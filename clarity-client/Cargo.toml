@@ -1,0 +1,9 @@
+[package]
+name = "clarity-client"
+version = "0.1.0-dev"
+edition = "2021"
+
+[dependencies]
+clarity-core = { path = "../clarity-core" }
+dioxus = { version = "0.7.3", features = ["fullstack"] }
+tokio = { version = "1.0", features = ["full"] }

@@ -1,0 +1,15 @@
+[package]
+name = "clarity-server"
+version = "0.1.0-dev"
+edition = "2021"
+
+[dependencies]
+clarity-core = { path = "../clarity-core" }
+axum = "0.8.8"
+tokio = { version = "1.0", features = ["full"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["trace"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+anyhow = "1.0"
+dioxus = { version = "0.7.3", features = ["fullstack"] }

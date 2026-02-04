@@ -1,0 +1,8 @@
+/home/lewis/src/clarity/clarity-server/target/debug/deps/dioxus_asset_resolver-415f1b8ea46ba883.d: /cache/cargo-shared/registry/src/index.crates.io-1949cf8c6b5b557f/dioxus-asset-resolver-0.7.3/src/lib.rs /cache/cargo-shared/registry/src/index.crates.io-1949cf8c6b5b557f/dioxus-asset-resolver-0.7.3/src/native.rs
+
+/home/lewis/src/clarity/clarity-server/target/debug/deps/libdioxus_asset_resolver-415f1b8ea46ba883.rlib: /cache/cargo-shared/registry/src/index.crates.io-1949cf8c6b5b557f/dioxus-asset-resolver-0.7.3/src/lib.rs /cache/cargo-shared/registry/src/index.crates.io-1949cf8c6b5b557f/dioxus-asset-resolver-0.7.3/src/native.rs
+
+/home/lewis/src/clarity/clarity-server/target/debug/deps/libdioxus_asset_resolver-415f1b8ea46ba883.rmeta: /cache/cargo-shared/registry/src/index.crates.io-1949cf8c6b5b557f/dioxus-asset-resolver-0.7.3/src/lib.rs /cache/cargo-shared/registry/src/index.crates.io-1949cf8c6b5b557f/dioxus-asset-resolver-0.7.3/src/native.rs
+
+/cache/cargo-shared/registry/src/index.crates.io-1949cf8c6b5b557f/dioxus-asset-resolver-0.7.3/src/lib.rs:
+/cache/cargo-shared/registry/src/index.crates.io-1949cf8c6b5b557f/dioxus-asset-resolver-0.7.3/src/native.rs:
