@@ -1,10 +1,16 @@
-use dioxus::prelude::*;
+//! Core functionality for the Clarity application
 
-pub fn app() -> Element {
-    rsx! {
-        div {
-            h1 { "Clarity Application" }
-            p { "Welcome to the modern fullstack Dioxus application!" }
-        }
+/// A simple function to demonstrate core functionality
+pub fn greet(name: &str) -> String {
+    format!("Hello, {}!", name)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_greet() {
+        assert_eq!(greet("World"), "Hello, World!");
     }
 }
