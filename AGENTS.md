@@ -97,3 +97,12 @@ This project uses zjj for isolated workspace management:
 1. Create new workspace with `zjj spawn`
 2. Use `zjj focus` to switch between workspaces
 3. Sync changes with `zjj sync`
+
+### Workflows
+All development work must follow these workflows:
+
+1. **Development**: Use `tdd15` for all new feature development
+2. **Code Review**: Use `red-queen` for adversarial review of all code
+3. **Session Completion**: Use `land-the-plane` skill for final session cleanup
+
+This ensures consistent, high-quality development practices across all team members.
