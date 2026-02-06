@@ -1,5 +1,42 @@
 # AGENTS.md - Agent Instructions for AI Agents
 
+**This document is designed for AI agents** - you are the primary audience and user of these guidelines.
+
+## Functional Programming Principles
+
+This project follows functional programming principles with the following key concepts:
+
+1. **Immutability**: All data structures are immutable by design
+2. **Pure Functions**: No side effects, same input → same output
+3. **Error Handling**: `Result` types instead of exceptions
+4. **Type Safety**: Leverage Rust's type system to prevent runtime errors
+5. **Function Composition**: Build complex operations from simple functions
+
+## ATDD: Acceptance Test-Driven Development
+
+**You MUST write tests FIRST.** This is non-negotiable.
+
+1. **RED**: Write a failing test based on acceptance criteria
+2. **GREEN**: Write minimal code to make the test pass
+3. **REFACTOR**: Improve the code while keeping tests green
+
+**Why tests first?**
+- Tests document the expected behavior
+- Tests prove the code works before it exists
+- Tests prevent over-engineering
+- Tests give you confidence to refactor
+
+**Your workflow:**
+```
+1. Read the bead's acceptance criteria
+2. Write a test that validates those criteria
+3. Run the test (it WILL fail - RED)
+4. Write the minimal implementation
+5. Run the test again (it should pass - GREEN)
+6. Refactor for clarity and functional purity
+7. Run all tests (should still pass - REFACTOR)
+```
+
 ## Critical Rules
 
 ### NEVER Touch Clippy/Lint Configuration
@@ -140,7 +177,21 @@ moon run :ci       # Full pipeline
 
 ---
 
-## Testing Philosophy: Break the Code
+## Testing Philosophy: ATDD + Break the Code
+
+**ATDD (Acceptance Test-Driven Development) is mandatory for all AI agents working on this codebase.**
+
+### The ATDD Loop (REPEAT FOR EVERY FEATURE)
+
+1. **READ** the acceptance criteria in the bead
+2. **WRITE** a test that codifies those criteria into code
+3. **RUN** the test - it MUST fail (RED)
+4. **IMPLEMENT** the minimal code to pass
+5. **RUN** the test again - it MUST pass (GREEN)
+6. **REFACTOR** for functional purity and clarity
+7. **REPEAT** until all acceptance criteria have tests
+
+### Break the Code Philosophy
 
 We don't write tests to prove code works. We write tests to **prove code breaks correctly**.
 
@@ -158,17 +209,12 @@ We don't write tests to prove code works. We write tests to **prove code breaks 
 - Obvious behavior (1 + 1 = 2)
 - Trivial getters/setters
 
-### Example: Good vs Bad Testing
+### Example: ATDD in Action
 
+**Step 1 - Write failing test (RED):**
 ```rust
-// ❌ BAD: Only tests happy path
-#[test]
-fn test_add_user() {
-    let user = User::new("test@example.com");
-    assert!(user.is_valid());
-}
-
-// ✅ GOOD: Tests what breaks
+// First, write the test based on acceptance criteria
+// This WILL NOT COMPILE initially - that's expected!
 #[test]
 fn test_user_rejects_empty_email() {
     let result = User::new("");
@@ -188,6 +234,41 @@ fn test_user_rejects_email_too_long() {
     assert!(matches!(result, Err(UserError::EmailTooLong)));
 }
 ```
+
+**Step 2 - Implement minimal code (GREEN):**
+```rust
+// Write just enough to pass the tests
+impl User {
+    pub fn new(email: &str) -> Result<Self, UserError> {
+        if email.is_empty() {
+            return Err(UserError::EmptyEmail);
+        }
+        if !email.contains('@') || !email.contains('.') {
+            return Err(UserError::InvalidEmail);
+        }
+        if email.len() > 254 {
+            return Err(UserError::EmailTooLong);
+        }
+        // ... create user
+    }
+}
+```
+
+**Step 3 - Refactor for functional purity:**
+```rust
+// Now improve with Result chaining, combinators, etc.
+impl User {
+    pub fn new(email: &str) -> Result<Self, UserError> {
+        email
+            .validate_non_empty()?
+            .validate_max_length(254)?
+            .validate_email_format()
+            .map(|_| User { /* ... */ })
+    }
+}
+```
+
+This is the ATDD cycle. **Always start with the test.**
 
 ---
 
