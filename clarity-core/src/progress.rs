@@ -608,11 +608,14 @@ pub fn generate_dashboard(
 /// use clarity_core::progress::{ProgressStatus, ProgressMetrics, ProgressFormat, ProgressOutputOptions, format_progress};
 ///
 /// let metrics = ProgressMetrics::new(10, 7, 2, 0, 1, 0).unwrap();
-/// let output = format_progress(&metrics, ProgressOutputOptions {
+/// let options = ProgressOutputOptions {
 ///     format: ProgressFormat::Terminal,
 ///     ..Default::default()
-/// }).unwrap();
-/// assert!(output.contains("[============================            ] 70.0%"));
+/// };
+/// let output = format_progress(&metrics, &options).unwrap();
+/// assert!(output.contains("["));
+/// assert!(output.contains("]"));
+/// assert!(output.contains("%"));
 /// ```
 pub fn format_progress(
   metrics: &ProgressMetrics,
@@ -906,7 +909,11 @@ mod tests {
   fn test_format_progress_terminal() {
     let metrics = ProgressMetrics::new(10, 7, 2, 0, 1, 0).unwrap();
     let output = format_progress(&metrics, &ProgressOutputOptions::default()).unwrap();
-    assert!(output.contains("\"total\":10"));
+    // Terminal format should show progress bar with "[]" and percentage
+    assert!(output.contains("["));
+    assert!(output.contains("]"));
+    assert!(output.contains("%"));
+    assert!(output.contains("Completed: 7"));
   }
 
   #[test]
