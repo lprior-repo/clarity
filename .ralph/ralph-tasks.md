@@ -11,7 +11,7 @@
 - [x] bd-2if: foundation: foundation-010: File path utilities
 - [x] bd-3vg: foundation: foundation-009: Progress dashboard and output
 - [x] bd-26p: foundation: JSON output formatting
-- [ ] bd-1ib: foundation: Exit code system
+- [x] bd-1ib: foundation: Exit code system
 - [ ] bd-3s0: foundation: Implement type system (HttpMethod, SpecName, Url, etc.)
 - [ ] bd-2b3: foundation: Implement Result-based error handling system
 

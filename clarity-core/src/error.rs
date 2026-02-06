@@ -17,6 +17,9 @@
 
 use std::fmt::{self, Display};
 
+use super::db::error::DbError;
+use super::validation::ValidationError;
+
 /// Exit code for CLI processes
 ///
 /// Exit codes are constrained to 0-255 as per POSIX standard.
@@ -106,6 +109,37 @@ impl Display for ExitCodeError {
 }
 
 impl std::error::Error for ExitCodeError {}
+
+/// Map database errors to appropriate exit codes
+///
+/// # Errors
+///
+/// Returns `ExitCodeError::OutOfRange` if the mapped exit code is > 255
+pub fn map_db_error(error: &DbError) -> Result<ExitCode, ExitCodeError> {
+    match error {
+        DbError::Connection(_) => Ok(ExitCode::IO_ERROR),
+        DbError::Migration(_) => Ok(ExitCode::CONFIG_ERROR),
+        DbError::NotFound { .. } => Ok(ExitCode::NOT_FOUND),
+        DbError::Validation(_) => Ok(ExitCode::VALIDATION_ERROR),
+        DbError::Duplicate(_) => Ok(ExitCode::ERROR),
+        DbError::InvalidUuid(_) => Ok(ExitCode::USAGE),
+        DbError::InvalidEmail(_) => Ok(ExitCode::USAGE),
+    }
+}
+
+/// Map validation errors to appropriate exit codes
+///
+/// # Errors
+///
+/// Returns `ExitCodeError::OutOfRange` if the mapped exit code is > 255
+pub fn map_validation_error(error: &ValidationError) -> Result<ExitCode, ExitCodeError> {
+    match error {
+        ValidationError::EmptyInput
+        | ValidationError::InvalidCharacters { .. }
+        | ValidationError::InvalidFormat { .. } => Ok(ExitCode::VALIDATION_ERROR),
+        ValidationError::InputTooLong { .. } => Ok(ExitCode::USAGE),
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -205,5 +239,92 @@ mod tests {
             format!("{}", error),
             "exit code 256 out of range (must be 0-255)"
         );
+    }
+
+    #[test]
+    fn test_map_db_connection_error() {
+        let error = DbError::Connection(sqlx::Error::decode(Box::new(std::io::Error::new(
+            std::io::ErrorKind::ConnectionRefused,
+            "test",
+        ))));
+        let result = map_db_error(&error);
+        assert_eq!(result, Ok(ExitCode::IO_ERROR));
+    }
+
+    #[test]
+    fn test_map_db_migration_error() {
+        let error = DbError::Migration("test migration".to_string());
+        let result = map_db_error(&error);
+        assert_eq!(result, Ok(ExitCode::CONFIG_ERROR));
+    }
+
+    #[test]
+    fn test_map_db_not_found_error() {
+        let error = DbError::NotFound {
+            entity: "test".to_string(),
+            id: "123".to_string(),
+        };
+        let result = map_db_error(&error);
+        assert_eq!(result, Ok(ExitCode::NOT_FOUND));
+    }
+
+    #[test]
+    fn test_map_db_validation_error() {
+        let error = DbError::Validation("test".to_string());
+        let result = map_db_error(&error);
+        assert_eq!(result, Ok(ExitCode::VALIDATION_ERROR));
+    }
+
+    #[test]
+    fn test_map_db_duplicate_error() {
+        let error = DbError::Duplicate("test".to_string());
+        let result = map_db_error(&error);
+        assert_eq!(result, Ok(ExitCode::ERROR));
+    }
+
+    #[test]
+    fn test_map_db_invalid_uuid_error() {
+        let error = DbError::InvalidUuid("invalid-uuid".to_string());
+        let result = map_db_error(&error);
+        assert_eq!(result, Ok(ExitCode::USAGE));
+    }
+
+    #[test]
+    fn test_map_db_invalid_email_error() {
+        let error = DbError::InvalidEmail("invalid-email".to_string());
+        let result = map_db_error(&error);
+        assert_eq!(result, Ok(ExitCode::USAGE));
+    }
+
+    #[test]
+    fn test_map_validation_empty_input() {
+        let error = ValidationError::EmptyInput;
+        let result = map_validation_error(&error);
+        assert_eq!(result, Ok(ExitCode::VALIDATION_ERROR));
+    }
+
+    #[test]
+    fn test_map_validation_invalid_characters() {
+        let error = ValidationError::InvalidCharacters {
+            chars: "!@#".to_string(),
+        };
+        let result = map_validation_error(&error);
+        assert_eq!(result, Ok(ExitCode::VALIDATION_ERROR));
+    }
+
+    #[test]
+    fn test_map_validation_invalid_format() {
+        let error = ValidationError::InvalidFormat {
+            reason: "test reason".to_string(),
+        };
+        let result = map_validation_error(&error);
+        assert_eq!(result, Ok(ExitCode::VALIDATION_ERROR));
+    }
+
+    #[test]
+    fn test_map_validation_input_too_long() {
+        let error = ValidationError::InputTooLong { max_length: 10 };
+        let result = map_validation_error(&error);
+        assert_eq!(result, Ok(ExitCode::USAGE));
     }
 }

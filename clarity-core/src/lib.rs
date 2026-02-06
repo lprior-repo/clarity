@@ -7,6 +7,8 @@ pub mod progress;
 pub mod session;
 pub mod validation;
 
+pub use error::{ExitCode, ExitCodeError, map_db_error, map_validation_error};
+
 /// A simple function to demonstrate core functionality
 pub fn greet(name: &str) -> String {
     format!("Hello, {}!", name)
