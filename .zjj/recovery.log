@@ -1,0 +1,2 @@
+[2026-02-06T16:45:39Z] Database file corrupted: /home/lewis/src/clarity/.zjj/state.db. Magic bytes: 3c 3c 3c 3c 3c 3c 3c 20 43 6f 6e 66 6c 69 63 74. SQLite will recover automatically.
+[2026-02-06T16:45:39Z] Database corruption detected at: /home/lewis/src/clarity/.zjj/state.db. Recovered by recreating database.

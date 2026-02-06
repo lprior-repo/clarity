@@ -1,9 +1,0 @@
-[package]
-name = "clarity-client"
-version.workspace = true
-edition.workspace = true
-
-[dependencies]
-clarity-core = { path = "../clarity-core" }
-dioxus.workspace = true
-tokio.workspace = true
