@@ -1,63 +1,234 @@
-# Moon tasks configuration
-# This file defines custom tasks for the project
+$schema: "https://moonrepo.dev/schemas/tasks.json"
+
+# Moon Task Configuration - Clarity Project
+# All commands use cargo with system Rust toolchain
 
 tasks:
-  # Build the core library
-  build-core:
-    command: "cargo build"
-    cwd: "clarity-core"
-    dependencies:
-      - build-core
+  # ============================================================================
+  # STAGE 1: CODE FORMATTING & LINTING
+  # ============================================================================
 
-  # Build the server
-  build-server:
-    command: "cargo build"
-    cwd: "clarity-server"
-    dependencies:
-      - build-core
+  fmt:
+    command: "cargo fmt --all --check"
+    description: "Check code formatting (rustfmt)"
+    inputs:
+      - "clarity-*/src/**/*.rs"
+      - "Cargo.toml"
+      - "rustfmt.toml"
+    options:
+      cache: true
+      runInCI: true
 
-  # Build the client
-  build-client:
-    command: "cargo build"
-    cwd: "clarity-client"
-    dependencies:
-      - build-core
+  fmt-fix:
+    command: "cargo fmt --all"
+    description: "Auto-fix code formatting"
+    inputs:
+      - "clarity-*/src/**/*.rs"
+      - "Cargo.toml"
+    options:
+      cache: false  # Never cache - always format
 
-  # Run the server
-  run-server:
-    command: "cargo run"
-    cwd: "clarity-server"
+  clippy:
+    command: "cargo clippy --workspace --all-targets --all-features -- -D warnings"
+    description: "Lint with Clippy (strict mode)"
+    inputs:
+      - "clarity-*/src/**/*.rs"
+      - "Cargo.toml"
+      - "/Cargo.lock"
+      - ".clippy.toml"
+    options:
+      cache: true
+      runInCI: true
+
+  # ============================================================================
+  # STAGE 2: QUICK CHECKS (Fast Feedback)
+  # ============================================================================
+
+  quick:
+    command: "cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings"
+    description: "Fast format + lint check (cached)"
+    inputs:
+      - "clarity-*/src/**/*.rs"
+      - "Cargo.toml"
+      - "/Cargo.lock"
+    options:
+      cache: true
+      runInCI: false
+
+  check:
+    command: "cargo check --workspace --all-targets --all-features"
+    description: "Fast type check without building"
+    inputs:
+      - "clarity-*/src/**/*.rs"
+      - "Cargo.toml"
+      - "/Cargo.lock"
+    options:
+      cache: true
+      runInCI: false
+
+  # ============================================================================
+  # STAGE 3: TESTING
+  # ============================================================================
+
+  test:
+    command: "cargo test --workspace --all-features"
+    description: "Run all tests"
+    inputs:
+      - "clarity-*/src/**/*.rs"
+      - "clarity-*/tests/**/*.rs"
+      - "Cargo.toml"
+      - "/Cargo.lock"
+    options:
+      cache: true
+      runInCI: true
+    env:
+      CARGO_BUILD_JOBS: "8"
+
+  test-doc:
+    command: "cargo test --doc --workspace"
+    description: "Run documentation tests"
+    inputs:
+      - "clarity-*/src/**/*.rs"
+      - "Cargo.toml"
+      - "/Cargo.lock"
+    options:
+      cache: true
+      runInCI: true
+
+  test-unit:
+    command: "cargo test --workspace --lib"
+    description: "Run unit tests only"
+    inputs:
+      - "clarity-*/src/**/*.rs"
+      - "Cargo.toml"
+      - "/Cargo.lock"
+    options:
+      cache: true
+      runInCI: false
+
+  # ============================================================================
+  # STAGE 4: BUILDING
+  # ============================================================================
+
+  build:
+    command: "cargo build --workspace"
+    description: "Build all crates (debug mode)"
+    inputs:
+      - "clarity-*/src/**/*.rs"
+      - "Cargo.toml"
+      - "/Cargo.lock"
+    options:
+      cache: true
+      runInCI: false
+
+  release:
+    command: "cargo build --workspace --release"
+    description: "Build release binaries"
+    inputs:
+      - "clarity-*/src/**/*.rs"
+      - "Cargo.toml"
+      - "/Cargo.lock"
+    options:
+      cache: true
+      runInCI: false
+
+  # ============================================================================
+  # STAGE 5: RUNNING
+  # ============================================================================
+
+  server:
+    command: "cargo run -p clarity-server"
+    description: "Run the Axum server"
     dependencies:
       - build-server
+    options:
+      cache: false
+      runInCI: false
 
-  # Run the client
-  run-client:
-    command: "cargo run"
-    cwd: "clarity-client"
+  client:
+    command: "cargo run -p clarity-client"
+    description: "Run the Dioxus client"
     dependencies:
       - build-client
+    options:
+      cache: false
+      runInCI: false
 
-  # Run all builds
-  build:
-    command: "cargo build --all"
-    cwd: "."
+  # ============================================================================
+  # STAGE 6: FULL PIPELINE (CI)
+  # ============================================================================
 
-  # Run all tests
-  test:
-    command: "cargo test"
-    cwd: "."
+  ci:
+    description: "Run full CI pipeline (format, lint, test)"
+    commands:
+      - "moon run :fmt"
+      - "moon run :clippy"
+      - "moon run :test"
+      - "moon run :test-doc"
+    options:
+      cache: true
+      runInCI: true
 
-  # Format code
-  fmt:
-    command: "cargo fmt"
-    cwd: "."
+  # ============================================================================
+  # DATABASE OPERATIONS
+  # ============================================================================
 
-  # Lint code
-  clippy:
-    command: "cargo clippy"
-    cwd: "."
+  db-migrate:
+    command: "sqlx migrate run"
+    description: "Run database migrations"
+    inputs:
+      - "clarity-core/migrations/**/*.sql"
+      - "Cargo.toml"
+    options:
+      cache: false
+      runInCI: false
+    env:
+      DATABASE_URL: "postgresql://localhost/clarity"
 
-  # Run with bazel-remote caching
-  build-bazel:
-    command: "bazel build //clarity-core:clarity_core //clarity-server:clarity_server //clarity-client:clarity_client"
-    cwd: "."
+  db-migrate-add:
+    command: "sqlx migrate add"
+    description: "Create new migration"
+    options:
+      cache: false
+      runInCI: false
+
+  # ============================================================================
+  # INDIVIDUAL CRATE BUILDS
+  # ============================================================================
+
+  build-core:
+    command: "cargo build -p clarity-core"
+    description: "Build clarity-core"
+    inputs:
+      - "clarity-core/src/**/*.rs"
+      - "Cargo.toml"
+      - "/Cargo.lock"
+    options:
+      cache: true
+      runInCI: false
+
+  build-server:
+    command: "cargo build -p clarity-server"
+    description: "Build clarity-server"
+    inputs:
+      - "clarity-server/src/**/*.rs"
+      - "Cargo.toml"
+      - "/Cargo.lock"
+    options:
+      cache: true
+      runInCI: false
+    env:
+      CLARITY_CORE_PATH: "../clarity-core"
+
+  build-client:
+    command: "cargo build -p clarity-client"
+    description: "Build clarity-client"
+    inputs:
+      - "clarity-client/src/**/*.rs"
+      - "Cargo.toml"
+      - "/Cargo.lock"
+    options:
+      cache: true
+      runInCI: false
+    env:
+      CLARITY_CORE_PATH: "../clarity-core"
