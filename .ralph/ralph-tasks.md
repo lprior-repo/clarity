@@ -9,7 +9,7 @@
 
 ### Foundation Beads
 - [x] bd-2if: foundation: foundation-010: File path utilities
-- [ ] bd-3vg: foundation: foundation-009: Progress dashboard and output
+- [x] bd-3vg: foundation: foundation-009: Progress dashboard and output
 - [ ] bd-26p: foundation: JSON output formatting
 - [ ] bd-1ib: foundation: Exit code system
 - [ ] bd-3s0: foundation: Implement type system (HttpMethod, SpecName, Url, etc.)
