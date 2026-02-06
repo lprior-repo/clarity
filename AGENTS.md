@@ -2,6 +2,33 @@
 
 **This document is designed for AI agents** - you are the primary audience and user of these guidelines.
 
+## Required Skills for All Development
+
+**Before starting any work, you MUST load these skills:**
+
+1. **/tdd15** - 15-phase Test-Driven Development workflow
+   - RED-GREEN-REFACTOR cycle
+   - Acceptance Test-Driven Development (ATDD)
+   - Write tests FIRST, then implement
+
+2. **/zjj** - Workspace isolation with Jujutsu
+   - Create isolated workspaces for each bead
+   - Prevent cross-contamination between tasks
+   - Clean merge and cleanup when done
+
+3. **/functional-rust-generator** - Zero-panic functional Rust patterns
+   - Railway-Oriented Programming
+   - Zero unwraps, zero panics, zero expects
+   - Result<T, E> with proper error propagation
+
+**How to load skills:**
+```
+When assigned a bead, automatically invoke these skills before starting implementation.
+The tdd15 skill will guide you through writing tests first.
+The zjj skill will create an isolated workspace.
+The functional-rust-generator skill will ensure zero-panic code.
+```
+
 ## Functional Programming Principles
 
 This project follows functional programming principles with the following key concepts:
@@ -323,3 +350,38 @@ let result: Vec<Item> = items
     .filter(|item| item.is_valid())
     .collect();
 ```
+
+---
+
+## Code Review: Red Queen Adversarial Testing
+
+**Before completing any bead, run the red-queen skill for adversarial QA.**
+
+The Red Queen uses the Digital Red Queen algorithm to coevolve your code and tests - each generation must defeat ALL previous generations. This is adversarial review that tries to break your code.
+
+### When to Use Red Queen
+
+- After implementing all acceptance criteria
+- Before marking a bead as complete
+- When you think your code is "done"
+
+### What Red Queen Does
+
+1. **Generates test commands** that try to break your code
+2. **Evolves tests** to find edge cases you missed
+3. **Validates** that all quality gates pass
+4. **Provides feedback** on weaknesses and vulnerabilities
+
+### Your Workflow
+
+```
+1. Complete implementation (with TDD15)
+2. Run all tests (moon run :test) - must pass
+3. Invoke red-queen skill
+4. Address any failures or weaknesses found
+5. Re-run red-queen until it passes
+6. THEN close the bead
+```
+
+**Red Queen is your final gatekeeper** - if it finds issues, your code isn't done.
+
