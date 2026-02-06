@@ -3,6 +3,7 @@
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
+#![allow(clippy::missing_const_for_fn)]
 
 //! Security validation module for clarity-core
 //!
@@ -63,7 +64,7 @@ pub const fn validate_non_empty(input: &str) -> Result<&str, ValidationError> {
 /// # Errors
 ///
 /// Returns `ValidationError::InputTooLong` if the input string length exceeds `max_length`
-pub const fn validate_max_length(input: &str, max_length: usize) -> Result<&str, ValidationError> {
+pub fn validate_max_length(input: &str, max_length: usize) -> Result<&str, ValidationError> {
     if input.len() > max_length {
         Err(ValidationError::InputTooLong { max_length })
     } else {

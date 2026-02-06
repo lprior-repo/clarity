@@ -4,6 +4,7 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![allow(clippy::match_same_arms)]
+#![allow(clippy::missing_const_for_fn)]
 
 //! Session types for Clarity
 //!
@@ -290,35 +291,35 @@ impl SessionBuilder {
 
     /// Set the session ID
     #[must_use]
-    pub const fn id(mut self, id: String) -> Self {
+    pub fn id(mut self, id: String) -> Self {
         self.id = Some(id);
         self
     }
 
     /// Set the session kind
     #[must_use]
-    pub const fn kind(mut self, kind: SessionKind) -> Self {
+    pub fn kind(mut self, kind: SessionKind) -> Self {
         self.kind = Some(kind);
         self
     }
 
     /// Set the creation timestamp
     #[must_use]
-    pub const fn created_at(mut self, timestamp: Timestamp) -> Self {
+    pub fn created_at(mut self, timestamp: Timestamp) -> Self {
         self.created_at = Some(timestamp);
         self
     }
 
     /// Set the session title
     #[must_use]
-    pub const fn title(mut self, title: String) -> Self {
+    pub fn title(mut self, title: String) -> Self {
         self.title = Some(title);
         self
     }
 
     /// Set the session description
     #[must_use]
-    pub const fn description(mut self, description: String) -> Self {
+    pub fn description(mut self, description: String) -> Self {
         self.description = Some(description);
         self
     }
@@ -362,6 +363,7 @@ impl Timestamp {
 
     /// Get the current time as a Timestamp
     #[must_use]
+    #[allow(clippy::cast_possible_wrap)]
     pub fn now() -> Self {
         use std::time::{SystemTime, UNIX_EPOCH};
         Self(
@@ -542,7 +544,10 @@ mod tests {
 
         assert_eq!(session.kind, SessionKind::Planning);
         assert_eq!(session.title.as_deref(), Some("Planning Session"));
-        assert_eq!(session.description.as_deref(), Some("Plan the implementation"));
+        assert_eq!(
+            session.description.as_deref(),
+            Some("Plan the implementation")
+        );
     }
 
     #[test]
@@ -667,7 +672,8 @@ mod tests {
             .build()
             .unwrap();
 
-        let result = session.transition_to(SessionState::Completed, Timestamp::from_secs(1234567891));
+        let result =
+            session.transition_to(SessionState::Completed, Timestamp::from_secs(1234567891));
 
         assert!(result.is_err());
         match result {
@@ -693,7 +699,8 @@ mod tests {
             .transition_to(SessionState::Completed, Timestamp::from_secs(1234567892))
             .unwrap();
 
-        let result = completed.transition_to(SessionState::InProgress, Timestamp::from_secs(1234567893));
+        let result =
+            completed.transition_to(SessionState::InProgress, Timestamp::from_secs(1234567893));
 
         assert!(result.is_err());
     }
@@ -712,7 +719,8 @@ mod tests {
             .transition_to(SessionState::Failed, Timestamp::from_secs(1234567892))
             .unwrap();
 
-        let result = failed.transition_to(SessionState::InProgress, Timestamp::from_secs(1234567893));
+        let result =
+            failed.transition_to(SessionState::InProgress, Timestamp::from_secs(1234567893));
 
         assert!(result.is_err());
     }
@@ -843,41 +851,77 @@ mod tests {
 
     #[test]
     fn test_is_valid_transition_same_state() {
-        assert!(is_valid_transition(SessionState::Created, SessionState::Created));
-        assert!(is_valid_transition(SessionState::InProgress, SessionState::InProgress));
+        assert!(is_valid_transition(
+            SessionState::Created,
+            SessionState::Created
+        ));
+        assert!(is_valid_transition(
+            SessionState::InProgress,
+            SessionState::InProgress
+        ));
     }
 
     #[test]
     fn test_is_valid_transition_created_to_in_progress() {
-        assert!(is_valid_transition(SessionState::Created, SessionState::InProgress));
+        assert!(is_valid_transition(
+            SessionState::Created,
+            SessionState::InProgress
+        ));
     }
 
     #[test]
     fn test_is_valid_transition_created_to_cancelled() {
-        assert!(is_valid_transition(SessionState::Created, SessionState::Cancelled));
+        assert!(is_valid_transition(
+            SessionState::Created,
+            SessionState::Cancelled
+        ));
     }
 
     #[test]
     fn test_is_valid_transition_in_progress_to_completed() {
-        assert!(is_valid_transition(SessionState::InProgress, SessionState::Completed));
+        assert!(is_valid_transition(
+            SessionState::InProgress,
+            SessionState::Completed
+        ));
     }
 
     #[test]
     fn test_is_valid_transition_in_progress_to_failed() {
-        assert!(is_valid_transition(SessionState::InProgress, SessionState::Failed));
+        assert!(is_valid_transition(
+            SessionState::InProgress,
+            SessionState::Failed
+        ));
     }
 
     #[test]
     fn test_is_valid_transition_in_progress_to_cancelled() {
-        assert!(is_valid_transition(SessionState::InProgress, SessionState::Cancelled));
+        assert!(is_valid_transition(
+            SessionState::InProgress,
+            SessionState::Cancelled
+        ));
     }
 
     #[test]
     fn test_is_valid_transition_invalid() {
-        assert!(!is_valid_transition(SessionState::Completed, SessionState::InProgress));
-        assert!(!is_valid_transition(SessionState::Failed, SessionState::InProgress));
-        assert!(!is_valid_transition(SessionState::Cancelled, SessionState::Created));
-        assert!(!is_valid_transition(SessionState::Created, SessionState::Completed));
-        assert!(!is_valid_transition(SessionState::Created, SessionState::Failed));
+        assert!(!is_valid_transition(
+            SessionState::Completed,
+            SessionState::InProgress
+        ));
+        assert!(!is_valid_transition(
+            SessionState::Failed,
+            SessionState::InProgress
+        ));
+        assert!(!is_valid_transition(
+            SessionState::Cancelled,
+            SessionState::Created
+        ));
+        assert!(!is_valid_transition(
+            SessionState::Created,
+            SessionState::Completed
+        ));
+        assert!(!is_valid_transition(
+            SessionState::Created,
+            SessionState::Failed
+        ));
     }
 }
