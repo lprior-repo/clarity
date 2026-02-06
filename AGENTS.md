@@ -2,14 +2,20 @@
 
 ## Critical Rules
 
+### NEVER Touch Clippy/Lint Configuration
+**ABSOLUTE RULE: DO NOT MODIFY clippy or linting configuration files. EVER.**
+
+If clippy reports warnings or errors, fix the **code**, not the lint rules.
+
 ### Build System: Moon Only
 **NEVER use raw cargo commands.** Always use Moon for all build operations:
 
 ```bash
 # Correct
-moon run :quick       # Format + type check
-moon run :ci          # Full pipeline
+moon run :quick       # Format + lint check
 moon run :test        # Run tests
+moon run :build       # Build all crates
+moon run :ci          # Full pipeline
 moon run :fmt-fix     # Auto-fix formatting
 moon run :check       # Fast type check
 
@@ -27,60 +33,47 @@ cargo build          # NO
 - Use functional patterns: `map()`, `and_then()`, `?` operator
 - Railway-Oriented Programming with combinators
 
-### Functional Rust Principles
-1. **Immutability**: All data structures are immutable by design
-2. **Pure Functions**: No side effects, same input → same output
-3. **Error Handling**: `Result` types instead of exceptions
-4. **Type Safety**: Leverage Rust's type system to prevent runtime errors
-5. **Function Composition**: Build complex operations from simple functions
+### Extensive Testing Philosophy
+Tests should **actively try to break the code**. We don't test happy paths - we test:
+- Edge cases and boundary conditions
+- Error paths and failure modes
+- Invalid inputs and malformed data
+- Concurrent access and race conditions
+- Resource exhaustion and limits
+- **If the code can fail, test that it fails gracefully**
 
----
-
-## Project Structure
-
+### Project Structure
 ```
 clarity/
-├── clarity-client/     # Dioxus frontend application
-├── clarity-core/       # Shared business logic and models
-├── clarity-server/     # Axum backend server
-├── migrations/         # SQLx database migrations
-└── .beads/            # Issue tracking (beads system)
+├── clarity-client/     # Dioxus frontend (responsive CSS, components)
+├── clarity-core/       # Shared types, validation, database layer
+├── clarity-server/     # Axum backend (WebSocket, REST API)
+└── migrations/         # SQLx database migrations
 ```
 
-### Key Modules
+### Key Decisions
+- **Sync strategy**: Rebase (`jj rebase -d main`)
+- **Testing**: Break-it-first philosophy (red queen adversarial testing)
+- **Beads**: Hard requirement, always integrate with `.beads/issues.jsonl`
+- **Functional Rust**: Zero panic, immutable by default, Result<T, E> throughout
 
-#### clarity-core/src/
-- `session.rs` - Session types with state machine
-- `validation.rs` - Security validators (email, alphanumeric, etc.)
-- `error.rs` - Exit code system (POSIX-compliant)
-- `db/` - Database layer
-  - `models.rs` - Domain models (User, Bead, Interview, Spec)
-  - `pool.rs` - Connection pool management
-  - `migrate.rs` - Migration runner
-  - `error.rs` - Database errors
-
-#### clarity-server/src/
-- `main.rs` - Axum server with WebSocket support
-
-#### clarity-client/
-- `assets/responsive.css` - Mobile-first responsive design (1,100+ lines)
-- `tests/responsive_design_test.rs` - 21 responsive design tests
+### Tech Stack
+- **Axum** (0.8) - Web framework with WebSocket support
+- **SQLx** (0.8) - Compile-time checked database queries
+- **Dioxus** (0.7) - React-like frontend framework
+- **Tokio** - Async runtime
+- **PostgreSQL** - Database with UUID primary keys
 
 ---
 
-## Development Workflow
+## Quick Reference
 
 ### Issue Tracking (Beads)
 ```bash
-# Find available work
-br ready              # Show beads ready to start
-
-# Claim and work
-br show <id>          # View bead details
+br ready              # Find available work
+br show <id>          # View issue details
 br update <id> --status in_progress  # Claim work
-
-# Complete work
-br close <id>         # Mark as complete
+br close <id>         # Complete work
 br sync --flush-only  # Sync to JSONL (no git)
 git add .beads/
 git commit -m "close bead <id>"
@@ -88,149 +81,146 @@ git commit -m "close bead <id>"
 
 ### Development (Moon CI/CD)
 ```bash
-moon run :quick       # Fast checks (format + lint)
-moon run :ci          # Full pipeline (all quality gates)
-moon run :test        # Run tests
+moon run :quick       # Fast checks (6-7ms with cache!)
+moon run :ci          # Full pipeline (parallel)
 moon run :fmt-fix     # Auto-fix formatting
-moon run :check       # Fast type check
+moon run :test        # Run tests
+moon run :server      # Run Axum server
+moon run :client      # Run Dioxus client
 ```
 
-### Workspace Management (Optional)
-If using zjj for workspace isolation:
+### Workspace Management (zjj)
 ```bash
-zjj add <name>        # Create session + workspace
-zjj focus <name>      # Switch to session
+zjj add <name>        # Create isolated workspace
+zjj focus <name>      # Switch to workspace
 zjj remove <name>     # Close workspace
-zjj list              # Show all sessions
+zjj list              # Show all workspaces
+```
+
+### Database Operations
+```bash
+moon run :db-migrate         # Run migrations
+moon run :db-migrate-add     # Create new migration
+sqlx migrate run             # Direct SQLx command
 ```
 
 ---
 
-## Quality Standards
+## Hyper-Fast CI/CD Pipeline
 
-### Lint Configuration
-**ABSOLUTE RULE: DO NOT MODIFY clippy or linting configuration.**
+This project uses **Moon** for fast cached builds:
 
-If clippy reports warnings or errors, fix the **code**, not the lint rules.
+### Performance Characteristics
+- **6-7ms** for cached tasks (vs ~450ms uncached)
+- **Parallel execution** across all crates
+- **Aggressive caching** for fast feedback
 
-Current strict settings:
-```rust
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::panic)]
-#![warn(clippy::pedantic)]
-#![warn(clippy::nursery)]
+### Development Workflow
+
+**1. Quick Iteration Loop** (6-7ms with cache):
+```bash
+# Edit code...
+moon run :quick  # Parallel fmt + clippy check
 ```
 
-### Testing Standards
-- All code must have comprehensive unit tests
-- Test happy paths AND error paths
-- Use property-based testing where appropriate
-- Follow TDD: RED → GREEN → REFACTOR
-
-### Documentation Standards
-- Document all public APIs with Rustdoc
-- Include `# Errors` sections on fallible functions
-- Add examples for complex functions
-- Keep comments concise and focused on "why", not "what"
-
----
-
-## Build System (Moon)
-
-### Moon Tasks
-
-```yaml
-# Quality Checks
-moon run :quick       # Format + lint (fast feedback)
-moon run :fmt-fix     # Auto-fix formatting issues
-
-# Testing
-moon run :test        # Run all tests
-moon run :test-doc    # Run documentation tests
-
-# Building
-moon run :build       # Build all crates (debug)
-moon run :release     # Build release binaries
-
-# Running
-moon run :server      # Run clarity-server
-moon run :client      # Run clarity-client
+**2. Before Committing**:
+```bash
+moon run :fmt-fix  # Auto-fix formatting
+moon run :ci       # Full pipeline
 ```
 
-### Cache Strategy
-Moon uses aggressive caching for fast feedback:
-- **Format check**: ~6-7ms (cached)
-- **Clippy**: ~2-3s (cached)
-- **Tests**: ~5-10s (cached)
+### Build System Rules
+
+**ALWAYS use Moon, NEVER raw cargo:**
+- ✅ `moon run :test` (cached, fast)
+- ✅ `moon run :check` (quick type check)
+- ✅ `moon run :build` (dependency-aware)
+- ❌ `cargo test` (no caching, slow)
+- ❌ `cargo build` (no parallelism)
 
 ---
 
-## CI/CD Pipeline
+## Testing Philosophy: Break the Code
 
-### GitHub Actions (.github/workflows/ci.yml)
+We don't write tests to prove code works. We write tests to **prove code breaks correctly**.
 
-**Three parallel jobs:**
+### What to Test
 
-1. **Quality** (10 min timeout)
-   - Check formatting (rustfmt)
-   - Run Clippy (strict mode, `-D warnings`)
+**✅ Test these:**
+- Edge cases: empty strings, zero values, max limits
+- Error paths: network failures, invalid data, timeouts
+- Concurrent access: multiple connections, race conditions
+- Resource limits: out of memory, connection pool exhaustion
+- Invalid inputs: negative numbers, malformed UUIDs, bad UTF-8
 
-2. **Test** (15 min timeout)
-   - Matrix: stable + nightly Rust
-   - Run all tests
-   - Run doc tests
+**❌ Don't just test:**
+- Happy paths (they're boring)
+- Obvious behavior (1 + 1 = 2)
+- Trivial getters/setters
 
-3. **Build** (20 min timeout)
-   - Build release binaries
-   - Upload artifacts (server + client)
-
-### All Quality Gates Must Pass
-- ✅ Zero format violations
-- ✅ Zero clippy warnings
-- ✅ All tests passing
-- ✅ Clean release build
-
----
-
-## Common Patterns
-
-### Error Handling (Functional Style)
+### Example: Good vs Bad Testing
 
 ```rust
-// WRONG - unwrap()
-fn get_user(id: &str) -> User {
-    User::find(id).unwrap()  // ❌ Forbidden
+// ❌ BAD: Only tests happy path
+#[test]
+fn test_add_user() {
+    let user = User::new("test@example.com");
+    assert!(user.is_valid());
 }
 
-// CORRECT - Result with ?
+// ✅ GOOD: Tests what breaks
+#[test]
+fn test_user_rejects_empty_email() {
+    let result = User::new("");
+    assert!(matches!(result, Err(UserError::EmptyEmail)));
+}
+
+#[test]
+fn test_user_rejects_invalid_email_format() {
+    let result = User::new("not-an-email");
+    assert!(matches!(result, Err(UserError::InvalidEmail)));
+}
+
+#[test]
+fn test_user_rejects_email_too_long() {
+    let long_email = "a@".repeat(300) + ".com";
+    let result = User::new(&long_email);
+    assert!(matches!(result, Err(UserError::EmailTooLong)));
+}
+```
+
+---
+
+## Functional Rust Patterns
+
+### Error Handling
+
+```rust
+// ❌ WRONG: unwrap()
+fn get_user(id: &str) -> User {
+    User::find(id).unwrap()
+}
+
+// ✅ CORRECT: Result with ?
 fn get_user(id: &str) -> Result<User, DbError> {
-    let user = User::find(id)?;  // ✅ Correct
+    let user = User::find(id)?;
     Ok(user)
 }
-
-// CORRECT - Combinators
-fn validate_email(email: &str) -> Result<Email, ValidationError> {
-    email
-        .validate_non_empty()?    // Use ? for propagation
-        .validate_max_length(254)? // Chain validators
-        .validate_email_format()   // Final check
-}
 ```
 
-### Immutability by Default
+### Immutability
 
 ```rust
-// WRONG - Mutable
+// ❌ WRONG: Mutable
 fn process_items(items: &mut Vec<Item>) {
-    items.push(Item::new());  // ❌ Mutation
+    items.push(Item::new());
 }
 
-// CORRECT - Immutable
+// ✅ CORRECT: Immutable
 fn process_items(items: Vec<Item>) -> Vec<Item> {
     items
         .into_iter()
-        .chain(Some(Item::new()))  // ✅ New vector
+        .chain(Some(Item::new()))
         .collect()
 }
 ```
@@ -238,7 +228,7 @@ fn process_items(items: Vec<Item>) -> Vec<Item> {
 ### Iterator Combinators
 
 ```rust
-// WRONG - Loop with mutation
+// ❌ WRONG: Loop with mutation
 let mut result = Vec::new();
 for item in items {
     if item.is_valid() {
@@ -246,131 +236,9 @@ for item in items {
     }
 }
 
-// CORRECT - Iterator combinators
+// ✅ CORRECT: Iterator combinators
 let result: Vec<Item> = items
     .into_iter()
     .filter(|item| item.is_valid())
     .collect();
 ```
-
----
-
-## Dependencies
-
-### Runtime Dependencies
-- **Axum** (0.8) - Web framework
-- **SQLx** (0.8) - Database with compile-time query checking
-- **Dioxus** (0.7) - Frontend framework
-- **Tokio** - Async runtime
-
-### Dev Dependencies
-- **Moon** - Build system
-- **Cargo-nextest** - Fast test runner
-- **Tarpaulin** - Code coverage
-
-### Beads Integration
-- `.beads/issues.jsonl` - Issue tracking
-- `br` CLI - Bead management (non-invasive, no git auto-push)
-
----
-
-## Database Architecture
-
-### Migration Strategy
-```bash
-# Run migrations
-sqlx migrate run
-
-# Create new migration
-sqlx migrate add <name>
-
-# Revert last migration
-sqlx migrate revert
-```
-
-### Connection Pool
-```rust
-// Use PgPool for connection pooling
-// Max connections: 5 (configurable)
-// Timeout: 30s
-// All database operations return DbResult<T>
-```
-
-### Schema
-- `users` - User accounts with UUID primary keys
-- `beads` - Issue tracking integration
-- `interviews` - User interview sessions
-- `specs` - Specification documents
-- `sessions` - Session management
-
----
-
-## WebSocket Architecture
-
-### Endpoint
-- **Route**: `/ws`
-- **Protocol**: WebSocket upgrade via Axum
-- **Pattern**: Echo handler with broadcast channel
-
-### State Management
-```rust
-// Use tokio::sync::broadcast for pub/sub
-// Channel capacity: 128 messages
-// Graceful shutdown on connection errors
-```
-
----
-
-## Quick Reference
-
-### Commands to Run
-
-```bash
-# Development
-moon run :server      # Start backend server
-moon run :client      # Start frontend client
-
-# Quality
-moon run :quick       # Fast format + lint check
-moon run :ci          # Full quality pipeline
-
-# Testing
-moon run :test        # Run all tests
-cargo test --workspace --all-features
-
-# Building
-moon run :release     # Build release binaries
-```
-
-### File Locations
-
-```
-Database:    clarity-core/migrations/001_initial_schema.sql
-Websocket:   clarity-server/src/main.rs (/ws route)
-Responsive:  clarity-client/assets/responsive.css
-Sessions:    clarity-core/src/session.rs
-Validation:  clarity-core/src/validation.rs
-Exit Codes:  clarity-core/src/error.rs
-```
-
----
-
-## Anti-Patterns to Avoid
-
-| Anti-Pattern | Problem | Correct Way |
-|--------------|---------|-------------|
-| `unwrap()` | Crashes on error | Use `?` or `match` |
-| `expect()` | Crashes on error | Use `Result<T, E>` |
-| `panic!()` | Crashes process | Return `Err` |
-| `todo!()` | Incomplete code | Implement or file bead |
-| `mut` by default | Side effects | Use immutable by default |
-| Raw cargo commands | Bypasses moon cache | Use `moon run :<task>` |
-| Editing clippy.toml | Weakens lint rules | Fix the code instead |
-
----
-
-## Version: 1.0.0
-
-**Last Updated**: February 2026
-**Status**: Production Ready
-**Maintainer**: lprior-repo
