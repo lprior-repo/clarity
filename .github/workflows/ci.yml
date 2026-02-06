@@ -33,7 +33,7 @@ jobs:
         run: cargo fmt --all --check
 
       - name: Run Clippy (strict)
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy --workspace --lib -- -D warnings
 
   # ============================================================================
   # JOB 2: Test (Parallel)

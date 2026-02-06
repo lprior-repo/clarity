@@ -28,3 +28,12 @@ Thumbs.db
 
 # bv (beads viewer) local config and caches
 .bv/
+
+# Workspace and bead tracking directories
+.zjj/
+.beads/
+.ralph/
+
+# Database files
+*.db
+*.db.backup
