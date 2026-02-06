@@ -68,8 +68,5 @@ pub fn app() -> Element {
     }
 }
 
-// Re-export with backward compatibility
-#[deprecated(note = "Use app() instead")]
-pub fn App() -> Element {
-    app()
-}
+// Note: App renamed to app() to follow Rust naming conventions
+// Use app() instead of App()

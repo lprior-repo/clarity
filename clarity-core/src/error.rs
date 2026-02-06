@@ -52,7 +52,7 @@ impl ExitCode {
     /// File not found
     pub const NOT_FOUND: Self = Self(8);
 
-    /// Create a new ExitCode, ensuring it's within 0-255
+    /// Create a new `ExitCode`, ensuring it's within 0-255
     ///
     /// # Errors
     ///
@@ -88,7 +88,7 @@ impl Display for ExitCode {
     }
 }
 
-/// Errors that can occur when creating an ExitCode
+/// Errors that can occur when creating an `ExitCode`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExitCodeError {
     /// Value exceeds 255 (maximum valid exit code)

@@ -2,13 +2,13 @@
 // Following TDD15 principles: RED-GREEN-REFACTOR
 // Zero unwrap/panic policy - all tests use Result/Option properly
 
-use clarity_client::App;
+use clarity_client::app;
 
 #[test]
 fn test_app_component_exists() {
-    // Test that the App component can be created
+    // Test that the app component can be created
     // This is a compilation test - if it compiles, the component exists
-    let _app = App;
+    let _component = app;
 }
 
 #[test]
@@ -16,7 +16,7 @@ fn test_responsive_metadata_present() {
     // Test that responsive viewport meta tag is present
     // In a real browser environment, this would check the DOM
     // For now, we verify the component compiles correctly
-    let _component = App;
+    let _component = app;
 }
 
 #[test]

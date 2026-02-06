@@ -92,10 +92,7 @@ mod tests {
         let send_result = state.tx.send(test_message.clone());
 
         // Then: All subscribers should receive the message
-        assert!(
-            send_result.is_ok(),
-            "Send should succeed - receivers exist"
-        );
+        assert!(send_result.is_ok(), "Send should succeed - receivers exist");
 
         let msg1 = rx1.recv().await;
         let msg2 = rx2.recv().await;
