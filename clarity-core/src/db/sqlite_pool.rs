@@ -121,34 +121,29 @@ pub async fn create_sqlite_pool(config: &SqliteDbConfig) -> DbResult<SqlitePool>
         // Configure WAL mode on each new connection for 2-3x throughput
         sqlx::query("PRAGMA journal_mode=WAL")
           .execute(&mut *connection)
-          .await
-          .map_err(|e| DbError::Connection(e))?;
+          .await?;
 
         // Set synchronous to NORMAL (optimal for WAL - sync only on checkpoint)
         sqlx::query("PRAGMA synchronous=NORMAL")
           .execute(&mut *connection)
-          .await
-          .map_err(|e| DbError::Connection(e))?;
+          .await?;
 
         // Increase cache size to 64MB (negative value = KB)
         sqlx::query("PRAGMA cache_size=-64000")
           .execute(&mut *connection)
-          .await
-          .map_err(|e| DbError::Connection(e))?;
+          .await?;
 
         // Store temporary tables in memory for fastest performance
         sqlx::query("PRAGMA temp_store=MEMORY")
           .execute(&mut *connection)
-          .await
-          .map_err(|e| DbError::Connection(e))?;
+          .await?;
 
         // Limit WAL file size to 1MB to prevent unbounded growth
         sqlx::query("PRAGMA journal_size_limit=1048576")
           .execute(&mut *connection)
-          .await
-          .map_err(|e| DbError::Connection(e))?;
+          .await?;
 
-        Result::<(), DbError>::Ok(())
+        Ok(())
       })
     })
     .connect(&config.database_url)
@@ -246,12 +241,12 @@ mod tests {
       .expect("Failed to create in-memory SQLite pool");
 
     sqlx::query(
-      r#"
+      r"
       CREATE TABLE test_table (
         id INTEGER PRIMARY KEY,
         name TEXT NOT NULL
       )
-      "#,
+      ",
     )
     .execute(&pool)
     .await

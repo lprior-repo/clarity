@@ -12,7 +12,7 @@
 //!
 //! These tests verify that domain types are validated correctly
 
-use crate::db::{BeadId, BeadPriority, BeadStatus, BeadType, DbError, Email, UserId};
+use crate::db::{BeadId, BeadPriority, DbError, Email, UserId};
 
 #[allow(clippy::unwrap_used)]
 #[allow(clippy::panic)]
