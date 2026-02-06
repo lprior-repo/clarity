@@ -172,6 +172,49 @@ pub enum BeadStatus {
   Closed,
 }
 
+impl BeadStatus {
+  /// Parse a string into a `BeadStatus`
+  ///
+  /// # Errors
+  /// - Returns `DbError::Validation` if the string is not a valid status
+  pub fn from_str(s: &str) -> DbResult<Self> {
+    match s.to_lowercase().as_str() {
+      "open" => Ok(Self::Open),
+      "in_progress" => Ok(Self::InProgress),
+      "blocked" => Ok(Self::Blocked),
+      "deferred" => Ok(Self::Deferred),
+      "closed" => Ok(Self::Closed),
+      _ => Err(DbError::validation(format!("Invalid bead status: {s}"))),
+    }
+  }
+
+  /// Get the status as a lowercase string
+  #[must_use]
+  pub const fn as_str(&self) -> &'static str {
+    match self {
+      Self::Open => "open",
+      Self::InProgress => "in_progress",
+      Self::Blocked => "blocked",
+      Self::Deferred => "deferred",
+      Self::Closed => "closed",
+    }
+  }
+}
+
+impl std::fmt::Display for BeadStatus {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", self.as_str())
+  }
+}
+
+impl std::str::FromStr for BeadStatus {
+  type Err = DbError;
+
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    Self::from_str(s)
+  }
+}
+
 /// Bead type
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "bead_type", rename_all = "lowercase")]
@@ -181,6 +224,49 @@ pub enum BeadType {
   Refactor,
   Test,
   Docs,
+}
+
+impl BeadType {
+  /// Parse a string into a `BeadType`
+  ///
+  /// # Errors
+  /// - Returns `DbError::Validation` if the string is not a valid type
+  pub fn from_str(s: &str) -> DbResult<Self> {
+    match s.to_lowercase().as_str() {
+      "feature" => Ok(Self::Feature),
+      "bugfix" => Ok(Self::Bugfix),
+      "refactor" => Ok(Self::Refactor),
+      "test" => Ok(Self::Test),
+      "docs" => Ok(Self::Docs),
+      _ => Err(DbError::validation(format!("Invalid bead type: {s}"))),
+    }
+  }
+
+  /// Get the type as a lowercase string
+  #[must_use]
+  pub const fn as_str(&self) -> &'static str {
+    match self {
+      Self::Feature => "feature",
+      Self::Bugfix => "bugfix",
+      Self::Refactor => "refactor",
+      Self::Test => "test",
+      Self::Docs => "docs",
+    }
+  }
+}
+
+impl std::fmt::Display for BeadType {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", self.as_str())
+  }
+}
+
+impl std::str::FromStr for BeadType {
+  type Err = DbError;
+
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    Self::from_str(s)
+  }
 }
 
 /// Bead priority (1 = high, 2 = medium, 3 = low)
