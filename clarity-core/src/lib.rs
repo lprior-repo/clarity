@@ -5,9 +5,11 @@ pub mod error;
 pub mod json_formatter;
 pub mod progress;
 pub mod session;
+pub mod types;
 pub mod validation;
 
 pub use error::{ExitCode, ExitCodeError, map_db_error, map_validation_error};
+pub use types::{HttpMethod, HttpMethodError, SpecName, SpecNameError, Url, UrlError};
 
 /// A simple function to demonstrate core functionality
 pub fn greet(name: &str) -> String {

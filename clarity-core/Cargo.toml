@@ -19,3 +19,6 @@ sqlx.workspace = true
 uuid.workspace = true
 chrono.workspace = true
 deadpool-postgres.workspace = true
+url = "2.5"
+urlencoding = "2.1"
+once_cell = "1.19"
