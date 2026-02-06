@@ -1,5 +1,9 @@
 //! Core functionality for the Clarity application
 
+pub mod error;
+pub mod session;
+pub mod validation;
+
 /// A simple function to demonstrate core functionality
 pub fn greet(name: &str) -> String {
     format!("Hello, {}!", name)
