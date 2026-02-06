@@ -139,7 +139,7 @@ tasks:
   server:
     command: "cargo run -p clarity-server"
     description: "Run the Axum server"
-    dependencies:
+    deps:
       - build-server
     options:
       cache: false
@@ -148,7 +148,7 @@ tasks:
   client:
     command: "cargo run -p clarity-client"
     description: "Run the Dioxus client"
-    dependencies:
+    deps:
       - build-client
     options:
       cache: false
@@ -160,11 +160,11 @@ tasks:
 
   ci:
     description: "Run full CI pipeline (format, lint, test)"
-    commands:
-      - "moon run :fmt"
-      - "moon run :clippy"
-      - "moon run :test"
-      - "moon run :test-doc"
+    deps:
+      - fmt
+      - clippy
+      - test
+      - test-doc
     options:
       cache: true
       runInCI: true

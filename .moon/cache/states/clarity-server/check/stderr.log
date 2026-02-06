@@ -1,0 +1,548 @@
+[1m[92m    Blocking[0m waiting for file lock on package cache
+[1m[92m    Blocking[0m waiting for file lock on package cache
+[1m[92m    Blocking[0m waiting for file lock on package cache
+[1m[92m    Checking[0m clarity-core v0.1.0-dev (/home/lewis/src/clarity/clarity-core)
+[1m[91merror[0m[1m: expected one of `,`, `.`, `?`, `}`, or an operator, found `bead_type`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:293:7
+    [1m[94m|[0m
+[1m[94m285[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m292[0m [1m[94m|[0m         .map(|opt| opt.map(BeadPriority))?
+    [1m[94m|[0m                                           [1m[94m-[0m
+    [1m[94m|[0m                                           [1m[94m|[0m
+    [1m[94m|[0m                                           [1m[94mexpected one of `,`, `.`, `?`, `}`, or an operator[0m
+    [1m[94m|[0m                                           [1m[94mhelp: try adding a comma: `,`[0m
+[1m[94m293[0m [1m[94m|[0m       bead_type: row.try_get::<BeadType, _>("bead_type")?,
+    [1m[94m|[0m       [1m[91m^^^^^^^^^[0m [1m[91munexpected token[0m
+
+[1m[91merror[0m[1m: expected identifier, found reserved identifier `_`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:293:42
+    [1m[94m|[0m
+[1m[94m285[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m293[0m [1m[94m|[0m       bead_type: row.try_get::<BeadType, _>("bead_type")?,
+    [1m[94m|[0m                                          [1m[91m^[0m [1m[91mexpected identifier, found reserved identifier[0m
+
+[1m[91merror[0m[1m: expected one of `,`, `.`, `?`, `}`, or an operator, found `created_at`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:298:7
+    [1m[94m|[0m
+[1m[94m285[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m297[0m [1m[94m|[0m         .map(|opt| opt.map(UserId))?
+    [1m[94m|[0m                                     [1m[94m-[0m
+    [1m[94m|[0m                                     [1m[94m|[0m
+    [1m[94m|[0m                                     [1m[94mexpected one of `,`, `.`, `?`, `}`, or an operator[0m
+    [1m[94m|[0m                                     [1m[94mhelp: try adding a comma: `,`[0m
+[1m[94m298[0m [1m[94m|[0m       created_at: DateTime::from_naive_utc_and_offset(
+    [1m[94m|[0m       [1m[91m^^^^^^^^^^[0m [1m[91munexpected token[0m
+
+[1m[91merror[0m[1m: expected identifier, found reserved identifier `_`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:299:46
+    [1m[94m|[0m
+[1m[94m285[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m299[0m [1m[94m|[0m         row.try_get::<chrono::NaiveDateTime, _>("created_at")?,
+    [1m[94m|[0m                                              [1m[91m^[0m [1m[91mexpected identifier, found reserved identifier[0m
+
+[1m[91merror[0m[1m: expected one of `,`, `:`, or `}`, found `::`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:300:15
+    [1m[94m|[0m
+[1m[94m285[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m300[0m [1m[94m|[0m         chrono::Utc,
+    [1m[94m|[0m         [1m[94m------[0m[1m[91m^^[0m [1m[91mexpected one of `,`, `:`, or `}`[0m
+    [1m[94m|[0m         [1m[94m|[0m
+    [1m[94m|[0m         [1m[94mwhile parsing this struct field[0m
+
+[1m[91merror[0m[1m: expected identifier, found `)`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:301:7
+    [1m[94m|[0m
+[1m[94m285[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m301[0m [1m[94m|[0m       ),
+    [1m[94m|[0m       [1m[91m^[0m [1m[91mexpected identifier[0m
+
+[1m[91merror[0m[1m: expected one of `,`, `.`, `?`, `}`, or an operator, found `bead_type`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:342:11
+    [1m[94m|[0m
+[1m[94m334[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m341[0m [1m[94m|[0m             .map(|opt| opt.map(BeadPriority))?
+    [1m[94m|[0m                                               [1m[94m-[0m
+    [1m[94m|[0m                                               [1m[94m|[0m
+    [1m[94m|[0m                                               [1m[94mexpected one of `,`, `.`, `?`, `}`, or an operator[0m
+    [1m[94m|[0m                                               [1m[94mhelp: try adding a comma: `,`[0m
+[1m[94m342[0m [1m[94m|[0m           bead_type: r.try_get::<BeadType, _>("bead_type")?,
+    [1m[94m|[0m           [1m[91m^^^^^^^^^[0m [1m[91munexpected token[0m
+
+[1m[91merror[0m[1m: expected identifier, found reserved identifier `_`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:342:44
+    [1m[94m|[0m
+[1m[94m334[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m342[0m [1m[94m|[0m           bead_type: r.try_get::<BeadType, _>("bead_type")?,
+    [1m[94m|[0m                                            [1m[91m^[0m [1m[91mexpected identifier, found reserved identifier[0m
+
+[1m[91merror[0m[1m: expected one of `,`, `.`, `?`, `}`, or an operator, found `created_at`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:346:11
+    [1m[94m|[0m
+[1m[94m334[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m345[0m [1m[94m|[0m             .map(|opt| opt.map(UserId))?
+    [1m[94m|[0m                                         [1m[94m-[0m
+    [1m[94m|[0m                                         [1m[94m|[0m
+    [1m[94m|[0m                                         [1m[94mexpected one of `,`, `.`, `?`, `}`, or an operator[0m
+    [1m[94m|[0m                                         [1m[94mhelp: try adding a comma: `,`[0m
+[1m[94m346[0m [1m[94m|[0m           created_at: DateTime::from_naive_utc_and_offset(
+    [1m[94m|[0m           [1m[91m^^^^^^^^^^[0m [1m[91munexpected token[0m
+
+[1m[91merror[0m[1m: expected identifier, found reserved identifier `_`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:347:48
+    [1m[94m|[0m
+[1m[94m334[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m347[0m [1m[94m|[0m             r.try_get::<chrono::NaiveDateTime, _>("created_at")?,
+    [1m[94m|[0m                                                [1m[91m^[0m [1m[91mexpected identifier, found reserved identifier[0m
+
+[1m[91merror[0m[1m: expected one of `,`, `:`, or `}`, found `::`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:348:19
+    [1m[94m|[0m
+[1m[94m334[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m348[0m [1m[94m|[0m             chrono::Utc,
+    [1m[94m|[0m             [1m[94m------[0m[1m[91m^^[0m [1m[91mexpected one of `,`, `:`, or `}`[0m
+    [1m[94m|[0m             [1m[94m|[0m
+    [1m[94m|[0m             [1m[94mwhile parsing this struct field[0m
+
+[1m[91merror[0m[1m: expected identifier, found `)`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:349:11
+    [1m[94m|[0m
+[1m[94m334[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m349[0m [1m[94m|[0m           ),
+    [1m[94m|[0m           [1m[91m^[0m [1m[91mexpected identifier[0m
+
+[1m[91merror[0m[1m: expected one of `,`, `.`, `?`, `}`, or an operator, found `bead_type`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:390:11
+    [1m[94m|[0m
+[1m[94m382[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m389[0m [1m[94m|[0m             .map(|opt| opt.map(BeadPriority))?
+    [1m[94m|[0m                                               [1m[94m-[0m
+    [1m[94m|[0m                                               [1m[94m|[0m
+    [1m[94m|[0m                                               [1m[94mexpected one of `,`, `.`, `?`, `}`, or an operator[0m
+    [1m[94m|[0m                                               [1m[94mhelp: try adding a comma: `,`[0m
+[1m[94m390[0m [1m[94m|[0m           bead_type: r.try_get::<BeadType, _>("bead_type")?,
+    [1m[94m|[0m           [1m[91m^^^^^^^^^[0m [1m[91munexpected token[0m
+
+[1m[91merror[0m[1m: expected identifier, found reserved identifier `_`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:390:44
+    [1m[94m|[0m
+[1m[94m382[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m390[0m [1m[94m|[0m           bead_type: r.try_get::<BeadType, _>("bead_type")?,
+    [1m[94m|[0m                                            [1m[91m^[0m [1m[91mexpected identifier, found reserved identifier[0m
+
+[1m[91merror[0m[1m: expected one of `,`, `.`, `?`, `}`, or an operator, found `created_at`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:394:11
+    [1m[94m|[0m
+[1m[94m382[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m393[0m [1m[94m|[0m             .map(|opt| opt.map(UserId))?
+    [1m[94m|[0m                                         [1m[94m-[0m
+    [1m[94m|[0m                                         [1m[94m|[0m
+    [1m[94m|[0m                                         [1m[94mexpected one of `,`, `.`, `?`, `}`, or an operator[0m
+    [1m[94m|[0m                                         [1m[94mhelp: try adding a comma: `,`[0m
+[1m[94m394[0m [1m[94m|[0m           created_at: DateTime::from_naive_utc_and_offset(
+    [1m[94m|[0m           [1m[91m^^^^^^^^^^[0m [1m[91munexpected token[0m
+
+[1m[91merror[0m[1m: expected identifier, found reserved identifier `_`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:395:48
+    [1m[94m|[0m
+[1m[94m382[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m395[0m [1m[94m|[0m             r.try_get::<chrono::NaiveDateTime, _>("created_at")?,
+    [1m[94m|[0m                                                [1m[91m^[0m [1m[91mexpected identifier, found reserved identifier[0m
+
+[1m[91merror[0m[1m: expected one of `,`, `:`, or `}`, found `::`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:396:19
+    [1m[94m|[0m
+[1m[94m382[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m396[0m [1m[94m|[0m             chrono::Utc,
+    [1m[94m|[0m             [1m[94m------[0m[1m[91m^^[0m [1m[91mexpected one of `,`, `:`, or `}`[0m
+    [1m[94m|[0m             [1m[94m|[0m
+    [1m[94m|[0m             [1m[94mwhile parsing this struct field[0m
+
+[1m[91merror[0m[1m: expected identifier, found `)`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:397:11
+    [1m[94m|[0m
+[1m[94m382[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m397[0m [1m[94m|[0m           ),
+    [1m[94m|[0m           [1m[91m^[0m [1m[91mexpected identifier[0m
+
+[1m[91merror[0m[1m: expected one of `,`, `.`, `?`, `}`, or an operator, found `bead_type`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:438:11
+    [1m[94m|[0m
+[1m[94m430[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m437[0m [1m[94m|[0m             .map(|opt| opt.map(BeadPriority))?
+    [1m[94m|[0m                                               [1m[94m-[0m
+    [1m[94m|[0m                                               [1m[94m|[0m
+    [1m[94m|[0m                                               [1m[94mexpected one of `,`, `.`, `?`, `}`, or an operator[0m
+    [1m[94m|[0m                                               [1m[94mhelp: try adding a comma: `,`[0m
+[1m[94m438[0m [1m[94m|[0m           bead_type: r.try_get::<BeadType, _>("bead_type")?,
+    [1m[94m|[0m           [1m[91m^^^^^^^^^[0m [1m[91munexpected token[0m
+
+[1m[91merror[0m[1m: expected identifier, found reserved identifier `_`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:438:44
+    [1m[94m|[0m
+[1m[94m430[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m438[0m [1m[94m|[0m           bead_type: r.try_get::<BeadType, _>("bead_type")?,
+    [1m[94m|[0m                                            [1m[91m^[0m [1m[91mexpected identifier, found reserved identifier[0m
+
+[1m[91merror[0m[1m: expected one of `,`, `.`, `?`, `}`, or an operator, found `created_at`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:442:11
+    [1m[94m|[0m
+[1m[94m430[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m441[0m [1m[94m|[0m             .map(|opt| opt.map(UserId))?
+    [1m[94m|[0m                                         [1m[94m-[0m
+    [1m[94m|[0m                                         [1m[94m|[0m
+    [1m[94m|[0m                                         [1m[94mexpected one of `,`, `.`, `?`, `}`, or an operator[0m
+    [1m[94m|[0m                                         [1m[94mhelp: try adding a comma: `,`[0m
+[1m[94m442[0m [1m[94m|[0m           created_at: DateTime::from_naive_utc_and_offset(
+    [1m[94m|[0m           [1m[91m^^^^^^^^^^[0m [1m[91munexpected token[0m
+
+[1m[91merror[0m[1m: expected identifier, found reserved identifier `_`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:443:48
+    [1m[94m|[0m
+[1m[94m430[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m443[0m [1m[94m|[0m             r.try_get::<chrono::NaiveDateTime, _>("created_at")?,
+    [1m[94m|[0m                                                [1m[91m^[0m [1m[91mexpected identifier, found reserved identifier[0m
+
+[1m[91merror[0m[1m: expected one of `,`, `:`, or `}`, found `::`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:444:19
+    [1m[94m|[0m
+[1m[94m430[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m444[0m [1m[94m|[0m             chrono::Utc,
+    [1m[94m|[0m             [1m[94m------[0m[1m[91m^^[0m [1m[91mexpected one of `,`, `:`, or `}`[0m
+    [1m[94m|[0m             [1m[94m|[0m
+    [1m[94m|[0m             [1m[94mwhile parsing this struct field[0m
+
+[1m[91merror[0m[1m: expected identifier, found `)`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:445:11
+    [1m[94m|[0m
+[1m[94m430[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m445[0m [1m[94m|[0m           ),
+    [1m[94m|[0m           [1m[91m^[0m [1m[91mexpected identifier[0m
+
+[1m[91merror[0m[1m: expected one of `,`, `.`, `?`, `}`, or an operator, found `bead_type`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:489:7
+    [1m[94m|[0m
+[1m[94m481[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m488[0m [1m[94m|[0m         .map(|opt| opt.map(BeadPriority))?
+    [1m[94m|[0m                                           [1m[94m-[0m
+    [1m[94m|[0m                                           [1m[94m|[0m
+    [1m[94m|[0m                                           [1m[94mexpected one of `,`, `.`, `?`, `}`, or an operator[0m
+    [1m[94m|[0m                                           [1m[94mhelp: try adding a comma: `,`[0m
+[1m[94m489[0m [1m[94m|[0m       bead_type: row.try_get::<BeadType, _>("bead_type")?,
+    [1m[94m|[0m       [1m[91m^^^^^^^^^[0m [1m[91munexpected token[0m
+
+[1m[91merror[0m[1m: expected identifier, found reserved identifier `_`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:489:42
+    [1m[94m|[0m
+[1m[94m481[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m489[0m [1m[94m|[0m       bead_type: row.try_get::<BeadType, _>("bead_type")?,
+    [1m[94m|[0m                                          [1m[91m^[0m [1m[91mexpected identifier, found reserved identifier[0m
+
+[1m[91merror[0m[1m: expected one of `,`, `.`, `?`, `}`, or an operator, found `created_at`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:494:7
+    [1m[94m|[0m
+[1m[94m481[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m493[0m [1m[94m|[0m         .map(|opt| opt.map(UserId))?
+    [1m[94m|[0m                                     [1m[94m-[0m
+    [1m[94m|[0m                                     [1m[94m|[0m
+    [1m[94m|[0m                                     [1m[94mexpected one of `,`, `.`, `?`, `}`, or an operator[0m
+    [1m[94m|[0m                                     [1m[94mhelp: try adding a comma: `,`[0m
+[1m[94m494[0m [1m[94m|[0m       created_at: DateTime::from_naive_utc_and_offset(
+    [1m[94m|[0m       [1m[91m^^^^^^^^^^[0m [1m[91munexpected token[0m
+
+[1m[91merror[0m[1m: expected identifier, found reserved identifier `_`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:495:46
+    [1m[94m|[0m
+[1m[94m481[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m495[0m [1m[94m|[0m         row.try_get::<chrono::NaiveDateTime, _>("created_at")?,
+    [1m[94m|[0m                                              [1m[91m^[0m [1m[91mexpected identifier, found reserved identifier[0m
+
+[1m[91merror[0m[1m: expected one of `,`, `:`, or `}`, found `::`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:496:15
+    [1m[94m|[0m
+[1m[94m481[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m496[0m [1m[94m|[0m         chrono::Utc,
+    [1m[94m|[0m         [1m[94m------[0m[1m[91m^^[0m [1m[91mexpected one of `,`, `:`, or `}`[0m
+    [1m[94m|[0m         [1m[94m|[0m
+    [1m[94m|[0m         [1m[94mwhile parsing this struct field[0m
+
+[1m[91merror[0m[1m: expected identifier, found `)`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:497:7
+    [1m[94m|[0m
+[1m[94m481[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m497[0m [1m[94m|[0m       ),
+    [1m[94m|[0m       [1m[91m^[0m [1m[91mexpected identifier[0m
+
+[1m[91merror[0m[1m: expected one of `,`, `.`, `?`, `}`, or an operator, found `bead_type`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:543:7
+    [1m[94m|[0m
+[1m[94m535[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m542[0m [1m[94m|[0m         .map(|opt| opt.map(BeadPriority))?
+    [1m[94m|[0m                                           [1m[94m-[0m
+    [1m[94m|[0m                                           [1m[94m|[0m
+    [1m[94m|[0m                                           [1m[94mexpected one of `,`, `.`, `?`, `}`, or an operator[0m
+    [1m[94m|[0m                                           [1m[94mhelp: try adding a comma: `,`[0m
+[1m[94m543[0m [1m[94m|[0m       bead_type: row.try_get::<BeadType, _>("bead_type")?,
+    [1m[94m|[0m       [1m[91m^^^^^^^^^[0m [1m[91munexpected token[0m
+
+[1m[91merror[0m[1m: expected identifier, found reserved identifier `_`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:543:42
+    [1m[94m|[0m
+[1m[94m535[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m543[0m [1m[94m|[0m       bead_type: row.try_get::<BeadType, _>("bead_type")?,
+    [1m[94m|[0m                                          [1m[91m^[0m [1m[91mexpected identifier, found reserved identifier[0m
+
+[1m[91merror[0m[1m: expected one of `,`, `.`, `?`, `}`, or an operator, found `created_at`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:548:7
+    [1m[94m|[0m
+[1m[94m535[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m547[0m [1m[94m|[0m         .map(|opt| opt.map(UserId))?
+    [1m[94m|[0m                                     [1m[94m-[0m
+    [1m[94m|[0m                                     [1m[94m|[0m
+    [1m[94m|[0m                                     [1m[94mexpected one of `,`, `.`, `?`, `}`, or an operator[0m
+    [1m[94m|[0m                                     [1m[94mhelp: try adding a comma: `,`[0m
+[1m[94m548[0m [1m[94m|[0m       created_at: DateTime::from_naive_utc_and_offset(
+    [1m[94m|[0m       [1m[91m^^^^^^^^^^[0m [1m[91munexpected token[0m
+
+[1m[91merror[0m[1m: expected identifier, found reserved identifier `_`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:549:46
+    [1m[94m|[0m
+[1m[94m535[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m549[0m [1m[94m|[0m         row.try_get::<chrono::NaiveDateTime, _>("created_at")?,
+    [1m[94m|[0m                                              [1m[91m^[0m [1m[91mexpected identifier, found reserved identifier[0m
+
+[1m[91merror[0m[1m: expected one of `,`, `:`, or `}`, found `::`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:550:15
+    [1m[94m|[0m
+[1m[94m535[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m550[0m [1m[94m|[0m         chrono::Utc,
+    [1m[94m|[0m         [1m[94m------[0m[1m[91m^^[0m [1m[91mexpected one of `,`, `:`, or `}`[0m
+    [1m[94m|[0m         [1m[94m|[0m
+    [1m[94m|[0m         [1m[94mwhile parsing this struct field[0m
+
+[1m[91merror[0m[1m: expected identifier, found `)`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:551:7
+    [1m[94m|[0m
+[1m[94m535[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[94m----[0m [1m[94mwhile parsing this struct[0m
+[1m[94m...[0m
+[1m[94m551[0m [1m[94m|[0m       ),
+    [1m[94m|[0m       [1m[91m^[0m [1m[91mexpected identifier[0m
+
+[1m[91merror[E0432][0m[1m: unresolved imports `crate::db::get_user_by_email`, `crate::db::list_users`, `crate::db::update_user_email`[0m
+  [1m[94m--> [0mclarity-core/src/db/tests/integration_test.rs:19:3
+   [1m[94m|[0m
+[1m[94m19[0m [1m[94m|[0m   get_user_by_email, list_beads, list_beads_by_status, list_beads_by_user, list_users,
+   [1m[94m|[0m   [1m[91m^^^^^^^^^^^^^^^^^[0m [1m[91mno `get_user_by_email` in `db`[0m                         [1m[91m^^^^^^^^^^[0m [1m[91mno `list_users` in `db`[0m
+[1m[94m20[0m [1m[94m|[0m   run_migrations, update_bead_priority, update_bead_status, update_user_email, update_user_role,
+   [1m[94m|[0m                                                             [1m[91m^^^^^^^^^^^^^^^^^[0m
+   [1m[94m|[0m                                                             [1m[91m|[0m
+   [1m[94m|[0m                                                             [1m[91mno `update_user_email` in `db`[0m
+   [1m[94m|[0m                                                             [1m[91mhelp: a similar name exists in the module: `update_user_role`[0m
+
+[1m[33mwarning[0m[1m: unused imports: `Bead` and `UserId`[0m
+  [1m[94m--> [0mclarity-core/src/db/tests/integration_test.rs:21:3
+   [1m[94m|[0m
+[1m[94m21[0m [1m[94m|[0m   Bead, BeadId, BeadPriority, BeadStatus, BeadType, DbConfig, Email, NewBead, NewUser, UserId,
+   [1m[94m|[0m   [1m[33m^^^^[0m                                                                                 [1m[33m^^^^^^[0m
+   [1m[94m|[0m
+   [1m[94m= [0m[1mnote[0m: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+[1m[91merror[E0599][0m[1m: `i16` is not an iterator[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:250:22
+    [1m[94m|[0m
+[1m[94m250[0m [1m[94m|[0m       .map(|opt| opt.map(BeadPriority))?,
+    [1m[94m|[0m                      [1m[91m^^^[0m [1m[91m`i16` is not an iterator[0m
+    [1m[94m|[0m
+    [1m[94m= [0m[1mnote[0m: the following trait bounds were not satisfied:
+            `i16: Iterator`
+            which is required by `&mut i16: Iterator`
+
+[1m[91merror[E0063][0m[1m: missing fields `bead_type` and `created_at` in initializer of `Bead`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:285:21
+    [1m[94m|[0m
+[1m[94m285[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[91m^^^^[0m [1m[91mmissing `bead_type` and `created_at`[0m
+
+[1m[91merror[E0063][0m[1m: missing fields `bead_type` and `created_at` in initializer of `Bead`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:334:26
+    [1m[94m|[0m
+[1m[94m334[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[91m^^^^[0m [1m[91mmissing `bead_type` and `created_at`[0m
+
+[1m[91merror[E0063][0m[1m: missing fields `bead_type` and `created_at` in initializer of `Bead`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:382:26
+    [1m[94m|[0m
+[1m[94m382[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[91m^^^^[0m [1m[91mmissing `bead_type` and `created_at`[0m
+
+[1m[91merror[E0063][0m[1m: missing fields `bead_type` and `created_at` in initializer of `Bead`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:430:26
+    [1m[94m|[0m
+[1m[94m430[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[91m^^^^[0m [1m[91mmissing `bead_type` and `created_at`[0m
+
+[1m[91merror[E0063][0m[1m: missing fields `bead_type` and `created_at` in initializer of `Bead`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:481:21
+    [1m[94m|[0m
+[1m[94m481[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[91m^^^^[0m [1m[91mmissing `bead_type` and `created_at`[0m
+
+[1m[91merror[E0063][0m[1m: missing fields `bead_type` and `created_at` in initializer of `Bead`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:535:21
+    [1m[94m|[0m
+[1m[94m535[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[91m^^^^[0m [1m[91mmissing `bead_type` and `created_at`[0m
+
+[1m[91merror[E0063][0m[1m: missing fields `bead_type` and `created_at` in initializer of `models::Bead`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:285:21
+    [1m[94m|[0m
+[1m[94m285[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[91m^^^^[0m [1m[91mmissing `bead_type` and `created_at`[0m
+
+[1m[91merror[E0063][0m[1m: missing fields `bead_type` and `created_at` in initializer of `models::Bead`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:334:26
+    [1m[94m|[0m
+[1m[94m334[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[91m^^^^[0m [1m[91mmissing `bead_type` and `created_at`[0m
+
+[1m[91merror[E0063][0m[1m: missing fields `bead_type` and `created_at` in initializer of `models::Bead`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:382:26
+    [1m[94m|[0m
+[1m[94m382[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[91m^^^^[0m [1m[91mmissing `bead_type` and `created_at`[0m
+
+[1m[91merror[E0063][0m[1m: missing fields `bead_type` and `created_at` in initializer of `models::Bead`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:430:26
+    [1m[94m|[0m
+[1m[94m430[0m [1m[94m|[0m         Ok::<_, DbError>(Bead {
+    [1m[94m|[0m                          [1m[91m^^^^[0m [1m[91mmissing `bead_type` and `created_at`[0m
+
+[1m[91merror[E0063][0m[1m: missing fields `bead_type` and `created_at` in initializer of `models::Bead`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:481:21
+    [1m[94m|[0m
+[1m[94m481[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[91m^^^^[0m [1m[91mmissing `bead_type` and `created_at`[0m
+
+[1m[91merror[E0063][0m[1m: missing fields `bead_type` and `created_at` in initializer of `models::Bead`[0m
+   [1m[94m--> [0mclarity-core/src/db/repository.rs:535:21
+    [1m[94m|[0m
+[1m[94m535[0m [1m[94m|[0m     Some(row) => Ok(Bead {
+    [1m[94m|[0m                     [1m[91m^^^^[0m [1m[91mmissing `bead_type` and `created_at`[0m
+
+[1m[91merror[E0282][0m[1m: type annotations needed[0m
+   [1m[94m--> [0mclarity-core/src/db/tests/integration_test.rs:243:7
+    [1m[94m|[0m
+[1m[94m243[0m [1m[94m|[0m   let result = get_user_by_email(&pool, "nonexistent@example.com").await;
+    [1m[94m|[0m       [1m[91m^^^^^^[0m
+[1m[94m...[0m
+[1m[94m246[0m [1m[94m|[0m     result.is_err(),
+    [1m[94m|[0m     [1m[94m------[0m [1m[94mtype must be known at this point[0m
+    [1m[94m|[0m
+[1m[96mhelp[0m: consider giving `result` an explicit type
+    [1m[94m|[0m
+[1m[94m243[0m [1m[94m| [0m  let result[92m: /* Type */[0m = get_user_by_email(&pool, "nonexistent@example.com").await;
+    [1m[94m|[0m             [92m++++++++++++[0m
+
+[1m[91merror[E0282][0m[1m: type annotations needed[0m
+   [1m[94m--> [0mclarity-core/src/db/tests/integration_test.rs:260:15
+    [1m[94m|[0m
+[1m[94m260[0m [1m[94m|[0m   let users = list_users(&pool).await.unwrap();
+    [1m[94m|[0m               [1m[91m^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[91mcannot infer type[0m
+
+[1m[91merror[E0282][0m[1m: type annotations needed[0m
+   [1m[94m--> [0mclarity-core/src/db/tests/integration_test.rs:274:37
+    [1m[94m|[0m
+[1m[94m274[0m [1m[94m|[0m   let users: Vec<crate::db::User> = list_users(&pool).await.unwrap();
+    [1m[94m|[0m                                     [1m[91m^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[91mcannot infer type[0m
+
+[1m[91merror[E0282][0m[1m: type annotations needed[0m
+   [1m[94m--> [0mclarity-core/src/db/tests/integration_test.rs:298:22
+    [1m[94m|[0m
+[1m[94m298[0m [1m[94m|[0m     let updated_user = update_user_email(&pool, &user.id, "newemail@example.com")
+    [1m[94m|[0m [1m[91m ______________________^[0m
+[1m[94m299[0m [1m[94m|[0m [1m[91m|[0m     .await
+    [1m[94m|[0m [1m[91m|__________^[0m [1m[91mcannot infer type[0m
+
+[1m[91merror[E0282][0m[1m: type annotations needed[0m
+   [1m[94m--> [0mclarity-core/src/db/tests/integration_test.rs:317:37
+    [1m[94m|[0m
+[1m[94m317[0m [1m[94m|[0m   let users: Vec<crate::db::User> = list_users(&pool).await.unwrap();
+    [1m[94m|[0m                                     [1m[91m^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[91mcannot infer type[0m
+
+[1mSome errors have detailed explanations: E0063, E0599.[0m
+[1mFor more information about an error, try `rustc --explain E0063`.[0m
+[1m[91merror[0m: could not compile `clarity-core` (lib) due to 43 previous errors
+[1m[33mwarning[0m: build failed, waiting for other jobs to finish...
+[1mSome errors have detailed explanations: E0063, E0282, E0432, E0599.[0m
+[1m[33mwarning[0m: `clarity-core` (lib test) generated 1 warning
+[1m[91merror[0m: could not compile `clarity-core` (lib test) due to 49 previous errors; 1 warning emitted

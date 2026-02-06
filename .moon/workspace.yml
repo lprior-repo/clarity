@@ -6,20 +6,6 @@ versionConstraint: ">=1.0.0"
 
 # Define the projects in the workspace
 projects:
-  clarity-core:
-    root: "clarity-core"
-    type: "rust"
-    dependencies:
-      - clarity-server
-
-  clarity-server:
-    root: "clarity-server"
-    type: "rust"
-    dependencies:
-      - clarity-core
-
-  clarity-client:
-    root: "clarity-client"
-    type: "rust"
-    dependencies:
-      - clarity-core
+  - "clarity-core"
+  - "clarity-server"
+  - "clarity-client"

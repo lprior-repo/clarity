@@ -22,3 +22,10 @@ deadpool-postgres.workspace = true
 url = "2.5"
 urlencoding = "2.1"
 once_cell = "1.19"
+
+[dev-dependencies]
+sqlx = { workspace = true, features = ["runtime-tokio", "postgres", "uuid", "chrono", "json", "migrate"] }
+
+[features]
+default = []
+integration-tests = []
