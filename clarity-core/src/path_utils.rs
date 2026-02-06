@@ -93,7 +93,7 @@ pub fn get_extension(path: &str) -> Result<&str, PathError> {
   Path::new(path)
     .extension()
     .and_then(|ext| ext.to_str())
-    .ok_or_else(|| PathError::MissingExtension(PathBuf::from(path)))
+    .ok_or_else(|| PathError::MissingExtension(path.into()))
 }
 
 /// Get the file stem (name without extension) from a path
@@ -117,7 +117,7 @@ pub fn get_file_stem(path: &str) -> Result<&str, PathError> {
   Path::new(path)
     .file_stem()
     .and_then(|stem| stem.to_str())
-    .ok_or_else(|| PathError::InvalidUtf8)
+    .ok_or(PathError::InvalidUtf8)
 }
 
 /// Get the parent directory of a path
@@ -168,7 +168,7 @@ pub fn join_paths(base: &str, path: &str) -> Result<String, PathError> {
   result
     .to_str()
     .map(String::from)
-    .ok_or_else(|| PathError::InvalidUtf8)
+    .ok_or(PathError::InvalidUtf8)
 }
 
 /// Normalize a path by resolving `.` and `..` components
@@ -193,7 +193,7 @@ pub fn normalize_path(path: &str) -> Result<String, PathError> {
     .fold(PathBuf::new(), |acc, comp| {
       match comp {
         std::path::Component::ParentDir => {
-          acc.parent().map_or_else(|| acc.clone(), |p| p.to_path_buf())
+          acc.parent().map_or_else(|| acc.clone(), Path::to_path_buf)
         }
         std::path::Component::CurDir => acc,
         _ => acc.join(comp),
@@ -203,7 +203,7 @@ pub fn normalize_path(path: &str) -> Result<String, PathError> {
   normalized
     .to_str()
     .map(String::from)
-    .ok_or_else(|| PathError::InvalidUtf8)
+    .ok_or(PathError::InvalidUtf8)
 }
 
 /// Check if a path is absolute
