@@ -2,11 +2,11 @@
 
 ## Completed Tasks
 - [x] bd-2ck: foundation: Set up Rust workspace with zero-unwrap philosophy
+- [x] bd-di8: foundation: foundation-012: Test infrastructure setup
 
 ## Pending Tasks (42 Total)
 
 ### Foundation Beads
-- [ ] bd-di8: foundation: foundation-012: Test infrastructure setup
 - [ ] bd-1ft: foundation: foundation-011: Security validation
 - [ ] bd-2if: foundation: foundation-010: File path utilities
 - [ ] bd-3vg: foundation: foundation-009: Progress dashboard and output
