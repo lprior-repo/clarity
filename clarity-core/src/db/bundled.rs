@@ -34,11 +34,10 @@ static BUNDLED_DB_PATH: OnceLock<DbResult<PathBuf>> = OnceLock::new();
 /// - Returns `DbError::BundledDbExtraction` if atomic extraction fails
 /// - Returns `DbError::BundledDbExtraction` if cache directory cannot be created
 pub fn get_bundled_db_path() -> DbResult<PathBuf> {
-  BUNDLED_DB_PATH
-    .get_or_init(|| extract_database_atomically())
-    .as_ref()
-    .map(Clone::clone)
-    .map_err(|e| e.clone())
+  match BUNDLED_DB_PATH.get_or_init(|| extract_database_atomically()) {
+    Ok(path) => Ok(path.clone()),
+    Err(e) => Err(e.clone()),
+  }
 }
 
 /// Extract the embedded database to the cache directory atomically

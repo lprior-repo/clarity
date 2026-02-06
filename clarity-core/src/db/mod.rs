@@ -9,11 +9,15 @@
 //!
 //! Provides database access, migrations, and repository pattern for entities.
 
+pub mod bundled;
+pub mod cache;
 pub mod error;
 pub mod migrate;
 pub mod models;
 pub mod pool;
-pub mod sqlite_pool;
+// TODO: Re-enable sqlite modules when fully implemented
+// pub mod sqlite_optimize;
+// pub mod sqlite_pool;
 
 // TODO: Re-enable repository module when database infrastructure is ready
 // The repository module requires SQLX to connect to a database at compile time
@@ -26,11 +30,14 @@ pub mod sqlite_pool;
 #[cfg(test)]
 mod tests;
 
+pub use bundled::*;
+pub use cache::*;
 pub use error::{DbError, DbResult};
 pub use migrate::*;
 pub use models::*;
 pub use pool::*;
-pub use sqlite_pool::*;
+// pub use sqlite_optimize::*;
+// pub use sqlite_pool::*;
 // pub use repository::*;
 
 // Re-export commonly used types

@@ -6,7 +6,7 @@
 #![forbid(unsafe_code)]
 
 /// Database operation errors
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, Clone)]
 pub enum DbError {
   #[error("Database connection error: {0}")]
   Connection(#[from] sqlx::Error),
@@ -28,6 +28,12 @@ pub enum DbError {
 
   #[error("Invalid email format: {0}")]
   InvalidEmail(String),
+
+  #[error("Bundled database extraction error: {0}")]
+  BundledDbExtraction(String),
+
+  #[error("Bundled database connection error: {0}")]
+  BundledDbConnection(String),
 }
 
 impl DbError {
