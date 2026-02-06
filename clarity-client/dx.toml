@@ -1,0 +1,46 @@
+# Dioxus configuration file
+# See https://dioxuslabs.com/learn/0.5/reference
+
+[application]
+# App name
+name = "Clarity"
+
+# Default platform
+default_platform = "web"
+
+# Build configuration
+[web.app]
+# HTML title
+title = "Clarity"
+
+[web.watcher]
+# Watch for changes in these paths
+watch_path = ["src"]
+
+# Reload on these file changes
+reload_html = true
+watch_style = true
+
+# Additional resource paths
+resource_path = ["public"]
+
+[web.resource]
+# CSS files
+style = ["public/style.css"]
+
+# JavaScript files
+script = []
+
+[web.devtools]
+# Enable DevTools
+devtools = true
+
+# Auto-open browser
+personal_ssl_port = 8080
+
+[web.compiler]
+# Enable hot reload
+hot_reload = true
+
+# Optimize for debug builds
+optimize_on_watch = false

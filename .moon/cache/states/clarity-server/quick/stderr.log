@@ -1,0 +1,81 @@
+[1m[92m    Blocking[0m waiting for file lock on package cache
+[1m[92m    Blocking[0m waiting for file lock on package cache
+[1m[92m    Blocking[0m waiting for file lock on package cache
+[1m[92m    Blocking[0m waiting for file lock on package cache
+[1m[92m    Blocking[0m waiting for file lock on build directory
+[1m[92m    Checking[0m clarity-core v0.1.0-dev (/home/lewis/src/clarity/clarity-core)
+[1m[91merror[0m[1m: unused import: `Row`[0m
+  [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:15:39
+   [1m[94m|[0m
+[1m[94m15[0m [1m[94m|[0m use sqlx::{sqlite::SqlitePoolOptions, Row};
+   [1m[94m|[0m                                       [1m[91m^^^[0m
+   [1m[94m|[0m
+   [1m[94m= [0m[1mnote[0m: `-D unused-imports` implied by `-D warnings`
+   [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(unused_imports)]`
+
+[1m[91merror[0m[1m: unnecessary hashes around raw string literal[0m
+   [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:249:7
+    [1m[94m|[0m
+[1m[94m249[0m [1m[94m|[0m [1m[91m/[0m       r#"
+[1m[94m250[0m [1m[94m|[0m [1m[91m|[0m       CREATE TABLE test_table (
+[1m[94m251[0m [1m[94m|[0m [1m[91m|[0m         id INTEGER PRIMARY KEY,
+[1m[94m252[0m [1m[94m|[0m [1m[91m|[0m         name TEXT NOT NULL
+[1m[94m253[0m [1m[94m|[0m [1m[91m|[0m       )
+[1m[94m254[0m [1m[94m|[0m [1m[91m|[0m       "#,
+    [1m[94m|[0m [1m[91m|________^[0m
+    [1m[94m|[0m
+    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#needless_raw_string_hashes
+    [1m[94m= [0m[1mnote[0m: `-D clippy::needless-raw-string-hashes` implied by `-D warnings`
+    [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::needless_raw_string_hashes)]`
+[1m[96mhelp[0m: remove all the hashes around the string literal
+    [1m[94m|[0m
+[1m[94m249[0m [92m~ [0m      r"
+[1m[94m250[0m [1m[94m|[0m       CREATE TABLE test_table (
+[1m[94m...[0m
+[1m[94m253[0m [1m[94m|[0m       )
+[1m[94m254[0m [92m~ [0m      ",
+    [1m[94m|[0m
+
+[1m[91merror[0m[1m: unused imports: `BeadStatus` and `BeadType`[0m
+  [1m[94m--> [0mclarity-core/src/db/tests/models_test.rs:15:39
+   [1m[94m|[0m
+[1m[94m15[0m [1m[94m|[0m use crate::db::{BeadId, BeadPriority, BeadStatus, BeadType, DbError, Email, UserId};
+   [1m[94m|[0m                                       [1m[91m^^^^^^^^^^[0m  [1m[91m^^^^^^^^[0m
+   [1m[94m|[0m
+   [1m[94m= [0m[1mnote[0m: `-D unused-imports` implied by `-D warnings`
+   [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(unused_imports)]`
+
+[1m[91merror[E0277][0m[1m: `?` couldn't convert the error: `db::error::DbError: sqlx::error::DatabaseError` is not satisfied[0m
+   [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:125:47
+    [1m[94m|[0m
+[1m[94m122[0m [1m[94m|[0m [1m[94m/[0m         sqlx::query("PRAGMA journal_mode=WAL")
+[1m[94m123[0m [1m[94m|[0m [1m[94m|[0m           .execute(&mut *connection)
+[1m[94m124[0m [1m[94m|[0m [1m[94m|[0m           .await
+    [1m[94m|[0m [1m[94m|________________-[0m [1m[94mthis has type `Result<_, sqlx::Error>`[0m
+[1m[94m125[0m [1m[94m|[0m             .map_err(|e| DbError::Connection(e))?;
+    [1m[94m|[0m              [1m[94m-----------------------------------[0m[1m[91m^[0m [1m[91mthe trait `sqlx::error::DatabaseError` is not implemented for `db::error::DbError`[0m
+    [1m[94m|[0m              [1m[94m|[0m
+    [1m[94m|[0m              [1m[94mthis has type `Result<_, db::error::DbError>`[0m
+    [1m[94m|[0m
+[1m[92mnote[0m: `db::error::DbError` needs to implement `sqlx::error::DatabaseError`
+   [1m[94m--> [0mclarity-core/src/db/error.rs:10:1
+    [1m[94m|[0m
+[1m[94m 10[0m [1m[94m|[0m pub enum DbError {
+    [1m[94m|[0m [1m[92m^^^^^^^^^^^^^^^^[0m
+    [1m[94m= [0m[1mnote[0m: the question mark operation (`?`) implicitly performs a conversion on the error value using the `From` trait
+[1m[96mhelp[0m: the following other types implement trait `sqlx::error::DatabaseError`
+   [1m[94m--> [0m/cache/cargo-shared/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-postgres-0.8.6/src/error.rs:165:1
+    [1m[94m|[0m
+[1m[94m165[0m [1m[94m|[0m impl DatabaseError for PgDatabaseError {
+    [1m[94m|[0m [1m[96m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[96m`sqlx::sqlx_postgres::PgDatabaseError`[0m
+    [1m[94m|[0m
+   [1m[94m::: [0m/cache/cargo-shared/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-sqlite-0.8.6/src/error.rs:95:1
+    [1m[94m|[0m
+[1m[94m 95[0m [1m[94m|[0m impl DatabaseError for SqliteError {
+    [1m[94m|[0m [1m[96m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[96m`sqlx::sqlx_sqlite::SqliteError`[0m
+    [1m[94m= [0m[1mnote[0m: required for `sqlx::Error` to implement `std::convert::From<db::error::DbError>`
+
+[1mFor more information about this error, try `rustc --explain E0277`.[0m
+[1m[91merror[0m: could not compile `clarity-core` (lib) due to 2 previous errors
+[1m[33mwarning[0m: build failed, waiting for other jobs to finish...
+[1m[91merror[0m: could not compile `clarity-core` (lib test) due to 3 previous errors
