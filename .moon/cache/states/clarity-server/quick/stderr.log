@@ -1,7 +1,1 @@
-[1m[92m    Blocking[0m waiting for file lock on package cache
-[1m[92m    Blocking[0m waiting for file lock on package cache
-[1m[92m    Blocking[0m waiting for file lock on package cache
-[1m[92m    Checking[0m clarity-core v0.1.0-dev (/home/lewis/src/clarity/clarity-core)
-[1m[92m    Checking[0m clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client)
-[1m[92m    Checking[0m clarity-server v0.1.0-dev (/home/lewis/src/clarity/clarity-server)
-[1m[92m    Finished[0m ]8;;https://doc.rust-lang.org/cargo/reference/profiles.html#default-profiles\`dev` profile [unoptimized + debuginfo]]8;;\ target(s) in 1.00s
+Error writing files: failed to resolve mod `schema_registry`: /home/lewis/src/clarity/clarity-core/src/schema_registry.rs does not exist

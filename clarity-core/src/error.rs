@@ -124,7 +124,7 @@ pub const fn map_db_error(error: &DbError) -> Result<ExitCode, ExitCodeError> {
     DbError::Validation(_) => Ok(ExitCode::VALIDATION_ERROR),
     DbError::Duplicate(_) => Ok(ExitCode::ERROR),
     DbError::InvalidUuid(_) | DbError::InvalidEmail(_) => Ok(ExitCode::USAGE),
-    DbError::BundledDbExtraction(_) | DbError::BundledDbConnection(_) => Ok(ExitCode::IO_ERROR),
+    
   }
 }
 

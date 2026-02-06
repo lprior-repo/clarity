@@ -6,7 +6,7 @@
 #![forbid(unsafe_code)]
 
 /// Database operation errors
-#[derive(Debug, thiserror::Error, Clone)]
+#[derive(Debug, thiserror::Error)]
 pub enum DbError {
   #[error("Database connection error: {0}")]
   Connection(#[from] sqlx::Error),

@@ -22,7 +22,7 @@ use std::sync::OnceLock;
 const BUNDLED_DB: &[u8] = include_bytes!("../../assets/bundled.db");
 
 /// Cache directory for extracted database
-static BUNDLED_DB_PATH: OnceLock<DbResult<PathBuf>> = OnceLock::new();
+static BUNDLED_DB_PATH: OnceLock<PathBuf> = OnceLock::new();
 
 /// Get the path to the extracted bundled database
 ///
@@ -34,10 +34,19 @@ static BUNDLED_DB_PATH: OnceLock<DbResult<PathBuf>> = OnceLock::new();
 /// - Returns `DbError::BundledDbExtraction` if atomic extraction fails
 /// - Returns `DbError::BundledDbExtraction` if cache directory cannot be created
 pub fn get_bundled_db_path() -> DbResult<PathBuf> {
-  match BUNDLED_DB_PATH.get_or_init(|| extract_database_atomically()) {
-    Ok(path) => Ok(path.clone()),
-    Err(e) => Err(e.clone()),
+  // Try to get cached path
+  if let Some(path) = BUNDLED_DB_PATH.get() {
+    return Ok(path.clone());
   }
+
+  // Extract database
+  let path = extract_database_atomically()?;
+
+  // Cache the path
+  // Note: set() will return Err if already set, which is fine - we just use the existing value
+  let _ = BUNDLED_DB_PATH.set(path.clone());
+
+  Ok(path)
 }
 
 /// Extract the embedded database to the cache directory atomically
@@ -95,11 +104,7 @@ mod tests {
   #[test]
   fn test_bundled_db_module_compiles() {
     // This test verifies the module compiles
-    // Actual functionality tests will be added in GREEN phase
   }
-
-  // Note: The following tests will fail until we implement the functions
-  // They are written here as part of TDD RED phase
 
   #[test]
   fn test_bundled_db_extraction() -> DbResult<()> {
