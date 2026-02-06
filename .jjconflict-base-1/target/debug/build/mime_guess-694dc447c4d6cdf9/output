@@ -1,0 +1,1 @@
+cargo:rustc-env=MIME_TYPES_GENERATED_PATH=/home/lewis/src/clarity/target/debug/build/mime_guess-694dc447c4d6cdf9/out/mime_types_generated.rs

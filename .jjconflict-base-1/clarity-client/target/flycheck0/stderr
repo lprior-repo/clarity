@@ -1,0 +1,98 @@
+   0.173737449s  INFO prepare_target{force=false package_id=clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client) target="clarity_client"}: cargo::core::compiler::fingerprint: stale: changed "/home/lewis/src/clarity/clarity-core/src/lib.rs"
+   0.173760529s  INFO prepare_target{force=false package_id=clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client) target="clarity_client"}: cargo::core::compiler::fingerprint:           (vs) "/home/lewis/src/clarity/clarity-client/target/debug/.fingerprint/clarity-core-c9ab9e3c0e288c85/dep-lib-clarity_core"
+   0.173764229s  INFO prepare_target{force=false package_id=clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client) target="clarity_client"}: cargo::core::compiler::fingerprint:                FileTime { seconds: 1770188970, nanos: 214962310 } < FileTime { seconds: 1770189146, nanos: 864528171 }
+   0.174043936s  INFO prepare_target{force=false package_id=clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client) target="clarity_client"}: cargo::core::compiler::fingerprint: fingerprint dirty for clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client)/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("clarity_client", ["lib"], "/home/lewis/src/clarity/clarity-client/src/lib.rs", Edition2021) }
+   0.174061186s  INFO prepare_target{force=false package_id=clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client) target="clarity_client"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { name: "clarity_core" })
+   0.174978388s  INFO prepare_target{force=false package_id=clarity-core v0.1.0-dev (/home/lewis/src/clarity/clarity-core) target="clarity_core"}: cargo::core::compiler::fingerprint: fingerprint dirty for clarity-core v0.1.0-dev (/home/lewis/src/clarity/clarity-core)/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("clarity_core", ["lib"], "/home/lewis/src/clarity/clarity-core/src/lib.rs", Edition2021) }
+   0.174995658s  INFO prepare_target{force=false package_id=clarity-core v0.1.0-dev (/home/lewis/src/clarity/clarity-core) target="clarity_core"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleItem(ChangedFile { reference: "/home/lewis/src/clarity/clarity-client/target/debug/.fingerprint/clarity-core-c9ab9e3c0e288c85/dep-lib-clarity_core", reference_mtime: FileTime { seconds: 1770188970, nanos: 214962310 }, stale: "/home/lewis/src/clarity/clarity-core/src/lib.rs", stale_mtime: FileTime { seconds: 1770189146, nanos: 864528171 } }))
+   0.191221402s  INFO prepare_target{force=false package_id=clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client) target="clarity_client"}: cargo::core::compiler::fingerprint: fingerprint dirty for clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client)/Check { test: true }/TargetInner { name_inferred: true, ..: lib_target("clarity_client", ["lib"], "/home/lewis/src/clarity/clarity-client/src/lib.rs", Edition2021) }
+   0.191256102s  INFO prepare_target{force=false package_id=clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client) target="clarity_client"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { name: "clarity_core" })
+   0.193270804s  INFO prepare_target{force=false package_id=clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client) target="clarity-client"}: cargo::core::compiler::fingerprint: fingerprint error for clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client)/Check { test: false }/TargetInner { name: "clarity-client", doc: true, ..: with_path("/home/lewis/src/clarity/clarity-client/src/main.rs", Edition2021) }
+   0.193810629s  INFO prepare_target{force=false package_id=clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client) target="clarity-client"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/lewis/src/clarity/clarity-client/target/debug/.fingerprint/clarity-client-80620164cd4dc626/bin-clarity-client`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: cargo_util::paths::read_bytes
+   1: cargo_util::paths::read
+   2: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   3: cargo::core::compiler::fingerprint::prepare_target
+   4: cargo::core::compiler::compile
+   5: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   6: cargo::ops::cargo_compile::compile_ws
+   7: cargo::ops::cargo_compile::compile_with_exec
+   8: cargo::ops::cargo_compile::compile
+   9: cargo::commands::check::exec
+  10: <cargo::cli::Exec>::exec
+  11: cargo::main
+  12: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  13: std::rt::lang_start::<()>::{closure#0}
+  14: <&dyn core::ops::function::Fn<(), Output = i32> + core::panic::unwind_safe::RefUnwindSafe + core::marker::Sync as core::ops::function::FnOnce<()>>::call_once
+             at /rustc/56f24e00c62ec2db9a8b407e7aef532caaf71062/library/core/src/ops/function.rs:287:21
+  15: std::panicking::catch_unwind::do_call::<&dyn core::ops::function::Fn<(), Output = i32> + core::panic::unwind_safe::RefUnwindSafe + core::marker::Sync, i32>
+             at /rustc/56f24e00c62ec2db9a8b407e7aef532caaf71062/library/std/src/panicking.rs:581:40
+  16: std::panicking::catch_unwind::<i32, &dyn core::ops::function::Fn<(), Output = i32> + core::panic::unwind_safe::RefUnwindSafe + core::marker::Sync>
+             at /rustc/56f24e00c62ec2db9a8b407e7aef532caaf71062/library/std/src/panicking.rs:544:19
+  17: std::panic::catch_unwind::<&dyn core::ops::function::Fn<(), Output = i32> + core::panic::unwind_safe::RefUnwindSafe + core::marker::Sync, i32>
+             at /rustc/56f24e00c62ec2db9a8b407e7aef532caaf71062/library/std/src/panic.rs:359:14
+  18: std::rt::lang_start_internal::{closure#0}
+             at /rustc/56f24e00c62ec2db9a8b407e7aef532caaf71062/library/std/src/rt.rs:175:24
+  19: std::panicking::catch_unwind::do_call::<std::rt::lang_start_internal::{closure#0}, isize>
+             at /rustc/56f24e00c62ec2db9a8b407e7aef532caaf71062/library/std/src/panicking.rs:581:40
+  20: std::panicking::catch_unwind::<isize, std::rt::lang_start_internal::{closure#0}>
+             at /rustc/56f24e00c62ec2db9a8b407e7aef532caaf71062/library/std/src/panicking.rs:544:19
+  21: std::panic::catch_unwind::<std::rt::lang_start_internal::{closure#0}, isize>
+             at /rustc/56f24e00c62ec2db9a8b407e7aef532caaf71062/library/std/src/panic.rs:359:14
+  22: std::rt::lang_start_internal
+             at /rustc/56f24e00c62ec2db9a8b407e7aef532caaf71062/library/std/src/rt.rs:171:5
+  23: main
+  24: <unknown>
+  25: __libc_start_main
+  26: <unknown>
+   0.202006415s  INFO prepare_target{force=false package_id=clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client) target="clarity-client"}: cargo::core::compiler::fingerprint: fingerprint error for clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client)/Check { test: true }/TargetInner { name: "clarity-client", doc: true, ..: with_path("/home/lewis/src/clarity/clarity-client/src/main.rs", Edition2021) }
+   0.202085004s  INFO prepare_target{force=false package_id=clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client) target="clarity-client"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/lewis/src/clarity/clarity-client/target/debug/.fingerprint/clarity-client-a7a9c7aa6dd168cb/test-bin-clarity-client`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: cargo_util::paths::read_bytes
+   1: cargo_util::paths::read
+   2: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   3: cargo::core::compiler::fingerprint::prepare_target
+   4: cargo::core::compiler::compile
+   5: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   6: cargo::ops::cargo_compile::compile_ws
+   7: cargo::ops::cargo_compile::compile_with_exec
+   8: cargo::ops::cargo_compile::compile
+   9: cargo::commands::check::exec
+  10: <cargo::cli::Exec>::exec
+  11: cargo::main
+  12: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  13: std::rt::lang_start::<()>::{closure#0}
+  14: <&dyn core::ops::function::Fn<(), Output = i32> + core::panic::unwind_safe::RefUnwindSafe + core::marker::Sync as core::ops::function::FnOnce<()>>::call_once
+             at /rustc/56f24e00c62ec2db9a8b407e7aef532caaf71062/library/core/src/ops/function.rs:287:21
+  15: std::panicking::catch_unwind::do_call::<&dyn core::ops::function::Fn<(), Output = i32> + core::panic::unwind_safe::RefUnwindSafe + core::marker::Sync, i32>
+             at /rustc/56f24e00c62ec2db9a8b407e7aef532caaf71062/library/std/src/panicking.rs:581:40
+  16: std::panicking::catch_unwind::<i32, &dyn core::ops::function::Fn<(), Output = i32> + core::panic::unwind_safe::RefUnwindSafe + core::marker::Sync>
+             at /rustc/56f24e00c62ec2db9a8b407e7aef532caaf71062/library/std/src/panicking.rs:544:19
+  17: std::panic::catch_unwind::<&dyn core::ops::function::Fn<(), Output = i32> + core::panic::unwind_safe::RefUnwindSafe + core::marker::Sync, i32>
+             at /rustc/56f24e00c62ec2db9a8b407e7aef532caaf71062/library/std/src/panic.rs:359:14
+  18: std::rt::lang_start_internal::{closure#0}
+             at /rustc/56f24e00c62ec2db9a8b407e7aef532caaf71062/library/std/src/rt.rs:175:24
+  19: std::panicking::catch_unwind::do_call::<std::rt::lang_start_internal::{closure#0}, isize>
+             at /rustc/56f24e00c62ec2db9a8b407e7aef532caaf71062/library/std/src/panicking.rs:581:40
+  20: std::panicking::catch_unwind::<isize, std::rt::lang_start_internal::{closure#0}>
+             at /rustc/56f24e00c62ec2db9a8b407e7aef532caaf71062/library/std/src/panicking.rs:544:19
+  21: std::panic::catch_unwind::<std::rt::lang_start_internal::{closure#0}, isize>
+             at /rustc/56f24e00c62ec2db9a8b407e7aef532caaf71062/library/std/src/panic.rs:359:14
+  22: std::rt::lang_start_internal
+             at /rustc/56f24e00c62ec2db9a8b407e7aef532caaf71062/library/std/src/rt.rs:171:5
+  23: main
+  24: <unknown>
+  25: __libc_start_main
+  26: <unknown>
+    Checking clarity-core v0.1.0-dev (/home/lewis/src/clarity/clarity-core)
+    Checking clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.71s
