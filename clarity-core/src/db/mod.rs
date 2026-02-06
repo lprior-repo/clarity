@@ -13,6 +13,7 @@ pub mod error;
 pub mod migrate;
 pub mod models;
 pub mod pool;
+pub mod sqlite_pool;
 
 // TODO: Re-enable repository module when database infrastructure is ready
 // The repository module requires SQLX to connect to a database at compile time
@@ -29,6 +30,7 @@ pub use error::{DbError, DbResult};
 pub use migrate::*;
 pub use models::*;
 pub use pool::*;
+pub use sqlite_pool::*;
 // pub use repository::*;
 
 // Re-export commonly used types
