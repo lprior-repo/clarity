@@ -1,105 +1,16 @@
+[1m[92m    Blocking[0m waiting for file lock on package cache
+[1m[92m    Blocking[0m waiting for file lock on package cache
+[1m[92m    Blocking[0m waiting for file lock on package cache
+[1m[92m    Blocking[0m waiting for file lock on package cache
 [1m[92m   Compiling[0m clarity-core v0.1.0-dev (/home/lewis/src/clarity/clarity-core)
-[1m[91merror[0m[1m: error communicating with database: failed to lookup address information: Name or service not known[0m
-  [1m[94m--> [0mclarity-core/src/db/repository.rs:31:16
+[1m[91merror[E0583][0m[1m: file not found for module `integration_test`[0m
+  [1m[94m--> [0mclarity-core/src/db/tests/mod.rs:11:1
    [1m[94m|[0m
-[1m[94m31[0m [1m[94m|[0m     let result = sqlx::query!(
-   [1m[94m|[0m [1m[91m ________________^[0m
-[1m[94m32[0m [1m[94m|[0m [1m[91m|[0m     r#"
-[1m[94m33[0m [1m[94m|[0m [1m[91m|[0m     INSERT INTO users (id, email, password_hash, role, created_at, updated_at)
-[1m[94m34[0m [1m[94m|[0m [1m[91m|[0m     VALUES ($1, $2, $3, $4, $5, $6)
-[1m[94m...[0m  [1m[91m|[0m
-[1m[94m42[0m [1m[94m|[0m [1m[91m|[0m     updated_at
-[1m[94m43[0m [1m[94m|[0m [1m[91m|[0m   )
-   [1m[94m|[0m [1m[91m|___^[0m
+[1m[94m11[0m [1m[94m|[0m mod integration_test;
+   [1m[94m|[0m [1m[91m^^^^^^^^^^^^^^^^^^^^^[0m
    [1m[94m|[0m
-   [1m[94m= [0m[1mnote[0m: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+   [1m[94m= [0m[1mhelp[0m: to create the module `integration_test`, create file "clarity-core/src/db/tests/integration_test.rs" or "clarity-core/src/db/tests/integration_test/mod.rs"
+   [1m[94m= [0m[1mnote[0m: if there is a `mod integration_test` elsewhere in the crate already, import it with `use crate::...` instead
 
-[1m[91merror[0m[1m: error communicating with database: failed to lookup address information: Name or service not known[0m
-  [1m[94m--> [0mclarity-core/src/db/repository.rs:70:16
-   [1m[94m|[0m
-[1m[94m70[0m [1m[94m|[0m     let result = sqlx::query!(
-   [1m[94m|[0m [1m[91m ________________^[0m
-[1m[94m71[0m [1m[94m|[0m [1m[91m|[0m     r#"
-[1m[94m72[0m [1m[94m|[0m [1m[91m|[0m     SELECT id, email, role, created_at, updated_at
-[1m[94m73[0m [1m[94m|[0m [1m[91m|[0m     FROM users
-[1m[94m...[0m  [1m[91m|[0m
-[1m[94m76[0m [1m[94m|[0m [1m[91m|[0m     user_id
-[1m[94m77[0m [1m[94m|[0m [1m[91m|[0m   )
-   [1m[94m|[0m [1m[91m|___^[0m
-   [1m[94m|[0m
-   [1m[94m= [0m[1mnote[0m: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-[1m[91merror[0m[1m: error communicating with database: failed to lookup address information: Name or service not known[0m
-  [1m[94m--> [0mclarity-core/src/db/repository.rs:92:16
-   [1m[94m|[0m
-[1m[94m92[0m [1m[94m|[0m     let result = sqlx::query!(
-   [1m[94m|[0m [1m[91m ________________^[0m
-[1m[94m93[0m [1m[94m|[0m [1m[91m|[0m     r#"
-[1m[94m94[0m [1m[94m|[0m [1m[91m|[0m     SELECT id, email, role, created_at, updated_at
-[1m[94m95[0m [1m[94m|[0m [1m[91m|[0m     FROM users
-[1m[94m...[0m  [1m[91m|[0m
-[1m[94m98[0m [1m[94m|[0m [1m[91m|[0m     email_obj.as_str()
-[1m[94m99[0m [1m[94m|[0m [1m[91m|[0m   )
-   [1m[94m|[0m [1m[91m|___^[0m
-   [1m[94m|[0m
-   [1m[94m= [0m[1mnote[0m: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-[1m[91merror[0m[1m: error communicating with database: failed to lookup address information: Name or service not known[0m
-   [1m[94m--> [0mclarity-core/src/db/repository.rs:112:17
-    [1m[94m|[0m
-[1m[94m112[0m [1m[94m|[0m     let results = sqlx::query!(
-    [1m[94m|[0m [1m[91m _________________^[0m
-[1m[94m113[0m [1m[94m|[0m [1m[91m|[0m     r#"
-[1m[94m114[0m [1m[94m|[0m [1m[91m|[0m     SELECT id, email, role, created_at, updated_at
-[1m[94m115[0m [1m[94m|[0m [1m[91m|[0m     FROM users
-[1m[94m116[0m [1m[94m|[0m [1m[91m|[0m     ORDER BY email ASC
-[1m[94m117[0m [1m[94m|[0m [1m[91m|[0m     "#,
-[1m[94m118[0m [1m[94m|[0m [1m[91m|[0m   )
-    [1m[94m|[0m [1m[91m|___^[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-[1m[91merror[0m[1m: error communicating with database: failed to lookup address information: Name or service not known[0m
-   [1m[94m--> [0mclarity-core/src/db/repository.rs:147:16
-    [1m[94m|[0m
-[1m[94m147[0m [1m[94m|[0m     let result = sqlx::query!(
-    [1m[94m|[0m [1m[91m ________________^[0m
-[1m[94m148[0m [1m[94m|[0m [1m[91m|[0m     r#"
-[1m[94m149[0m [1m[94m|[0m [1m[91m|[0m     UPDATE users
-[1m[94m150[0m [1m[94m|[0m [1m[91m|[0m     SET email = $1, updated_at = NOW()
-[1m[94m...[0m   [1m[91m|[0m
-[1m[94m155[0m [1m[94m|[0m [1m[91m|[0m     user_id
-[1m[94m156[0m [1m[94m|[0m [1m[91m|[0m   )
-    [1m[94m|[0m [1m[91m|___^[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-[1m[91merror[0m[1m: error communicating with database: failed to lookup address information: Name or service not known[0m
-   [1m[94m--> [0mclarity-core/src/db/repository.rs:174:16
-    [1m[94m|[0m
-[1m[94m174[0m [1m[94m|[0m     let result = sqlx::query!(
-    [1m[94m|[0m [1m[91m ________________^[0m
-[1m[94m175[0m [1m[94m|[0m [1m[91m|[0m     r#"
-[1m[94m176[0m [1m[94m|[0m [1m[91m|[0m     UPDATE users
-[1m[94m177[0m [1m[94m|[0m [1m[91m|[0m     SET role = $1, updated_at = NOW()
-[1m[94m...[0m   [1m[91m|[0m
-[1m[94m182[0m [1m[94m|[0m [1m[91m|[0m     user_id
-[1m[94m183[0m [1m[94m|[0m [1m[91m|[0m   )
-    [1m[94m|[0m [1m[91m|___^[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-[1m[91merror[0m[1m: error communicating with database: failed to lookup address information: Name or service not known[0m
-   [1m[94m--> [0mclarity-core/src/db/repository.rs:197:16
-    [1m[94m|[0m
-[1m[94m197[0m [1m[94m|[0m     let result = sqlx::query!(
-    [1m[94m|[0m [1m[91m ________________^[0m
-[1m[94m198[0m [1m[94m|[0m [1m[91m|[0m     r#"
-[1m[94m199[0m [1m[94m|[0m [1m[91m|[0m     DELETE FROM users
-[1m[94m200[0m [1m[94m|[0m [1m[91m|[0m     WHERE id = $1
-[1m[94m201[0m [1m[94m|[0m [1m[91m|[0m     "#,
-[1m[94m202[0m [1m[94m|[0m [1m[91m|[0m     user_id
-[1m[94m203[0m [1m[94m|[0m [1m[91m|[0m   )
-    [1m[94m|[0m [1m[91m|___^[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+[1mFor more information about this error, try `rustc --explain E0583`.[0m
+[1m[91merror[0m: could not compile `clarity-core` (lib test) due to 1 previous error

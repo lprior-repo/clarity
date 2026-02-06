@@ -6,6 +6,39 @@ members = [
 ]
 resolver = "2"
 
+# Zero-unwrap philosophy: Enforce strict error handling via compiler lints
+[workspace.lints.rust]
+# Warn about unused results (helps catch ignored errors)
+unused_results = "warn"
+# Warn about missing documentation for public items
+missing_docs = "warn"
+# Warn about deprecated items
+deprecated = "warn"
+
+[workspace.lints.clippy]
+# FORBID: unwrap() and expect() - core of zero-unwrap philosophy
+unwrap_used = "deny"
+expect_used = "deny"
+# FORBID: panic in production code
+panic = "deny"
+todo = "warn"
+unimplemented = "warn"
+# ENFORCE: Result types and proper error handling
+result_large_err = "warn"
+# ENFORCE: Functional patterns
+or_fun_call = "warn"
+expect_fun_call = "warn"
+# ENFORCE: Code quality
+cognitive_complexity = "warn"
+too_many_arguments = "warn"
+# ENFORCE: Error messages must be meaningful
+unwrap_in_result = "deny"
+# ALLOW: In tests, we may use unwrap for test data (but still prefer Result)
+#[cfg(test)]
+#unwrap_used = "warn"
+#[cfg(test)]
+#expect_used = "warn"
+
 [workspace.package]
 version = "0.1.0-dev"
 edition = "2021"
