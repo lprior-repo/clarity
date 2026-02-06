@@ -10,7 +10,7 @@
 ### Foundation Beads
 - [x] bd-2if: foundation: foundation-010: File path utilities
 - [x] bd-3vg: foundation: foundation-009: Progress dashboard and output
-- [ ] bd-26p: foundation: JSON output formatting
+- [x] bd-26p: foundation: JSON output formatting
 - [ ] bd-1ib: foundation: Exit code system
 - [ ] bd-3s0: foundation: Implement type system (HttpMethod, SpecName, Url, etc.)
 - [ ] bd-2b3: foundation: Implement Result-based error handling system
@@ -76,6 +76,6 @@ ralph "Implement bead [ID]: [Title]" \
 
 ## Progress Tracking
 Total Beads: 42
-Completed: 2
-Remaining: 40
-Progress: 4.8%
+Completed: 3
+Remaining: 39
+Progress: 7.1%

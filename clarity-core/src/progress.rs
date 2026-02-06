@@ -448,11 +448,11 @@ pub fn calculate_progress(statuses: &[ProgressStatus]) -> ProgressMetrics {
 /// # Examples
 ///
 /// ```
-/// use clarity_core::progress::{ProgressStatus, ProgressMetrics};
+/// use clarity_core::progress::{ProgressStatus, ProgressMetrics, format_terminal_progress};
 ///
 /// let metrics = ProgressMetrics::new(10, 7, 2, 0, 1, 0).unwrap();
 /// let output = format_terminal_progress(&metrics);
-/// assert!(output.contains("[=====  ]"));
+/// assert!(output.contains("[============================            ] 70.0%"));
 /// ```
 pub fn format_terminal_progress(metrics: &ProgressMetrics) -> String {
     let bar_length = 40;
@@ -484,7 +484,7 @@ pub fn format_terminal_progress(metrics: &ProgressMetrics) -> String {
 /// # Examples
 ///
 /// ```
-/// use clarity_core::progress::{ProgressStatus, ProgressMetrics};
+/// use clarity_core::progress::{ProgressStatus, ProgressMetrics, format_json_progress};
 ///
 /// let metrics = ProgressMetrics::new(10, 7, 2, 0, 1, 0).unwrap();
 /// let json = format_json_progress(&metrics);
@@ -501,7 +501,7 @@ pub fn format_json_progress(metrics: &ProgressMetrics) -> String {
 /// # Examples
 ///
 /// ```
-/// use clarity_core::progress::{ProgressStatus, ProgressMetrics};
+/// use clarity_core::progress::{ProgressStatus, ProgressMetrics, format_markdown_progress};
 ///
 /// let metrics = ProgressMetrics::new(10, 7, 2, 0, 1, 0).unwrap();
 /// let md = format_markdown_progress(&metrics);
@@ -553,10 +553,10 @@ pub fn format_markdown_progress(metrics: &ProgressMetrics) -> String {
 /// # Examples
 ///
 /// ```
-/// use clarity_core::progress::{ProgressStatus, ProgressMetrics, ProgressDashboard};
+/// use clarity_core::progress::{ProgressStatus, ProgressMetrics, ProgressDashboard, generate_dashboard};
 ///
 /// let metrics = ProgressMetrics::new(10, 7, 2, 0, 1, 0).unwrap();
-/// let dashboard = ProgressDashboard::new("Project Progress".to_string(), metrics, vec![]);
+/// let dashboard = generate_dashboard("Project Progress".to_string(), metrics, vec![]);
 /// assert_eq!(dashboard.title, "Project Progress");
 /// ```
 pub fn generate_dashboard(
@@ -580,14 +580,14 @@ pub fn generate_dashboard(
 /// # Examples
 ///
 /// ```
-/// use clarity_core::progress::{ProgressStatus, ProgressMetrics, ProgressFormat, ProgressOutputOptions};
+/// use clarity_core::progress::{ProgressStatus, ProgressMetrics, ProgressFormat, ProgressOutputOptions, format_progress};
 ///
 /// let metrics = ProgressMetrics::new(10, 7, 2, 0, 1, 0).unwrap();
 /// let output = format_progress(&metrics, ProgressOutputOptions {
 ///     format: ProgressFormat::Terminal,
 ///     ..Default::default()
 /// });
-/// assert!(output.contains("[=====  ]"));
+/// assert!(output.contains("[============================            ] 70.0%"));
 /// ```
 pub fn format_progress(metrics: &ProgressMetrics, options: ProgressOutputOptions) -> String {
     match options.format {

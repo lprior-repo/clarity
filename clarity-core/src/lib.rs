@@ -2,6 +2,7 @@
 
 pub mod db;
 pub mod error;
+pub mod json_formatter;
 pub mod progress;
 pub mod session;
 pub mod validation;
