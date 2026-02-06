@@ -1,4 +1,18 @@
 [1m[92m    Blocking[0m waiting for file lock on package cache
 [1m[92m    Blocking[0m waiting for file lock on package cache
 [1m[92m    Blocking[0m waiting for file lock on package cache
-[1m[92m    Blocking[0m waiting for file lock on build directory
+[1m[92m    Blocking[0m waiting for file lock on package cache
+[1m[92m    Checking[0m clarity-core v0.1.0-dev (/home/lewis/src/clarity/clarity-core)
+[1m[91merror[E0583][0m[1m: file not found for module `integration_test`[0m
+  [1m[94m--> [0mclarity-core/src/db/tests/mod.rs:11:1
+   [1m[94m|[0m
+[1m[94m11[0m [1m[94m|[0m mod integration_test;
+   [1m[94m|[0m [1m[91m^^^^^^^^^^^^^^^^^^^^^[0m
+   [1m[94m|[0m
+   [1m[94m= [0m[1mhelp[0m: to create the module `integration_test`, create file "clarity-core/src/db/tests/integration_test.rs" or "clarity-core/src/db/tests/integration_test/mod.rs"
+   [1m[94m= [0m[1mnote[0m: if there is a `mod integration_test` elsewhere in the crate already, import it with `use crate::...` instead
+
+[1m[92m    Checking[0m clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client)
+[1m[92m    Checking[0m clarity-server v0.1.0-dev (/home/lewis/src/clarity/clarity-server)
+[1mFor more information about this error, try `rustc --explain E0583`.[0m
+[1m[91merror[0m: could not compile `clarity-core` (lib test) due to 1 previous error
