@@ -8,7 +8,7 @@ pub mod session;
 pub mod types;
 pub mod validation;
 
-pub use error::{ExitCode, ExitCodeError, map_db_error, map_validation_error};
+pub use error::{map_db_error, map_validation_error, ExitCode, ExitCodeError};
 pub use types::{HttpMethod, HttpMethodError, SpecName, SpecNameError, Url, UrlError};
 
 /// A simple function to demonstrate core functionality
