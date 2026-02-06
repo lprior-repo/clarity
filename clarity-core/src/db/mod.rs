@@ -30,6 +30,7 @@ pub use error::{DbError, DbResult};
 pub use migrate::*;
 pub use models::*;
 pub use pool::*;
+pub use sqlite_pool::*;
 // pub use repository::*;
 
 // Re-export commonly used types

@@ -11,8 +11,8 @@
 //! or scenarios where data needs to be bundled with the binary.
 
 use crate::db::error::{DbError, DbResult};
-use sqlx::sqlite::SqlitePoolOptions;
 use sqlx::SqlitePool;
+use sqlx::{sqlite::SqlitePoolOptions, Row};
 use std::time::Duration;
 
 /// SQLite database configuration

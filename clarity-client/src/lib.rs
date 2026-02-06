@@ -19,3 +19,12 @@
 #![warn(clippy::new_without_default)]
 #![allow(clippy::cargo_common_metadata)]
 #![allow(clippy::multiple_crate_versions)]
+
+//! Clarity Client - Dioxus Frontend Application
+//!
+//! This is the web frontend for Clarity, built with Dioxus.
+//! It provides a modern, reactive UI for managing interviews and documentation.
+
+pub mod app;
+
+pub use app::{App, AppError, AppState};

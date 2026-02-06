@@ -138,11 +138,9 @@ pub fn get_parent(path: &str) -> Result<String, PathError> {
     return Err(PathError::EmptyPath);
   }
 
-  Ok(Path::new(path)
-    .parent()
-    .map_or(String::new(), |p| {
-      p.to_str().map_or(String::new(), String::from)
-    }))
+  Ok(Path::new(path).parent().map_or(String::new(), |p| {
+    p.to_str().map_or(String::new(), String::from)
+  }))
 }
 
 /// Join two path components
@@ -190,14 +188,12 @@ pub fn normalize_path(path: &str) -> Result<String, PathError> {
 
   let normalized = Path::new(path)
     .components()
-    .fold(PathBuf::new(), |acc, comp| {
-      match comp {
-        std::path::Component::ParentDir => {
-          acc.parent().map_or_else(|| acc.clone(), Path::to_path_buf)
-        }
-        std::path::Component::CurDir => acc,
-        _ => acc.join(comp),
+    .fold(PathBuf::new(), |acc, comp| match comp {
+      std::path::Component::ParentDir => {
+        acc.parent().map_or_else(|| acc.clone(), Path::to_path_buf)
       }
+      std::path::Component::CurDir => acc,
+      _ => acc.join(comp),
     });
 
   normalized
@@ -319,7 +315,10 @@ mod tests {
   // get_parent tests
   #[test]
   fn test_get_parent_absolute() {
-    assert_eq!(get_parent("/path/to/file.txt").unwrap().as_str(), "/path/to");
+    assert_eq!(
+      get_parent("/path/to/file.txt").unwrap().as_str(),
+      "/path/to"
+    );
     assert_eq!(get_parent("/path/to/").unwrap().as_str(), "/path");
   }
 
@@ -360,10 +359,7 @@ mod tests {
 
   #[test]
   fn test_join_paths_absolute_second() {
-    assert_eq!(
-      join_paths("/path/to", "/absolute").unwrap(),
-      "/absolute"
-    );
+    assert_eq!(join_paths("/path/to", "/absolute").unwrap(), "/absolute");
   }
 
   #[test]
@@ -420,7 +416,10 @@ mod tests {
 
   #[test]
   fn test_normalize_path_already_normalized() {
-    assert_eq!(normalize_path("/path/to/file.txt").unwrap(), "/path/to/file.txt");
+    assert_eq!(
+      normalize_path("/path/to/file.txt").unwrap(),
+      "/path/to/file.txt"
+    );
   }
 
   #[test]
