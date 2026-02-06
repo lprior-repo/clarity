@@ -63,7 +63,7 @@ pub const fn validate_non_empty(input: &str) -> Result<&str, ValidationError> {
 /// # Errors
 ///
 /// Returns `ValidationError::InputTooLong` if the input string length exceeds `max_length`
-pub fn validate_max_length(input: &str, max_length: usize) -> Result<&str, ValidationError> {
+pub const fn validate_max_length(input: &str, max_length: usize) -> Result<&str, ValidationError> {
     if input.len() > max_length {
         Err(ValidationError::InputTooLong { max_length })
     } else {
@@ -86,7 +86,7 @@ pub fn validate_max_length(input: &str, max_length: usize) -> Result<&str, Valid
 ///
 /// Returns `ValidationError::InvalidCharacters` if the input contains non-alphanumeric characters
 pub fn validate_alphanumeric(input: &str) -> Result<&str, ValidationError> {
-    if input.chars().all(|c| c.is_alphanumeric()) {
+    if input.chars().all(char::is_alphanumeric) {
         Ok(input)
     } else {
         let invalid: String = input.chars().filter(|c| !c.is_alphanumeric()).collect();

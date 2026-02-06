@@ -7,7 +7,7 @@
 ## Pending Tasks (42 Total)
 
 ### Foundation Beads
-- [ ] bd-1ft: foundation: foundation-011: Security validation
+- [/] bd-1ft: foundation: foundation-011: Security validation
 - [ ] bd-2if: foundation: foundation-010: File path utilities
 - [ ] bd-3vg: foundation: foundation-009: Progress dashboard and output
 - [ ] bd-26p: foundation: JSON output formatting
