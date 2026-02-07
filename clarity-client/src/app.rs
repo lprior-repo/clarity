@@ -92,7 +92,7 @@ impl std::error::Error for AppError {}
 #[component]
 pub fn App() -> Element {
   // Initialize application state
-  let mut state = use_signal(AppState::new);
+  let state = use_signal(AppState::new);
 
   rsx! {
       div { class: "app-container",

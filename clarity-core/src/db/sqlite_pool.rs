@@ -169,6 +169,10 @@ pub async fn test_sqlite_connection(pool: &SqlitePool) -> DbResult<()> {
 mod tests {
   use super::*;
 
+  // Mutex to serialize env var tests (they use shared mutable state)
+  use std::sync::Mutex;
+  static ENV_TEST_LOCK: Mutex<()> = Mutex::new(());
+
   #[allow(clippy::expect_used)]
   #[test]
   fn test_sqlite_config_default() {
@@ -199,6 +203,7 @@ mod tests {
   #[test]
   #[allow(clippy::panic)]
   fn test_sqlite_config_from_env_missing() {
+    let _lock = ENV_TEST_LOCK.lock().unwrap();
     std::env::remove_var("SQLITE_DATABASE_URL");
     let result = SqliteDbConfig::from_env();
     assert!(result.is_err());
@@ -211,6 +216,7 @@ mod tests {
   #[test]
   #[allow(clippy::expect_used)]
   fn test_sqlite_config_from_env_set() {
+    let _lock = ENV_TEST_LOCK.lock().unwrap();
     std::env::set_var("SQLITE_DATABASE_URL", "sqlite:fromenv.db");
     let result = SqliteDbConfig::from_env();
     assert!(result.is_ok());
