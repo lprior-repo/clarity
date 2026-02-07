@@ -11,8 +11,8 @@
 //! or scenarios where data needs to be bundled with the binary.
 
 use crate::db::error::{DbError, DbResult};
-use sqlx::SqlitePool;
-use sqlx::{sqlite::SqlitePoolOptions, Row};
+#[allow(unused_imports)]
+use sqlx::{sqlite::SqlitePoolOptions, Row, SqlitePool};
 use std::time::Duration;
 
 /// SQLite database configuration
@@ -116,7 +116,7 @@ pub async fn create_sqlite_pool(config: &SqliteDbConfig) -> DbResult<SqlitePool>
     .acquire_timeout(config.acquire_timeout)
     .idle_timeout(config.idle_timeout)
     .max_lifetime(config.max_lifetime)
-    .after_connect(|mut connection, _meta| {
+    .after_connect(|#[allow(unused_mut)] mut connection, _meta| {
       Box::pin(async move {
         // Configure WAL mode on each new connection for 2-3x throughput
         sqlx::query("PRAGMA journal_mode=WAL")
