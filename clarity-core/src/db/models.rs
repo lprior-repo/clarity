@@ -143,21 +143,15 @@ pub enum UserRole {
   User,
 }
 
-impl UserRole {
-  pub fn from_str(s: &str) -> DbResult<Self> {
-    match s.to_lowercase().as_str() {
-      "admin" => Ok(UserRole::Admin),
-      "user" => Ok(UserRole::User),
-      _ => Err(DbError::InvalidUuid(s.to_string())),
-    }
-  }
-}
-
 impl std::str::FromStr for UserRole {
   type Err = DbError;
 
   fn from_str(s: &str) -> Result<Self, Self::Err> {
-    UserRole::from_str(s)
+    match s.to_lowercase().as_str() {
+      "admin" => Ok(Self::Admin),
+      "user" => Ok(Self::User),
+      _ => Err(DbError::InvalidUuid(s.to_string())),
+    }
   }
 }
 
@@ -177,17 +171,7 @@ impl BeadStatus {
   ///
   /// # Errors
   /// - Returns `DbError::Validation` if the string is not a valid status
-  pub fn from_str(s: &str) -> DbResult<Self> {
-    match s.to_lowercase().as_str() {
-      "open" => Ok(Self::Open),
-      "in_progress" => Ok(Self::InProgress),
-      "blocked" => Ok(Self::Blocked),
-      "deferred" => Ok(Self::Deferred),
-      "closed" => Ok(Self::Closed),
-      _ => Err(DbError::validation(format!("Invalid bead status: {s}"))),
-    }
-  }
-
+  ///
   /// Get the status as a lowercase string
   #[must_use]
   pub const fn as_str(&self) -> &'static str {
@@ -211,7 +195,14 @@ impl std::str::FromStr for BeadStatus {
   type Err = DbError;
 
   fn from_str(s: &str) -> Result<Self, Self::Err> {
-    Self::from_str(s)
+    match s.to_lowercase().as_str() {
+      "open" => Ok(Self::Open),
+      "in_progress" => Ok(Self::InProgress),
+      "blocked" => Ok(Self::Blocked),
+      "deferred" => Ok(Self::Deferred),
+      "closed" => Ok(Self::Closed),
+      _ => Err(DbError::validation(format!("Invalid bead status: {s}"))),
+    }
   }
 }
 
@@ -231,17 +222,7 @@ impl BeadType {
   ///
   /// # Errors
   /// - Returns `DbError::Validation` if the string is not a valid type
-  pub fn from_str(s: &str) -> DbResult<Self> {
-    match s.to_lowercase().as_str() {
-      "feature" => Ok(Self::Feature),
-      "bugfix" => Ok(Self::Bugfix),
-      "refactor" => Ok(Self::Refactor),
-      "test" => Ok(Self::Test),
-      "docs" => Ok(Self::Docs),
-      _ => Err(DbError::validation(format!("Invalid bead type: {s}"))),
-    }
-  }
-
+  ///
   /// Get the type as a lowercase string
   #[must_use]
   pub const fn as_str(&self) -> &'static str {
@@ -265,7 +246,14 @@ impl std::str::FromStr for BeadType {
   type Err = DbError;
 
   fn from_str(s: &str) -> Result<Self, Self::Err> {
-    Self::from_str(s)
+    match s.to_lowercase().as_str() {
+      "feature" => Ok(Self::Feature),
+      "bugfix" => Ok(Self::Bugfix),
+      "refactor" => Ok(Self::Refactor),
+      "test" => Ok(Self::Test),
+      "docs" => Ok(Self::Docs),
+      _ => Err(DbError::validation(format!("Invalid bead type: {s}"))),
+    }
   }
 }
 

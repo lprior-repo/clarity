@@ -3,7 +3,7 @@
 //! These tests verify the complete integration of components,
 //! error handling, and application state management.
 
-use clarity_client::app::{App, AppError, AppState};
+use clarity_client::app::{AppError, AppState};
 
 #[test]
 fn test_app_state_navigation_flow() {

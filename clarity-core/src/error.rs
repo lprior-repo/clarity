@@ -118,13 +118,14 @@ impl std::error::Error for ExitCodeError {}
 /// Returns `ExitCodeError::OutOfRange` if the mapped exit code is > 255
 pub const fn map_db_error(error: &DbError) -> Result<ExitCode, ExitCodeError> {
   match error {
-    DbError::Connection(_) => Ok(ExitCode::IO_ERROR),
+    DbError::Connection(_) | DbError::BundledDbExtraction(_) | DbError::BundledDbConnection(_) => {
+      Ok(ExitCode::IO_ERROR)
+    }
     DbError::Migration(_) => Ok(ExitCode::CONFIG_ERROR),
     DbError::NotFound { .. } => Ok(ExitCode::NOT_FOUND),
     DbError::Validation(_) => Ok(ExitCode::VALIDATION_ERROR),
     DbError::Duplicate(_) => Ok(ExitCode::ERROR),
     DbError::InvalidUuid(_) | DbError::InvalidEmail(_) => Ok(ExitCode::USAGE),
-    DbError::BundledDbExtraction(_) | DbError::BundledDbConnection(_) => Ok(ExitCode::IO_ERROR),
   }
 }
 

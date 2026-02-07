@@ -2,11 +2,15 @@
 //!
 //! This module contains the root App component and its supporting functionality.
 
+// Dioxus rsx! macro internally uses unwrap, so we allow the disallowed_methods lint.
+// This is a framework limitation, not our code using unwrap.
+#![allow(clippy::disallowed_methods)]
+
 use dioxus::prelude::*;
 use std::result::Result;
 
 /// Application state that manages shared data across components
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AppState {
   /// Current route path
   pub current_route: String,
@@ -37,8 +41,7 @@ impl AppState {
 
     if !path.starts_with('/') {
       return Err(AppError::InvalidRoute(format!(
-        "Route path must start with '/', got: {}",
-        path
+        "Route path must start with '/', got: {path}"
       )));
     }
 
@@ -64,7 +67,7 @@ impl Default for AppState {
 }
 
 /// Application-specific errors
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AppError {
   /// Invalid route path
   InvalidRoute(String),
@@ -77,9 +80,9 @@ pub enum AppError {
 impl std::fmt::Display for AppError {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
-      Self::InvalidRoute(msg) => write!(f, "Invalid route: {}", msg),
-      Self::ComponentInit(msg) => write!(f, "Component initialization failed: {}", msg),
-      Self::StateUpdate(msg) => write!(f, "State update failed: {}", msg),
+      Self::InvalidRoute(msg) => write!(f, "Invalid route: {msg}"),
+      Self::ComponentInit(msg) => write!(f, "Component initialization failed: {msg}"),
+      Self::StateUpdate(msg) => write!(f, "State update failed: {msg}"),
     }
   }
 }

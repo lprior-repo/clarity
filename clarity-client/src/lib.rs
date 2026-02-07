@@ -1,8 +1,9 @@
+// Note: We don't enforce clippy::unwrap_used at the crate level because the Dioxus rsx!
+// macro internally uses unwrap(). The app module has its own lint checks for actual code.
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![warn(clippy::cargo)]
-#![warn(clippy::unwrap_used)]
 #![warn(clippy::expect_used)]
 #![warn(clippy::panic)]
 #![warn(clippy::todo)]

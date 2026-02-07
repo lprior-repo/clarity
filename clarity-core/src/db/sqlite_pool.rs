@@ -4,10 +4,10 @@
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
-//! SQLite connection pool management
+//! `SQLite` connection pool management
 //!
-//! This module provides SQLite database support for embedded database scenarios.
-//! The SQLite database runs in-process, making it ideal for single-user applications
+//! This module provides `SQLite` database support for embedded database scenarios.
+//! The `SQLite` database runs in-process, making it ideal for single-user applications
 //! or scenarios where data needs to be bundled with the binary.
 
 use crate::db::error::{DbError, DbResult};
@@ -15,10 +15,10 @@ use crate::db::error::{DbError, DbResult};
 use sqlx::{sqlite::SqlitePoolOptions, Row, SqlitePool};
 use std::time::Duration;
 
-/// SQLite database configuration
+/// `SQLite` database configuration
 #[derive(Debug, Clone)]
 pub struct SqliteDbConfig {
-  /// SQLite database path (e.g., "sqlite:clarity.db" or "sqlite::memory:")
+  /// `SQLite` database path (e.g., "sqlite:clarity.db" or "`sqlite::memory`:")
   pub database_url: String,
   /// Maximum number of connections in the pool
   pub max_connections: u32,

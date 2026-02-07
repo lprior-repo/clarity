@@ -175,7 +175,7 @@ impl Interview {
   /// # Errors
   ///
   /// Returns `InterviewError::InvalidIdFormat` if the ID is not a valid UUID
-  /// Returns `InterviewError::EmptySpecName` if spec_name is empty
+  /// Returns `InterviewError::EmptySpecName` if `spec_name` is empty
   ///
   /// # Examples
   ///
@@ -319,7 +319,7 @@ impl InterviewBuilder {
 
   /// Set the creation timestamp
   #[must_use]
-  pub fn created_at(mut self, timestamp: Timestamp) -> Self {
+  pub const fn created_at(mut self, timestamp: Timestamp) -> Self {
     self.created_at = Some(timestamp);
     self
   }
@@ -353,7 +353,7 @@ impl InterviewBuilder {
   /// Returns `InterviewError::InvalidIdFormat` if the ID is not a valid UUID
   /// Returns `InterviewError::SystemTimeInvalid` if no timestamp is provided and
   /// the system time is invalid
-  /// Returns `InterviewError::EmptySpecName` if spec_name is empty
+  /// Returns `InterviewError::EmptySpecName` if `spec_name` is empty
   pub fn build(self) -> Result<Interview, InterviewError> {
     let id = self
       .id
@@ -486,20 +486,17 @@ fn is_valid_uuid(s: &str) -> bool {
 
 /// Check if a state transition is valid
 fn is_valid_transition(from: InterviewState, to: InterviewState) -> bool {
-  match (from, to) {
-    // Valid transitions
-    (InterviewState::Created, InterviewState::InProgress) => true,
-    (InterviewState::Created, InterviewState::Cancelled) => true,
-    (InterviewState::InProgress, InterviewState::Completed) => true,
-    (InterviewState::InProgress, InterviewState::Failed) => true,
-    (InterviewState::InProgress, InterviewState::Cancelled) => true,
-
-    // Can always stay in the same state
-    (s, t) if s == t => true,
-
-    // All other transitions are invalid
-    _ => false,
-  }
+  from == to
+    || matches!(
+      (from, to),
+      (
+        InterviewState::Created,
+        InterviewState::InProgress | InterviewState::Cancelled
+      ) | (
+        InterviewState::InProgress,
+        InterviewState::Completed | InterviewState::Failed | InterviewState::Cancelled
+      )
+    )
 }
 
 #[cfg(test)]

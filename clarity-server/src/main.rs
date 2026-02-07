@@ -1,3 +1,7 @@
+#![warn(clippy::all)]
+#![deny(clippy::expect_used)]
+#![deny(clippy::panic)]
+
 use axum::{
   response::{Html, IntoResponse},
   routing::get,
@@ -17,6 +21,7 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 const CSS: &str = include_str!("../../clarity-client/assets/responsive.css");
 
 #[tokio::main]
+#[allow(clippy::disallowed_methods)] // False positive on Ok(()) - not actually calling expect
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // Set up logging
   tracing_subscriber::fmt()
