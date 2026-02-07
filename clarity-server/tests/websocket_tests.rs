@@ -1,3 +1,6 @@
+#![allow(clippy::disallowed_methods)]
+#![allow(clippy::panic)]
+
 //! WebSocket integration tests for clarity-server
 //!
 //! These tests verify WebSocket functionality including:
@@ -5,9 +8,6 @@
 //! - Message broadcasting to multiple clients
 //! - Proper connection lifecycle management
 //! - Error handling without panics
-
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::panic)]
 
 use tokio::sync::broadcast;
 

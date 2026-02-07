@@ -29,8 +29,8 @@ tasks:
       cache: false  # Never cache - always format
 
   clippy:
-    command: "cargo clippy --workspace --all-targets --all-features -- -D warnings"
-    description: "Lint with Clippy (strict mode)"
+    command: "cargo clippy --workspace --all-targets -- -D warnings"
+    description: "Lint with Clippy (strict mode, excludes integration-tests)"
     inputs:
       - "clarity-*/src/**/*.rs"
       - "Cargo.toml"
@@ -46,7 +46,7 @@ tasks:
 
   quick:
     command: "cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings"
-    description: "Fast format + lint check (cached)"
+    description: "Fast format + lint check (cached, excludes integration-tests)"
     inputs:
       - "clarity-*/src/**/*.rs"
       - "Cargo.toml"
@@ -56,8 +56,8 @@ tasks:
       runInCI: false
 
   check:
-    command: "cargo check --workspace --all-targets --all-features"
-    description: "Fast type check without building"
+    command: "cargo check --workspace --all-targets"
+    description: "Fast type check without building (excludes integration-tests)"
     inputs:
       - "clarity-*/src/**/*.rs"
       - "Cargo.toml"

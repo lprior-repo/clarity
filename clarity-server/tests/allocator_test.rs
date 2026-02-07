@@ -1,3 +1,5 @@
+#![allow(clippy::disallowed_methods)]
+
 /// Tests for mimalloc global allocator configuration
 ///
 /// These tests verify that:

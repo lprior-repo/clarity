@@ -331,7 +331,7 @@ pub enum SchemaRegistryError {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::disallowed_methods)]
 #[allow(clippy::panic)]
 mod tests {
   use super::*;
