@@ -353,6 +353,7 @@ mod tests {
   #![allow(clippy::unwrap_used)]
   #![allow(clippy::expect_used)]
   #![allow(clippy::panic)]
+  #![allow(clippy::disallowed_methods)]
   use super::*;
   #[allow(clippy::redundant_clone)]
   #[allow(clippy::implicit_clone)]

@@ -599,6 +599,9 @@ fn dfs_cycle<'a>(
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+  #![allow(clippy::disallowed_methods)]
   use super::*;
 
   // Test 1: test_task_should_create_with_valid_fields

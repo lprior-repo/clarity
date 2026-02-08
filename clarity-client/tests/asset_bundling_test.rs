@@ -6,11 +6,6 @@
 //! See docs/TESTING.md for testing standards.
 
 use clarity_client::assets::{get_binary_asset, get_text_asset, registry, AssetError};
-//!
-//! These tests verify that assets are properly embedded and accessible
-//! in the desktop binary.
-
-use clarity_client::assets::{get_binary_asset, get_text_asset, registry, AssetError};
 
 #[test]
 fn test_css_asset_embedded_and_accessible() {
@@ -22,7 +17,10 @@ fn test_css_asset_embedded_and_accessible() {
 
   // THEN: The CSS should be returned as Ok(&str)
   assert!(result.is_ok(), "CSS asset should be accessible");
-  let css = result.unwrap();
+  let css = match result {
+    Ok(asset) => asset,
+    Err(e) => panic!("Failed to get CSS asset: {:?}", e),
+  };
 
   // AND: The CSS content should be valid UTF-8
   assert!(css.len() > 0, "CSS should have content");

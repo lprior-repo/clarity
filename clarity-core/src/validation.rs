@@ -125,6 +125,7 @@ mod tests {
   #![allow(clippy::panic)]
   #![allow(clippy::unwrap_used)]
   #![allow(clippy::expect_used)]
+  #![allow(clippy::disallowed_methods)]
   use super::*;
 
   #[test]

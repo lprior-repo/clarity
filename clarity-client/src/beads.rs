@@ -384,10 +384,6 @@ mod tests {
   #[test]
   fn test_create_bead_validation_required_fields() {
     let title = "";
-    let description = Some("Test description");
-    let priority = 1;
-    let bead_type = "feature";
-    let status = "open";
 
     // Title is required
     assert!(title.is_empty(), "Empty title should be invalid");
@@ -474,11 +470,10 @@ mod tests {
   // Test 10 from acceptance tests: Update Bead Status Quick Action
   #[test]
   fn test_bead_status_transition() {
-    let mut status = "open".to_string();
-    status = "in_progress".to_string();
+    let status = "in_progress";
     assert_eq!(status, "in_progress");
 
-    status = "completed".to_string();
+    let status = "completed";
     assert_eq!(status, "completed");
   }
 
