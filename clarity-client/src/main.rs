@@ -33,26 +33,17 @@ use std::result::Result;
 /// - Menu creation fails
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-  use clarity_client::{WindowGeometry, WindowStateManager};
-  use dioxus_desktop::{Config, WindowBuilder};
+  use dioxus_desktop::{launch, Config, WindowBuilder};
 
   // ==============================================================================
   // WINDOW CONFIGURATION
   // ==============================================================================
 
   // Default window geometry
-  let default_geometry = WindowGeometry {
-    x: 100,
-    y: 100,
-    width: 1200,
-    height: 800,
-  };
-
-  // Try to load saved window state, fall back to defaults
-  let geometry = match WindowStateManager::load_geometry() {
-    Ok(geo) => geo,
-    Err(_) => default_geometry,
-  };
+  let width = 1200.0;
+  let height = 800.0;
+  let x = 100.0;
+  let y = 100.0;
 
   // ==============================================================================
   // LAUNCH DESKTOP APPLICATION
@@ -61,10 +52,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   // Build window configuration
   let window_builder = WindowBuilder::new()
     .with_title("Clarity")
-    .with_inner_size(geometry.width, geometry.height)
-    .with_position(dioxus_desktop::tao::dpi::LogicalPosition::new(
-      geometry.x, geometry.y,
-    ))
+    .with_inner_size(dioxus_desktop::tao::dpi::LogicalSize::new(width, height))
+    .with_position(dioxus_desktop::tao::dpi::LogicalPosition::new(x, y))
     .with_resizable(true)
     .with_decorations(true);
 
@@ -72,9 +61,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   let config = Config::default().with_window(window_builder);
 
   // Launch the desktop app
-  // Note: dioxus_desktop::launch_cfg doesn't return Result, it handles errors internally
+  // Note: dioxus_desktop::launch doesn't return Result, it handles errors internally
   // We're following the Dioxus desktop API here
-  dioxus_desktop::launch_cfg(clarity_client::App, config);
+  launch(clarity_client::App);
 
   Ok(())
 }
@@ -112,11 +101,11 @@ mod tests {
   /// Test window configuration values
   #[test]
   fn test_window_configuration_is_valid() {
-    let width = 1200u32;
-    let height = 800u32;
+    let width = 1200.0;
+    let height = 800.0;
 
-    assert!(width >= 800, "Window width should be at least 800px");
-    assert!(height >= 600, "Window height should be at least 600px");
+    assert!(width >= 800.0, "Window width should be at least 800px");
+    assert!(height >= 600.0, "Window height should be at least 600px");
   }
 
   /// Test window title is configured
@@ -130,11 +119,11 @@ mod tests {
   /// Test window position is valid
   #[test]
   fn test_window_position_is_valid() {
-    let x = 100i32;
-    let y = 100i32;
+    let x = 100.0;
+    let y = 100.0;
 
-    assert!(x >= 0, "Window X position should be non-negative");
-    assert!(y >= 0, "Window Y position should be non-negative");
+    assert!(x >= 0.0, "Window X position should be non-negative");
+    assert!(y >= 0.0, "Window Y position should be non-negative");
   }
 
   /// Test zero-unwrap policy in main

@@ -602,6 +602,8 @@ mod tests {
   #![allow(clippy::unwrap_used)]
   #![allow(clippy::expect_used)]
   #![allow(clippy::disallowed_methods)]
+  #![allow(clippy::float_cmp)]
+  #![allow(clippy::manual_string_new)]
   use super::*;
 
   // Test 1: test_task_should_create_with_valid_fields

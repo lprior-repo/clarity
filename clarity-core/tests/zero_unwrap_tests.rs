@@ -1,3 +1,13 @@
+//! Zero-Unwrap Pattern Tests
+//!
+//! These tests demonstrate alternatives to unwrap() and expect().
+//! They show that proper error handling can be done without panics.
+//!
+//! Note: This file allows `clippy::unnecessary_literal_unwrap` because
+//! it demonstrates unwrap_or() patterns as alternatives to unwrap().
+//!
+//! See docs/zero-unwrap-philosophy.md and docs/TESTING.md
+
 #![allow(clippy::unnecessary_literal_unwrap)]
 #![allow(clippy::unnecessary_lazy_evaluations)]
 #![allow(clippy::bind_instead_of_map)]
