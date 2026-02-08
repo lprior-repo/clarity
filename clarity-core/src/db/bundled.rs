@@ -34,19 +34,9 @@ static BUNDLED_DB_PATH: OnceLock<PathBuf> = OnceLock::new();
 /// - Returns `DbError::BundledDbExtraction` if atomic extraction fails
 /// - Returns `DbError::BundledDbExtraction` if cache directory cannot be created
 pub fn get_bundled_db_path() -> DbResult<PathBuf> {
-  // Try to get cached path
-  if let Some(path) = BUNDLED_DB_PATH.get() {
-    return Ok(path.clone());
-  }
-
-  // Extract database
-  let path = extract_database_atomically()?;
-
-  // Cache the path
-  // Note: set() will return Err if already set, which is fine - we just use the existing value
-  let _ = BUNDLED_DB_PATH.set(path.clone());
-
-  Ok(path)
+  BUNDLED_DB_PATH
+    .get_or_try_init(extract_database_atomically)
+    .map(|path| path.clone())
 }
 
 /// Extract the embedded database to the cache directory atomically
@@ -88,17 +78,19 @@ fn extract_database_atomically() -> DbResult<PathBuf> {
 /// - macOS: `~/Library/Caches/clarity`
 /// - Windows: `%LOCALAPPDATA%\\clarity\\cache`
 fn get_cache_dir() -> DbResult<PathBuf> {
-  // TODO: Use proper platform-specific directories (dirs crate)
-  // For now, use a simple approach
-  let home = std::env::var("HOME").map_err(|_| {
-    DbError::BundledDbExtraction("HOME environment variable not set".to_string())
-  })?;
-
-  Ok(PathBuf::from(home).join(".cache").join("clarity"))
+  dirs::cache_dir()
+    .map(|p| p.join("clarity"))
+    .ok_or_else(|| DbError::BundledDbExtraction(
+      "Failed to determine cache directory".to_string()
+    ))
 }
 
 #[cfg(test)]
 mod tests {
+  #[allow(clippy::disallowed_methods)]
+  #[allow(clippy::unwrap_used)]
+  #[allow(clippy::expect_used)]
+  #[allow(clippy::panic)]
   use super::*;
 
   #[test]
