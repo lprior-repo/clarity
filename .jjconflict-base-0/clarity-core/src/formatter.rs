@@ -106,7 +106,7 @@ impl OutputFormat {
   ///
   /// # Errors
   /// Returns `FormatError::UnsupportedFormat` if the format string is not recognized
-  pub fn from_str(s: &str) -> Result<Self, FormatError> {
+  pub fn from_str_format(s: &str) -> Result<Self, FormatError> {
     match s.to_lowercase().as_str() {
       "json" => Ok(Self::Json),
       "markdown" | "md" => Ok(Self::Markdown),
@@ -178,11 +178,11 @@ impl OutputFormatter<Interview> for JsonFormatter {
     write!(json, "\"state\":\"{}\",", data.state).map_err(|e| FormatError::IoError(e.to_string()))?;
     let title_json = serde_json::to_string(&data.title)
       .map_err(|e| FormatError::SerializationFailed(e.to_string()))?;
-    write!(json, "\"title\":{},", title_json)
+    write!(json, "\"title\":{title_json},")
       .map_err(|e| FormatError::IoError(e.to_string()))?;
     let desc_json = serde_json::to_string(&data.description)
       .map_err(|e| FormatError::SerializationFailed(e.to_string()))?;
-    write!(json, "\"description\":{},", desc_json)
+    write!(json, "\"description\":{desc_json},")
       .map_err(|e| FormatError::IoError(e.to_string()))?;
 
     // Questions
@@ -194,11 +194,11 @@ impl OutputFormatter<Interview> for JsonFormatter {
       write!(json, "{{").map_err(|e| FormatError::IoError(e.to_string()))?;
       let text_json = serde_json::to_string(&q.text)
         .map_err(|e| FormatError::SerializationFailed(e.to_string()))?;
-      write!(json, "\"text\":{},", text_json)
+      write!(json, "\"text\":{text_json},")
         .map_err(|e| FormatError::IoError(e.to_string()))?;
       let help_json = serde_json::to_string(&q.help_text)
         .map_err(|e| FormatError::SerializationFailed(e.to_string()))?;
-      write!(json, "\"help_text\":{},", help_json)
+      write!(json, "\"help_text\":{help_json},")
         .map_err(|e| FormatError::IoError(e.to_string()))?;
       write!(json, "\"required\":{},", q.required).map_err(|e| FormatError::IoError(e.to_string()))?;
       write!(json, "\"question_type\":\"{:?}\"", q.question_type).map_err(|e| FormatError::IoError(e.to_string()))?;
@@ -215,9 +215,9 @@ impl OutputFormatter<Interview> for JsonFormatter {
       write!(json, "{{\"question_index\":{},", a.question_index).map_err(|e| FormatError::IoError(e.to_string()))?;
       match &a.value {
         AnswerValue::Text(s) => write!(json, "\"value\":\"{}\"}}", s.replace('"', "\\\"")),
-        AnswerValue::Boolean(b) => write!(json, "\"value\":{}}}", b),
-        AnswerValue::MultipleChoice(idx) => write!(json, "\"value\":{}}}", idx),
-        AnswerValue::Numeric(n) => write!(json, "\"value\":{}}}", n),
+        AnswerValue::Boolean(b) => write!(json, "\"value\":{b}}}"),,
+        AnswerValue::MultipleChoice(idx) => write!(json, "\"value\":{idx}}}"),,
+        AnswerValue::Numeric(n) => write!(json, "\"value\":{n}}}"),,
       }.map_err(|e| FormatError::IoError(e.to_string()))?;
     }
     write!(json, "],").map_err(|e| FormatError::IoError(e.to_string()))?;
@@ -388,7 +388,7 @@ mod tests {
   #![allow(clippy::expect_used)]
   #![allow(clippy::panic)]
   use super::*;
-  use crate::interview::{InterviewBuilder, Question, QuestionType, Timestamp};
+  use crate::interview::{InterviewBuilder, Question, QuestionType};
 
   /// Helper function to create a test interview
   fn create_test_interview() -> Interview {
@@ -578,7 +578,7 @@ mod tests {
 
   #[test]
   fn test_parse_format_from_invalid_string_returns_error() {
-    let result = OutputFormat::from_str("xml");
+    let result = OutputFormat::from_str_format("xml");
 
     assert!(result.is_err());
     match result {
@@ -591,22 +591,22 @@ mod tests {
 
   #[test]
   fn test_parse_format_from_valid_strings() {
-    assert_eq!(OutputFormat::from_str("json").unwrap(), OutputFormat::Json);
-    assert_eq!(OutputFormat::from_str("JSON").unwrap(), OutputFormat::Json);
+    assert_eq!(OutputFormat::from_str_format("json").unwrap(), OutputFormat::Json);
+    assert_eq!(OutputFormat::from_str_format("JSON").unwrap(), OutputFormat::Json);
     assert_eq!(
-      OutputFormat::from_str("markdown").unwrap(),
+      OutputFormat::from_str_format("markdown").unwrap(),
       OutputFormat::Markdown
     );
     assert_eq!(
-      OutputFormat::from_str("md").unwrap(),
+      OutputFormat::from_str_format("md").unwrap(),
       OutputFormat::Markdown
     );
     assert_eq!(
-      OutputFormat::from_str("text").unwrap(),
+      OutputFormat::from_str_format("text").unwrap(),
       OutputFormat::PlainText
     );
     assert_eq!(
-      OutputFormat::from_str("txt").unwrap(),
+      OutputFormat::from_str_format("txt").unwrap(),
       OutputFormat::PlainText
     );
   }
