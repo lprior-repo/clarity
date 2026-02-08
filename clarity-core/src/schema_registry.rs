@@ -342,15 +342,15 @@ mod tests {
     version: &str,
     name: &str,
     schema_def: serde_json::Value,
-  ) -> Schema {
-    Schema {
-      id: SchemaId::new(id.to_string()).unwrap(),
-      version: SchemaVersion::new(version.to_string()).unwrap(),
+  ) -> Result<Schema, SchemaRegistryError> {
+    Ok(Schema {
+      id: SchemaId::new(id.to_string())?,
+      version: SchemaVersion::new(version.to_string())?,
       name: name.to_string(),
       description: None,
       schema: schema_def,
       created_at: Utc::now(),
-    }
+    })
   }
 
   #[test]

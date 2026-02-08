@@ -1,1 +1,7 @@
-[1m[92m    Blocking[0m waiting for file lock on package cache
+[1m[92m    Updating[0m crates.io index
+[1m[91merror[0m: failed to select a version for the requirement `sqlx = "^0.9"`
+candidate versions found which didn't match: 0.9.0-alpha.1, 0.8.6, 0.8.5, ...
+location searched: crates.io index
+required by package `clarity-core v0.1.0-dev (/home/lewis/src/clarity/clarity-core)`
+if you are looking for the prerelease package it needs to be specified explicitly
+    sqlx = { version = "0.9.0-alpha.1" }
