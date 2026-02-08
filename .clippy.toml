@@ -1,42 +1,36 @@
-# Clippy configuration for zero-unwrap philosophy
-# This configuration enforces strict error handling without unwrap() or expect()
+# Strict Clippy Configuration
+# Enforces idiomatic Rust patterns and zero-unwrap philosophy
 
-# Cognitive complexity threshold
-cognitive-complexity-threshold = 30
-
-# Disallowed methods - forbid unwrap and expect
-disallowed-methods = [
-    "std::result::Result::unwrap",
-    "std::result::Result::expect",
-    "std::option::Option::unwrap",
-    "std::option::Option::expect",
-]
-
-# Too many arguments threshold
-too-many-arguments-threshold = 7
-
-# Type complexity threshold
+# Complexity thresholds - keep functions simple
+cognitive-complexity-threshold = 20
+too-many-arguments-threshold = 5
 type-complexity-threshold = 250
 
-# Single char binding names threshold
-single-char-binding-names-threshold = 4
-
-# Literal representation threshold
-literal-representation-threshold = 10
-
-# Enum variant names threshold
-enum-variant-name-threshold = 3
-
-# Stack size threshold for functions
-stack-size-threshold = 512000
-
-# Enum variant size threshold
-enum-variant-size-threshold = 200
-
-# Disallowed names
-disallowed-names = ["foo", "bar", "baz", "quux"]
-
-# DO NOT allow unwrap in tests - enforce zero-unwrap everywhere
+# Enforcement: No panics allowed in production code
+# Allow panics in RED tests (Phase 4 TDD placeholders)
+allow-panic-in-tests = true
 allow-unwrap-in-tests = false
 allow-expect-in-tests = false
-allow-panic-in-tests = false
+
+# Suggest safer alternatives
+enforce-iter-loop-reborrow = true
+
+# Doc comment enforcement
+doc-valid-idents = [
+    "JSON",
+    "HTTP",
+    "HTTPS",
+    "API",
+    "URL",
+    "GitHub",
+    "Beads",
+    "Jujutsu",
+    "Moon",
+    "CUE",
+    "RUST",
+    "ZJJ",
+    "Windmill",
+]
+
+# Matches enforce idiomatic patterns
+single-char-binding-names-threshold = 4

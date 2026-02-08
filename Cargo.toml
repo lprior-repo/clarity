@@ -8,36 +8,36 @@ resolver = "2"
 
 # Zero-unwrap philosophy: Enforce strict error handling via compiler lints
 [workspace.lints.rust]
-# Warn about unused results (helps catch ignored errors)
-unused_results = "warn"
-# Warn about missing documentation for public items
-missing_docs = "warn"
-# Warn about deprecated items
-deprecated = "warn"
+unsafe_code = "forbid"
+missing_docs = "allow"
+dead_code = "deny"
+unused_must_use = "deny"
 
 [workspace.lints.clippy]
-# FORBID: unwrap() and expect() - core of zero-unwrap philosophy
+# Zero unwrap law - COMPILE ERRORS (relaxed in tests)
 unwrap_used = "deny"
 expect_used = "deny"
-# FORBID: panic in production code
 panic = "deny"
-todo = "warn"
-unimplemented = "warn"
-# ENFORCE: Result types and proper error handling
-result_large_err = "warn"
-# ENFORCE: Functional patterns
-or_fun_call = "warn"
-expect_fun_call = "warn"
-# ENFORCE: Code quality
-cognitive_complexity = "warn"
-too_many_arguments = "warn"
-# ENFORCE: Error messages must be meaningful
-unwrap_in_result = "deny"
-# ALLOW: In tests, we may use unwrap for test data (but still prefer Result)
-#[cfg(test)]
-#unwrap_used = "warn"
-#[cfg(test)]
-#expect_used = "warn"
+todo = "deny"
+unimplemented = "deny"
+
+# Quality enforcement (with priority)
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+correctness = { level = "deny", priority = -1 }
+suspicious = { level = "deny", priority = -1 }
+
+# Specific allows
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+redundant_pub_crate = "allow"
+type_complexity = "allow"
+return_self_not_must_use = "allow"
+trivially_copy_pass_by_ref = "allow"
+map_unwrap_or = "allow"
 
 [workspace.package]
 version = "0.1.0-dev"
