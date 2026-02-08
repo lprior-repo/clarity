@@ -20,7 +20,9 @@ pub async fn run_migrations(_pool: &PgPool) -> DbResult<()> {
   //   .run(pool)
   //   .await
   //   .map_err(|e| DbError::Migration(format!("Migration failed: {e}")))
-  Err(DbError::Migration("Migrations not yet implemented".to_string()))
+  Err(DbError::Migration(
+    "Migrations not yet implemented".to_string(),
+  ))
 }
 
 /// Get migration version information
@@ -30,7 +32,9 @@ pub async fn run_migrations(_pool: &PgPool) -> DbResult<()> {
 pub async fn get_migration_version(pool: &PgPool) -> DbResult<Option<i64>> {
   // TODO: Implement when migrations are set up
   let _ = pool;
-  Err(DbError::Migration("Migration version not yet implemented".to_string()))
+  Err(DbError::Migration(
+    "Migration version not yet implemented".to_string(),
+  ))
 }
 
 #[cfg(test)]

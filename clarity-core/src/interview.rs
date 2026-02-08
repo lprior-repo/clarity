@@ -990,7 +990,8 @@ mod tests {
       Err(_) => panic!("Expected Ok Interview"),
     };
 
-    let failed_result = in_progress.transition_to(InterviewState::Failed, Timestamp::from_secs(1_234_567_892));
+    let failed_result =
+      in_progress.transition_to(InterviewState::Failed, Timestamp::from_secs(1_234_567_892));
 
     assert!(failed_result.is_ok());
     let failed = match failed_result {
@@ -1045,7 +1046,8 @@ mod tests {
     };
     assert!(completed.is_terminal());
 
-    let failed_result = in_progress.transition_to(InterviewState::Failed, Timestamp::from_secs(1_234_567_892));
+    let failed_result =
+      in_progress.transition_to(InterviewState::Failed, Timestamp::from_secs(1_234_567_892));
 
     assert!(failed_result.is_ok());
     let failed = match failed_result {

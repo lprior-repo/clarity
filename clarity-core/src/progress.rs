@@ -134,7 +134,11 @@ pub struct ProgressMetrics {
 }
 
 /// Distribution of progress statuses
+///
+/// Note: Does not derive Eq because it contains f64 fields (percentages).
+/// Floats cannot implement Eq due to NaN values not being equal to themselves.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 pub struct ProgressDistribution {
   /// Percentage of completed items
   pub completed_pct: f64,
@@ -314,7 +318,11 @@ impl Display for ProgressMetrics {
 }
 
 /// Progress dashboard display
+///
+/// Note: Does not derive Eq because it contains ProgressMetrics which has f64 fields.
+/// Floats cannot implement Eq due to NaN values not being equal to themselves.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 pub struct ProgressDashboard {
   /// Title of the dashboard
   pub title: String,
@@ -330,7 +338,11 @@ pub struct ProgressDashboard {
 }
 
 /// Progress breakdown by category
+///
+/// Note: Does not derive Eq because it contains ProgressMetrics which has f64 fields.
+/// Floats cannot implement Eq due to NaN values not being equal to themselves.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 pub struct CategoryProgress {
   /// Category name
   pub category: String,

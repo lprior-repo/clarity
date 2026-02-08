@@ -81,7 +81,7 @@ mod allocator_tests {
       let result = handle.join();
       assert!(result.is_ok(), "Thread panicked");
       match result {
-        Ok(true) => {},
+        Ok(true) => {}
         Ok(false) => panic!("Thread returned false"),
         Err(_) => panic!("Thread panicked"),
       }
