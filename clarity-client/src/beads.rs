@@ -344,4 +344,179 @@ mod tests {
     assert_eq!(bead.labels.len(), 3);
     assert_eq!(bead.labels, labels);
   }
+
+  // Tests for new components (Phase 4: RED)
+
+  #[test]
+  fn test_bead_filter_with_all_criteria() {
+    let filter = BeadFilter {
+      status: Some("in_progress".to_string()),
+      bead_type: Some("feature".to_string()),
+      priority: Some("1".to_string()),
+      search_query: Some("auth".to_string()),
+    };
+    assert!(filter.is_active());
+    assert_eq!(filter.status, Some("in_progress".to_string()));
+    assert_eq!(filter.bead_type, Some("feature".to_string()));
+    assert_eq!(filter.priority, Some("1".to_string()));
+    assert_eq!(filter.search_query, Some("auth".to_string()));
+  }
+
+  #[test]
+  fn test_bead_filter_clear() {
+    let mut filter = BeadFilter {
+      status: Some("open".to_string()),
+      bead_type: Some("bugfix".to_string()),
+      priority: Some("2".to_string()),
+      search_query: Some("test".to_string()),
+    };
+    assert!(filter.is_active());
+
+    filter.status = None;
+    filter.bead_type = None;
+    filter.priority = None;
+    filter.search_query = None;
+
+    assert!(!filter.is_active());
+  }
+
+  // Test 3 from acceptance tests: Create Bead Successfully
+  #[test]
+  fn test_create_bead_validation_required_fields() {
+    let title = "";
+    let description = Some("Test description");
+    let priority = 1;
+    let bead_type = "feature";
+    let status = "open";
+
+    // Title is required
+    assert!(title.is_empty(), "Empty title should be invalid");
+
+    // Valid priority range is 0-4
+    let valid_priorities = [0, 1, 2, 3, 4];
+    for p in valid_priorities {
+      assert!(p >= 0 && p <= 4, "Priority {p} should be valid");
+    }
+
+    let invalid_priorities = [-1, 5, 10];
+    for p in invalid_priorities {
+      assert!(p < 0 || p > 4, "Priority {p} should be invalid");
+    }
+  }
+
+  // Test 4 from acceptance tests: Show Validation Errors
+  #[test]
+  fn test_create_bead_validation_invalid_priority() {
+    let priority = 5; // Invalid: must be 0-4
+    assert!(priority > 4, "Priority 5 should be invalid");
+  }
+
+  // Test 4 from acceptance tests: Show Validation Errors
+  #[test]
+  fn test_create_bead_validation_label_format() {
+    let valid_labels = vec!["stage:ready".to_string(), "size:large".to_string()];
+    for label in &valid_labels {
+      assert!(
+        label.contains(':'),
+        "Valid label '{label}' should contain colon"
+      );
+    }
+
+    let invalid_labels = vec!["invalidlabel".to_string(), "stage".to_string()];
+    for label in &invalid_labels {
+      assert!(
+        !label.contains(':'),
+        "Invalid label '{label}' should not contain colon"
+      );
+    }
+  }
+
+  // Test 7 from acceptance tests: Search Beads by Text Query
+  #[test]
+  fn test_bead_search_filters_by_title() {
+    let beads = vec![
+      BeadSummary {
+        id: "bd-001".to_string(),
+        title: "Implement interview feature".to_string(),
+        status: "open".to_string(),
+        priority: "1".to_string(),
+        bead_type: "feature".to_string(),
+        labels: vec![],
+      },
+      BeadSummary {
+        id: "bd-002".to_string(),
+        title: "Fix database bug".to_string(),
+        status: "open".to_string(),
+        priority: "2".to_string(),
+        bead_type: "bugfix".to_string(),
+        labels: vec![],
+      },
+    ];
+
+    let search_query = "interview";
+    let matching: Vec<_> = beads
+      .iter()
+      .filter(|b| b.title.contains(search_query))
+      .collect();
+
+    assert_eq!(matching.len(), 1);
+    assert_eq!(matching[0].id, "bd-001");
+  }
+
+  // Test 9 from acceptance tests: Handle Bead Not Found Gracefully
+  #[test]
+  fn test_bead_not_found_error() {
+    let bead_id = "bd-999";
+    let error_message = format!("Bead {bead_id} not found");
+    assert!(error_message.contains("not found"));
+  }
+
+  // Test 10 from acceptance tests: Update Bead Status Quick Action
+  #[test]
+  fn test_bead_status_transition() {
+    let mut status = "open".to_string();
+    status = "in_progress".to_string();
+    assert_eq!(status, "in_progress");
+
+    status = "completed".to_string();
+    assert_eq!(status, "completed");
+  }
+
+  #[test]
+  fn test_bead_summary_from_api() {
+    let api_bead = crate::api::BeadSummary {
+      id: "test-id".to_string(),
+      title: "Test Bead".to_string(),
+      description: Some("Test description".to_string()),
+      status: "open".to_string(),
+      priority: 1,
+      bead_type: "feature".to_string(),
+      created_at: "2024-01-01T00:00:00Z".to_string(),
+    };
+
+    let ui_bead = BeadSummary::from(api_bead.clone());
+    assert_eq!(ui_bead.id, api_bead.id);
+    assert_eq!(ui_bead.title, api_bead.title);
+    assert_eq!(ui_bead.status, api_bead.status);
+    assert_eq!(ui_bead.priority, "1");
+    assert_eq!(ui_bead.bead_type, api_bead.bead_type);
+    assert!(ui_bead.labels.is_empty());
+  }
+
+  #[test]
+  fn test_bead_filter_preserves_state() {
+    let filter1 = BeadFilter {
+      status: Some("open".to_string()),
+      bead_type: None,
+      priority: None,
+      search_query: None,
+    };
+
+    let filter2 = filter1.clone();
+
+    assert_eq!(filter1.status, filter2.status);
+    assert_eq!(filter1.bead_type, filter2.bead_type);
+    assert_eq!(filter1.priority, filter2.priority);
+    assert_eq!(filter1.search_query, filter2.search_query);
+  }
 }

@@ -1,7 +1,3 @@
-#![allow(clippy::unwrap_used)]
-#![allow(clippy::expect_used)]
-#![allow(clippy::panic)]
-
 //! Martin Fowler tests for Quality Types (core-012)
 //!
 //! Test Plan:

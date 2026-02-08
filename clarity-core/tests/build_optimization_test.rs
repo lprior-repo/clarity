@@ -103,27 +103,27 @@ fn test_pgo_profiles_exist() -> Result<(), Box<dyn std::error::Error>> {
 
 /// Test 7: Cargo config should exist for target-specific optimizations
 #[test]
-fn test_cargo_config_exists() {
+fn test_cargo_config_exists() -> Result<(), Box<dyn std::error::Error>> {
   let config_path = PathBuf::from("../.cargo/config.toml");
   assert!(
     config_path.exists(),
     ".cargo/config.toml should exist for target-specific optimizations and PGO configuration"
   );
 
-  let config = std::fs::read_to_string(&config_path).expect("Failed to read .cargo/config.toml");
+  let config = std::fs::read_to_string(&config_path)?;
 
   // Verify it has documentation about PGO
   assert!(
     config.contains("PGO") || config.contains("profile-generate") || config.contains("profile-use"),
     ".cargo/config.toml should document PGO workflow"
   );
+  Ok(())
 }
 
 /// Test 8: Moon tasks should include PGO workflow
 #[test]
-fn test_moon_pgo_tasks_exist() {
-  let moon_tasks =
-    std::fs::read_to_string("../.moon/tasks.yml").expect("Failed to read .moon/tasks.yml");
+fn test_moon_pgo_tasks_exist() -> Result<(), Box<dyn std::error::Error>> {
+  let moon_tasks = std::fs::read_to_string("../.moon/tasks.yml")?;
 
   // Verify PGO instrumentation task exists
   assert!(
@@ -142,11 +142,12 @@ fn test_moon_pgo_tasks_exist() {
     moon_tasks.contains("pgo-optimize"),
     ".moon/tasks.yml should define a pgo-optimize task"
   );
+  Ok(())
 }
 
 /// Test 9: PGO workload script should exist
 #[test]
-fn test_pgo_workload_script_exists() {
+fn test_pgo_workload_script_exists() -> Result<(), Box<dyn std::error::Error>> {
   let script_path = PathBuf::from("../.moon/scripts/pgo-workload.sh");
   assert!(
     script_path.exists(),
@@ -154,7 +155,7 @@ fn test_pgo_workload_script_exists() {
   );
 
   // Verify script is executable
-  let metadata = std::fs::metadata(&script_path).expect("Failed to get script metadata");
+  let metadata = std::fs::metadata(&script_path)?;
   let permissions = metadata.permissions();
   #[cfg(unix)]
   {
@@ -165,18 +166,19 @@ fn test_pgo_workload_script_exists() {
       "PGO workload script should be executable (chmod +x)"
     );
   }
+  Ok(())
 }
 
 /// Test 10: Documentation should exist
 #[test]
-fn test_optimization_documentation_exists() {
+fn test_optimization_documentation_exists() -> Result<(), Box<dyn std::error::Error>> {
   let doc_path = PathBuf::from("../docs/BUILD_OPTIMIZATION.md");
   assert!(
     doc_path.exists(),
     "docs/BUILD_OPTIMIZATION.md should exist to document LTO and PGO workflow"
   );
 
-  let docs = std::fs::read_to_string(&doc_path).expect("Failed to read documentation");
+  let docs = std::fs::read_to_string(&doc_path)?;
 
   // Verify documentation covers key topics
   assert!(
@@ -188,4 +190,5 @@ fn test_optimization_documentation_exists() {
     docs.contains("bd-2m1"),
     "Documentation should reference the implementation bead"
   );
+  Ok(())
 }

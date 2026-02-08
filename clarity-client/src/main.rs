@@ -59,7 +59,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   };
 
   // Try to load saved window state, fall back to defaults
-  let geometry = WindowStateManager::load_geometry().unwrap_or_else(|_| default_geometry.clone());
+  let geometry = match WindowStateManager::load_geometry() {
+    Ok(geo) => geo,
+    Err(_) => default_geometry.clone(),
+  };
 
   // ==============================================================================
   // DESKTOP LAUNCHER CONFIGURATION
@@ -75,14 +78,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   // Build window configuration
   let mut window_builder = WindowBuilder::new();
-  window_builder = window_builder.with_title("Clarity").with_inner_size(
-    geometry.width.unwrap_or(1200.0),
-    geometry.height.unwrap_or(800.0),
-  );
+  let width = match geometry.width {
+    Some(w) => w,
+    None => 1200.0,
+  };
+  let height = match geometry.height {
+    Some(h) => h,
+    None => 800.0,
+  };
+  window_builder = window_builder
+    .with_title("Clarity")
+    .with_inner_size(width, height);
 
   if let Some(min_width) = geometry.min_width {
-    window_builder =
-      window_builder.with_min_inner_size(min_width, geometry.min_height.unwrap_or(600.0));
+    let min_height = match geometry.min_height {
+      Some(h) => h,
+      None => 600.0,
+    };
+    window_builder = window_builder.with_min_inner_size(min_width, min_height);
   }
 
   if let Some(x) = geometry.x {
