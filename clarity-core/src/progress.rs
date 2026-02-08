@@ -102,7 +102,11 @@ impl Display for ProgressStatus {
 }
 
 /// Progress metrics for a collection of items
+///
+/// Note: Does not derive Eq because it contains f64 fields (completion_percentage).
+/// Floats cannot implement Eq due to NaN values not being equal to themselves.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 pub struct ProgressMetrics {
   /// Total number of items tracked
   pub total: usize,
