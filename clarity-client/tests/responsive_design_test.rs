@@ -1,6 +1,9 @@
-// Tests for responsive design functionality
-// Following TDD15 principles: RED-GREEN-REFACTOR
-// Zero unwrap/panic policy - all tests use Result/Option properly
+//! Tests for responsive design functionality
+//!
+//! Following TDD15 principles: RED-GREEN-REFACTOR
+//! Zero unwrap/panic policy - all tests use Result/Option properly
+//!
+//! See docs/TESTING.md for testing standards.
 
 // TODO: Re-enable app component tests when app module is implemented
 // use clarity_client::app;

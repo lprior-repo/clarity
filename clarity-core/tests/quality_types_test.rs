@@ -1,5 +1,9 @@
 //! Martin Fowler tests for Quality Types (core-012)
 //!
+//! These tests verify quality scoring and validation functionality.
+//!
+//! See docs/TESTING.md for testing standards.
+//!
 //! Test Plan:
 //! 1. Should Create QualityScore From Valid Float
 //! 2. Should Reject QualityScore Outside Range

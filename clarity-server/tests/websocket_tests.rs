@@ -1,8 +1,6 @@
 //! WebSocket integration tests for clarity-server
 //!
 //! These tests verify WebSocket functionality including:
-//!
-//! These tests verify WebSocket functionality including:
 //! - Connection upgrade from HTTP to WebSocket
 //! - Message broadcasting to multiple clients
 //! - Proper connection lifecycle management

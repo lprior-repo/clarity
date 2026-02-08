@@ -2,6 +2,8 @@
 //!
 //! These tests verify the complete integration of components,
 //! error handling, and application state management.
+//!
+//! See docs/TESTING.md for testing standards.
 
 use clarity_client::app::{AppError, AppState};
 
