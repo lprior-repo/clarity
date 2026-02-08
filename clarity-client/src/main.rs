@@ -33,37 +33,15 @@ use std::result::Result;
 /// - Menu creation fails
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-  use dioxus_desktop::{launch, Config, WindowBuilder};
-
-  // ==============================================================================
-  // WINDOW CONFIGURATION
-  // ==============================================================================
-
-  // Default window geometry
-  let width = 1200.0;
-  let height = 800.0;
-  let x = 100.0;
-  let y = 100.0;
+  use dioxus_desktop::launch::launch;
 
   // ==============================================================================
   // LAUNCH DESKTOP APPLICATION
   // ==============================================================================
 
-  // Build window configuration
-  let window_builder = WindowBuilder::new()
-    .with_title("Clarity")
-    .with_inner_size(dioxus_desktop::tao::dpi::LogicalSize::new(width, height))
-    .with_position(dioxus_desktop::tao::dpi::LogicalPosition::new(x, y))
-    .with_resizable(true)
-    .with_decorations(true);
-
-  // Configure desktop app
-  let config = Config::default().with_window(window_builder);
-
-  // Launch the desktop app
-  // Note: dioxus_desktop::launch doesn't return Result, it handles errors internally
-  // We're following the Dioxus desktop API here
-  launch(clarity_client::App);
+  // Launch the desktop app with default configuration
+  // Note: launch doesn't return Result, it handles errors internally
+  launch(clarity_client::App, vec![], vec![]);
 
   Ok(())
 }

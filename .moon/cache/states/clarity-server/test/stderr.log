@@ -1,0 +1,27 @@
+[1m[92m    Blocking[0m waiting for file lock on package cache
+[1m[92m    Blocking[0m waiting for file lock on package cache
+[1m[92m    Blocking[0m waiting for file lock on package cache
+[1m[92m   Compiling[0m clarity-core v0.1.0-dev (/home/lewis/src/clarity/clarity-core)
+[1m[92m   Compiling[0m dioxus-desktop v0.7.3
+[1m[92m   Compiling[0m clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client)
+[1m[91merror[E0433][0m[1m: failed to resolve: could not find `beads` in the crate root[0m
+   [1m[94m--> [0mclarity-client/src/app.rs:118:30
+    [1m[94m|[0m
+[1m[94m118[0m [1m[94m|[0m                       crate::beads::BeadManagementPage {}
+    [1m[94m|[0m                              [1m[91m^^^^^[0m [1m[91mcould not find `beads` in the crate root[0m
+
+[1m[91merror[E0282][0m[1m: type annotations needed[0m
+   [1m[94m--> [0mclarity-client/src/app.rs:117:31
+    [1m[94m|[0m
+[1m[94m117[0m [1m[94m|[0m                     "/beads" => rsx! {
+    [1m[94m|[0m [1m[91m _______________________________^[0m
+[1m[94m118[0m [1m[94m|[0m [1m[91m|[0m                       crate::beads::BeadManagementPage {}
+[1m[94m119[0m [1m[94m|[0m [1m[91m|[0m                   },
+    [1m[94m|[0m [1m[91m|___________________^[0m [1m[91mcannot infer type[0m
+    [1m[94m|[0m
+    [1m[94m= [0m[1mnote[0m: this error originates in the macro `rsx` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+[1mSome errors have detailed explanations: E0282, E0433.[0m
+[1mFor more information about an error, try `rustc --explain E0282`.[0m
+[1m[91merror[0m: could not compile `clarity-client` (lib) due to 2 previous errors
+[1m[33mwarning[0m: build failed, waiting for other jobs to finish...
