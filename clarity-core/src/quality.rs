@@ -532,6 +532,12 @@ impl Validator {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+  #![allow(clippy::panic)]
+  #![allow(clippy::float_cmp)]
+  #![allow(clippy::unnecessary_to_owned)]
+  #![allow(clippy::manual_string_new)]
   use super::*;
 
   // Test 1: Should Create QualityScore From Valid Float
