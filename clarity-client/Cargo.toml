@@ -3,7 +3,26 @@ name = "clarity-client"
 version.workspace = true
 edition.workspace = true
 
+[[bin]]
+name = "clarity-desktop"
+path = "src/main.rs"
+
 [dependencies]
 clarity-core = { path = "../clarity-core" }
 dioxus.workspace = true
 tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+dirs = "5.0"
+reqwest = { version = "0.12", features = ["json"] }
+anyhow.workspace = true
+thiserror.workspace = true
+num_cpus = "1.16"
+
+# Desktop-specific dependencies (only for desktop builds)
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+dioxus-desktop = "0.7"
+
+# Web-specific dependencies
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+dioxus-web = "0.7"

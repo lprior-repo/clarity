@@ -345,8 +345,14 @@ impl std::error::Error for UrlError {}
 /// Question types for surveys and forms
 pub mod question;
 
+/// Planning types for project management
+pub mod planning;
+
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+  #![allow(clippy::panic)]
   use super::*;
   #[allow(clippy::redundant_clone)]
   #[allow(clippy::implicit_clone)]

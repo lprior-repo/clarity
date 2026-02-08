@@ -28,6 +28,7 @@ pub mod interview;
 pub mod json_formatter;
 pub mod path_utils;
 pub mod progress;
+pub mod quality;
 // pub mod schema_registry;
 pub mod session;
 pub mod types;

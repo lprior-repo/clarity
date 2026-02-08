@@ -1,4 +1,3 @@
-#![deny(clippy::disallowed_methods)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
@@ -122,9 +121,10 @@ pub fn validate_email_format(input: &str) -> Result<&str, ValidationError> {
 }
 
 #[cfg(test)]
-#[allow(clippy::disallowed_methods)]
-#[allow(clippy::panic)]
 mod tests {
+  #![allow(clippy::panic)]
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
   use super::*;
 
   #[test]

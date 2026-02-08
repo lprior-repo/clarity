@@ -54,6 +54,7 @@ serde_json = "1.0"
 axum = { version = "0.8.8", features = ["ws"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["trace"] }
+tower-service = "0.3"
 tracing = "0.1"
 tracing-subscriber = "0.3"
 anyhow = "1.0"
@@ -61,11 +62,21 @@ thiserror = "1.0"
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "sqlite", "uuid", "chrono", "json", "migrate"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
-deadpool-postgres = "0.14"
+# TODO: Re-enable when bd-237 is complete
+# deadpool-postgres = "0.14"
+# TODO: Re-enable deadpool-sqlx when bd-237 is complete
+# Currently blocked - crate may not exist or wrong version
+# deadpool-sqlx = { version = "0.7", features = ["sqlx-postgres", "sqlx-sqlite"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
 tempfile = "3.10"
 moka = { version = "0.12", features = ["future"] }
 mimalloc = { version = "0.1", default-features = false }
+
+# ============================================================================
+# BUILD OPTIMIZATION PROFILES
+# ============================================================================
+# This configuration implements Release Build Optimization (LTO + PGO)
+# See bead bd-2m1 for details and test coverage.
 
 [profile.dev]
 opt-level = 0
@@ -78,3 +89,29 @@ debug = false
 lto = true
 codegen-units = 1
 strip = true
+
+# Alternative release profile for faster CI builds (thin LTO)
+[profile.ci]
+inherits = "release"
+opt-level = 3
+lto = "thin"
+codegen-units = 16
+strip = true
+
+# Profile for PGO instrumentation (see .moon/tasks.yml for workflow)
+[profile.pgo-instrument]
+inherits = "release"
+opt-level = 3
+debug = true
+lto = "thin"
+strip = false
+
+# Profile for PGO optimized builds (after profiling)
+[profile.pgo-optimized]
+inherits = "release"
+opt-level = 3
+debug = false
+lto = "fat"
+codegen-units = 1
+strip = true
+

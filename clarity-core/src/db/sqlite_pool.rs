@@ -9,6 +9,13 @@
 //! This module provides `SQLite` database support for embedded database scenarios.
 //! The `SQLite` database runs in-process, making it ideal for single-user applications
 //! or scenarios where data needs to be bundled with the binary.
+//!
+//! Features:
+//! - WAL mode for concurrent reads and writes
+//! - Configurable pool size and timeouts
+//! - Pool metrics for monitoring
+//! - Automatic reconnection on failures
+//! - Health checks
 
 use crate::db::error::{DbError, DbResult};
 #[allow(unused_imports)]
@@ -22,12 +29,18 @@ pub struct SqliteDbConfig {
   pub database_url: String,
   /// Maximum number of connections in the pool
   pub max_connections: u32,
+  /// Minimum number of connections in the pool
+  pub min_connections: u32,
   /// Timeout when acquiring a connection from the pool
   pub acquire_timeout: Duration,
   /// Timeout for idle connections in the pool
   pub idle_timeout: Duration,
   /// Maximum lifetime of a connection in the pool
   pub max_lifetime: Duration,
+  /// Time to wait before attempting reconnection
+  pub reconnect_timeout: Duration,
+  /// Maximum number of reconnection attempts
+  pub max_reconnect_attempts: u32,
 }
 
 impl Default for SqliteDbConfig {
@@ -35,9 +48,12 @@ impl Default for SqliteDbConfig {
     Self {
       database_url: "sqlite:clarity.db".to_string(),
       max_connections: 5,
+      min_connections: 0,
       acquire_timeout: Duration::from_secs(30),
       idle_timeout: Duration::from_secs(600),
       max_lifetime: Duration::from_secs(1800),
+      reconnect_timeout: Duration::from_secs(5),
+      max_reconnect_attempts: 3,
     }
   }
 }
@@ -45,10 +61,16 @@ impl Default for SqliteDbConfig {
 impl SqliteDbConfig {
   /// Create a new `SqliteDbConfig` from a database URL
   #[must_use]
-  pub fn new(database_url: String) -> Self {
+  pub const fn new(database_url: String) -> Self {
     Self {
       database_url,
-      ..Default::default()
+      max_connections: 5,
+      min_connections: 0,
+      acquire_timeout: Duration::from_secs(30),
+      idle_timeout: Duration::from_secs(600),
+      max_lifetime: Duration::from_secs(1800),
+      reconnect_timeout: Duration::from_secs(5),
+      max_reconnect_attempts: 3,
     }
   }
 
@@ -75,6 +97,13 @@ impl SqliteDbConfig {
     self
   }
 
+  /// Set min connections
+  #[must_use]
+  pub const fn with_min_connections(mut self, min: u32) -> Self {
+    self.min_connections = min;
+    self
+  }
+
   /// Set acquire timeout
   #[must_use]
   pub const fn with_acquire_timeout(mut self, timeout: Duration) -> Self {
@@ -93,6 +122,20 @@ impl SqliteDbConfig {
   #[must_use]
   pub const fn with_max_lifetime(mut self, lifetime: Duration) -> Self {
     self.max_lifetime = lifetime;
+    self
+  }
+
+  /// Set reconnect timeout
+  #[must_use]
+  pub const fn with_reconnect_timeout(mut self, timeout: Duration) -> Self {
+    self.reconnect_timeout = timeout;
+    self
+  }
+
+  /// Set max reconnect attempts
+  #[must_use]
+  pub const fn with_max_reconnect_attempts(mut self, attempts: u32) -> Self {
+    self.max_reconnect_attempts = attempts;
     self
   }
 }
@@ -163,6 +206,127 @@ pub async fn test_sqlite_connection(pool: &SqlitePool) -> DbResult<()> {
     .await
     .map(|_| ())
     .map_err(DbError::from)
+}
+
+/// `SQLite` pool metrics for monitoring
+#[derive(Debug, Clone, Copy)]
+pub struct SqlitePoolMetrics {
+  /// Current pool size (active + idle connections)
+  pub size: u32,
+  /// Number of idle connections available
+  pub idle: u32,
+  /// Maximum pool size
+  pub max_size: u32,
+  /// Number of active connections (size - idle)
+  pub active: u32,
+  /// Pool utilization percentage (active / `max_size` * 100)
+  pub utilization: f32,
+}
+
+/// Get pool metrics from a `SQLite` pool
+#[must_use]
+pub fn get_sqlite_pool_metrics(pool: &SqlitePool) -> SqlitePoolMetrics {
+  let size = pool.size();
+  let idle = u32::try_from(pool.num_idle()).unwrap_or(u32::MAX);
+  let max_size = pool.options().get_max_connections();
+  let active = size.saturating_sub(idle);
+  let utilization = if max_size > 0 {
+    (active as f32 / max_size as f32) * 100.0
+  } else {
+    0.0
+  };
+
+  SqlitePoolMetrics {
+    size,
+    idle,
+    max_size,
+    active,
+    utilization,
+  }
+}
+
+/// SQLite pool health status
+#[derive(Debug, Clone)]
+pub struct SqlitePoolHealthStatus {
+  /// Whether the pool is healthy
+  pub is_healthy: bool,
+  /// Current pool metrics
+  pub metrics: SqlitePoolMetrics,
+  /// Health status message
+  pub message: String,
+}
+
+/// Test SQLite pool health by checking connectivity and pool state
+///
+/// # Errors
+/// - Returns `DbError` if the pool is unhealthy or connection test fails
+pub async fn test_sqlite_pool_health(pool: &SqlitePool) -> DbResult<SqlitePoolHealthStatus> {
+  // Test basic connectivity
+  test_sqlite_connection(pool).await?;
+
+  // Check pool metrics
+  let metrics = get_sqlite_pool_metrics(pool);
+
+  // Determine health status
+  let is_healthy = metrics.utilization < 90.0 && metrics.active < metrics.max_size;
+
+  Ok(SqlitePoolHealthStatus {
+    is_healthy,
+    metrics,
+    message: if is_healthy {
+      "SQLite pool is healthy".to_string()
+    } else if metrics.utilization >= 90.0 {
+      format!(
+        "SQLite pool is at high utilization: {:.1}%",
+        metrics.utilization
+      )
+    } else {
+      "SQLite pool has no available connections".to_string()
+    },
+  })
+}
+
+/// Acquire a connection from the SQLite pool with automatic retry on failure
+///
+/// This function will attempt to acquire a connection and retry if it fails,
+/// up to the configured maximum number of reconnection attempts.
+///
+/// # Errors
+/// - Returns `DbError::Connection` if all reconnection attempts fail
+/// - Returns `DbError::AcquisitionTimeout` if connection acquisition times out
+pub async fn acquire_sqlite_with_retry(
+  pool: &SqlitePool,
+  config: &SqliteDbConfig,
+) -> DbResult<sqlx::pool::PoolConnection<sqlx::Sqlite>> {
+  let mut last_error = None;
+
+  for attempt in 0..=config.max_reconnect_attempts {
+    match pool.acquire().await {
+      Ok(conn) => return Ok(conn),
+      Err(e) => {
+        last_error = Some(DbError::from(e));
+
+        // If this isn't the last attempt, wait before retrying
+        if attempt < config.max_reconnect_attempts {
+          tokio::time::sleep(config.reconnect_timeout).await;
+        }
+      }
+    }
+  }
+
+  // All attempts failed
+  Err(last_error.unwrap_or_else(|| {
+    DbError::AcquisitionTimeout(
+      "Failed to acquire SQLite connection after all retry attempts".to_string(),
+    )
+  }))
+}
+
+/// Close the SQLite pool gracefully
+///
+/// This function closes all connections in the pool and waits for them to be released.
+pub async fn close_sqlite_pool(pool: &SqlitePool) {
+  pool.close().await;
 }
 
 #[cfg(test)]

@@ -18,7 +18,9 @@ thiserror.workspace = true
 sqlx.workspace = true
 uuid.workspace = true
 chrono.workspace = true
-deadpool-postgres.workspace = true
+# TODO: Re-enable when bd-237 is complete
+# deadpool-postgres.workspace = true
+# deadpool-sqlx.workspace = true
 rusqlite.workspace = true
 tempfile.workspace = true
 moka.workspace = true

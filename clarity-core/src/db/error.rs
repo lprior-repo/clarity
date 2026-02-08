@@ -34,6 +34,21 @@ pub enum DbError {
 
   #[error("Bundled database connection error: {0}")]
   BundledDbConnection(String),
+
+  #[error("Connection pool exhausted: {0}")]
+  PoolExhausted(String),
+
+  #[error("Connection pool closed")]
+  PoolClosed,
+
+  #[error("Connection pool creation failed: {0}")]
+  PoolCreation(String),
+
+  #[error("Connection acquisition timeout: {0}")]
+  AcquisitionTimeout(String),
+
+  #[error("Reconnection failed: {0}")]
+  ReconnectionFailed(String),
 }
 
 impl DbError {

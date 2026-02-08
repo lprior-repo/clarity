@@ -22,7 +22,7 @@ reload_html = true
 watch_style = true
 
 # Additional resource paths
-resource_path = ["public"]
+resource_path = ["public", "assets"]
 
 [web.resource]
 # CSS files
@@ -44,3 +44,61 @@ hot_reload = true
 
 # Optimize for debug builds
 optimize_on_watch = false
+
+# ============================================================================
+# DESKTOP BUNDLE CONFIGURATION
+# ============================================================================
+# This section configures asset bundling for desktop builds (Linux, macOS, Windows)
+
+[bundle]
+# App identifier (reverse domain notation)
+identifier = "com.clarityapp"
+
+# Publisher name
+publisher = "Clarity"
+
+# Icon files for different platforms
+icon = [
+    "assets/icons/icon.png",    # Linux/Windows
+    "assets/icons/icon.svg",    # Fallback SVG icon
+]
+
+# Additional resources to bundle
+resources = [
+    "assets/responsive.css",
+    "assets/icons/",
+]
+
+# Copyright notice
+copyright = "Copyright (c) 2025 Clarity contributors"
+
+# Category (Linux)
+category = "Development"
+
+# Short description
+short_description = "A modern interview and documentation management app"
+
+# Long description
+long_description = """
+Clarity is a modern desktop application for managing interviews,
+documentation, and development workflows. Built with Dioxus and Rust.
+"""
+
+# Platform-specific settings
+
+# Linux/Debian settings
+[bundle.deb]
+depends = ["libwebkit2gtk-4.1-0", "libgtk-3-0"]
+provides = ["clarity"]
+section = "devel"
+priority = "optional"
+
+# macOS settings
+[bundle.macos]
+minimum_system_version = "10.15"
+frameworks = ["WebKit"]
+hardened_runtime = true
+
+# Windows settings
+[bundle.windows]
+webview_install_mode = { DownloadBootstrapper = { silent = false } }

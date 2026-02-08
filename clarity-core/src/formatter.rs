@@ -174,12 +174,13 @@ impl OutputFormatter<Interview> for JsonFormatter {
     let mut json = String::new();
     write!(json, "{{").map_err(|e| FormatError::IoError(e.to_string()))?;
     write!(json, "\"id\":\"{}\",", data.id).map_err(|e| FormatError::IoError(e.to_string()))?;
-    write!(json, "\"spec_name\":\"{}\",", data.spec_name).map_err(|e| FormatError::IoError(e.to_string()))?;
-    write!(json, "\"state\":\"{}\",", data.state).map_err(|e| FormatError::IoError(e.to_string()))?;
+    write!(json, "\"spec_name\":\"{}\",", data.spec_name)
+      .map_err(|e| FormatError::IoError(e.to_string()))?;
+    write!(json, "\"state\":\"{}\",", data.state)
+      .map_err(|e| FormatError::IoError(e.to_string()))?;
     let title_json = serde_json::to_string(&data.title)
       .map_err(|e| FormatError::SerializationFailed(e.to_string()))?;
-    write!(json, "\"title\":{},", title_json)
-      .map_err(|e| FormatError::IoError(e.to_string()))?;
+    write!(json, "\"title\":{},", title_json).map_err(|e| FormatError::IoError(e.to_string()))?;
     let desc_json = serde_json::to_string(&data.description)
       .map_err(|e| FormatError::SerializationFailed(e.to_string()))?;
     write!(json, "\"description\":{},", desc_json)
@@ -194,14 +195,15 @@ impl OutputFormatter<Interview> for JsonFormatter {
       write!(json, "{{").map_err(|e| FormatError::IoError(e.to_string()))?;
       let text_json = serde_json::to_string(&q.text)
         .map_err(|e| FormatError::SerializationFailed(e.to_string()))?;
-      write!(json, "\"text\":{},", text_json)
-        .map_err(|e| FormatError::IoError(e.to_string()))?;
+      write!(json, "\"text\":{},", text_json).map_err(|e| FormatError::IoError(e.to_string()))?;
       let help_json = serde_json::to_string(&q.help_text)
         .map_err(|e| FormatError::SerializationFailed(e.to_string()))?;
       write!(json, "\"help_text\":{},", help_json)
         .map_err(|e| FormatError::IoError(e.to_string()))?;
-      write!(json, "\"required\":{},", q.required).map_err(|e| FormatError::IoError(e.to_string()))?;
-      write!(json, "\"question_type\":\"{:?}\"", q.question_type).map_err(|e| FormatError::IoError(e.to_string()))?;
+      write!(json, "\"required\":{},", q.required)
+        .map_err(|e| FormatError::IoError(e.to_string()))?;
+      write!(json, "\"question_type\":\"{:?}\"", q.question_type)
+        .map_err(|e| FormatError::IoError(e.to_string()))?;
       write!(json, "}}").map_err(|e| FormatError::IoError(e.to_string()))?;
     }
     write!(json, "],").map_err(|e| FormatError::IoError(e.to_string()))?;
@@ -212,24 +214,28 @@ impl OutputFormatter<Interview> for JsonFormatter {
       if i > 0 {
         write!(json, ",").map_err(|e| FormatError::IoError(e.to_string()))?;
       }
-      write!(json, "{{\"question_index\":{},", a.question_index).map_err(|e| FormatError::IoError(e.to_string()))?;
+      write!(json, "{{\"question_index\":{},", a.question_index)
+        .map_err(|e| FormatError::IoError(e.to_string()))?;
       match &a.value {
         AnswerValue::Text(s) => write!(json, "\"value\":\"{}\"}}", s.replace('"', "\\\"")),
         AnswerValue::Boolean(b) => write!(json, "\"value\":{}}}", b),
         AnswerValue::MultipleChoice(idx) => write!(json, "\"value\":{}}}", idx),
         AnswerValue::Numeric(n) => write!(json, "\"value\":{}}}", n),
-      }.map_err(|e| FormatError::IoError(e.to_string()))?;
+      }
+      .map_err(|e| FormatError::IoError(e.to_string()))?;
     }
     write!(json, "],").map_err(|e| FormatError::IoError(e.to_string()))?;
 
-    write!(json, "\"created_at\":{},", data.created_at.as_secs()).map_err(|e| FormatError::IoError(e.to_string()))?;
-    write!(json, "\"updated_at\":{}", data.updated_at.as_secs()).map_err(|e| FormatError::IoError(e.to_string()))?;
+    write!(json, "\"created_at\":{},", data.created_at.as_secs())
+      .map_err(|e| FormatError::IoError(e.to_string()))?;
+    write!(json, "\"updated_at\":{}", data.updated_at.as_secs())
+      .map_err(|e| FormatError::IoError(e.to_string()))?;
     write!(json, "}}").map_err(|e| FormatError::IoError(e.to_string()))?;
 
     // Pretty print if needed
     if self.pretty {
-      let parsed: serde_json::Value = serde_json::from_str(&json)
-        .map_err(|e| FormatError::SerializationFailed(e.to_string()))?;
+      let parsed: serde_json::Value =
+        serde_json::from_str(&json).map_err(|e| FormatError::SerializationFailed(e.to_string()))?;
       serde_json::to_string_pretty(&parsed)
         .map_err(|e| FormatError::SerializationFailed(e.to_string()))
     } else {
@@ -388,7 +394,7 @@ mod tests {
   #![allow(clippy::expect_used)]
   #![allow(clippy::panic)]
   use super::*;
-  use crate::interview::{InterviewBuilder, Question, QuestionType, Timestamp};
+  use crate::interview::{InterviewBuilder, Question, QuestionType};
 
   /// Helper function to create a test interview
   fn create_test_interview() -> Interview {

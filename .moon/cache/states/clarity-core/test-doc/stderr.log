@@ -1,1 +1,84 @@
 [1m[92m    Blocking[0m waiting for file lock on package cache
+[1m[92m    Blocking[0m waiting for file lock on package cache
+[1m[92m    Blocking[0m waiting for file lock on package cache
+[1m[92m   Compiling[0m clarity-core v0.1.0-dev (/home/lewis/src/clarity/clarity-core)
+[1m[92m   Compiling[0m clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client)
+[1m[33mwarning[0m[1m: unused import: `std::result::Result`[0m
+  [1m[94m--> [0mclarity-client/src/beads.rs:11:5
+   [1m[94m|[0m
+[1m[94m11[0m [1m[94m|[0m use std::result::Result;
+   [1m[94m|[0m     [1m[33m^^^^^^^^^^^^^^^^^^^[0m
+   [1m[94m|[0m
+   [1m[94m= [0m[1mnote[0m: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+[1m[91merror[E0277][0m[1m: the trait bound `Vec<Result<VNode, dioxus::prelude::RenderError>>: IntoDynNode<core::nodes::FromNodeIterator>` is not satisfied[0m
+  [1m[94m--> [0mclarity-client/src/beads.rs:83:27
+   [1m[94m|[0m
+[1m[94m70[0m [1m[94m|[0m [1m[94m/[0m     rsx! {
+[1m[94m71[0m [1m[94m|[0m [1m[94m|[0m         div { class: "bead-management-page",
+[1m[94m72[0m [1m[94m|[0m [1m[94m|[0m             h1 { "Bead Management" }
+[1m[94m73[0m [1m[94m|[0m [1m[94m|[0m             div { class: "bead-content",
+[1m[94m...[0m  [1m[94m|[0m
+[1m[94m83[0m [1m[94m|[0m [1m[94m|[0m                             {beads.read().iter().map(|bead| {
+   [1m[94m|[0m [1m[94m|[0m[1m[91m ____________________________^[0m[1m[94m-[0m
+   [1m[94m|[0m [1m[94m|[0m[1m[91m|[0m[1m[94m ____________________________|[0m
+[1m[94m84[0m [1m[94m|[0m [1m[94m|[0m[1m[91m|[0m[1m[94m|[0m                               rsx! {
+[1m[94m85[0m [1m[94m|[0m [1m[94m|[0m[1m[91m|[0m[1m[94m|[0m                                   BeadCard { bead: bead.clone() }
+[1m[94m86[0m [1m[94m|[0m [1m[94m|[0m[1m[91m|[0m[1m[94m|[0m                               }
+[1m[94m87[0m [1m[94m|[0m [1m[94m|[0m[1m[91m|[0m[1m[94m|[0m                           }).collect::<Vec<_>>()}
+   [1m[94m|[0m [1m[94m|[0m[1m[91m|[0m[1m[94m|[0m[1m[91m________________________________________________[0m[1m[94m-[0m[1m[91m^[0m [1m[91mthe trait `Iterator` is not implemented for `Vec<Result<VNode, dioxus::prelude::RenderError>>`[0m
+   [1m[94m|[0m [1m[94m|[0m [1m[94m|________________________________________________|[0m
+   [1m[94m|[0m [1m[94m|[0m                                                  [1m[94mthis tail expression is of type `Vec<Result<VNode, RenderError>>`[0m
+[1m[94m...[0m  [1m[94m|[0m
+[1m[94m93[0m [1m[94m|[0m [1m[94m|[0m     }
+   [1m[94m|[0m [1m[94m|_____-[0m [1m[94mrequired by a bound introduced by this call[0m
+   [1m[94m|[0m
+   [1m[94m= [0m[1mhelp[0m: the following other types implement trait `IntoDynNode<A>`:
+             &Result<VNode, dioxus::prelude::RenderError>
+             &VNode
+             &std::option::Option<VNode>
+             &str
+             ()
+             Arguments<'_>
+             DynamicNode
+             Loader<T>
+           and 10 others
+   [1m[94m= [0m[1mnote[0m: required for `Vec<Result<VNode, dioxus::prelude::RenderError>>` to implement `IntoDynNode<core::nodes::FromNodeIterator>`
+
+[1m[91merror[E0277][0m[1m: the trait bound `Vec<Result<VNode, dioxus::prelude::RenderError>>: IntoDynNode<core::nodes::FromNodeIterator>` is not satisfied[0m
+   [1m[94m--> [0mclarity-client/src/beads.rs:112:19
+    [1m[94m|[0m
+[1m[94m 99[0m [1m[94m|[0m [1m[94m/[0m     rsx! {
+[1m[94m100[0m [1m[94m|[0m [1m[94m|[0m         div { class: "bead-card",
+[1m[94m101[0m [1m[94m|[0m [1m[94m|[0m             div { class: "bead-header",
+[1m[94m102[0m [1m[94m|[0m [1m[94m|[0m                 h3 { class: "bead-title", "{bead.title}" }
+[1m[94m...[0m   [1m[94m|[0m
+[1m[94m112[0m [1m[94m|[0m [1m[94m|[0m                     {bead.labels.iter().map(|label| {
+    [1m[94m|[0m [1m[94m|[0m[1m[91m ____________________^[0m[1m[94m-[0m
+    [1m[94m|[0m [1m[94m|[0m[1m[91m|[0m[1m[94m ____________________|[0m
+[1m[94m113[0m [1m[94m|[0m [1m[94m|[0m[1m[91m|[0m[1m[94m|[0m                       rsx! {
+[1m[94m114[0m [1m[94m|[0m [1m[94m|[0m[1m[91m|[0m[1m[94m|[0m                           span { class: "label-badge", "{label}" }
+[1m[94m115[0m [1m[94m|[0m [1m[94m|[0m[1m[91m|[0m[1m[94m|[0m                       }
+[1m[94m116[0m [1m[94m|[0m [1m[94m|[0m[1m[91m|[0m[1m[94m|[0m                   }).collect::<Vec<_>>()}
+    [1m[94m|[0m [1m[94m|[0m[1m[91m|[0m[1m[94m|[0m[1m[91m________________________________________[0m[1m[94m-[0m[1m[91m^[0m [1m[91mthe trait `Iterator` is not implemented for `Vec<Result<VNode, dioxus::prelude::RenderError>>`[0m
+    [1m[94m|[0m [1m[94m|[0m [1m[94m|________________________________________|[0m
+    [1m[94m|[0m [1m[94m|[0m                                          [1m[94mthis tail expression is of type `Vec<Result<VNode, RenderError>>`[0m
+[1m[94m...[0m   [1m[94m|[0m
+[1m[94m124[0m [1m[94m|[0m [1m[94m|[0m     }
+    [1m[94m|[0m [1m[94m|_____-[0m [1m[94mrequired by a bound introduced by this call[0m
+    [1m[94m|[0m
+    [1m[94m= [0m[1mhelp[0m: the following other types implement trait `IntoDynNode<A>`:
+              &Result<VNode, dioxus::prelude::RenderError>
+              &VNode
+              &std::option::Option<VNode>
+              &str
+              ()
+              Arguments<'_>
+              DynamicNode
+              Loader<T>
+            and 10 others
+    [1m[94m= [0m[1mnote[0m: required for `Vec<Result<VNode, dioxus::prelude::RenderError>>` to implement `IntoDynNode<core::nodes::FromNodeIterator>`
+
+[1mFor more information about this error, try `rustc --explain E0277`.[0m
+[1m[33mwarning[0m: `clarity-client` (lib) generated 1 warning
+[1m[91merror[0m: could not compile `clarity-client` (lib) due to 2 previous errors; 1 warning emitted

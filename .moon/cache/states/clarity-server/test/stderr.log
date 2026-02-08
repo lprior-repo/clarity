@@ -1,27 +1,165 @@
+[1m[92m    Updating[0m crates.io index
+[1m[92m    Blocking[0m waiting for file lock on package cache
+[1m[92m     Locking[0m 159 packages to latest compatible versions
+[1m[92m      Adding[0m atk v0.18.2
+[1m[92m      Adding[0m atk-sys v0.18.2
+[1m[92m      Adding[0m block v0.1.6
+[1m[92m      Adding[0m block2 v0.6.2
+[1m[92m      Adding[0m cairo-rs v0.18.5
+[1m[92m      Adding[0m cairo-sys-rs v0.18.2
+[1m[92m      Adding[0m cfg-expr v0.15.8
+[1m[92m      Adding[0m cocoa v0.26.1
+[1m[92m      Adding[0m cocoa-foundation v0.2.1
+[1m[92m      Adding[0m convert_case v0.4.0
+[1m[92m      Adding[0m core-foundation v0.10.1
+[1m[92m      Adding[0m core-graphics v0.24.0
+[1m[92m      Adding[0m core-graphics-types v0.2.0
+[1m[92m      Adding[0m cssparser v0.29.6
+[1m[92m      Adding[0m cssparser-macros v0.6.1
+[1m[92m      Adding[0m derive_more v0.99.20
+[1m[92m      Adding[0m dioxus-desktop v0.7.3
+[1m[92m      Adding[0m dirs v6.0.0
+[1m[92m      Adding[0m dirs-sys v0.5.0
+[1m[92m      Adding[0m dispatch v0.2.0
+[1m[92m      Adding[0m dispatch2 v0.3.0
+[1m[92m      Adding[0m dlopen2 v0.8.2
+[1m[92m      Adding[0m dlopen2_derive v0.4.3
+[1m[92m      Adding[0m dpi v0.1.2
+[1m[92m      Adding[0m dtoa v1.0.11
+[1m[92m      Adding[0m dtoa-short v0.3.5
+[1m[92m      Adding[0m fdeflate v0.3.7
+[1m[92m      Adding[0m field-offset v0.3.6
+[1m[92m      Adding[0m foreign-types v0.5.0
+[1m[92m      Adding[0m foreign-types-macros v0.2.3
+[1m[92m      Adding[0m foreign-types-shared v0.3.1
+[1m[92m      Adding[0m futf v0.1.5
+[1m[92m      Adding[0m fxhash v0.2.1
+[1m[92m      Adding[0m gdk v0.18.2
+[1m[92m      Adding[0m gdk-pixbuf v0.18.5
+[1m[92m      Adding[0m gdk-pixbuf-sys v0.18.0
+[1m[92m      Adding[0m gdk-sys v0.18.2
+[1m[92m      Adding[0m gdkwayland-sys v0.18.2
+[1m[92m      Adding[0m gdkx11-sys v0.18.2
+[1m[92m      Adding[0m gethostname v1.1.0
+[1m[92m      Adding[0m getrandom v0.1.16
+[1m[92m      Adding[0m gio v0.18.4
+[1m[92m      Adding[0m gio-sys v0.18.1
+[1m[92m      Adding[0m glib v0.18.5
+[1m[92m      Adding[0m glib-macros v0.18.5
+[1m[92m      Adding[0m glib-sys v0.18.1
+[1m[92m      Adding[0m global-hotkey v0.7.0
+[1m[92m      Adding[0m gobject-sys v0.18.0
+[1m[92m      Adding[0m gtk v0.18.2
+[1m[92m      Adding[0m gtk-sys v0.18.2
+[1m[92m      Adding[0m gtk3-macros v0.18.2
+[1m[92m      Adding[0m heck v0.4.1
+[1m[92m      Adding[0m html5ever v0.29.1
+[1m[92m      Adding[0m javascriptcore-rs v1.1.2
+[1m[92m      Adding[0m javascriptcore-rs-sys v1.1.1
+[1m[92m      Adding[0m kuchikiki v0.8.8-speedreader
+[1m[92m      Adding[0m libappindicator v0.9.0
+[1m[92m      Adding[0m libappindicator-sys v0.9.0
+[1m[92m      Adding[0m libloading v0.7.4
+[1m[92m      Adding[0m libxdo v0.6.0
+[1m[92m      Adding[0m libxdo-sys v0.11.0
+[1m[92m      Adding[0m mac v0.1.1
+[1m[92m      Adding[0m malloc_buf v0.0.6
+[1m[92m      Adding[0m markup5ever v0.14.1
+[1m[92m      Adding[0m match_token v0.1.0
+[1m[92m      Adding[0m matches v0.1.10
+[1m[92m      Adding[0m memoffset v0.9.1
+[1m[92m      Adding[0m muda v0.17.1
+[1m[92m      Adding[0m new_debug_unreachable v1.0.6
+[1m[92m      Adding[0m nodrop v0.1.14
+[1m[92m      Adding[0m objc v0.2.7
+[1m[92m      Adding[0m objc2 v0.6.3
+[1m[92m      Adding[0m objc2-app-kit v0.3.2
+[1m[92m      Adding[0m objc2-core-foundation v0.3.2
+[1m[92m      Adding[0m objc2-core-graphics v0.3.2
+[1m[92m      Adding[0m objc2-encode v4.1.0
+[1m[92m      Adding[0m objc2-exception-helper v0.1.1
+[1m[92m      Adding[0m objc2-foundation v0.3.2
+[1m[92m      Adding[0m objc2-ui-kit v0.3.2
+[1m[92m      Adding[0m objc2-web-kit v0.3.2
+[1m[92m      Adding[0m objc_id v0.1.1
+[1m[92m      Adding[0m pango v0.18.3
+[1m[92m      Adding[0m pango-sys v0.18.0
+[1m[92m      Adding[0m phf v0.8.0
+[1m[92m      Adding[0m phf v0.10.1
+[1m[92m      Adding[0m phf v0.11.3
+[1m[92m      Adding[0m phf_codegen v0.8.0
+[1m[92m      Adding[0m phf_codegen v0.11.3
+[1m[92m      Adding[0m phf_generator v0.8.0
+[1m[92m      Adding[0m phf_generator v0.10.0
+[1m[92m      Adding[0m phf_generator v0.11.3
+[1m[92m      Adding[0m phf_macros v0.10.0
+[1m[92m      Adding[0m phf_shared v0.8.0
+[1m[92m      Adding[0m phf_shared v0.10.0
+[1m[92m      Adding[0m phf_shared v0.11.3
+[1m[92m      Adding[0m png v0.17.16
+[1m[92m      Adding[0m pollster v0.4.0
+[1m[92m      Adding[0m precomputed-hash v0.1.1
+[1m[92m      Adding[0m proc-macro-crate v1.3.1
+[1m[92m      Adding[0m proc-macro-crate v2.0.2
+[1m[92m      Adding[0m proc-macro-hack v0.5.20+deprecated
+[1m[92m      Adding[0m rand v0.7.3
+[1m[92m      Adding[0m rand_chacha v0.2.2
+[1m[92m      Adding[0m rand_core v0.5.1
+[1m[92m      Adding[0m rand_hc v0.2.0
+[1m[92m      Adding[0m rand_pcg v0.2.1
+[1m[92m      Adding[0m raw-window-handle v0.5.2
+[1m[92m      Adding[0m redox_users v0.5.2
+[1m[92m      Adding[0m rfd v0.17.2
+[1m[92m      Adding[0m selectors v0.24.0
+[1m[92m      Adding[0m serde_repr v0.1.20
+[1m[92m      Adding[0m serde_spanned v0.6.9
+[1m[92m      Adding[0m servo_arc v0.2.0
+[1m[92m      Adding[0m signal-hook v0.3.18
+[1m[92m      Adding[0m siphasher v0.3.11
+[1m[92m      Adding[0m siphasher v1.0.2
+[1m[92m      Adding[0m soup3 v0.5.0
+[1m[92m      Adding[0m soup3-sys v0.5.0
+[1m[92m      Adding[0m string_cache v0.8.9
+[1m[92m      Adding[0m string_cache_codegen v0.5.4
+[1m[92m      Adding[0m system-deps v6.2.2
+[1m[92m      Adding[0m tao v0.34.5
+[1m[92m      Adding[0m tao-macros v0.1.3
+[1m[92m      Adding[0m target-lexicon v0.12.16
+[1m[92m      Adding[0m tendril v0.4.3
+[1m[92m      Adding[0m toml v0.8.2 [1m[33m(available: v0.8.23)[0m
+[1m[92m      Adding[0m toml_datetime v0.6.3 [1m[33m(available: v0.6.11)[0m
+[1m[92m      Adding[0m toml_edit v0.19.15
+[1m[92m      Adding[0m toml_edit v0.20.2 [1m[33m(available: v0.20.7)[0m
+[1m[92m      Adding[0m tray-icon v0.21.3
+[1m[92m      Adding[0m version-compare v0.2.1
+[1m[92m      Adding[0m wasi v0.9.0+wasi-snapshot-preview1
+[1m[92m      Adding[0m webbrowser v1.1.0
+[1m[92m      Adding[0m webkit2gtk v2.0.1 [1m[33m(available: v2.0.2)[0m
+[1m[92m      Adding[0m webkit2gtk-sys v2.0.1 [1m[33m(available: v2.0.2)[0m
+[1m[92m      Adding[0m webview2-com v0.38.2
+[1m[92m      Adding[0m webview2-com-macros v0.8.1
+[1m[92m      Adding[0m webview2-com-sys v0.38.2
+[1m[92m      Adding[0m winapi v0.3.9
+[1m[92m      Adding[0m winapi-i686-pc-windows-gnu v0.4.0
+[1m[92m      Adding[0m winapi-x86_64-pc-windows-gnu v0.4.0
+[1m[92m      Adding[0m windows v0.61.3
+[1m[92m      Adding[0m windows-collections v0.2.0
+[1m[92m      Adding[0m windows-core v0.61.2
+[1m[92m      Adding[0m windows-future v0.2.1
+[1m[92m      Adding[0m windows-link v0.1.3
+[1m[92m      Adding[0m windows-numerics v0.2.0
+[1m[92m      Adding[0m windows-result v0.3.4
+[1m[92m      Adding[0m windows-strings v0.4.2
+[1m[92m      Adding[0m windows-sys v0.59.0
+[1m[92m      Adding[0m windows-threading v0.1.0
+[1m[92m      Adding[0m windows-version v0.1.7
+[1m[92m      Adding[0m winnow v0.5.40
+[1m[92m      Adding[0m wry v0.53.5
+[1m[92m      Adding[0m x11 v2.21.0
+[1m[92m      Adding[0m x11-dl v2.21.0
+[1m[92m      Adding[0m x11rb v0.13.2
+[1m[92m      Adding[0m x11rb-protocol v0.13.2
+[1m[92m      Adding[0m xkeysym v0.2.1
 [1m[92m    Blocking[0m waiting for file lock on package cache
 [1m[92m    Blocking[0m waiting for file lock on package cache
-[1m[92m    Blocking[0m waiting for file lock on package cache
-[1m[92m    Blocking[0m waiting for file lock on package cache
-[1m[33mwarning[0m[1m: unused import: `super::*`[0m
-  [1m[94m--> [0mclarity-core/src/db/migrate.rs:34:7
-   [1m[94m|[0m
-[1m[94m34[0m [1m[94m|[0m   use super::*;
-   [1m[94m|[0m       [1m[33m^^^^^^^^[0m
-   [1m[94m|[0m
-   [1m[94m= [0m[1mnote[0m: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
-
-[1m[33mwarning[0m: `clarity-core` (lib test) generated 1 warning (run `cargo fix --lib -p clarity-core --tests` to apply 1 suggestion)
-[1m[92m   Compiling[0m clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client)
-[1m[92m    Finished[0m ]8;;https://doc.rust-lang.org/cargo/reference/profiles.html#default-profiles\`test` profile [unoptimized + debuginfo]]8;;\ target(s) in 0.29s
-[1m[92m     Running[0m unittests src/lib.rs (/home/lewis/src/clarity/target/debug/deps/clarity_client-642dfb41d2680cde)
-[1m[92m     Running[0m unittests src/main.rs (/home/lewis/src/clarity/target/debug/deps/clarity_client-b8fc313220ca7ec3)
-[1m[92m     Running[0m tests/responsive_design_test.rs (/home/lewis/src/clarity/target/debug/deps/responsive_design_test-00ecdf56dbf19997)
-[1m[92m     Running[0m tests/zero_unwrap_tests.rs (/home/lewis/src/clarity/target/debug/deps/zero_unwrap_tests-ac822031005957bf)
-[1m[92m     Running[0m unittests src/lib.rs (/home/lewis/src/clarity/target/debug/deps/clarity_core-b46496cae1caa233)
-[1m[92m     Running[0m tests/json_formatter_test.rs (/home/lewis/src/clarity/target/debug/deps/json_formatter_test-fd2bf8d1f4e28ceb)
-[1m[92m     Running[0m tests/zero_unwrap_tests.rs (/home/lewis/src/clarity/target/debug/deps/zero_unwrap_tests-48299cd76758b75a)
-[1m[92m     Running[0m unittests src/main.rs (/home/lewis/src/clarity/target/debug/deps/clarity_server-cfda25b311a1dcc7)
-[1m[92m     Running[0m tests/websocket_tests.rs (/home/lewis/src/clarity/target/debug/deps/websocket_tests-63199609e23c94b6)
-[1m[92m     Running[0m tests/zero_unwrap_tests.rs (/home/lewis/src/clarity/target/debug/deps/zero_unwrap_tests-21e670bcaed6641a)
-[1m[92m   Doc-tests[0m clarity_client
-[1m[92m   Doc-tests[0m clarity_core
+[1m[92m    Blocking[0m waiting for file lock on artifact directory

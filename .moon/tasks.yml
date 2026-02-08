@@ -155,7 +155,67 @@ tasks:
       runInCI: false
 
   # ============================================================================
-  # STAGE 6: FULL PIPELINE (CI)
+  # STAGE 6: OPTIMIZED BUILDS (LTO + PGO)
+  # ============================================================================
+
+  release-ci:
+    command: "cargo build --workspace --profile ci"
+    description: "Build release binaries with thin LTO (faster for CI)"
+    inputs:
+      - "clarity-*/src/**/*.rs"
+      - "Cargo.toml"
+      - "/Cargo.lock"
+    options:
+      cache: true
+      runInCI: false
+
+  pgo-instrument:
+    command: "cargo build --workspace --profile pgo-instrument"
+    description: "Build with PGO instrumentation (step 1 of PGO workflow)"
+    inputs:
+      - "clarity-*/src/**/*.rs"
+      - "Cargo.toml"
+      - "/Cargo.lock"
+      - ".cargo/config.toml"
+    options:
+      cache: false
+      runInCI: false
+    env:
+      CARGO_PROFILE_PGO_INSTRUMENT_OVERRIDE_RUSTFLAGS: "-C profile-generate=pgo-data"
+
+  pgo-profile:
+    command: "sh .moon/scripts/pgo-workload.sh"
+    description: "Run representative workload for PGO profiling (step 2)"
+    options:
+      cache: false
+      runInCI: false
+
+  pgo-optimize:
+    command: "cargo build --workspace --profile pgo-optimized"
+    description: "Build optimized binary using PGO profile data (step 3)"
+    inputs:
+      - "clarity-*/src/**/*.rs"
+      - "Cargo.toml"
+      - "/Cargo.lock"
+      - "pgo-data/**/*.profraw"
+    options:
+      cache: false
+      runInCI: false
+    env:
+      CARGO_PROFILE_PGO_OPTIMIZED_OVERRIDE_RUSTFLAGS: "-C profile-use=pgo-data -C llvm-args=-pgo-warn-missing-function"
+
+  pgo-build:
+    description: "Complete PGO workflow: instrument, profile, and optimize"
+    deps:
+      - pgo-instrument
+      - pgo-profile
+      - pgo-optimize
+    options:
+      cache: false
+      runInCI: false
+
+  # ============================================================================
+  # STAGE 7: FULL PIPELINE (CI)
   # ============================================================================
 
   ci:
