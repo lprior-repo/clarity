@@ -204,7 +204,6 @@ impl JsonFormatter {
 #[cfg(test)]
 mod tests {
   use super::*;
-  #[allow(clippy::unwrap_used)]
   #[allow(clippy::expect_used)]
   #[allow(clippy::float_cmp)]
   #[allow(clippy::uninlined_format_args)]
@@ -214,14 +213,13 @@ mod tests {
     let formatter = JsonFormatter::new();
     let result = formatter.format_success("Operation completed successfully");
     assert!(result.is_ok());
-    let json_str = result.unwrap();
+    let json_str = result.expect("format_success should return Ok");
     assert!(json_str.contains("\"status\":\"success\""));
     assert!(json_str.contains("\"message\":\"Operation completed successfully\""));
     assert!(json_str.contains("\"timestamp\""));
   }
 
   #[test]
-  #[allow(clippy::unwrap_used)]
   fn test_json_formatter_with_data() {
     let formatter = JsonFormatter::new();
     let data = JsonValue::object(vec![(
@@ -230,13 +228,12 @@ mod tests {
     )]);
     let result = formatter.format_response("success", "Operation completed", data);
     assert!(result.is_ok());
-    let json_str = result.unwrap();
+    let json_str = result.expect("format_response should return Ok");
     assert!(json_str.contains("\"status\":\"success\""));
     assert!(json_str.contains("\"data\""));
   }
 
   #[test]
-  #[allow(clippy::unwrap_used)]
   fn test_json_formatter_error_with_next_actions() {
     let formatter = JsonFormatter::new();
     let errors = vec![ErrorDetail::new(
@@ -246,25 +243,23 @@ mod tests {
     )];
     let result = formatter.format_error("validation_failed", errors);
     assert!(result.is_ok());
-    let json_str = result.unwrap();
+    let json_str = result.expect("format_error should return Ok");
     assert!(json_str.contains("\"status\":\"error\""));
     assert!(json_str.contains("\"next_actions\""));
   }
 
   #[test]
-  #[allow(clippy::unwrap_used)]
   fn test_json_formatter_error_without_next_actions() {
     let formatter = JsonFormatter::new();
     let errors = vec![ErrorDetail::new("field1", "Value must be valid", vec![])];
     let result = formatter.format_error("validation_failed", errors);
     assert!(result.is_ok());
-    let json_str = result.unwrap();
+    let json_str = result.expect("format_error should return Ok");
     assert!(json_str.contains("\"status\":\"error\""));
     assert!(json_str.contains("\"next_actions\":[]"));
   }
 
   #[test]
-  #[allow(clippy::unwrap_used)]
   fn test_json_formatter_complex_nested_structure() {
     let formatter = JsonFormatter::new();
     let nested_data = JsonValue::object(vec![(
@@ -279,18 +274,17 @@ mod tests {
     )]);
     let result = formatter.format_response("error", "Validation failed", nested_data);
     assert!(result.is_ok());
-    let json_str = result.unwrap();
+    let json_str = result.expect("format_response should return Ok");
     assert!(json_str.contains("\"status\":\"error\""));
     assert!(json_str.contains("\"errors\""));
   }
 
   #[test]
-  #[allow(clippy::unwrap_used)]
   fn test_json_formatter_empty_errors() {
     let formatter = JsonFormatter::new();
     let result = formatter.format_error("error", vec![]);
     assert!(result.is_ok());
-    let json_str = result.unwrap();
+    let json_str = result.expect("format_error should return Ok");
     assert!(json_str.contains("\"status\":\"error\""));
     assert!(json_str.contains("\"errors\":[]"));
   }
