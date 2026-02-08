@@ -175,7 +175,7 @@ impl Session {
   ///     .kind(SessionKind::Interview)
   ///     .title("User Requirements Interview".to_string())
   ///     .build()
-  ///     .unwrap();
+  ///     .expect("valid session ID and kind provided");
   ///
   /// assert_eq!(session.kind, SessionKind::Interview);
   /// assert_eq!(session.state, SessionState::Created);
@@ -193,6 +193,26 @@ impl Session {
       updated_at: created_at,
       title: None,
       description: None,
+    })
+  }
+
+  /// Private constructor that accepts all fields for builder use
+  #[allow(clippy::unnecessary_wraps)]
+  fn with_optional_fields(
+    id: SessionId,
+    kind: SessionKind,
+    created_at: Timestamp,
+    title: Option<String>,
+    description: Option<String>,
+  ) -> Result<Self, SessionError> {
+    Ok(Self {
+      id,
+      kind,
+      state: SessionState::Created,
+      created_at,
+      updated_at: created_at,
+      title,
+      description,
     })
   }
 
@@ -219,15 +239,27 @@ impl Session {
   ///     .id("550e8400-e29b-41d4-a716-446655440000".to_string())
   ///     .kind(SessionKind::Interview)
   ///     .build()
-  ///     .unwrap();
+  ///     .expect("valid session ID and kind provided");
   ///
   /// // Valid transition: Created -> InProgress
-  /// let updated = session.transition_to(SessionState::InProgress, Timestamp::now().unwrap());
+  /// let updated = session.transition_to(
+  ///     SessionState::InProgress,
+  ///     Timestamp::now().expect("system time is valid")
+  /// );
   /// assert!(updated.is_ok());
   ///
   /// // Invalid transition: Completed -> InProgress
-  /// let completed = updated.unwrap().transition_to(SessionState::Completed, Timestamp::now().unwrap()).unwrap();
-  /// let invalid = completed.transition_to(SessionState::InProgress, Timestamp::now().unwrap());
+  /// let completed = updated
+  ///     .expect("transition succeeds")
+  ///     .transition_to(
+  ///         SessionState::Completed,
+  ///         Timestamp::now().expect("system time is valid")
+  ///     )
+  ///     .expect("transition succeeds");
+  /// let invalid = completed.transition_to(
+  ///     SessionState::InProgress,
+  ///     Timestamp::now().expect("system time is valid")
+  /// );
   /// assert!(invalid.is_err());
   /// ```
   pub fn transition_to(
@@ -345,11 +377,7 @@ impl SessionBuilder {
     };
 
     let session_id = SessionId::new(id)?;
-    let mut session = Session::new(session_id, kind, created_at)?;
-    session.title = self.title;
-    session.description = self.description;
-
-    Ok(session)
+    Session::with_optional_fields(session_id, kind, created_at, self.title, self.description)
   }
 }
 

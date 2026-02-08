@@ -19,7 +19,10 @@ mod allocator_tests {
     let sizes = vec![1, 8, 16, 32, 64, 128, 256, 512, 1024, 4096];
 
     for size in sizes {
-      let layout = Layout::from_size_align(size, 8).expect("Invalid layout");
+      let layout = match Layout::from_size_align(size, 8) {
+        Ok(l) => l,
+        Err(e) => panic!("Invalid layout for size {size}: {e}"),
+      };
       unsafe {
         let ptr = System.alloc(layout);
         assert!(!ptr.is_null(), "Allocation failed for size {}", size);
@@ -52,7 +55,10 @@ mod allocator_tests {
 
           for i in 0..allocations_per_thread {
             let size = (i % 10 + 1) * 128;
-            let layout = Layout::from_size_align(size, 8).expect("Invalid layout");
+            let layout = match Layout::from_size_align(size, 8) {
+              Ok(l) => l,
+              Err(e) => panic!("Invalid layout for size {size}: {e}"),
+            };
 
             unsafe {
               let ptr = System.alloc(layout);
@@ -74,7 +80,11 @@ mod allocator_tests {
     for handle in handles {
       let result = handle.join();
       assert!(result.is_ok(), "Thread panicked");
-      assert!(result.unwrap(), "Thread returned false");
+      match result {
+        Ok(true) => {},
+        Ok(false) => panic!("Thread returned false"),
+        Err(_) => panic!("Thread panicked"),
+      }
     }
   }
 

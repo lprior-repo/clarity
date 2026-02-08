@@ -271,7 +271,7 @@ impl OutputFormatter<Interview> for MarkdownFormatter {
     let mut output = String::new();
 
     // Title
-    let title = interview.title.as_deref().unwrap_or("Untitled Interview");
+    let title = interview.title.as_deref().map_or("Untitled Interview", |t| t);
     writeln!(output, "# {}", title).map_err(|e| FormatError::IoError(e.to_string()))?;
 
     // Metadata
@@ -341,7 +341,7 @@ impl OutputFormatter<Interview> for PlainTextFormatter {
   fn format(&self, interview: &Interview) -> Result<String, FormatError> {
     let mut output = String::new();
 
-    let title = interview.title.as_deref().unwrap_or("Untitled Interview");
+    let title = interview.title.as_deref().map_or("Untitled Interview", |t| t);
     writeln!(output, "Interview: {}", title).map_err(|e| FormatError::IoError(e.to_string()))?;
     writeln!(output, "ID: {}", interview.id).map_err(|e| FormatError::IoError(e.to_string()))?;
     writeln!(output, "Spec: {}", interview.spec_name)

@@ -10,8 +10,12 @@ mod tests {
 
   #[test]
   fn test_address_bind_error_display() {
+    let address = match "127.0.0.1:8080".parse::<std::net::SocketAddr>() {
+      Ok(addr) => addr,
+      Err(e) => panic!("Failed to parse socket address: {e}"),
+    };
     let error = ServerError::AddressBind {
-      address: "127.0.0.1:8080".parse().unwrap(),
+      address,
       source: std::io::Error::new(std::io::ErrorKind::AddrInUse, "Address already in use"),
     };
     let msg = format!("{}", error);

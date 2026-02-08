@@ -16,12 +16,14 @@ mod tests {
     let addr = SocketAddr::from(([127, 0, 0, 1], 4123));
     let server = Server::new(addr);
     // Verify server was created - we'll check the address through behavior
-    block_on(async {
+    match block_on(async {
       // Test that server can be created
       let _ = server;
       Ok::<(), ServerError>(())
-    })
-    .unwrap();
+    }) {
+      Ok(_) => {},
+      Err(e) => panic!("Server test failed: {e}"),
+    }
   }
 
   #[test]
