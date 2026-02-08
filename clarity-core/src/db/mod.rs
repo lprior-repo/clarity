@@ -10,7 +10,10 @@
 //! Provides database access, migrations, and repository pattern for entities.
 
 pub mod error;
-pub mod managed_pool;
+// TODO: Re-enable managed_pool when deadpool-sqlx is added to dependencies
+// The managed_pool module requires deadpool-sqlx which is not currently
+// in the workspace dependencies.
+// pub mod managed_pool;
 pub mod migrate;
 pub mod models;
 pub mod pool;
@@ -28,7 +31,7 @@ pub mod sqlite_pool;
 mod tests;
 
 pub use error::{DbError, DbResult};
-pub use managed_pool::*;
+// pub use managed_pool::*;
 pub use migrate::*;
 pub use models::*;
 pub use pool::*;

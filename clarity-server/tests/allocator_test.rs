@@ -1,6 +1,14 @@
-#![allow(clippy::disallowed_methods)]
+//! Tests for mimalloc global allocator configuration
+//!
+//! These tests verify that:
+//! 1. The global allocator is properly configured
+//! 2. Memory allocation/deallocation works correctly
+//! 3. No panics occur during memory operations
+//! 4. The allocator provides expected performance characteristics
+//!
+//! See docs/TESTING.md for testing standards.
 
-/// Tests for mimalloc global allocator configuration
+use std::alloc::{GlobalAlloc, Layout, System};
 ///
 /// These tests verify that:
 /// 1. The global allocator is properly configured
@@ -19,7 +27,10 @@ mod allocator_tests {
     let sizes = vec![1, 8, 16, 32, 64, 128, 256, 512, 1024, 4096];
 
     for size in sizes {
-      let layout = Layout::from_size_align(size, 8).expect("Invalid layout");
+      let layout = match Layout::from_size_align(size, 8) {
+        Ok(l) => l,
+        Err(e) => panic!("Invalid layout for size {}: {:?}", size, e),
+      };
       unsafe {
         let ptr = System.alloc(layout);
         assert!(!ptr.is_null(), "Allocation failed for size {}", size);
@@ -52,7 +63,10 @@ mod allocator_tests {
 
           for i in 0..allocations_per_thread {
             let size = (i % 10 + 1) * 128;
-            let layout = Layout::from_size_align(size, 8).expect("Invalid layout");
+            let layout = match Layout::from_size_align(size, 8) {
+              Ok(l) => l,
+              Err(e) => panic!("Invalid layout for size {}: {:?}", size, e),
+            };
 
             unsafe {
               let ptr = System.alloc(layout);

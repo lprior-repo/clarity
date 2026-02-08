@@ -26,6 +26,7 @@
 //! This is the web frontend for Clarity, built with Dioxus.
 //! It provides a modern, reactive UI for managing interviews and documentation.
 
+pub mod analysis;
 pub mod api;
 pub mod app;
 pub mod assets;

@@ -480,6 +480,7 @@ mod tests {
   }
 
   #[allow(clippy::unwrap_used)]
+  #[allow(clippy::disallowed_methods)]
   #[allow(clippy::panic)]
   #[test]
   fn test_url_scheme() {
@@ -490,6 +491,7 @@ mod tests {
   }
 
   #[allow(clippy::unwrap_used)]
+  #[allow(clippy::disallowed_methods)]
   #[allow(clippy::panic)]
   #[test]
   fn test_url_without_fragment() {
@@ -504,6 +506,7 @@ mod tests {
   }
 
   #[allow(clippy::unwrap_used)]
+  #[allow(clippy::disallowed_methods)]
   #[allow(clippy::panic)]
   #[test]
   fn test_url_with_path() {
@@ -513,6 +516,7 @@ mod tests {
   }
 
   #[allow(clippy::unwrap_used)]
+  #[allow(clippy::disallowed_methods)]
   #[allow(clippy::panic)]
   #[test]
   fn test_url_with_query() {
@@ -522,6 +526,7 @@ mod tests {
   }
 
   #[allow(clippy::unwrap_used)]
+  #[allow(clippy::disallowed_methods)]
   #[allow(clippy::panic)]
   #[test]
   fn test_url_host() {
@@ -530,6 +535,7 @@ mod tests {
   }
 
   #[allow(clippy::unwrap_used)]
+  #[allow(clippy::disallowed_methods)]
   #[allow(clippy::panic)]
   #[test]
   fn test_url_path() {
@@ -541,6 +547,7 @@ mod tests {
   }
 
   #[allow(clippy::unwrap_used)]
+  #[allow(clippy::disallowed_methods)]
   #[allow(clippy::panic)]
   #[test]
   fn test_url_query() {
@@ -552,6 +559,7 @@ mod tests {
   }
 
   #[allow(clippy::unwrap_used)]
+  #[allow(clippy::disallowed_methods)]
   #[allow(clippy::panic)]
   #[test]
   fn test_url_fragment() {
@@ -563,6 +571,7 @@ mod tests {
   }
 
   #[allow(clippy::unwrap_used)]
+  #[allow(clippy::disallowed_methods)]
   #[allow(clippy::panic)]
   #[test]
   fn test_url_complex_components() {

@@ -4,7 +4,6 @@
 //! See bead bd-2m1 and docs/BUILD_OPTIMIZATION.md for details.
 
 use std::path::PathBuf;
-use std::process::Command;
 
 /// Test 1: LTO should be enabled in release profile
 #[test]

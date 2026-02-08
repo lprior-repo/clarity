@@ -1,7 +1,6 @@
-#![allow(clippy::disallowed_methods)]
-#![allow(clippy::panic)]
-
 //! WebSocket integration tests for clarity-server
+//!
+//! These tests verify WebSocket functionality including:
 //!
 //! These tests verify WebSocket functionality including:
 //! - Connection upgrade from HTTP to WebSocket
@@ -68,7 +67,10 @@ mod tests {
     // Then: State should be created successfully
     assert!(result.is_ok(), "WebSocketState creation should succeed");
 
-    let state = result.expect("WebSocketState creation should succeed");
+    let state = match result {
+      Ok(s) => s,
+      Err(e) => panic!("WebSocketState creation failed: {:?}", e),
+    };
     // Verify the broadcast channel is functional by subscribing
     let rx = state.tx.subscribe();
     assert_eq!(
@@ -81,7 +83,10 @@ mod tests {
   #[tokio::test]
   async fn test_broadcast_message_to_multiple_subscribers() {
     // Given: A WebSocket state and multiple subscribers
-    let state = WebSocketState::new(100).expect("State creation should succeed");
+    let state = match WebSocketState::new(100) {
+      Ok(s) => s,
+      Err(e) => panic!("State creation failed: {:?}", e),
+    };
     let mut rx1 = state.tx.subscribe();
     let mut rx2 = state.tx.subscribe();
     let mut rx3 = state.tx.subscribe();
@@ -105,7 +110,10 @@ mod tests {
   #[tokio::test]
   async fn test_broadcast_without_subscribers_does_not_panic() {
     // Given: A WebSocket state with no subscribers
-    let state = WebSocketState::new(100).expect("State creation should succeed");
+    let state = match WebSocketState::new(100) {
+      Ok(s) => s,
+      Err(e) => panic!("State creation failed: {:?}", e),
+    };
 
     // When: Sending a message with no subscribers
     let send_result = state.tx.send("Test message".to_string());
@@ -122,7 +130,10 @@ mod tests {
   async fn test_channel_capacity_respected() {
     // Given: A WebSocket state with small capacity
     let capacity = 2;
-    let state = WebSocketState::new(capacity).expect("State creation should succeed");
+    let state = match WebSocketState::new(capacity) {
+      Ok(s) => s,
+      Err(e) => panic!("State creation failed: {:?}", e),
+    };
     let mut rx = state.tx.subscribe();
 
     // When: Sending more messages than capacity

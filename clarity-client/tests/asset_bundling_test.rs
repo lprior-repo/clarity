@@ -2,6 +2,13 @@
 //!
 //! These tests verify that assets are properly embedded and accessible
 //! in the desktop binary.
+//!
+//! See docs/TESTING.md for testing standards.
+
+use clarity_client::assets::{get_binary_asset, get_text_asset, registry, AssetError};
+//!
+//! These tests verify that assets are properly embedded and accessible
+//! in the desktop binary.
 
 use clarity_client::assets::{get_binary_asset, get_text_asset, registry, AssetError};
 

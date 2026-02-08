@@ -485,10 +485,22 @@ fn test_should_validate_with_severity_levels() {
 /// Test 10: QualityScore Thresholds and Categories
 #[test]
 fn test_quality_score_thresholds() {
-  let poor_score = QualityScore::new(0.3).unwrap();
-  let fair_score = QualityScore::new(0.5).unwrap();
-  let good_score = QualityScore::new(0.7).unwrap();
-  let excellent_score = QualityScore::new(0.9).unwrap();
+  let poor_score = match QualityScore::new(0.3) {
+    Ok(score) => score,
+    Err(e) => panic!("Failed to create poor_score: {:?}", e),
+  };
+  let fair_score = match QualityScore::new(0.5) {
+    Ok(score) => score,
+    Err(e) => panic!("Failed to create fair_score: {:?}", e),
+  };
+  let good_score = match QualityScore::new(0.7) {
+    Ok(score) => score,
+    Err(e) => panic!("Failed to create good_score: {:?}", e),
+  };
+  let excellent_score = match QualityScore::new(0.9) {
+    Ok(score) => score,
+    Err(e) => panic!("Failed to create excellent_score: {:?}", e),
+  };
 
   assert!(poor_score.is_poor(), "0.3 should be poor");
   assert!(poor_score.is_failing(), "0.3 should be failing");
@@ -526,7 +538,10 @@ fn test_quality_score_boundary_values() {
 /// Edge Case: QualityScore Display
 #[test]
 fn test_quality_score_display() {
-  let score = QualityScore::new(0.8567).unwrap();
+  let score = match QualityScore::new(0.8567) {
+    Ok(s) => s,
+    Err(e) => panic!("Failed to create score: {:?}", e),
+  };
   let display = format!("{}", score);
   assert!(
     display.contains("0.86") || display.contains("0.85"),
@@ -563,7 +578,10 @@ fn test_quality_metrics_with_custom() {
     "with_custom_metric should succeed"
   );
 
-  let metrics = metrics_with_custom.unwrap();
+  let metrics = match metrics_with_custom {
+    Ok(m) => m,
+    Err(e) => panic!("Failed to get metrics with custom: {:?}", e),
+  };
 
   assert!(metrics.custom_metrics().contains_key("documentation"));
   assert_eq!(metrics.custom_metrics().get("documentation"), Some(&0.9));

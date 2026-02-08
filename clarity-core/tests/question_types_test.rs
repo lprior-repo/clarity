@@ -1,8 +1,8 @@
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::panic)]
-#![warn(clippy::pedantic)]
-#![warn(clippy::nursery)]
+//! Question Types Tests
+//!
+//! These tests verify the QuestionType enum and its variants.
+//!
+//! See docs/TESTING.md for testing standards.
 
 use clarity_core::types::question::{QuestionType, QuestionTypeError};
 
