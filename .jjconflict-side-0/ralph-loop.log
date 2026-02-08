@@ -1,0 +1,3 @@
+Error: A Ralph loop is already active (iteration 1)
+Started at: 2026-02-06T14:25:43.716Z
+To cancel it, press Ctrl+C in its terminal or delete /home/lewis/src/clarity/.ralph/ralph-loop.state.json

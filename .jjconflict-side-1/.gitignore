@@ -1,0 +1,39 @@
+# Build artifacts
+target/
+**/target/
+
+# Cargo cache
+.cargo/
+
+# Rust toolchain
+rust-toolchain.toml
+rust-toolchain
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# Local config
+.local/
+
+# bv (beads viewer) local config and caches
+.bv/
+
+# Workspace and bead tracking directories
+.zjj/
+.beads/
+.ralph/
+
+# Database files
+*.db
+*.db.backup

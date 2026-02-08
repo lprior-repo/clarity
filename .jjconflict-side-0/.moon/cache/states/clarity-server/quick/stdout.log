@@ -1,0 +1,92 @@
+Diff in /home/lewis/src/clarity/clarity-core/src/formatter.rs:174:
+     let mut json = String::new();
+     write!(json, "{{").map_err(|e| FormatError::IoError(e.to_string()))?;
+     write!(json, "\"id\":\"{}\",", data.id).map_err(|e| FormatError::IoError(e.to_string()))?;
+[31m-    write!(json, "\"spec_name\":\"{}\",", data.spec_name).map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m[31m-    write!(json, "\"state\":\"{}\",", data.state).map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m[31m-    write!(json, "\"title\":{},", serde_json::to_string(&data.title).unwrap_or_else(|_| "null".to_string()))
+(B[m[32m+    write!(json, "\"spec_name\":\"{}\",", data.spec_name)
+(B[m       .map_err(|e| FormatError::IoError(e.to_string()))?;
+[31m-    write!(json, "\"description\":{},", serde_json::to_string(&data.description).unwrap_or_else(|_| "null".to_string()))
+(B[m[32m+    write!(json, "\"state\":\"{}\",", data.state)
+(B[m       .map_err(|e| FormatError::IoError(e.to_string()))?;
+[32m+    write!(
+(B[m[32m+      json,
+(B[m[32m+      "\"title\":{},",
+(B[m[32m+      serde_json::to_string(&data.title).unwrap_or_else(|_| "null".to_string())
+(B[m[32m+    )
+(B[m[32m+    .map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m[32m+    write!(
+(B[m[32m+      json,
+(B[m[32m+      "\"description\":{},",
+(B[m[32m+      serde_json::to_string(&data.description).unwrap_or_else(|_| "null".to_string())
+(B[m[32m+    )
+(B[m[32m+    .map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m 
+     // Questions
+     write!(json, "\"questions\":[").map_err(|e| FormatError::IoError(e.to_string()))?;
+Diff in /home/lewis/src/clarity/clarity-core/src/formatter.rs:188:
+         write!(json, ",").map_err(|e| FormatError::IoError(e.to_string()))?;
+       }
+       write!(json, "{{").map_err(|e| FormatError::IoError(e.to_string()))?;
+[31m-      write!(json, "\"text\":{},", serde_json::to_string(&q.text).unwrap())
+(B[m[32m+      write!(
+(B[m[32m+        json,
+(B[m[32m+        "\"text\":{},",
+(B[m[32m+        serde_json::to_string(&q.text).unwrap()
+(B[m[32m+      )
+(B[m[32m+      .map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m[32m+      write!(
+(B[m[32m+        json,
+(B[m[32m+        "\"help_text\":{},",
+(B[m[32m+        serde_json::to_string(&q.help_text).unwrap()
+(B[m[32m+      )
+(B[m[32m+      .map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m[32m+      write!(json, "\"required\":{},", q.required)
+(B[m         .map_err(|e| FormatError::IoError(e.to_string()))?;
+[31m-      write!(json, "\"help_text\":{},", serde_json::to_string(&q.help_text).unwrap())
+(B[m[32m+      write!(json, "\"question_type\":\"{:?}\"", q.question_type)
+(B[m         .map_err(|e| FormatError::IoError(e.to_string()))?;
+[31m-      write!(json, "\"required\":{},", q.required).map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m[31m-      write!(json, "\"question_type\":\"{:?}\"", q.question_type).map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m       write!(json, "}}").map_err(|e| FormatError::IoError(e.to_string()))?;
+     }
+     write!(json, "],").map_err(|e| FormatError::IoError(e.to_string()))?;
+Diff in /home/lewis/src/clarity/clarity-core/src/formatter.rs:204:
+       if i > 0 {
+         write!(json, ",").map_err(|e| FormatError::IoError(e.to_string()))?;
+       }
+[31m-      write!(json, "{{\"question_index\":{},", a.question_index).map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m[32m+      write!(json, "{{\"question_index\":{},", a.question_index)
+(B[m[32m+        .map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m       match &a.value {
+         AnswerValue::Text(s) => write!(json, "\"value\":\"{}\"}}", s.replace('"', "\\\"")),
+         AnswerValue::Boolean(b) => write!(json, "\"value\":{}}}", b),
+Diff in /home/lewis/src/clarity/clarity-core/src/formatter.rs:211:
+         AnswerValue::MultipleChoice(idx) => write!(json, "\"value\":{}}}", idx),
+         AnswerValue::Numeric(n) => write!(json, "\"value\":{}}}", n),
+[31m-      }.map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m[32m+      }
+(B[m[32m+      .map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m     }
+     write!(json, "],").map_err(|e| FormatError::IoError(e.to_string()))?;
+ 
+Diff in /home/lewis/src/clarity/clarity-core/src/formatter.rs:217:
+[31m-    write!(json, "\"created_at\":{},", data.created_at.as_secs()).map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m[31m-    write!(json, "\"updated_at\":{}", data.updated_at.as_secs()).map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m[32m+    write!(json, "\"created_at\":{},", data.created_at.as_secs())
+(B[m[32m+      .map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m[32m+    write!(json, "\"updated_at\":{}", data.updated_at.as_secs())
+(B[m[32m+      .map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m     write!(json, "}}").map_err(|e| FormatError::IoError(e.to_string()))?;
+ 
+     // Pretty print if needed
+Diff in /home/lewis/src/clarity/clarity-core/src/formatter.rs:222:
+     if self.pretty {
+[31m-      let parsed: serde_json::Value = serde_json::from_str(&json)
+(B[m[31m-        .map_err(|e| FormatError::SerializationFailed(e.to_string()))?;
+(B[m[32m+      let parsed: serde_json::Value =
+(B[m[32m+        serde_json::from_str(&json).map_err(|e| FormatError::SerializationFailed(e.to_string()))?;
+(B[m       serde_json::to_string_pretty(&parsed)
+         .map_err(|e| FormatError::SerializationFailed(e.to_string()))
+     } else {

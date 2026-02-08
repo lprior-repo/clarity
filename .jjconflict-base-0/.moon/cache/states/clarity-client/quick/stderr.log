@@ -1,0 +1,9 @@
+[1m[92m    Updating[0m crates.io index
+[1m[91merror[0m: failed to select a version for `sqlx`.
+    ... required by package `clarity-core v0.1.0-dev (/home/lewis/src/clarity/clarity-core)`
+versions that meet the requirements `^0.9.0-alpha.1` are: 0.9.0-alpha.1
+
+package `clarity-core` depends on `sqlx` with feature `runtime-tokio-rustls` but `sqlx` does not have that feature.
+
+
+failed to select a version for `sqlx` which could resolve this conflict
