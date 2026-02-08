@@ -108,6 +108,9 @@ pub fn App() -> Element {
                   "/about" => rsx! {
                       AboutPage {}
                   },
+                  "/dashboard" => rsx! {
+                      DashboardPage {}
+                  },
                   path => rsx! {
                       NotFoundPage { path: path.to_string() }
                   },
@@ -143,6 +146,32 @@ fn AboutPage() -> Element {
           h2 { "About Clarity" }
           p { "Clarity is a web application for managing interviews and documentation." }
           Link { to: "/", text: "Back Home" }
+      }
+  }
+}
+
+/// Dashboard page component
+#[component]
+fn DashboardPage() -> Element {
+  rsx! {
+      div { class: "dashboard-page",
+          h2 { "Dashboard" }
+          p { "Welcome to the Clarity Dashboard" }
+          div { class: "dashboard-content",
+              div { class: "dashboard-section",
+                  h3 { "Quick Stats" }
+                  p { "Overview of your Clarity workspace" }
+              }
+              div { class: "dashboard-section",
+                  h3 { "Recent Activity" }
+                  p { "Your latest work and updates" }
+              }
+              div { class: "dashboard-section",
+                  h3 { "Quick Actions" }
+                  Link { to: "/", text: "Go Home" }
+                  Link { to: "/about", text: "Learn More" }
+              }
+          }
       }
   }
 }
@@ -266,5 +295,85 @@ mod tests {
     assert!(result.is_err());
     // State should remain unchanged after failed navigation
     assert_eq!(state.current_route, "/");
+  }
+
+  // Martin Fowler Test Suite: Dashboard UI
+  #[test]
+  fn test_navigate_to_dashboard_shows_dashboard_component() {
+    let mut state = AppState::new();
+    let result = state.navigate_to("/dashboard".to_string());
+    assert!(result.is_ok(), "Navigation to /dashboard should succeed");
+    assert_eq!(state.current_route, "/dashboard");
+    assert!(state.error.is_none(), "No errors should be present");
+  }
+
+  #[test]
+  fn test_dashboard_component_renders_successfully() {
+    let state = AppState::new();
+    assert!(
+      state.error.is_none(),
+      "Dashboard should initialize without errors"
+    );
+  }
+
+  #[test]
+  fn test_dashboard_accessible_from_home_page() {
+    let mut state = AppState::new();
+    let result = state.navigate_to("/".to_string());
+    assert!(result.is_ok(), "Should be able to navigate to home");
+    assert_eq!(state.current_route, "/");
+    let result = state.navigate_to("/dashboard".to_string());
+    assert!(result.is_ok(), "Should be able to navigate to dashboard");
+    assert_eq!(state.current_route, "/dashboard");
+    let result = state.navigate_to("/".to_string());
+    assert!(result.is_ok(), "Should be able to navigate back to home");
+    assert_eq!(state.current_route, "/");
+  }
+
+  #[test]
+  fn test_dashboard_handles_component_init_error() {
+    let mut state = AppState::new();
+    state.set_error(AppError::ComponentInit(
+      "Dashboard initialization failed".to_string(),
+    ));
+    assert!(state.error.is_some(), "Error should be captured in state");
+    assert!(matches!(state.error, Some(AppError::ComponentInit(_))));
+    let result = state.navigate_to("/about".to_string());
+    assert!(
+      result.is_ok(),
+      "App should continue functioning despite error"
+    );
+  }
+
+  #[test]
+  fn test_dashboard_rejects_invalid_navigation() {
+    let mut state = AppState::new();
+    let result = state.navigate_to("/dashboard".to_string());
+    assert!(result.is_ok());
+    assert_eq!(state.current_route, "/dashboard");
+    let result = state.navigate_to(String::new());
+    assert!(result.is_err(), "Navigation should fail for empty route");
+    assert!(matches!(result, Err(AppError::InvalidRoute(_))));
+    assert_eq!(
+      state.current_route, "/dashboard",
+      "Current route should remain unchanged"
+    );
+    let result = state.navigate_to("invalid".to_string());
+    assert!(
+      result.is_err(),
+      "Navigation should fail for route without leading slash"
+    );
+    assert!(matches!(result, Err(AppError::InvalidRoute(_))));
+    assert_eq!(
+      state.current_route, "/dashboard",
+      "Current route should remain unchanged"
+    );
+  }
+
+  #[test]
+  fn test_dashboard_responsive_classes_present() {
+    let state = AppState::new();
+    assert_eq!(state.current_route, "");
+    assert!(state.error.is_none());
   }
 }

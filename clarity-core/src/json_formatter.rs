@@ -296,14 +296,88 @@ mod tests {
   }
 
   #[test]
-  #[allow(clippy::unwrap_used)]
-  #[allow(clippy::single_char_pattern)]
   fn test_json_formatter_pretty_formatting() {
     let formatter = JsonFormatter::with_pretty(true);
     let result = formatter.format_success("Test message");
-    assert!(result.is_ok());
-    let json_str = result.unwrap();
-    assert!(json_str.contains("\n"));
-    assert!(json_str.contains("\"status\":"));
+
+    let validation = result.and_then(|json_str| {
+      if json_str.contains('\n') && json_str.contains("\"status\":") {
+        Ok(())
+      } else {
+        Err(JsonFormatterError {
+          message: "Pretty formatting not applied".to_string(),
+        })
+      }
+    });
+
+    assert!(validation.is_ok(), "Pretty formatting should be applied");
+  }
+
+  #[test]
+  fn test_json_value_constructors() {
+    // Test all JsonValue constructors work correctly
+    let str_val = JsonValue::string("test");
+    let num_val = JsonValue::number(42.0);
+    let bool_val = JsonValue::boolean(true);
+    let null_val = JsonValue::null();
+    let arr_val = JsonValue::array(vec![JsonValue::string("item")]);
+    let obj_val = JsonValue::object(vec![("key".to_string(), JsonValue::string("value"))]);
+
+    // Verify variants using pattern matching
+    let checks: Vec<(&str, bool)> = vec![
+      ("String variant", matches!(str_val, JsonValue::String(_))),
+      ("Number variant", matches!(num_val, JsonValue::Number(_))),
+      ("Boolean variant", matches!(bool_val, JsonValue::Boolean(_))),
+      ("Null variant", matches!(null_val, JsonValue::Null)),
+      ("Array variant", matches!(arr_val, JsonValue::Array(_))),
+      ("Object variant", matches!(obj_val, JsonValue::Object(_))),
+    ];
+
+    assert!(
+      checks.iter().all(|(_, passed)| *passed),
+      "All JsonValue constructors should create correct variants"
+    );
+  }
+
+  #[test]
+  fn test_api_response_success() {
+    let response = ApiResponse::success("Test message", None);
+
+    assert_eq!(response.status, "success");
+    assert_eq!(response.message, Some("Test message".to_string()));
+    assert!(response.data.is_none());
+    assert!(response.errors.is_none());
+  }
+
+  #[test]
+  fn test_api_response_error() {
+    let errors = vec![ErrorDetail::new(
+      "field",
+      "error",
+      vec!["fix it".to_string()],
+    )];
+    let response = ApiResponse::error("Validation failed", errors.clone());
+
+    assert_eq!(response.status, "error");
+    assert_eq!(response.message, Some("Validation failed".to_string()));
+    assert!(response.errors.is_some());
+
+    // Check next_actions using is_some and length assertion
+    assert!(response.next_actions.is_some());
+    let next_actions_count = response.next_actions.as_ref().map_or(0, Vec::len);
+    assert_eq!(next_actions_count, 1);
+  }
+
+  #[test]
+  fn test_error_detail_new() {
+    let detail = ErrorDetail::new("field1", "Invalid value", vec!["Check format".to_string()]);
+
+    assert_eq!(detail.field, "field1");
+    assert_eq!(detail.message, "Invalid value");
+    assert_eq!(detail.next_actions.len(), 1);
+    assert_eq!(
+      detail.next_actions.get(0),
+      Some(&"Check format".to_string())
+    );
   }
 }
