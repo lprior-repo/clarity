@@ -341,15 +341,15 @@ mod tests {
     version: &str,
     name: &str,
     schema_def: serde_json::Value,
-  ) -> Schema {
-    Schema {
-      id: SchemaId::new(id.to_string()).unwrap(),
-      version: SchemaVersion::new(version.to_string()).unwrap(),
+  ) -> Result<Schema, SchemaRegistryError> {
+    Ok(Schema {
+      id: SchemaId::new(id.to_string())?,
+      version: SchemaVersion::new(version.to_string())?,
       name: name.to_string(),
       description: None,
       schema: schema_def,
       created_at: Utc::now(),
-    }
+    })
   }
 
   #[test]
@@ -381,7 +381,7 @@ mod tests {
       "1.0.0",
       "User Schema",
       serde_json::json!({"type": "object"}),
-    );
+    ).expect("Failed to create test schema");
 
     let result = registry.register(schema);
     assert!(result.is_ok());
@@ -395,15 +395,15 @@ mod tests {
       "1.0.0",
       "User Schema",
       serde_json::json!({"type": "object"}),
-    );
+    ).expect("Failed to create test schema");
     let id = schema.id.clone();
     let version = schema.version.clone();
 
-    registry.register(schema).unwrap();
+    registry.register(schema).expect("Failed to register schema");
     let result = registry.get(&id, &version);
 
     assert!(result.is_ok());
-    let retrieved = result.unwrap();
+    let retrieved = result.expect("Failed to get schema");
     assert_eq!(retrieved.name, "User Schema");
   }
 
@@ -418,11 +418,11 @@ mod tests {
         "type": "object",
         "required": ["name", "email"]
       }),
-    );
+    ).expect("Failed to create test schema");
     let id = schema.id.clone();
     let version = schema.version.clone();
 
-    registry.register(schema).unwrap();
+    registry.register(schema).expect("Failed to register schema");
 
     let valid_data = serde_json::json!({
       "name": "John Doe",
