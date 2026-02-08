@@ -388,16 +388,16 @@ impl QuestionType {
   #[must_use]
   pub fn prompt(&self) -> &str {
     match self {
-      Self::Text { prompt, .. } => prompt,
-      Self::MultipleChoice { prompt, .. } => prompt,
-      Self::Boolean { prompt, .. } => prompt,
-      Self::NumericRange { prompt, .. } => prompt,
-      Self::Date { prompt, .. } => prompt,
-      Self::LongText { prompt, .. } => prompt,
-      Self::Rating { prompt, .. } => prompt,
-      Self::Code { prompt, .. } => prompt,
-      Self::FileUpload { prompt, .. } => prompt,
-      Self::Ranking { prompt, .. } => prompt,
+      Self::Text { prompt, .. }
+      | Self::MultipleChoice { prompt, .. }
+      | Self::Boolean { prompt, .. }
+      | Self::NumericRange { prompt, .. }
+      | Self::Date { prompt, .. }
+      | Self::LongText { prompt, .. }
+      | Self::Rating { prompt, .. }
+      | Self::Code { prompt, .. }
+      | Self::FileUpload { prompt, .. }
+      | Self::Ranking { prompt, .. } => prompt,
     }
   }
 

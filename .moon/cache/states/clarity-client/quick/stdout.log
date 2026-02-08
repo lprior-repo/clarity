@@ -1,0 +1,17 @@
+Diff in /home/lewis/src/clarity/clarity-core/src/formatter.rs:603:
+ 
+   #[test]
+   fn test_parse_format_from_valid_strings() {
+[31m-    assert_eq!(OutputFormat::from_str_format("json").unwrap(), OutputFormat::Json);
+(B[m[31m-    assert_eq!(OutputFormat::from_str_format("JSON").unwrap(), OutputFormat::Json);
+(B[m[32m+    assert_eq!(
+(B[m[32m+      OutputFormat::from_str_format("json").unwrap(),
+(B[m[32m+      OutputFormat::Json
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+      OutputFormat::from_str_format("JSON").unwrap(),
+(B[m[32m+      OutputFormat::Json
+(B[m[32m+    );
+(B[m     assert_eq!(
+       OutputFormat::from_str_format("markdown").unwrap(),
+       OutputFormat::Markdown

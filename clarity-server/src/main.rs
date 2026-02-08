@@ -37,7 +37,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   let addr = SocketAddr::from(([127, 0, 0, 1], 4123));
   let listener = TcpListener::bind(addr).await?;
 
-  println!("Server starting on http://{}", addr);
+  println!("Server starting on http://{addr}");
 
   // Start the server
   axum::serve(listener, app).await?;

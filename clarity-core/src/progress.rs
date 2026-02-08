@@ -103,8 +103,8 @@ impl Display for ProgressStatus {
 
 /// Progress metrics for a collection of items
 ///
-/// Note: Does not derive Eq because it contains f64 fields (completion_percentage).
-/// Floats cannot implement Eq due to NaN values not being equal to themselves.
+/// Note: Does not derive Eq because it contains f64 fields (`completion_percentage`).
+/// Floats cannot implement Eq due to `NaN` values not being equal to themselves.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 pub struct ProgressMetrics {
@@ -136,7 +136,7 @@ pub struct ProgressMetrics {
 /// Distribution of progress statuses
 ///
 /// Note: Does not derive Eq because it contains f64 fields (percentages).
-/// Floats cannot implement Eq due to NaN values not being equal to themselves.
+/// Floats cannot implement Eq due to `NaN` values not being equal to themselves.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 pub struct ProgressDistribution {
@@ -162,6 +162,7 @@ impl ProgressMetrics {
   /// # Errors
   ///
   /// Returns `ProgressError::InvalidCount` if total count doesn't match sum of all statuses
+  #[allow(clippy::too_many_arguments)]
   pub fn new(
     total: usize,
     completed: usize,
@@ -319,8 +320,8 @@ impl Display for ProgressMetrics {
 
 /// Progress dashboard display
 ///
-/// Note: Does not derive Eq because it contains ProgressMetrics which has f64 fields.
-/// Floats cannot implement Eq due to NaN values not being equal to themselves.
+/// Note: Does not derive Eq because it contains `ProgressMetrics` which has f64 fields.
+/// Floats cannot implement Eq due to `NaN` values not being equal to themselves.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 pub struct ProgressDashboard {
@@ -339,8 +340,8 @@ pub struct ProgressDashboard {
 
 /// Progress breakdown by category
 ///
-/// Note: Does not derive Eq because it contains ProgressMetrics which has f64 fields.
-/// Floats cannot implement Eq due to NaN values not being equal to themselves.
+/// Note: Does not derive Eq because it contains `ProgressMetrics` which has f64 fields.
+/// Floats cannot implement Eq due to `NaN` values not being equal to themselves.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 pub struct CategoryProgress {

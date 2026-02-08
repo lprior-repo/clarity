@@ -124,6 +124,7 @@ pub fn validate_email_format(input: &str) -> Result<&str, ValidationError> {
 #[cfg(test)]
 #[allow(clippy::disallowed_methods)]
 #[allow(clippy::panic)]
+#[allow(clippy::unwrap_used)]
 mod tests {
   use super::*;
 

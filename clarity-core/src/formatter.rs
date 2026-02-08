@@ -243,11 +243,11 @@ impl OutputFormatter<Interview> for JsonFormatter {
     }
   }
 
-  fn format_name(&self) -> &str {
+  fn format_name(&self) -> &'static str {
     "json"
   }
 
-  fn mime_type(&self) -> &str {
+  fn mime_type(&self) -> &'static str {
     "application/json"
   }
 }
@@ -281,19 +281,19 @@ impl OutputFormatter<Interview> for MarkdownFormatter {
       .title
       .as_deref()
       .map_or("Untitled Interview", |t| t);
-    writeln!(output, "# {}", title).map_err(|e| FormatError::IoError(e.to_string()))?;
+    writeln!(output, "# {title}").map_err(|e| FormatError::IoError(e.to_string()))?;
 
     // Metadata
-    writeln!(output, "\n**ID**: {}", interview.id)
+    writeln!(output, "\n**ID**: {id}", id = interview.id)
       .map_err(|e| FormatError::IoError(e.to_string()))?;
-    writeln!(output, "**Spec**: {}", interview.spec_name)
+    writeln!(output, "**Spec**: {spec}", spec = interview.spec_name)
       .map_err(|e| FormatError::IoError(e.to_string()))?;
-    writeln!(output, "**Status**: {}", interview.state)
+    writeln!(output, "**Status**: {state}", state = interview.state)
       .map_err(|e| FormatError::IoError(e.to_string()))?;
 
     // Description
     if let Some(desc) = &interview.description {
-      writeln!(output, "\n## Description\n\n{}", desc)
+      writeln!(output, "\n## Description\n\n{desc}")
         .map_err(|e| FormatError::IoError(e.to_string()))?;
     }
 
@@ -301,12 +301,11 @@ impl OutputFormatter<Interview> for MarkdownFormatter {
     writeln!(output, "\n## Questions\n").map_err(|e| FormatError::IoError(e.to_string()))?;
 
     for (i, question) in interview.questions.iter().enumerate() {
-      writeln!(output, "{}. {}", i + 1, question.text)
+      writeln!(output, "{num}. {text}", num = i + 1, text = question.text)
         .map_err(|e| FormatError::IoError(e.to_string()))?;
 
       if let Some(help) = &question.help_text {
-        writeln!(output, "   - *Help: {}*", help)
-          .map_err(|e| FormatError::IoError(e.to_string()))?;
+        writeln!(output, "   - *Help: {help}*").map_err(|e| FormatError::IoError(e.to_string()))?;
       }
 
       if question.required {
@@ -317,11 +316,11 @@ impl OutputFormatter<Interview> for MarkdownFormatter {
     Ok(output)
   }
 
-  fn format_name(&self) -> &str {
+  fn format_name(&self) -> &'static str {
     "markdown"
   }
 
-  fn mime_type(&self) -> &str {
+  fn mime_type(&self) -> &'static str {
     "text/markdown"
   }
 }
@@ -354,25 +353,26 @@ impl OutputFormatter<Interview> for PlainTextFormatter {
       .title
       .as_deref()
       .map_or("Untitled Interview", |t| t);
-    writeln!(output, "Interview: {}", title).map_err(|e| FormatError::IoError(e.to_string()))?;
-    writeln!(output, "ID: {}", interview.id).map_err(|e| FormatError::IoError(e.to_string()))?;
-    writeln!(output, "Spec: {}", interview.spec_name)
+    writeln!(output, "Interview: {title}").map_err(|e| FormatError::IoError(e.to_string()))?;
+    writeln!(output, "ID: {interview_id}", interview_id = interview.id)
       .map_err(|e| FormatError::IoError(e.to_string()))?;
-    writeln!(output, "Status: {}", interview.state)
+    writeln!(output, "Spec: {spec_name}", spec_name = interview.spec_name)
+      .map_err(|e| FormatError::IoError(e.to_string()))?;
+    writeln!(output, "Status: {state}", state = interview.state)
       .map_err(|e| FormatError::IoError(e.to_string()))?;
 
     if let Some(desc) = &interview.description {
-      writeln!(output, "Description: {}", desc).map_err(|e| FormatError::IoError(e.to_string()))?;
+      writeln!(output, "Description: {desc}").map_err(|e| FormatError::IoError(e.to_string()))?;
     }
 
     writeln!(output, "\nQuestions:").map_err(|e| FormatError::IoError(e.to_string()))?;
 
     for (i, question) in interview.questions.iter().enumerate() {
-      writeln!(output, "  {}. {}", i + 1, question.text)
+      writeln!(output, "  {num}. {text}", num = i + 1, text = question.text)
         .map_err(|e| FormatError::IoError(e.to_string()))?;
 
       if let Some(help) = &question.help_text {
-        writeln!(output, "     Help: {}", help)
+        writeln!(output, "     Help: {help}")
           .map_err(|e: fmt::Error| FormatError::IoError(e.to_string()))?;
       }
 
@@ -385,11 +385,11 @@ impl OutputFormatter<Interview> for PlainTextFormatter {
     Ok(output)
   }
 
-  fn format_name(&self) -> &str {
+  fn format_name(&self) -> &'static str {
     "text"
   }
 
-  fn mime_type(&self) -> &str {
+  fn mime_type(&self) -> &'static str {
     "text/plain"
   }
 }
@@ -603,8 +603,14 @@ mod tests {
 
   #[test]
   fn test_parse_format_from_valid_strings() {
-    assert_eq!(OutputFormat::from_str_format("json").unwrap(), OutputFormat::Json);
-    assert_eq!(OutputFormat::from_str_format("JSON").unwrap(), OutputFormat::Json);
+    assert_eq!(
+      OutputFormat::from_str_format("json").unwrap(),
+      OutputFormat::Json
+    );
+    assert_eq!(
+      OutputFormat::from_str_format("JSON").unwrap(),
+      OutputFormat::Json
+    );
     assert_eq!(
       OutputFormat::from_str_format("markdown").unwrap(),
       OutputFormat::Markdown

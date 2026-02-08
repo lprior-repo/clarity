@@ -14,7 +14,7 @@ use sqlx::PgPool;
 ///
 /// # Errors
 /// - Returns a `DbError::Migration` if migrations fail to execute
-pub async fn run_migrations(_pool: &PgPool) -> DbResult<()> {
+pub fn run_migrations(_pool: &PgPool) -> DbResult<()> {
   // TODO: Uncomment when migrations directory is set up
   // sqlx::migrate!("./migrations")
   //   .run(pool)
@@ -29,7 +29,7 @@ pub async fn run_migrations(_pool: &PgPool) -> DbResult<()> {
 ///
 /// # Errors
 /// - Returns a `DbError::DatabaseError` if the query fails
-pub async fn get_migration_version(pool: &PgPool) -> DbResult<Option<i64>> {
+pub fn get_migration_version(pool: &PgPool) -> DbResult<Option<i64>> {
   // TODO: Implement when migrations are set up
   let _ = pool;
   Err(DbError::Migration(
