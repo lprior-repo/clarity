@@ -33,11 +33,8 @@ use std::result::Result;
 /// - Menu creation fails
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-  use clarity_client::{
-    DesktopLauncher, LauncherConfig, LauncherError, WindowGeometry, WindowStateManager,
-  };
-  use dioxus::prelude::*;
-  use dioxus_desktop::{tao::window::WindowBuilder as TaoWindowBuilder, Config, WindowBuilder};
+  use clarity_client::{WindowGeometry, WindowStateManager};
+  use dioxus_desktop::{Config, WindowBuilder};
 
   // ==============================================================================
   // WINDOW CONFIGURATION
@@ -45,67 +42,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   // Default window geometry
   let default_geometry = WindowGeometry {
-    x: None,
-    y: None,
-    width: Some(1200.0),
-    height: Some(800.0),
-    min_width: Some(800.0),
-    min_height: Some(600.0),
-    max_width: None,
-    max_height: None,
-    resizable: true,
-    decorations: true,
-    always_on_top: false,
+    x: 100,
+    y: 100,
+    width: 1200,
+    height: 800,
   };
 
   // Try to load saved window state, fall back to defaults
   let geometry = match WindowStateManager::load_geometry() {
     Ok(geo) => geo,
-    Err(_) => default_geometry.clone(),
+    Err(_) => default_geometry,
   };
-
-  // ==============================================================================
-  // DESKTOP LAUNCHER CONFIGURATION
-  // ==============================================================================
-
-  // Note: Desktop launcher configuration is optional for basic functionality
-  // It's used for system integration (shortcuts, file associations, etc.)
-  // For now, we'll launch the app without full system integration
 
   // ==============================================================================
   // LAUNCH DESKTOP APPLICATION
   // ==============================================================================
 
   // Build window configuration
-  let mut window_builder = WindowBuilder::new();
-  let width = match geometry.width {
-    Some(w) => w,
-    None => 1200.0,
-  };
-  let height = match geometry.height {
-    Some(h) => h,
-    None => 800.0,
-  };
-  window_builder = window_builder
+  let window_builder = WindowBuilder::new()
     .with_title("Clarity")
-    .with_inner_size(width, height);
-
-  if let Some(min_width) = geometry.min_width {
-    let min_height = match geometry.min_height {
-      Some(h) => h,
-      None => 600.0,
-    };
-    window_builder = window_builder.with_min_inner_size(min_width, min_height);
-  }
-
-  if let Some(x) = geometry.x {
-    if let Some(y) = geometry.y {
-      window_builder = window_builder.with_position(x, y);
-    }
-  }
-
-  window_builder = window_builder.with_resizable(geometry.resizable);
-  window_builder = window_builder.with_decorations(geometry.decorations);
+    .with_inner_size(geometry.width, geometry.height)
+    .with_position(dioxus_desktop::tao::dpi::LogicalPosition::new(geometry.x, geometry.y))
+    .with_resizable(true)
+    .with_decorations(true);
 
   // Configure desktop app
   let config = Config::default().with_window(window_builder);
@@ -151,24 +110,11 @@ mod tests {
   /// Test window configuration values
   #[test]
   fn test_window_configuration_is_valid() {
-    let width = 1200.0;
-    let height = 800.0;
-    let min_width = 800.0;
-    let min_height = 600.0;
+    let width = 1200u32;
+    let height = 800u32;
 
-    assert!(
-      width >= min_width,
-      "Window width should be >= minimum width"
-    );
-    assert!(
-      height >= min_height,
-      "Window height should be >= minimum height"
-    );
-    assert!(min_width >= 640.0, "Minimum width should be at least 640px");
-    assert!(
-      min_height >= 480.0,
-      "Minimum height should be at least 480px"
-    );
+    assert!(width >= 800, "Window width should be at least 800px");
+    assert!(height >= 600, "Window height should be at least 600px");
   }
 
   /// Test window title is configured
@@ -179,31 +125,14 @@ mod tests {
     assert!(!title.is_empty(), "Window title should not be empty");
   }
 
-  /// Test window is resizable
+  /// Test window position is valid
   #[test]
-  fn test_window_is_resizable() {
-    let resizable = true;
-    assert!(resizable, "Window should be resizable");
-  }
+  fn test_window_position_is_valid() {
+    let x = 100i32;
+    let y = 100i32;
 
-  /// Test window has decorations
-  #[test]
-  fn test_window_has_decorations() {
-    let decorations = true;
-    assert!(
-      decorations,
-      "Window should have decorations (title bar, etc.)"
-    );
-  }
-
-  /// Test window is not always on top
-  #[test]
-  fn test_window_is_not_always_on_top() {
-    let always_on_top = false;
-    assert!(
-      !always_on_top,
-      "Window should not be always on top by default"
-    );
+    assert!(x >= 0, "Window X position should be non-negative");
+    assert!(y >= 0, "Window Y position should be non-negative");
   }
 
   /// Test zero-unwrap policy in main

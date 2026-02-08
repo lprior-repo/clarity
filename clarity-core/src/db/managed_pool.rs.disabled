@@ -7,7 +7,7 @@
 
 //! Managed database connection pool with deadpool
 //!
-//! This module provides advanced connection pooling using deadpool-sqlx:
+//! This module provides advanced connection pooling using deadpool:
 //! - Configurable pool size and timeouts
 //! - Pool metrics for monitoring
 //! - Automatic reconnection on failures
@@ -15,8 +15,8 @@
 //! - Support for both PostgreSQL and SQLite
 
 use crate::db::error::{DbError, DbResult};
-use deadpool_sqlx::{Manager, Pool, Runtime};
-use sqlx::{postgres::PgPoolOptions, sqlite::SqlitePoolOptions, PgPool, SqlitePool};
+use deadpool_postgres::{Manager as PgManager, Pool as PgPool, Runtime};
+use deadpool_sqlite::{Manager as SqliteManager, Pool as SqlitePool, Runtime as SqliteRuntime};
 use std::time::Duration;
 use tokio::time::timeout;
 
@@ -133,12 +133,12 @@ impl ManagedPoolConfig {
   }
 }
 
-/// Managed pool wrapper for deadpool-sqlx
+/// Managed pool wrapper for deadpool
 pub enum ManagedPool {
   /// SQLite managed pool
-  SQLite(Pool<sqlx::Sqlite>),
+  SQLite(SqlitePool),
   /// PostgreSQL managed pool
-  Postgres(Pool<sqlx::Postgres>),
+  Postgres(PgPool),
 }
 
 impl ManagedPool {
@@ -167,18 +167,14 @@ impl ManagedPool {
   /// # Errors
   /// - Returns `DbError::PoolCreation` if pool creation fails
   async fn create_sqlite_pool(config: &ManagedPoolConfig) -> DbResult<Self> {
-    let manager = Manager::from_config(
-      &config.database_url,
-      deadpool_sqlx::sqlite::Config::default(),
-      Runtime::Tokio1,
-    );
+    let manager = SqliteManager::new(&config.database_url);
 
     let pool_config = deadpool::managed::PoolConfig {
       max_size: config.max_connections,
       min_idle: Some(config.min_idle),
     };
 
-    let pool = Pool::builder(manager)
+    let pool = SqlitePool::builder(manager)
       .config(pool_config)
       .build()
       .map_err(|e| DbError::PoolCreation(format!("Failed to create SQLite pool: {e}")))?;
@@ -191,18 +187,20 @@ impl ManagedPool {
   /// # Errors
   /// - Returns `DbError::PoolCreation` if pool creation fails
   async fn create_postgres_pool(config: &ManagedPoolConfig) -> DbResult<Self> {
-    let manager = Manager::from_config(
-      &config.database_url,
-      deadpool_sqlx::postgres::Config::default(),
-      Runtime::Tokio1,
-    );
+    // Parse the PostgreSQL URL
+    let url = config
+      .database_url
+      .parse()
+      .map_err(|e| DbError::PoolCreation(format!("Invalid PostgreSQL URL: {e}")))?;
+
+    let manager = PgManager::new(url, tokio_postgres::NoTls);
 
     let pool_config = deadpool::managed::PoolConfig {
       max_size: config.max_connections,
       min_idle: Some(config.min_idle),
     };
 
-    let pool = Pool::builder(manager)
+    let pool = PgPool::builder(manager)
       .config(pool_config)
       .build()
       .map_err(|e| DbError::PoolCreation(format!("Failed to create PostgreSQL pool: {e}")))?;
@@ -221,23 +219,30 @@ impl ManagedPool {
           .get()
           .await
           .map_err(|e| DbError::Connection(e.into()))?;
-        sqlx::query("SELECT 1")
-          .fetch_one(&*conn)
+
+        // Simple query to test connection
+        conn
+          .interact(|conn| conn.execute("SELECT 1", []))
           .await
-          .map_err(DbError::from)?;
+          .map_err(|e| DbError::Connection(e.into()))?;
+
+        Ok(())
       }
       ManagedPool::Postgres(pool) => {
-        let conn = pool
+        let client = pool
           .get()
           .await
           .map_err(|e| DbError::Connection(e.into()))?;
-        sqlx::query("SELECT 1")
-          .fetch_one(&*conn)
+
+        // Simple query to test connection
+        client
+          .query_one("SELECT 1", &[])
           .await
-          .map_err(DbError::from)?;
+          .map_err(|e| DbError::Connection(e.into()))?;
+
+        Ok(())
       }
     }
-    Ok(())
   }
 
   /// Get pool metrics
@@ -292,8 +297,6 @@ mod tests {
   use super::*;
 
   // Test 1: Should Create Connection Pool With Valid Config
-  #[allow(clippy::unwrap_used)]
-  #[allow(clippy::expect_used)]
   #[tokio::test]
   async fn test_pool_should_create_with_default_configuration() {
     let config = ManagedPoolConfig::new("sqlite::memory:".to_string());
@@ -309,8 +312,6 @@ mod tests {
   }
 
   // Test 2: Should Reuse Connections Across Requests
-  #[allow(clippy::unwrap_used)]
-  #[allow(clippy::expect_used)]
   #[tokio::test]
   async fn test_pool_should_reuse_connections_across_requests() {
     let config = ManagedPoolConfig::new("sqlite::memory:".to_string())
@@ -333,8 +334,6 @@ mod tests {
   }
 
   // Test 3: Should Timeout When Pool Exhausted
-  #[allow(clippy::unwrap_used)]
-  #[allow(clippy::expect_used)]
   #[tokio::test]
   async fn test_pool_should_timeout_when_pool_exhausted() {
     let config = ManagedPoolConfig::new("sqlite::memory:".to_string())
@@ -352,8 +351,6 @@ mod tests {
   }
 
   // Test 4: Should Close Idle Connections After Timeout
-  #[allow(clippy::unwrap_used)]
-  #[allow(clippy::expect_used)]
   #[tokio::test]
   async fn test_pool_should_close_idle_connections_after_timeout() {
     let config = ManagedPoolConfig::new("sqlite::memory:".to_string())
@@ -370,8 +367,6 @@ mod tests {
   }
 
   // Test 5: Should Close Old Connections After Max Lifetime
-  #[allow(clippy::unwrap_used)]
-  #[allow(clippy::expect_used)]
   #[tokio::test]
   async fn test_pool_should_close_old_connections_after_max_lifetime() {
     let config = ManagedPoolConfig::new("sqlite::memory:".to_string())
@@ -387,8 +382,6 @@ mod tests {
   }
 
   // Test 6: Should Track Metrics Correctly
-  #[allow(clippy::unwrap_used)]
-  #[allow(clippy::expect_used)]
   #[tokio::test]
   async fn test_pool_should_track_metrics_correctly() {
     let config = ManagedPoolConfig::new("sqlite::memory:".to_string());
@@ -408,8 +401,6 @@ mod tests {
   }
 
   // Test 7: Should Support Custom Configuration
-  #[allow(clippy::unwrap_used)]
-  #[allow(clippy::expect_used)]
   #[tokio::test]
   async fn test_pool_should_support_custom_configuration() {
     let config = ManagedPoolConfig::new("sqlite::memory:".to_string())
@@ -427,8 +418,6 @@ mod tests {
   }
 
   // Test 8: Should Fail Gracefully When Database Unavailable
-  #[allow(clippy::unwrap_used)]
-  #[allow(clippy::expect_used)]
   #[tokio::test]
   async fn test_pool_should_fail_gracefully_when_database_unavailable() {
     let config = ManagedPoolConfig::new("sqlite:/nonexistent/path/db.db".to_string());
@@ -444,8 +433,6 @@ mod tests {
   }
 
   // Test 9: Should Close All Connections On Shutdown
-  #[allow(clippy::unwrap_used)]
-  #[allow(clippy::expect_used)]
   #[tokio::test]
   async fn test_pool_should_close_all_connections_on_shutdown() {
     let config = ManagedPoolConfig::new("sqlite::memory:".to_string());
@@ -459,8 +446,6 @@ mod tests {
   }
 
   // Test 10: Should Handle Database URL With Special Characters
-  #[allow(clippy::unwrap_used)]
-  #[allow(clippy::expect_used)]
   #[tokio::test]
   async fn test_pool_should_handle_database_url_with_special_characters() {
     let config =
@@ -475,8 +460,6 @@ mod tests {
   }
 
   // Test 11: Should Validate Connection Health
-  #[allow(clippy::unwrap_used)]
-  #[allow(clippy::expect_used)]
   #[tokio::test]
   async fn test_pool_should_validate_connection_health() {
     let config = ManagedPoolConfig::new("sqlite::memory:".to_string());
@@ -489,8 +472,6 @@ mod tests {
   }
 
   // Test 12: Should Work With Transactions
-  #[allow(clippy::unwrap_used)]
-  #[allow(clippy::expect_used)]
   #[tokio::test]
   async fn test_pool_should_work_with_transactions() {
     let config = ManagedPoolConfig::new("sqlite::memory:".to_string());
@@ -504,11 +485,12 @@ mod tests {
           let conn_result = p.get().await;
           assert!(conn_result.is_ok(), "Should acquire connection");
 
-          if let Ok(mut conn) = conn_result {
-            // Begin transaction
-            let result = sqlx::query("CREATE TABLE test (id INTEGER)")
-              .execute(&mut *conn)
+          if let Ok(conn) = conn_result {
+            // Execute a query via interact
+            let result = conn
+              .interact(|conn| conn.execute("CREATE TABLE test (id INTEGER)", []))
               .await;
+
             assert!(result.is_ok(), "Should execute query");
           }
         }
@@ -520,8 +502,6 @@ mod tests {
   }
 
   // Test 13: Should Handle Connection Errors During Query
-  #[allow(clippy::unwrap_used)]
-  #[allow(clippy::expect_used)]
   #[tokio::test]
   async fn test_pool_should_handle_connection_errors_during_query() {
     let config = ManagedPoolConfig::new("sqlite::memory:".to_string());
@@ -541,8 +521,6 @@ mod tests {
   }
 
   // Test 14: Should Support Multiple Pools For Different Databases
-  #[allow(clippy::unwrap_used)]
-  #[allow(clippy::expect_used)]
   #[tokio::test]
   async fn test_pool_should_support_multiple_pools_for_different_databases() {
     let config1 = ManagedPoolConfig::new("sqlite::memory:".to_string()).with_max_connections(5);
@@ -563,8 +541,6 @@ mod tests {
   }
 
   // Test 15: Should Clean Up Resources On Drop
-  #[allow(clippy::unwrap_used)]
-  #[allow(clippy::expect_used)]
   #[tokio::test]
   async fn test_pool_should_clean_up_resources_on_drop() {
     let config = ManagedPoolConfig::new("sqlite::memory:".to_string());
@@ -575,8 +551,6 @@ mod tests {
   }
 
   // Test 16: Should Respect Min Idle Configuration
-  #[allow(clippy::unwrap_used)]
-  #[allow(clippy::expect_used)]
   #[tokio::test]
   async fn test_pool_should_respect_min_idle_configuration() {
     let config = ManagedPoolConfig::new("sqlite::memory:".to_string())
@@ -593,8 +567,6 @@ mod tests {
   }
 
   // Test 17: Should Detect Database Type From URL
-  #[allow(clippy::unwrap_used)]
-  #[allow(clippy::expect_used)]
   #[tokio::test]
   async fn test_pool_should_detect_database_type_from_url() {
     let sqlite_config = ManagedPoolConfig::new("sqlite::memory:".to_string());
@@ -609,8 +581,6 @@ mod tests {
   }
 
   // Test 18: Should Reject Unsupported Database URLs
-  #[allow(clippy::unwrap_used)]
-  #[allow(clippy::expect_used)]
   #[tokio::test]
   async fn test_pool_should_reject_unsupported_database_urls() {
     let config = ManagedPoolConfig::new("mysql://localhost/test".to_string());
@@ -626,8 +596,6 @@ mod tests {
   }
 
   // Test 19: Should Handle Zero Max Connections
-  #[allow(clippy::unwrap_used)]
-  #[allow(clippy::expect_used)]
   #[tokio::test]
   async fn test_pool_should_handle_zero_max_connections() {
     let config = ManagedPoolConfig::new("sqlite::memory:".to_string())
@@ -643,8 +611,6 @@ mod tests {
   }
 
   // Test 20: Should Handle Very Large Pool Size
-  #[allow(clippy::unwrap_used)]
-  #[allow(clippy::expect_used)]
   #[tokio::test]
   async fn test_pool_should_handle_very_large_pool_size() {
     let config = ManagedPoolConfig::new("sqlite::memory:".to_string())
