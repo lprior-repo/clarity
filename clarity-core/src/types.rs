@@ -342,6 +342,9 @@ impl fmt::Display for UrlError {
 
 impl std::error::Error for UrlError {}
 
+/// Question types for surveys and forms
+pub mod question;
+
 #[cfg(test)]
 mod tests {
   use super::*;

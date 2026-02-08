@@ -1,491 +1,92 @@
-Diff in /home/lewis/src/clarity/clarity-client/tests/integration_test.rs:7:
- 
- #[test]
- fn test_app_state_navigation_flow() {
-[31m-    let mut state = AppState::new();
-(B[m[32m+  let mut state = AppState::new();
+Diff in /home/lewis/src/clarity/clarity-core/src/formatter.rs:174:
+     let mut json = String::new();
+     write!(json, "{{").map_err(|e| FormatError::IoError(e.to_string()))?;
+     write!(json, "\"id\":\"{}\",", data.id).map_err(|e| FormatError::IoError(e.to_string()))?;
+[31m-    write!(json, "\"spec_name\":\"{}\",", data.spec_name).map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m[31m-    write!(json, "\"state\":\"{}\",", data.state).map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m[31m-    write!(json, "\"title\":{},", serde_json::to_string(&data.title).unwrap_or_else(|_| "null".to_string()))
+(B[m[32m+    write!(json, "\"spec_name\":\"{}\",", data.spec_name)
+(B[m       .map_err(|e| FormatError::IoError(e.to_string()))?;
+[31m-    write!(json, "\"description\":{},", serde_json::to_string(&data.description).unwrap_or_else(|_| "null".to_string()))
+(B[m[32m+    write!(json, "\"state\":\"{}\",", data.state)
+(B[m       .map_err(|e| FormatError::IoError(e.to_string()))?;
+[32m+    write!(
+(B[m[32m+      json,
+(B[m[32m+      "\"title\":{},",
+(B[m[32m+      serde_json::to_string(&data.title).unwrap_or_else(|_| "null".to_string())
+(B[m[32m+    )
+(B[m[32m+    .map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m[32m+    write!(
+(B[m[32m+      json,
+(B[m[32m+      "\"description\":{},",
+(B[m[32m+      serde_json::to_string(&data.description).unwrap_or_else(|_| "null".to_string())
+(B[m[32m+    )
+(B[m[32m+    .map_err(|e| FormatError::IoError(e.to_string()))?;
 (B[m 
-[31m-    // Test complete navigation flow
-(B[m[31m-    assert!(state.navigate_to("/about".to_string()).is_ok());
-(B[m[31m-    assert_eq!(state.current_route, "/about");
-(B[m[32m+  // Test complete navigation flow
-(B[m[32m+  assert!(state.navigate_to("/about".to_string()).is_ok());
-(B[m[32m+  assert_eq!(state.current_route, "/about");
-(B[m 
-[31m-    assert!(state.navigate_to("/contact".to_string()).is_ok());
-(B[m[31m-    assert_eq!(state.current_route, "/contact");
-(B[m[32m+  assert!(state.navigate_to("/contact".to_string()).is_ok());
-(B[m[32m+  assert_eq!(state.current_route, "/contact");
-(B[m 
-[31m-    assert!(state.navigate_to("/".to_string()).is_ok());
-(B[m[31m-    assert_eq!(state.current_route, "/");
-(B[m[32m+  assert!(state.navigate_to("/".to_string()).is_ok());
-(B[m[32m+  assert_eq!(state.current_route, "/");
-(B[m }
- 
- #[test]
-Diff in /home/lewis/src/clarity/clarity-client/tests/integration_test.rs:24:
- fn test_app_state_error_handling_flow() {
-[31m-    let mut state = AppState::new();
-(B[m[32m+  let mut state = AppState::new();
-(B[m 
-[31m-    // Simulate error scenario
-(B[m[31m-    state.set_error(AppError::ComponentInit("Failed to load component".to_string()));
-(B[m[31m-    assert!(state.error.is_some());
-(B[m[32m+  // Simulate error scenario
-(B[m[32m+  state.set_error(AppError::ComponentInit(
-(B[m[32m+    "Failed to load component".to_string(),
-(B[m[32m+  ));
-(B[m[32m+  assert!(state.error.is_some());
-(B[m 
-[31m-    // Clear error and verify
-(B[m[31m-    state.clear_error();
-(B[m[31m-    assert!(state.error.is_none());
-(B[m[32m+  // Clear error and verify
-(B[m[32m+  state.clear_error();
-(B[m[32m+  assert!(state.error.is_none());
-(B[m 
-[31m-    // Verify state is still functional after error
-(B[m[31m-    assert!(state.navigate_to("/test".to_string()).is_ok());
-(B[m[32m+  // Verify state is still functional after error
-(B[m[32m+  assert!(state.navigate_to("/test".to_string()).is_ok());
-(B[m }
- 
- #[test]
-Diff in /home/lewis/src/clarity/clarity-client/tests/integration_test.rs:40:
- fn test_app_state_error_preserves_on_navigation_failure() {
-[31m-    let mut state = AppState::new();
-(B[m[32m+  let mut state = AppState::new();
-(B[m 
-[31m-    // Set initial valid state
-(B[m[31m-    assert!(state.navigate_to("/valid".to_string()).is_ok());
-(B[m[31m-    assert_eq!(state.current_route, "/valid");
-(B[m[32m+  // Set initial valid state
-(B[m[32m+  assert!(state.navigate_to("/valid".to_string()).is_ok());
-(B[m[32m+  assert_eq!(state.current_route, "/valid");
-(B[m 
-[31m-    // Attempt invalid navigation
-(B[m[31m-    let result = state.navigate_to("invalid-path".to_string());
-(B[m[31m-    assert!(result.is_err());
-(B[m[32m+  // Attempt invalid navigation
-(B[m[32m+  let result = state.navigate_to("invalid-path".to_string());
-(B[m[32m+  assert!(result.is_err());
-(B[m 
-[31m-    // Verify state is unchanged after failed navigation
-(B[m[31m-    assert_eq!(state.current_route, "/valid");
-(B[m[32m+  // Verify state is unchanged after failed navigation
-(B[m[32m+  assert_eq!(state.current_route, "/valid");
-(B[m }
- 
- #[test]
-Diff in /home/lewis/src/clarity/clarity-client/tests/integration_test.rs:56:
- fn test_multiple_errors_in_sequence() {
-[31m-    let mut state = AppState::new();
-(B[m[32m+  let mut state = AppState::new();
-(B[m 
-[31m-    state.set_error(AppError::InvalidRoute("first error".to_string()));
-(B[m[31m-    assert_eq!(
-(B[m[31m-        state.error,
-(B[m[31m-        Some(AppError::InvalidRoute("first error".to_string()))
-(B[m[31m-    );
-(B[m[32m+  state.set_error(AppError::InvalidRoute("first error".to_string()));
-(B[m[32m+  assert_eq!(
-(B[m[32m+    state.error,
-(B[m[32m+    Some(AppError::InvalidRoute("first error".to_string()))
-(B[m[32m+  );
-(B[m 
-[31m-    // Overwrite with new error
-(B[m[31m-    state.set_error(AppError::StateUpdate("second error".to_string()));
-(B[m[31m-    assert_eq!(
-(B[m[31m-        state.error,
-(B[m[31m-        Some(AppError::StateUpdate("second error".to_string()))
-(B[m[31m-    );
-(B[m[32m+  // Overwrite with new error
-(B[m[32m+  state.set_error(AppError::StateUpdate("second error".to_string()));
-(B[m[32m+  assert_eq!(
-(B[m[32m+    state.error,
-(B[m[32m+    Some(AppError::StateUpdate("second error".to_string()))
-(B[m[32m+  );
-(B[m 
-[31m-    // Clear and verify
-(B[m[31m-    state.clear_error();
-(B[m[31m-    assert!(state.error.is_none());
-(B[m[32m+  // Clear and verify
-(B[m[32m+  state.clear_error();
-(B[m[32m+  assert!(state.error.is_none());
-(B[m }
- 
- #[test]
-Diff in /home/lewis/src/clarity/clarity-client/tests/integration_test.rs:78:
- fn test_app_error_equality() {
-[31m-    let err1 = AppError::InvalidRoute("test".to_string());
-(B[m[31m-    let err2 = AppError::InvalidRoute("test".to_string());
-(B[m[31m-    let err3 = AppError::InvalidRoute("other".to_string());
-(B[m[32m+  let err1 = AppError::InvalidRoute("test".to_string());
-(B[m[32m+  let err2 = AppError::InvalidRoute("test".to_string());
-(B[m[32m+  let err3 = AppError::InvalidRoute("other".to_string());
-(B[m 
-[31m-    assert_eq!(err1, err2);
-(B[m[31m-    assert_ne!(err1, err3);
-(B[m[32m+  assert_eq!(err1, err2);
-(B[m[32m+  assert_ne!(err1, err3);
-(B[m }
- 
- #[test]
-Diff in /home/lewis/src/clarity/clarity-client/tests/integration_test.rs:88:
- fn test_app_state_clone() {
-[31m-    let mut state = AppState::new();
-(B[m[31m-    assert!(state.navigate_to("/test".to_string()).is_ok());
-(B[m[32m+  let mut state = AppState::new();
-(B[m[32m+  assert!(state.navigate_to("/test".to_string()).is_ok());
-(B[m 
-[31m-    let cloned = state.clone();
-(B[m[31m-    assert_eq!(state.current_route, cloned.current_route);
-(B[m[31m-    assert_eq!(state.error, cloned.error);
-(B[m[32m+  let cloned = state.clone();
-(B[m[32m+  assert_eq!(state.current_route, cloned.current_route);
-(B[m[32m+  assert_eq!(state.error, cloned.error);
-(B[m 
-[31m-    // Modify clone doesn't affect original
-(B[m[31m-    let mut cloned = cloned;
-(B[m[31m-    assert!(cloned.navigate_to("/other".to_string()).is_ok());
-(B[m[31m-    assert_eq!(state.current_route, "/test");
-(B[m[31m-    assert_eq!(cloned.current_route, "/other");
-(B[m[32m+  // Modify clone doesn't affect original
-(B[m[32m+  let mut cloned = cloned;
-(B[m[32m+  assert!(cloned.navigate_to("/other".to_string()).is_ok());
-(B[m[32m+  assert_eq!(state.current_route, "/test");
-(B[m[32m+  assert_eq!(cloned.current_route, "/other");
-(B[m }
- 
- #[test]
-Diff in /home/lewis/src/clarity/clarity-client/tests/integration_test.rs:104:
- fn test_route_validation_various_cases() {
-[31m-    let mut state = AppState::new();
-(B[m[32m+  let mut state = AppState::new();
-(B[m 
-[31m-    // Valid routes
-(B[m[31m-    let valid_routes = vec![
-(B[m[31m-        "/",
-(B[m[31m-        "/about",
-(B[m[31m-        "/contact",
-(B[m[31m-        "/path/with/multiple/segments",
-(B[m[31m-        "/path-with-dashes",
-(B[m[31m-        "/path_with_underscores",
-(B[m[31m-        "/path123",
-(B[m[31m-        "/path?query=params",
-(B[m[31m-    ];
-(B[m[32m+  // Valid routes
-(B[m[32m+  let valid_routes = vec![
-(B[m[32m+    "/",
-(B[m[32m+    "/about",
-(B[m[32m+    "/contact",
-(B[m[32m+    "/path/with/multiple/segments",
-(B[m[32m+    "/path-with-dashes",
-(B[m[32m+    "/path_with_underscores",
-(B[m[32m+    "/path123",
-(B[m[32m+    "/path?query=params",
-(B[m[32m+  ];
-(B[m 
-[31m-    for route in valid_routes {
-(B[m[31m-        let result = state.navigate_to(route.to_string());
-(B[m[31m-        assert!(
-(B[m[31m-            result.is_ok(),
-(B[m[31m-            "Route '{}' should be valid, got error: {:?}",
-(B[m[31m-            route,
-(B[m[31m-            result
-(B[m[31m-        );
-(B[m[31m-    }
-(B[m[32m+  for route in valid_routes {
-(B[m[32m+    let result = state.navigate_to(route.to_string());
-(B[m[32m+    assert!(
-(B[m[32m+      result.is_ok(),
-(B[m[32m+      "Route '{}' should be valid, got error: {:?}",
-(B[m[32m+      route,
-(B[m[32m+      result
-(B[m[32m+    );
-(B[m[32m+  }
-(B[m 
-[31m-    // Invalid routes
-(B[m[31m-    let invalid_routes = vec![
-(B[m[31m-        "",
-(B[m[31m-        "no-leading-slash",
-(B[m[31m-        " ",
-(B[m[31m-        "\t",
-(B[m[31m-        "\n",
-(B[m[31m-    ];
-(B[m[32m+  // Invalid routes
-(B[m[32m+  let invalid_routes = vec!["", "no-leading-slash", " ", "\t", "\n"];
-(B[m 
-[31m-    for route in invalid_routes {
-(B[m[31m-        let result = state.navigate_to(route.to_string());
-(B[m[31m-        assert!(
-(B[m[31m-            result.is_err(),
-(B[m[31m-            "Route '{}' should be invalid, but got success",
-(B[m[31m-            route
-(B[m[31m-        );
-(B[m[31m-    }
-(B[m[32m+  for route in invalid_routes {
-(B[m[32m+    let result = state.navigate_to(route.to_string());
-(B[m[32m+    assert!(
-(B[m[32m+      result.is_err(),
-(B[m[32m+      "Route '{}' should be invalid, but got success",
-(B[m[32m+      route
-(B[m[32m+    );
-(B[m[32m+  }
-(B[m }
- 
-Diff in /home/lewis/src/clarity/clarity-core/src/db/sqlite_pool.rs:11:
- //! or scenarios where data needs to be bundled with the binary.
- 
- use crate::db::error::{DbError, DbResult};
-[31m-use sqlx::{Row, sqlite::SqlitePoolOptions};
-(B[m use sqlx::SqlitePool;
-[32m+use sqlx::{sqlite::SqlitePoolOptions, Row};
-(B[m use std::time::Duration;
- 
- /// SQLite database configuration
-Diff in /home/lewis/src/clarity/clarity-core/src/path_utils.rs:138:
-     return Err(PathError::EmptyPath);
-   }
- 
-[31m-  Ok(Path::new(path)
-(B[m[31m-    .parent()
-(B[m[31m-    .map_or(String::new(), |p| {
-(B[m[31m-      p.to_str().map_or(String::new(), String::from)
-(B[m[31m-    }))
-(B[m[32m+  Ok(Path::new(path).parent().map_or(String::new(), |p| {
-(B[m[32m+    p.to_str().map_or(String::new(), String::from)
-(B[m[32m+  }))
-(B[m }
- 
- /// Join two path components
-Diff in /home/lewis/src/clarity/clarity-core/src/path_utils.rs:190:
- 
-   let normalized = Path::new(path)
-     .components()
-[31m-    .fold(PathBuf::new(), |acc, comp| {
-(B[m[31m-      match comp {
-(B[m[31m-        std::path::Component::ParentDir => {
-(B[m[31m-          acc.parent().map_or_else(|| acc.clone(), Path::to_path_buf)
-(B[m[31m-        }
-(B[m[31m-        std::path::Component::CurDir => acc,
-(B[m[31m-        _ => acc.join(comp),
-(B[m[32m+    .fold(PathBuf::new(), |acc, comp| match comp {
-(B[m[32m+      std::path::Component::ParentDir => {
-(B[m[32m+        acc.parent().map_or_else(|| acc.clone(), Path::to_path_buf)
-(B[m       }
-[32m+      std::path::Component::CurDir => acc,
-(B[m[32m+      _ => acc.join(comp),
-(B[m     });
- 
-   normalized
-Diff in /home/lewis/src/clarity/clarity-core/src/path_utils.rs:319:
-   // get_parent tests
-   #[test]
-   fn test_get_parent_absolute() {
-[31m-    assert_eq!(get_parent("/path/to/file.txt").unwrap().as_str(), "/path/to");
-(B[m[32m+    assert_eq!(
-(B[m[32m+      get_parent("/path/to/file.txt").unwrap().as_str(),
-(B[m[32m+      "/path/to"
-(B[m[32m+    );
-(B[m     assert_eq!(get_parent("/path/to/").unwrap().as_str(), "/path");
-   }
- 
-Diff in /home/lewis/src/clarity/clarity-core/src/path_utils.rs:360:
- 
-   #[test]
-   fn test_join_paths_absolute_second() {
-[31m-    assert_eq!(
-(B[m[31m-      join_paths("/path/to", "/absolute").unwrap(),
-(B[m[31m-      "/absolute"
-(B[m[31m-    );
-(B[m[32m+    assert_eq!(join_paths("/path/to", "/absolute").unwrap(), "/absolute");
-(B[m   }
- 
-   #[test]
-Diff in /home/lewis/src/clarity/clarity-core/src/path_utils.rs:420:
- 
-   #[test]
-   fn test_normalize_path_already_normalized() {
-[31m-    assert_eq!(normalize_path("/path/to/file.txt").unwrap(), "/path/to/file.txt");
-(B[m[32m+    assert_eq!(
-(B[m[32m+      normalize_path("/path/to/file.txt").unwrap(),
-(B[m[32m+      "/path/to/file.txt"
-(B[m[32m+    );
-(B[m   }
- 
-   #[test]
-Diff in /home/lewis/src/clarity/clarity-server/tests/allocator_test.rs:5:
- /// 2. Memory allocation/deallocation works correctly
- /// 3. No panics occur during memory operations
- /// 4. The allocator provides expected performance characteristics
-[31m-
-(B[m use std::alloc::{GlobalAlloc, Layout, System};
- 
- #[cfg(test)]
-Diff in /home/lewis/src/clarity/clarity-server/tests/allocator_test.rs:12:
- mod allocator_tests {
-[31m-    use super::*;
-(B[m[32m+  use super::*;
-(B[m 
-[31m-    /// Test that basic allocation works without panics
-(B[m[31m-    #[test]
-(B[m[31m-    fn test_basic_allocation() {
-(B[m[31m-        let sizes = vec![1, 8, 16, 32, 64, 128, 256, 512, 1024, 4096];
-(B[m[32m+  /// Test that basic allocation works without panics
-(B[m[32m+  #[test]
-(B[m[32m+  fn test_basic_allocation() {
-(B[m[32m+    let sizes = vec![1, 8, 16, 32, 64, 128, 256, 512, 1024, 4096];
-(B[m 
-[31m-        for size in sizes {
-(B[m[31m-            let layout = Layout::from_size_align(size, 8).expect("Invalid layout");
-(B[m[31m-            unsafe {
-(B[m[31m-                let ptr = System.alloc(layout);
-(B[m[31m-                assert!(!ptr.is_null(), "Allocation failed for size {}", size);
-(B[m[32m+    for size in sizes {
-(B[m[32m+      let layout = Layout::from_size_align(size, 8).expect("Invalid layout");
-(B[m[32m+      unsafe {
-(B[m[32m+        let ptr = System.alloc(layout);
-(B[m[32m+        assert!(!ptr.is_null(), "Allocation failed for size {}", size);
-(B[m 
-[31m-                if size >= 8 {
-(B[m[31m-                    *(ptr as *mut u64) = 0xDEADBEEF;
-(B[m[31m-                    assert_eq!(*(ptr as *mut u64), 0xDEADBEEF);
-(B[m[31m-                }
-(B[m[31m-
-(B[m[31m-                System.dealloc(ptr, layout);
-(B[m[31m-            }
-(B[m[32m+        if size >= 8 {
-(B[m[32m+          *(ptr as *mut u64) = 0xDEADBEEF;
-(B[m[32m+          assert_eq!(*(ptr as *mut u64), 0xDEADBEEF);
-(B[m         }
-[32m+
-(B[m[32m+        System.dealloc(ptr, layout);
+     // Questions
+     write!(json, "\"questions\":[").map_err(|e| FormatError::IoError(e.to_string()))?;
+Diff in /home/lewis/src/clarity/clarity-core/src/formatter.rs:188:
+         write!(json, ",").map_err(|e| FormatError::IoError(e.to_string()))?;
+       }
+       write!(json, "{{").map_err(|e| FormatError::IoError(e.to_string()))?;
+[31m-      write!(json, "\"text\":{},", serde_json::to_string(&q.text).unwrap())
+(B[m[32m+      write!(
+(B[m[32m+        json,
+(B[m[32m+        "\"text\":{},",
+(B[m[32m+        serde_json::to_string(&q.text).unwrap()
+(B[m[32m+      )
+(B[m[32m+      .map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m[32m+      write!(
+(B[m[32m+        json,
+(B[m[32m+        "\"help_text\":{},",
+(B[m[32m+        serde_json::to_string(&q.help_text).unwrap()
+(B[m[32m+      )
+(B[m[32m+      .map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m[32m+      write!(json, "\"required\":{},", q.required)
+(B[m         .map_err(|e| FormatError::IoError(e.to_string()))?;
+[31m-      write!(json, "\"help_text\":{},", serde_json::to_string(&q.help_text).unwrap())
+(B[m[32m+      write!(json, "\"question_type\":\"{:?}\"", q.question_type)
+(B[m         .map_err(|e| FormatError::IoError(e.to_string()))?;
+[31m-      write!(json, "\"required\":{},", q.required).map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m[31m-      write!(json, "\"question_type\":\"{:?}\"", q.question_type).map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m       write!(json, "}}").map_err(|e| FormatError::IoError(e.to_string()))?;
+     }
+     write!(json, "],").map_err(|e| FormatError::IoError(e.to_string()))?;
+Diff in /home/lewis/src/clarity/clarity-core/src/formatter.rs:204:
+       if i > 0 {
+         write!(json, ",").map_err(|e| FormatError::IoError(e.to_string()))?;
+       }
+[31m-      write!(json, "{{\"question_index\":{},", a.question_index).map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m[32m+      write!(json, "{{\"question_index\":{},", a.question_index)
+(B[m[32m+        .map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m       match &a.value {
+         AnswerValue::Text(s) => write!(json, "\"value\":\"{}\"}}", s.replace('"', "\\\"")),
+         AnswerValue::Boolean(b) => write!(json, "\"value\":{}}}", b),
+Diff in /home/lewis/src/clarity/clarity-core/src/formatter.rs:211:
+         AnswerValue::MultipleChoice(idx) => write!(json, "\"value\":{}}}", idx),
+         AnswerValue::Numeric(n) => write!(json, "\"value\":{}}}", n),
+[31m-      }.map_err(|e| FormatError::IoError(e.to_string()))?;
 (B[m[32m+      }
+(B[m[32m+      .map_err(|e| FormatError::IoError(e.to_string()))?;
 (B[m     }
-[32m+  }
-(B[m 
-[31m-    /// Test concurrent allocations (multi-threaded safety)
-(B[m[31m-    #[test]
-(B[m[31m-    fn test_concurrent_allocations() {
-(B[m[31m-        use std::sync::{Arc, Barrier};
-(B[m[31m-        use std::thread;
-(B[m[32m+  /// Test concurrent allocations (multi-threaded safety)
-(B[m[32m+  #[test]
-(B[m[32m+  fn test_concurrent_allocations() {
-(B[m[32m+    use std::sync::{Arc, Barrier};
-(B[m[32m+    use std::thread;
-(B[m 
-[31m-        let num_threads = 8;
-(B[m[31m-        let allocations_per_thread = 100;
-(B[m[31m-        let barrier = Arc::new(Barrier::new(num_threads));
-(B[m[32m+    let num_threads = 8;
-(B[m[32m+    let allocations_per_thread = 100;
-(B[m[32m+    let barrier = Arc::new(Barrier::new(num_threads));
-(B[m 
-[31m-        let handles: Vec<_> = (0..num_threads)
-(B[m[31m-            .map(|_| {
-(B[m[31m-                let barrier = Arc::clone(&barrier);
-(B[m[31m-                thread::spawn(move || {
-(B[m[31m-                    barrier.wait();
-(B[m[32m+    let handles: Vec<_> = (0..num_threads)
-(B[m[32m+      .map(|_| {
-(B[m[32m+        let barrier = Arc::clone(&barrier);
-(B[m[32m+        thread::spawn(move || {
-(B[m[32m+          barrier.wait();
-(B[m 
-[31m-                    for i in 0..allocations_per_thread {
-(B[m[31m-                        let size = (i % 10 + 1) * 128;
-(B[m[31m-                        let layout = Layout::from_size_align(size, 8).expect("Invalid layout");
-(B[m[32m+          for i in 0..allocations_per_thread {
-(B[m[32m+            let size = (i % 10 + 1) * 128;
-(B[m[32m+            let layout = Layout::from_size_align(size, 8).expect("Invalid layout");
-(B[m 
-[31m-                        unsafe {
-(B[m[31m-                            let ptr = System.alloc(layout);
-(B[m[31m-                            assert!(!ptr.is_null(), "Thread allocation failed");
-(B[m[32m+            unsafe {
-(B[m[32m+              let ptr = System.alloc(layout);
-(B[m[32m+              assert!(!ptr.is_null(), "Thread allocation failed");
-(B[m 
-[31m-                            if size >= 8 {
-(B[m[31m-                                *(ptr as *mut u64) = i as u64;
-(B[m[31m-                            }
-(B[m[32m+              if size >= 8 {
-(B[m[32m+                *(ptr as *mut u64) = i as u64;
-(B[m[32m+              }
-(B[m 
-[31m-                            System.dealloc(ptr, layout);
-(B[m[31m-                        }
-(B[m[31m-                    }
-(B[m[32m+              System.dealloc(ptr, layout);
-(B[m[32m+            }
-(B[m[32m+          }
-(B[m 
-[31m-                    true
-(B[m[31m-                })
-(B[m[31m-            })
-(B[m[31m-            .collect();
-(B[m[32m+          true
-(B[m[32m+        })
-(B[m[32m+      })
-(B[m[32m+      .collect();
-(B[m 
-[31m-        for handle in handles {
-(B[m[31m-            let result = handle.join();
-(B[m[31m-            assert!(result.is_ok(), "Thread panicked");
-(B[m[31m-            assert!(result.unwrap(), "Thread returned false");
-(B[m[31m-        }
-(B[m[32m+    for handle in handles {
-(B[m[32m+      let result = handle.join();
-(B[m[32m+      assert!(result.is_ok(), "Thread panicked");
-(B[m[32m+      assert!(result.unwrap(), "Thread returned false");
-(B[m     }
-[32m+  }
-(B[m 
-[31m-    /// Verify allocator performance
-(B[m[31m-    #[test]
-(B[m[31m-    fn test_allocator_performance() {
-(B[m[31m-        let start = std::time::Instant::now();
-(B[m[32m+  /// Verify allocator performance
-(B[m[32m+  #[test]
-(B[m[32m+  fn test_allocator_performance() {
-(B[m[32m+    let start = std::time::Instant::now();
-(B[m 
-[31m-        for _ in 0..1000 {
-(B[m[31m-            let layout = Layout::new::<[u8; 256]>();
-(B[m[31m-            unsafe {
-(B[m[31m-                let ptr = System.alloc(layout);
-(B[m[31m-                assert!(!ptr.is_null());
-(B[m[31m-                System.dealloc(ptr, layout);
-(B[m[31m-            }
-(B[m[31m-        }
-(B[m[32m+    for _ in 0..1000 {
-(B[m[32m+      let layout = Layout::new::<[u8; 256]>();
-(B[m[32m+      unsafe {
-(B[m[32m+        let ptr = System.alloc(layout);
-(B[m[32m+        assert!(!ptr.is_null());
-(B[m[32m+        System.dealloc(ptr, layout);
-(B[m[32m+      }
-(B[m[32m+    }
-(B[m 
-[31m-        let duration = start.elapsed();
-(B[m[32m+    let duration = start.elapsed();
-(B[m 
-[31m-        // With mimalloc, 1000 allocations should be very fast
-(B[m[31m-        assert!(
-(B[m[31m-            duration.as_millis() < 100,
-(B[m[31m-            "Allocator seems slower than expected: {:?}",
-(B[m[31m-            duration
-(B[m[31m-        );
-(B[m[31m-    }
-(B[m[32m+    // With mimalloc, 1000 allocations should be very fast
-(B[m[32m+    assert!(
-(B[m[32m+      duration.as_millis() < 100,
-(B[m[32m+      "Allocator seems slower than expected: {:?}",
-(B[m[32m+      duration
-(B[m[32m+    );
-(B[m[32m+  }
-(B[m }
+     write!(json, "],").map_err(|e| FormatError::IoError(e.to_string()))?;
  
+Diff in /home/lewis/src/clarity/clarity-core/src/formatter.rs:217:
+[31m-    write!(json, "\"created_at\":{},", data.created_at.as_secs()).map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m[31m-    write!(json, "\"updated_at\":{}", data.updated_at.as_secs()).map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m[32m+    write!(json, "\"created_at\":{},", data.created_at.as_secs())
+(B[m[32m+      .map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m[32m+    write!(json, "\"updated_at\":{}", data.updated_at.as_secs())
+(B[m[32m+      .map_err(|e| FormatError::IoError(e.to_string()))?;
+(B[m     write!(json, "}}").map_err(|e| FormatError::IoError(e.to_string()))?;
+ 
+     // Pretty print if needed
+Diff in /home/lewis/src/clarity/clarity-core/src/formatter.rs:222:
+     if self.pretty {
+[31m-      let parsed: serde_json::Value = serde_json::from_str(&json)
+(B[m[31m-        .map_err(|e| FormatError::SerializationFailed(e.to_string()))?;
+(B[m[32m+      let parsed: serde_json::Value =
+(B[m[32m+        serde_json::from_str(&json).map_err(|e| FormatError::SerializationFailed(e.to_string()))?;
+(B[m       serde_json::to_string_pretty(&parsed)
+         .map_err(|e| FormatError::SerializationFailed(e.to_string()))
+     } else {

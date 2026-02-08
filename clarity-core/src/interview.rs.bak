@@ -19,7 +19,6 @@
 //! - No unwraps or panics
 //! - Result types for error handling
 
-use serde::{Deserialize, Serialize};
 use std::fmt::{self, Display};
 use thiserror::Error;
 
@@ -27,7 +26,7 @@ use thiserror::Error;
 ///
 /// Interview IDs are strongly typed wrappers around UUIDs.
 /// They ensure type safety and prevent mixing IDs from different domains.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct InterviewId(String);
 
 impl InterviewId {

@@ -23,6 +23,7 @@
 
 pub mod db;
 pub mod error;
+pub mod formatter;
 pub mod interview;
 pub mod json_formatter;
 pub mod path_utils;
