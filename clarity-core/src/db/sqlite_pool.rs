@@ -167,6 +167,10 @@ pub async fn test_sqlite_connection(pool: &SqlitePool) -> DbResult<()> {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+  #![allow(clippy::panic)]
+
   use super::*;
 
   // Mutex to serialize env var tests (they use shared mutable state)
