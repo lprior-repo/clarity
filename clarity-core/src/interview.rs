@@ -596,10 +596,7 @@ mod tests {
   fn test_interview_new_empty_spec_name() {
     let id_result = InterviewId::new("550e8400-e29b-41d4-a716-446655440000".to_string());
     assert!(id_result.is_ok());
-    let id = match id_result {
-      Ok(id) => id,
-      Err(e) => panic!("Expected Ok InterviewId, got Err: {e}"),
-    };
+    let id = id_result.unwrap();
 
     let result = Interview::new(id, String::new(), Timestamp::from_secs(1_234_567_890));
     assert!(result.is_err());
@@ -616,10 +613,7 @@ mod tests {
   fn test_interview_new_whitespace_spec_name() {
     let id_result = InterviewId::new("550e8400-e29b-41d4-a716-446655440000".to_string());
     assert!(id_result.is_ok());
-    let id = match id_result {
-      Ok(id) => id,
-      Err(e) => panic!("Expected Ok InterviewId, got Err: {e}"),
-    };
+    let id = id_result.unwrap();
 
     let result = Interview::new(id, "   ".to_string(), Timestamp::from_secs(1_234_567_890));
     assert!(result.is_err());
