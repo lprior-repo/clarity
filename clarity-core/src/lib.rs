@@ -19,7 +19,100 @@
 #![allow(clippy::cargo_common_metadata)]
 #![allow(clippy::multiple_crate_versions)]
 
-//! Core functionality for the Clarity application
+//! # Clarity Core
+//!
+//! `clarity-core` provides the foundational functionality for the Clarity application,
+//! including database operations, type validation, session management, progress tracking,
+//! and output formatting.
+//!
+//! ## Design Principles
+//!
+//! This crate follows strict functional programming principles:
+//! - **Zero Panic**: All functions return `Result` types instead of panicking
+//! - **Type Safety**: Strong typing with validation at boundaries
+//! - **Immutability**: Default to immutable data structures
+//! - **Composability**: Small, focused functions that compose well
+//! - **Error Handling**: Explicit, typed errors with clear context
+//!
+//! ## Architecture
+//!
+//! The crate is organized into several key modules:
+//!
+//! - [`db`]: Database operations and models with connection pooling
+//! - [`error`]: Error types and exit code management
+//! - [`types`]: Common validated types (URL, HTTP methods, spec names)
+//! - [`validation`]: Input validation utilities
+//! - [`session`]: Session management and tracking
+//! - [`progress`]: Progress calculation and formatting
+//! - [`formatter`]: Output formatting with multiple format support
+//! - [`interview`]: Interview data structures and builders
+//! - [`path_utils`]: Safe file path operations
+//! - [`json_formatter`]: JSON formatting utilities
+//!
+//! ## Getting Started
+//!
+//! ### Validated Types
+//!
+//! ```rust
+//! use clarity_core::{Url, SpecName};
+//!
+//! // URLs are validated on creation
+//! let url = Url::new("https://example.com".to_string())?;
+//! assert_eq!(url.scheme(), "https");
+//!
+//! // Spec names enforce format rules
+//! let name = SpecName::new("my_spec_v1".to_string())?;
+//! assert_eq!(name.as_str(), "my_spec_v1");
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! ### Validation
+//!
+//! ```rust
+//! use clarity_core::validation::{validate_non_empty, validate_email_format};
+//!
+//! // Chain validations for robust input handling
+//! let email = "user@example.com";
+//! let validated = validate_non_empty(email)
+//!     .and_then(|_| validate_email_format(email))?;
+//! # Ok::<(), clarity_core::validation::ValidationError>(())
+//! ```
+//!
+//! ### Error Handling
+//!
+//! ```rust
+//! use clarity_core::{ExitCode, map_validation_error};
+//! use clarity_core::validation::ValidationError;
+//!
+//! // Convert domain errors to exit codes
+//! let error = ValidationError::EmptyInput;
+//! let code = map_validation_error(&error)?;
+//! assert_eq!(code, ExitCode::VALIDATION_ERROR);
+//! # Ok::<(), clarity_core::error::ExitCodeError>(())
+//! ```
+//!
+//! ## Thread Safety
+//!
+//! Most types in this crate are `Send` and `Sync` when their internal
+//! data supports it. Database connections require careful handling -
+//! use connection pools for concurrent access.
+//!
+//! ## Performance
+//!
+//! - All validation is O(n) where n is input length
+//! - Database operations use prepared statements
+//! - Path operations avoid allocations where possible
+//! - Progress calculations are O(m) where m is the number of items
+//!
+//! ## Feature Flags
+//!
+//! Currently no feature flags are exposed. All functionality is available by default.
+//!
+//! ## Error Handling Philosophy
+//!
+//! This crate never panics in production code. All errors are explicitly
+//! handled through `Result` types. See the [`error`] module for details
+//! on error types and conversion utilities.
 
 pub mod db;
 pub mod error;

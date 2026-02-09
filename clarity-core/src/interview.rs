@@ -514,6 +514,8 @@ mod tests {
   #![allow(clippy::match_same_arms)]
   #![allow(clippy::uninlined_format_args)]
   #![allow(clippy::manual_string_new)]
+  #![allow(clippy::match_wild_err_arm)]
+  #![allow(clippy::manual_let_else)]
 
   use super::*;
 

@@ -97,15 +97,16 @@ pub async fn test_connection(pool: &PgPool) -> DbResult<()> {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+  #![allow(clippy::panic)]
+
   use super::*;
 
   // Mutex to serialize env var tests (they use shared mutable state)
   use std::sync::Mutex;
   static ENV_TEST_LOCK: Mutex<()> = Mutex::new(());
 
-  #[allow(clippy::expect_used)]
-  #[allow(clippy::panic)]
-  #[allow(clippy::unwrap_used)]
   #[test]
   fn test_db_config_default() {
     let config = DbConfig::default();
@@ -127,7 +128,6 @@ mod tests {
   }
 
   #[test]
-  #[allow(clippy::panic)]
   fn test_db_config_from_env_missing() {
     let _lock = ENV_TEST_LOCK.lock().unwrap();
     // Remove DATABASE_URL if it exists
@@ -141,7 +141,6 @@ mod tests {
   }
 
   #[test]
-  #[allow(clippy::expect_used)]
   fn test_db_config_from_env_set() {
     let _lock = ENV_TEST_LOCK.lock().unwrap();
     std::env::set_var("DATABASE_URL", "postgresql://localhost/fromenv");

@@ -1,6 +1,53 @@
+//! # JSON Formatter Module
+//!
+//! This module provides JSON formatting utilities for the Clarity application.
+//! It offers a flexible `JsonValue` enum for constructing JSON output and
+//! standardized structures for API responses and error details.
+//!
+//! ## Design Principles
+//!
+//! - **Type Safety**: Strongly typed JSON values
+//! - **Composability**: Builder-style methods for constructing JSON
+//! - **Zero Panic**: All operations are safe and cannot panic
+//! - **Serialization**: Full serde support for JSON serialization/deserialization
+//!
+//! ## Core Types
+//!
+//! - [`JsonValue`]: Enum representing any JSON value
+//! - [`ErrorDetail`]: Structured error information with next actions
+//! - [`ApiResponse`]: Standardized API response wrapper
+//! - [`JsonFormatter`]: Formatter for converting domain objects to JSON
+//!
+//! ## Thread Safety
+//!
+//! All types are `Send` and `Sync` when their internal data supports it.
+//! `JsonValue` can be freely shared across threads.
+//!
+//! ## Example Usage
+//!
+//! ```rust
+//! use clarity_core::json_formatter::{JsonValue, ApiResponse};
+//!
+//! // Create JSON values
+//! let json = JsonValue::object(vec![
+//!     ("name".to_string(), JsonValue::string("Clarity")),
+//!     ("version".to_string(), JsonValue::string("1.0.0")),
+//! ]);
+//!
+//! // Create API responses
+//! let response = ApiResponse::success(json);
+//! ```
+//!
+//! ## Performance
+//!
+//! - Zero-copy where possible
+//! - Efficient serialization via serde
+//! - Minimal allocations during construction
+
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
+/// JSON value enum that can represent any valid JSON
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum JsonValue {
@@ -203,11 +250,13 @@ impl JsonFormatter {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::expect_used)]
+  #![allow(clippy::float_cmp)]
+  #![allow(clippy::uninlined_format_args)]
+  #![allow(clippy::single_char_pattern)]
+  #![allow(clippy::redundant_clone)]
+
   use super::*;
-  #[allow(clippy::expect_used)]
-  #[allow(clippy::float_cmp)]
-  #[allow(clippy::uninlined_format_args)]
-  #[allow(clippy::single_char_pattern)]
   #[test]
   fn test_json_formatter_basic() {
     let formatter = JsonFormatter::new();
@@ -370,7 +419,7 @@ mod tests {
     assert_eq!(detail.message, "Invalid value");
     assert_eq!(detail.next_actions.len(), 1);
     assert_eq!(
-      detail.next_actions.get(0),
+      detail.next_actions.first(),
       Some(&"Check format".to_string())
     );
   }

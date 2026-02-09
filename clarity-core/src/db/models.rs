@@ -1,3 +1,63 @@
+//! # Database Models
+//!
+//! This module defines the core data models used throughout the Clarity application.
+//! All models follow functional programming principles with validation at construction time.
+//!
+//! ## Design Principles
+//!
+//! - **Type Safety**: Strongly typed IDs and values to prevent mixing domains
+//! - **Validation**: All types validate their data at construction time
+//! - **Immutability**: Models are immutable by default
+//! - **Zero Panic**: All operations return `Result` types
+//! - **Serialization**: Full serde support for database and API serialization
+//!
+//! ## Core Types
+//!
+//! ### Identifiers
+//!
+//! - [`UserId`]: Unique user identifier
+//! - [`BeadId`]: Unique bead identifier
+//!
+//! ### Value Objects
+//!
+//! - [`Email`]: Validated email addresses
+//! - [`UserRole`]: User permission levels (Admin, User, Guest)
+//! - [`BeadStatus`]: Bead lifecycle states (Open, InProgress, Completed, etc.)
+//! - [`BeadType`]: Bead categorization (Feature, Bug, Task, etc.)
+//! - [`BeadPriority`]: Priority levels (P0-P3)
+//!
+//! ### Entities
+//!
+//! - [`User`]: Application user accounts
+//! - [`NewUser`]: Builder for creating new users
+//! - [`Bead`]: Work items tracked by the bead system
+//! - [`NewBead`]: Builder for creating new beads
+//! - [`Interview`]: Interview data structures
+//! - [`Spec`]: API specification records
+//!
+//! ## Thread Safety
+//!
+//! All models are `Send` and `Sync` when their internal data supports it.
+//! IDs and value objects are freely copyable and shareable across threads.
+//!
+//! ## Example Usage
+//!
+//! ```rust
+//! use clarity_core::db::models::{Email, UserRole, NewUser};
+//! # fn example() -> Result<(), Box<dyn std::error::Error>> {
+//!
+//! // Create a validated email
+//! let email = Email::new("user@example.com".to_string())?;
+//!
+//! // Create a new user builder
+//! let user = NewUser {
+//!     email,
+//!     role: UserRole::User,
+//! };
+//! # Ok(())
+//! # }
+//! ```
+
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
