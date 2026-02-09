@@ -52,6 +52,7 @@
 //! // Create a new user builder
 //! let user = NewUser {
 //!     email,
+//!     password_hash: "hashed_password".to_string(),
 //!     role: UserRole::User,
 //! };
 //! # Ok(())

@@ -40,17 +40,17 @@
 //! ## Example Usage
 //!
 //! ```rust,no_run
-//! use clarity_core::db::{SqliteDbConfig, SqlitePool};
+//! use clarity_core::db::{DbConfig, SqlitePool};
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //!
 //! // Configure the database
-//! let config = SqliteDbConfig::default();
+//! let config = DbConfig::default();
 //!
 //! // Create a connection pool
 //! let pool = SqlitePool::new(&config).await?;
 //!
-//! // Run migrations
-//! clarity_core::db::run_migrations(&pool).await?;
+//! // Run migrations (if using PostgreSQL)
+//! // clarity_core::db::run_migrations(&pool)?;
 //!
 //! // Use the pool for queries
 //! // ...
