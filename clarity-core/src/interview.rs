@@ -525,7 +525,7 @@ mod tests {
     assert!(result.is_ok());
     let id = match result {
       Ok(id) => id,
-      Err(_) => panic!("Expected Ok InterviewId"),
+      Err(e) => panic!("Expected Ok InterviewId, got Err: {e}"),
     };
     assert_eq!(id.as_str(), "550e8400-e29b-41d4-a716-446655440000");
   }
@@ -560,7 +560,7 @@ mod tests {
     assert!(id_result.is_ok());
     let id = match id_result {
       Ok(id) => id,
-      Err(_) => panic!("Expected Ok InterviewId"),
+      Err(e) => panic!("Expected Ok InterviewId, got Err: {e}"),
     };
     assert_eq!(format!("{id}"), "550e8400-e29b-41d4-a716-446655440000");
   }
@@ -580,7 +580,7 @@ mod tests {
     assert!(id_result.is_ok());
     let id = match id_result {
       Ok(id) => id,
-      Err(_) => panic!("Expected Ok InterviewId"),
+      Err(e) => panic!("Expected Ok InterviewId, got Err: {e}"),
     };
     let spec_name = "my_spec".to_string();
     let created_at = Timestamp::from_secs(1_234_567_890);
@@ -589,7 +589,7 @@ mod tests {
     assert!(interview_result.is_ok());
     let interview = match interview_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
 
     assert_eq!(interview.id, id);
@@ -609,7 +609,7 @@ mod tests {
     assert!(id_result.is_ok());
     let id = match id_result {
       Ok(id) => id,
-      Err(_) => panic!("Expected Ok InterviewId"),
+      Err(e) => panic!("Expected Ok InterviewId, got Err: {e}"),
     };
 
     let result = Interview::new(id, String::new(), Timestamp::from_secs(1_234_567_890));
@@ -618,7 +618,8 @@ mod tests {
       Err(InterviewError::EmptySpecName) => {
         // Expected
       }
-      _ => panic!("Expected EmptySpecName error"),
+      Err(e) => panic!("Expected EmptySpecName error, got: {e}"),
+      Ok(_) => panic!("Expected error"),
     }
   }
 
@@ -628,7 +629,7 @@ mod tests {
     assert!(id_result.is_ok());
     let id = match id_result {
       Ok(id) => id,
-      Err(_) => panic!("Expected Ok InterviewId"),
+      Err(e) => panic!("Expected Ok InterviewId, got Err: {e}"),
     };
 
     let result = Interview::new(id, "   ".to_string(), Timestamp::from_secs(1_234_567_890));
@@ -637,7 +638,8 @@ mod tests {
       Err(InterviewError::EmptySpecName) => {
         // Expected
       }
-      _ => panic!("Expected EmptySpecName error"),
+      Err(e) => panic!("Expected EmptySpecName error, got: {e}"),
+      Ok(_) => panic!("Expected error"),
     }
   }
 
@@ -651,7 +653,7 @@ mod tests {
     assert!(interview_result.is_ok());
     let interview = match interview_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
 
     assert_eq!(interview.spec_name, "my_spec");
@@ -672,7 +674,7 @@ mod tests {
     assert!(interview_result.is_ok());
     let interview = match interview_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
 
     assert_eq!(interview.spec_name, "my_spec");
@@ -705,7 +707,7 @@ mod tests {
     assert!(interview_result.is_ok());
     let interview = match interview_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
 
     assert_eq!(interview.questions.len(), 2);
@@ -724,7 +726,8 @@ mod tests {
       Err(InterviewError::MissingField(field)) => {
         assert_eq!(field, "id");
       }
-      _ => panic!("Expected MissingField error for 'id'"),
+      Err(e) => panic!("Expected MissingField error for 'id', got: {e}"),
+      Ok(_) => panic!("Expected error"),
     }
   }
 
@@ -739,7 +742,8 @@ mod tests {
       Err(InterviewError::MissingField(field)) => {
         assert_eq!(field, "spec_name");
       }
-      _ => panic!("Expected MissingField error for 'spec_name'"),
+      Err(e) => panic!("Expected MissingField error for 'spec_name', got: {e}"),
+      Ok(_) => panic!("Expected error"),
     }
   }
 
@@ -755,7 +759,8 @@ mod tests {
       Err(InterviewError::InvalidIdFormat(_)) => {
         // Expected
       }
-      _ => panic!("Expected InvalidIdFormat error"),
+      Err(e) => panic!("Expected InvalidIdFormat error, got: {e}"),
+      Ok(_) => panic!("Expected error"),
     }
   }
 
@@ -771,7 +776,8 @@ mod tests {
       Err(InterviewError::EmptySpecName) => {
         // Expected
       }
-      _ => panic!("Expected EmptySpecName error"),
+      Err(e) => panic!("Expected EmptySpecName error, got: {e}"),
+      Ok(_) => panic!("Expected error"),
     }
   }
 
@@ -785,7 +791,7 @@ mod tests {
     assert!(interview_result.is_ok());
     let interview = match interview_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
 
     let updated_result = interview.transition_to(
@@ -796,7 +802,7 @@ mod tests {
     assert!(updated_result.is_ok());
     let updated = match updated_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
 
     assert_eq!(updated.state, InterviewState::InProgress);
@@ -814,7 +820,7 @@ mod tests {
     assert!(interview_result.is_ok());
     let interview = match interview_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
 
     let in_progress_result = interview.transition_to(
@@ -825,7 +831,7 @@ mod tests {
     assert!(in_progress_result.is_ok());
     let in_progress = match in_progress_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
 
     let completed_result = in_progress.transition_to(
@@ -836,7 +842,7 @@ mod tests {
     assert!(completed_result.is_ok());
     let completed = match completed_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
 
     assert_eq!(completed.state, InterviewState::Completed);
@@ -852,7 +858,7 @@ mod tests {
     assert!(interview_result.is_ok());
     let interview = match interview_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
 
     let in_progress_result = interview.transition_to(
@@ -863,7 +869,7 @@ mod tests {
     assert!(in_progress_result.is_ok());
     let in_progress = match in_progress_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
 
     let failed_result =
@@ -872,7 +878,7 @@ mod tests {
     assert!(failed_result.is_ok());
     let failed = match failed_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
 
     assert_eq!(failed.state, InterviewState::Failed);
@@ -888,7 +894,7 @@ mod tests {
     assert!(interview_result.is_ok());
     let interview = match interview_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
 
     let cancelled_result = interview.transition_to(
@@ -899,7 +905,7 @@ mod tests {
     assert!(cancelled_result.is_ok());
     let cancelled = match cancelled_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
 
     assert_eq!(cancelled.state, InterviewState::Cancelled);
@@ -915,7 +921,7 @@ mod tests {
     assert!(interview_result.is_ok());
     let interview = match interview_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
 
     let result = interview.transition_to(
@@ -929,7 +935,8 @@ mod tests {
         assert_eq!(from, InterviewState::Created);
         assert_eq!(to, InterviewState::Completed);
       }
-      _ => panic!("Expected InvalidStateTransition error"),
+      Err(e) => panic!("Expected InvalidStateTransition error, got: {e}"),
+      Ok(_) => panic!("Expected error"),
     }
   }
 
@@ -943,7 +950,7 @@ mod tests {
     assert!(interview_result.is_ok());
     let interview = match interview_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
 
     let in_progress_result = interview.transition_to(
@@ -954,7 +961,7 @@ mod tests {
     assert!(in_progress_result.is_ok());
     let in_progress = match in_progress_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
 
     let completed_result = in_progress.transition_to(
@@ -965,7 +972,7 @@ mod tests {
     assert!(completed_result.is_ok());
     let completed = match completed_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
 
     let result = completed.transition_to(
@@ -986,7 +993,7 @@ mod tests {
     assert!(interview_result.is_ok());
     let interview = match interview_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
 
     let in_progress_result = interview.transition_to(
@@ -997,7 +1004,7 @@ mod tests {
     assert!(in_progress_result.is_ok());
     let in_progress = match in_progress_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
 
     let failed_result =
@@ -1006,7 +1013,7 @@ mod tests {
     assert!(failed_result.is_ok());
     let failed = match failed_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
 
     let result = failed.transition_to(
@@ -1027,7 +1034,7 @@ mod tests {
     assert!(interview_result.is_ok());
     let interview = match interview_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
 
     assert!(!interview.is_terminal());
@@ -1040,7 +1047,7 @@ mod tests {
     assert!(in_progress_result.is_ok());
     let in_progress = match in_progress_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
     assert!(!in_progress.is_terminal());
 
@@ -1052,7 +1059,7 @@ mod tests {
     assert!(completed_result.is_ok());
     let completed = match completed_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
     assert!(completed.is_terminal());
 
@@ -1062,7 +1069,7 @@ mod tests {
     assert!(failed_result.is_ok());
     let failed = match failed_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
     assert!(failed.is_terminal());
 
@@ -1074,7 +1081,7 @@ mod tests {
     assert!(cancelled_result.is_ok());
     let cancelled = match cancelled_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
     assert!(cancelled.is_terminal());
   }
@@ -1089,7 +1096,7 @@ mod tests {
     assert!(interview_result.is_ok());
     let interview = match interview_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
 
     assert!(interview.is_active());
@@ -1102,7 +1109,7 @@ mod tests {
     assert!(in_progress_result.is_ok());
     let in_progress = match in_progress_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
     assert!(in_progress.is_active());
 
@@ -1114,7 +1121,7 @@ mod tests {
     assert!(completed_result.is_ok());
     let completed = match completed_result {
       Ok(i) => i,
-      Err(_) => panic!("Expected Ok Interview"),
+      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
     };
     assert!(!completed.is_active());
   }
@@ -1131,7 +1138,7 @@ mod tests {
     assert!(ts1_result.is_ok());
     let ts1 = match ts1_result {
       Ok(ts) => ts,
-      Err(_) => panic!("Expected Ok Timestamp"),
+      Err(e) => panic!("Expected Ok Timestamp, got Err: {e}"),
     };
 
     std::thread::sleep(std::time::Duration::from_secs(1));
@@ -1139,7 +1146,7 @@ mod tests {
     assert!(ts2_result.is_ok());
     let ts2 = match ts2_result {
       Ok(ts) => ts,
-      Err(_) => panic!("Expected Ok Timestamp"),
+      Err(e) => panic!("Expected Ok Timestamp, got Err: {e}"),
     };
 
     assert!(ts2 > ts1);

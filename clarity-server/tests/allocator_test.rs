@@ -83,7 +83,7 @@ mod allocator_tests {
       match result {
         Ok(true) => {}
         Ok(false) => panic!("Thread returned false"),
-        Err(_) => panic!("Thread panicked"),
+        Err(e) => panic!("Thread panicked: {e:?}"),
       }
     }
   }

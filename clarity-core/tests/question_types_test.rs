@@ -217,7 +217,7 @@ fn test_question_type_should_support_long_text_question() {
 // 13. test_question_type_should_enforce_max_length
 #[test]
 fn test_question_type_should_enforce_max_length() {
-  let question = QuestionType::long_text("Description", None, 10).unwrap();
+  let question = QuestionType::long_text("Description", None, 10).expect("Should create long text question with length limit");
 
   // Test validation with answer exceeding max length
   let long_answer = "This is way too long for the limit";
@@ -241,7 +241,7 @@ fn test_question_type_should_support_rating_scale_question() {
   let result = QuestionType::rating("Rate satisfaction", 1, 5);
   assert!(result.is_ok(), "Should create rating question");
 
-  let question = result.unwrap();
+  let question = result.expect("Should create rating scale question");
   assert_eq!(question.prompt(), "Rate satisfaction");
   assert!(question.validate().is_ok(), "Validation should pass");
 
@@ -253,11 +253,11 @@ fn test_question_type_should_support_rating_scale_question() {
 #[test]
 fn test_question_type_should_display_human_readable_prompt() {
   let questions = vec![
-    QuestionType::text("Text prompt", None).unwrap(),
+    QuestionType::text("Text prompt", None).expect("Should create text prompt question"),
     QuestionType::multiple_choice("MC prompt", vec!["A".to_string(), "B".to_string()], Some(0))
-      .unwrap(),
-    QuestionType::boolean("Boolean prompt", None).unwrap(),
-    QuestionType::numeric_range("Range prompt", 1, 5, Some(3)).unwrap(),
+      .expect("Should create multiple choice prompt question"),
+    QuestionType::boolean("Boolean prompt", None).expect("Should create boolean prompt question"),
+    QuestionType::numeric_range("Range prompt", 1, 5, Some(3)).expect("Should create numeric range prompt question"),
   ];
 
   for question in questions {
@@ -280,14 +280,14 @@ fn test_question_type_should_support_open_ended_code_question() {
   let result = QuestionType::code("Write a function", "python", None);
   assert!(result.is_ok(), "Should create code question");
 
-  let question = result.unwrap();
+  let question = result.expect("Should create code question");
   assert_eq!(question.prompt(), "Write a function");
   assert!(question.validate().is_ok(), "Validation should pass");
 
   let json = serde_json::to_string(&question);
   assert!(json.is_ok(), "Should serialize to JSON");
 
-  let parsed: serde_json::Value = serde_json::from_str(&json.unwrap()).unwrap();
+  let parsed: serde_json::Value = serde_json::from_str(&json.expect("Should serialize code question to JSON")).expect("Should parse code question JSON");
   assert_eq!(
     parsed["language"], "python",
     "JSON should include language field"
@@ -297,9 +297,9 @@ fn test_question_type_should_support_open_ended_code_question() {
 // 17. test_question_type_should_be_equality_comparable
 #[test]
 fn test_question_type_should_be_equality_comparable() {
-  let q1 = QuestionType::text("Same prompt", None).unwrap();
-  let q2 = QuestionType::text("Same prompt", None).unwrap();
-  let q3 = QuestionType::text("Different prompt", None).unwrap();
+  let q1 = QuestionType::text("Same prompt", None).expect("Should create first question");
+  let q2 = QuestionType::text("Same prompt", None).expect("Should create second question");
+  let q3 = QuestionType::text("Different prompt", None).expect("Should create different question");
 
   assert_eq!(q1, q2, "Questions with same data should be equal");
   assert_ne!(q1, q3, "Questions with different data should not be equal");
@@ -315,14 +315,14 @@ fn test_question_type_should_support_file_upload_question() {
   );
   assert!(result.is_ok(), "Should create file upload question");
 
-  let question = result.unwrap();
+  let question = result.expect("Should create file upload question");
   assert_eq!(question.prompt(), "Attach resume");
   assert!(question.validate().is_ok(), "Validation should pass");
 
   let json = serde_json::to_string(&question);
   assert!(json.is_ok(), "Should serialize to JSON");
 
-  let parsed: serde_json::Value = serde_json::from_str(&json.unwrap()).unwrap();
+  let parsed: serde_json::Value = serde_json::from_str(&json.expect("Should serialize file upload question to JSON")).expect("Should parse file upload question JSON");
   assert!(
     parsed["allowed_types"].is_array(),
     "JSON should include allowed types array"
@@ -338,7 +338,7 @@ fn test_question_type_should_support_ranking_question() {
   );
   assert!(result.is_ok(), "Should create ranking question");
 
-  let question = result.unwrap();
+  let question = result.expect("Should create ranking question");
   assert_eq!(question.prompt(), "Rank preferences");
   assert!(question.validate().is_ok(), "Validation should pass");
 

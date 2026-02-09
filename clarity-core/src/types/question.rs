@@ -419,13 +419,15 @@ impl QuestionType {
             reason: "options cannot be empty".to_string(),
           });
         }
-        if let Some(idx) = default {
-          if *idx >= options.len() {
-            return Err(QuestionTypeError::Validation {
+        default.map_or_else(Ok, |idx| {
+          if idx >= options.len() {
+            Err(QuestionTypeError::Validation {
               reason: format!("default index {idx} out of bounds"),
-            });
+            })
+          } else {
+            Ok(())
           }
-        }
+        })?;
         Ok(())
       }
       Self::NumericRange {
@@ -436,13 +438,15 @@ impl QuestionType {
             reason: format!("min ({min}) cannot be greater than max ({max})"),
           });
         }
-        if let Some(val) = default {
+        default.map_or_else(Ok, |val| {
           if *val < *min || *val > *max {
-            return Err(QuestionTypeError::Validation {
+            Err(QuestionTypeError::Validation {
               reason: format!("default {val} outside range [{min}, {max}]"),
-            });
+            })
+          } else {
+            Ok(())
           }
-        }
+        })?;
         Ok(())
       }
       Self::Rating { min, max, .. } => {

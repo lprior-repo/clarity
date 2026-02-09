@@ -298,10 +298,10 @@ impl OutputFormatter<Interview> for MarkdownFormatter {
       .map_err(|e| FormatError::IoError(e.to_string()))?;
 
     // Description
-    if let Some(desc) = &interview.description {
+    interview.description.as_ref().map_or(Ok(()), |desc| {
       writeln!(output, "\n## Description\n\n{desc}")
-        .map_err(|e| FormatError::IoError(e.to_string()))?;
-    }
+        .map_err(|e| FormatError::IoError(e.to_string()))
+    })?;
 
     // Questions
     writeln!(output, "\n## Questions\n").map_err(|e| FormatError::IoError(e.to_string()))?;
@@ -310,9 +310,9 @@ impl OutputFormatter<Interview> for MarkdownFormatter {
       writeln!(output, "{num}. {text}", num = i + 1, text = question.text)
         .map_err(|e| FormatError::IoError(e.to_string()))?;
 
-      if let Some(help) = &question.help_text {
-        writeln!(output, "   - *Help: {help}*").map_err(|e| FormatError::IoError(e.to_string()))?;
-      }
+      question.help_text.as_ref().map_or(Ok(()), |help| {
+        writeln!(output, "   - *Help: {help}*").map_err(|e| FormatError::IoError(e.to_string()))
+      })?;
 
       if question.required {
         writeln!(output, "   - **Required**").map_err(|e| FormatError::IoError(e.to_string()))?;
@@ -367,9 +367,9 @@ impl OutputFormatter<Interview> for PlainTextFormatter {
     writeln!(output, "Status: {state}", state = interview.state)
       .map_err(|e| FormatError::IoError(e.to_string()))?;
 
-    if let Some(desc) = &interview.description {
-      writeln!(output, "Description: {desc}").map_err(|e| FormatError::IoError(e.to_string()))?;
-    }
+    interview.description.as_ref().map_or(Ok(()), |desc| {
+      writeln!(output, "Description: {desc}").map_err(|e| FormatError::IoError(e.to_string()))
+    })?;
 
     writeln!(output, "\nQuestions:").map_err(|e| FormatError::IoError(e.to_string()))?;
 
@@ -377,10 +377,10 @@ impl OutputFormatter<Interview> for PlainTextFormatter {
       writeln!(output, "  {num}. {text}", num = i + 1, text = question.text)
         .map_err(|e| FormatError::IoError(e.to_string()))?;
 
-      if let Some(help) = &question.help_text {
+      question.help_text.as_ref().map_or(Ok(()), |help| {
         writeln!(output, "     Help: {help}")
-          .map_err(|e: fmt::Error| FormatError::IoError(e.to_string()))?;
-      }
+          .map_err(|e: fmt::Error| FormatError::IoError(e.to_string()))
+      })?;
 
       if question.required {
         writeln!(output, "     Required: Yes")
