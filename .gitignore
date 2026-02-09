@@ -37,3 +37,40 @@ Thumbs.db
 # Database files
 *.db
 *.db.backup
+*.db-shm
+*.db-wal
+
+# Moon build cache
+.moon/cache/
+
+# Claude/assistant files
+.claude/
+
+# Log files
+*.log
+
+# Rust backup files
+**/*.rs.bk
+*.pdb
+
+# Profiling data
+*.profraw
+*.profdata
+
+# Dioxus artifacts
+/dioxus/
+/app_assets/
+
+# Documentation reports (auto-generated)
+AGENT*_REPORT.md
+SWARM_*.md
+ROUND*.md
+*_BEADS.md
+CLIPPY_*.md
+QA_*.md
+TEST_*.md
+UUID_*.md
+PERFORMANCE_*.md
+CONTINUOUS_*.md
+DOCUMENTATION_*.md
+REMAINING_*.md

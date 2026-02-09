@@ -1,6 +1,6 @@
 # Clarity
 
-A modern fullstack application built with Rust, Axum, and Dioxus following functional programming principles and test-driven development.
+A modern desktop application built with Rust and Dioxus following functional programming principles and test-driven development.
 
 ## Table of Contents
 
@@ -18,17 +18,16 @@ A modern fullstack application built with Rust, Axum, and Dioxus following funct
 
 ## Overview
 
-Clarity is a fullstack Rust application that demonstrates modern web development practices with a focus on:
+Clarity is a desktop Rust application that demonstrates modern application development practices with a focus on:
 
 - **Functional Programming**: Immutable data structures, pure functions, and explicit error handling
 - **Test-Driven Development**: ATDD (Acceptance Test-Driven Development) with the RED-GREEN-REFACTOR cycle
 - **Type Safety**: Leverage Rust's type system to prevent runtime errors at compile time
 - **Zero-Panic Architecture**: No `unwrap()`, `expect()`, or `panic!()` - proper error handling with `Result<T, E>`
 
-The application uses a three-crate architecture with clear separation of concerns:
-- **Frontend**: Dioxus (React-like framework for Rust)
-- **Backend**: Axum (web framework with WebSocket support)
-- **Shared**: Common types, validation, and database layer
+The application uses a two-crate architecture with clear separation of concerns:
+- **Frontend**: Dioxus desktop framework
+- **Core**: Shared types, validation, and embedded database layer
 
 ## Architecture
 
@@ -36,9 +35,8 @@ The application uses a three-crate architecture with clear separation of concern
 
 ```
 clarity/
-├── clarity-client/     # Dioxus frontend (responsive UI, components)
-├── clarity-core/       # Shared types, validation, database layer
-├── clarity-server/     # Axum backend (WebSocket, REST API)
+├── clarity-client/     # Dioxus desktop frontend (UI, components)
+├── clarity-core/       # Shared types, validation, embedded database
 └── migrations/         # SQLx database migrations
 ```
 
@@ -51,27 +49,20 @@ clarity/
 - Reusable utilities and error types
 - No framework-specific code
 
-#### clarity-server
-- Axum web server with REST API
-- WebSocket support for real-time features
-- Request handling and routing
-- Database integration through clarity-core
-- Server-side business logic
 
 #### clarity-client
-- Dioxus frontend application
-- Responsive UI components
+- Dioxus desktop application
+- Native UI components
 - Client-side state management
-- API communication with clarity-server
+- Direct database integration through clarity-core
 - User interaction handling
 
 ### Technology Stack
 
 - **Rust**: Latest stable toolchain (2024 edition)
-- **Axum 0.8**: High-performance web framework with WebSocket support
-- **Dioxus 0.7**: React-like frontend framework for Rust
+- **Dioxus 0.7**: Desktop UI framework for Rust
 - **SQLx 0.8**: Compile-time checked database queries
-- **PostgreSQL**: Primary database with UUID primary keys
+- **SQLite**: Embedded database with UUID primary keys
 - **Tokio**: Async runtime for Rust
 - **MoonRepo**: Build system with aggressive caching
 
@@ -101,11 +92,6 @@ Before you begin, ensure you have the following installed:
   moon --version
   ```
 
-- **PostgreSQL**: Database server (version 12 or higher)
-  ```bash
-  psql --version
-  ```
-
 - **SQLx CLI**: Database migration tool
   ```bash
   sqlx --version
@@ -126,54 +112,15 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 curl -fsSL https://moonrepo.dev/install/setup.sh | bash
 ```
 
-#### Installing PostgreSQL
-
-**On Linux (Arch/Manjaro):**
-```bash
-sudo pacman -S postgresql
-sudo -u postgres initdb -D /var/lib/postgres/data
-sudo systemctl start postgresql
-```
-
-**On macOS:**
-```bash
-brew install postgresql@14
-brew services start postgresql@14
-```
-
-**On Ubuntu/Debian:**
-```bash
-sudo apt update
-sudo apt install postgresql postgresql-contrib
-sudo systemctl start postgresql
-```
-
 #### Installing SQLx CLI
 
 ```bash
-cargo install sqlx-cli --no-default-features --features rustls,postgres
+cargo install sqlx-cli --no-default-features --features rustls,sqlite
 ```
 
 ### Database Setup
 
-1. **Create the database:**
-   ```bash
-   createdb clarity
-   ```
-
-2. **Create a user (optional, but recommended):**
-   ```bash
-   createuser --interactive clarity_user
-   psql -c "ALTER USER clarity_user PASSWORD 'your_password';"
-   psql -c "GRANT ALL PRIVILEGES ON DATABASE clarity TO clarity_user;"
-   ```
-
-3. **Set environment variable:**
-   ```bash
-   export DATABASE_URL="postgresql://clarity_user:your_password@localhost/clarity"
-   ```
-
-4. **Run migrations:**
+1. **Run migrations** (SQLite database will be created automatically):
    ```bash
    moon run :db-migrate
    ```
@@ -203,25 +150,17 @@ moon run :db-migrate
 
 ### 4. Run the Application
 
-**Start the backend server:**
-```bash
-moon run :server
-```
-
-The server will start on `http://localhost:3000`
-
-**In a new terminal, start the frontend:**
 ```bash
 moon run :client
 ```
 
-The client will typically run on `http://localhost:8080`
+The desktop application will start as a native window.
 
 ### 5. Verify It's Working
 
-- Visit the frontend URL in your browser
-- Check the server logs for successful startup
+- The application window should open
 - Try interacting with the application
+- Check the terminal for any errors
 
 ## Development Setup
 
@@ -235,8 +174,6 @@ The client will typically run on `http://localhost:8080`
 
 2. **Set up the database:**
    ```bash
-   createdb clarity
-   export DATABASE_URL="postgresql://localhost/clarity"
    moon run :db-migrate
    ```
 
@@ -312,8 +249,7 @@ moon run :build
 
 ### Running the Application
 
-- **`moon run :server`** - Run the Axum backend server
-- **`moon run :client`** - Run the Dioxus frontend client
+- **`moon run :client`** - Run the Dioxus desktop client
 
 ### Full Pipeline
 
@@ -327,7 +263,6 @@ moon run :build
 ### Individual Crate Builds
 
 - **`moon run :build-core`** - Build clarity-core only
-- **`moon run :build-server`** - Build clarity-server only
 - **`moon run :build-client`** - Build clarity-client only
 
 ### Important: Always Use Moon
@@ -491,7 +426,7 @@ clarity/
 │   └── workspace.yml           # Moon workspace configuration
 ├── .beads/
 │   └── issues.jsonl            # Issue tracking (beads)
-├── clarity-client/             # Frontend application
+├── clarity-client/             # Desktop application
 │   ├── src/
 │   │   ├── main.rs
 │   │   ├── components/
@@ -506,13 +441,6 @@ clarity/
 │   ├── migrations/             # Database migrations
 │   │   └── 001_initial_schema.sql
 │   └── Cargo.toml
-├── clarity-server/             # Backend server
-│   ├── src/
-│   │   ├── main.rs
-│   │   ├── handlers/
-│   │   ├── routes/
-│   │   └── websocket/
-│   └── Cargo.toml
 ├── migrations/                 # Symlink to clarity-core/migrations
 ├── Cargo.toml                  # Workspace configuration
 ├── Cargo.lock
@@ -522,9 +450,8 @@ clarity/
 
 ### Key Directories
 
-- **`clarity-client/`**: Dioxus frontend with components and routes
-- **`clarity-core/`**: Shared types, validation, and database layer
-- **`clarity-server/`**: Axum backend with REST API and WebSocket support
+- **`clarity-client/`**: Dioxus desktop UI with components and routes
+- **`clarity-core/`**: Shared types, validation, and embedded database
 - **`migrations/`**: SQLx database migrations
 - **`.moon/`**: MoonRepo build configuration
 - **`.github/`**: CI/CD pipeline configuration
@@ -657,10 +584,10 @@ If you're experiencing issues, run these commands first:
 
 ```bash
 # Check your environment
-rustc --version && cargo --version && moon --version && psql --version
+rustc --version && cargo --version && moon --version
 
-# Check database connectivity
-psql -l | grep clarity
+# Check database
+ls -la clarity.db
 
 # Check build status
 moon run :quick
@@ -668,11 +595,10 @@ moon run :quick
 
 ### Common Issues
 
-**Database connection refused:**
+**Database connection issues:**
 ```bash
-# Start PostgreSQL
-sudo systemctl start postgresql  # Linux
-brew services start postgresql@14  # macOS
+# Re-run migrations to recreate database
+moon run :db-migrate
 ```
 
 **Moon command not found:**
@@ -690,7 +616,6 @@ moon run :clippy
 **Tests failing:**
 ```bash
 # Ensure database is set up
-export DATABASE_URL="postgresql://localhost/clarity"
 moon run :db-migrate
 moon run :test
 ```
@@ -705,7 +630,6 @@ MIT License - see LICENSE file for details
 
 Built with:
 - [Rust](https://www.rust-lang.org/)
-- [Axum](https://github.com/tokio-rs/axum)
 - [Dioxus](https://dioxuslabs.com/)
 - [SQLx](https://github.com/launchbadge/sqlx)
 - [MoonRepo](https://moonrepo.dev/)
@@ -713,7 +637,6 @@ Built with:
 ## Resources
 
 - [Rust Documentation](https://doc.rust-lang.org/)
-- [Axum Guide](https://docs.rs/axum/)
 - [Dioxus Guide](https://dioxuslabs.com/learn/0.7/)
 - [SQLx Guide](https://docs.rs/sqlx/)
 - [MoonRepo Documentation](https://moonrepo.dev/docs)
