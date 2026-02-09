@@ -40,6 +40,12 @@ macro_rules! uuid_id {
       pub const fn as_uuid(&self) -> Uuid {
         self.0
       }
+
+      /// Get string representation of the ID
+      #[must_use]
+      pub fn as_str(&self) -> String {
+        self.0.to_string()
+      }
     }
 
     impl Default for $name {
@@ -344,4 +350,42 @@ pub struct Spec {
   pub schema: serde_json::Value,
   pub created_at: DateTime<Utc>,
   pub updated_at: DateTime<Utc>,
+}
+
+/// Bead filters for server-side filtering
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BeadFilters {
+  pub status: Option<String>,
+  pub bead_type: Option<String>,
+  pub priority: Option<i16>,
+  pub created_by: Option<Uuid>,
+  pub search: Option<String>,
+}
+
+impl BeadFilters {
+  #[must_use]
+  pub const fn new() -> Self {
+    Self {
+      status: None,
+      bead_type: None,
+      priority: None,
+      created_by: None,
+      search: None,
+    }
+  }
+
+  #[must_use]
+  pub fn is_active(&self) -> bool {
+    self.status.is_some()
+      || self.bead_type.is_some()
+      || self.priority.is_some()
+      || self.created_by.is_some()
+      || self.search.as_ref().map_or(false, |s| !s.is_empty())
+  }
+}
+
+impl Default for BeadFilters {
+  fn default() -> Self {
+    Self::new()
+  }
 }

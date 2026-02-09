@@ -21,11 +21,15 @@
 #![allow(clippy::cargo_common_metadata)]
 #![allow(clippy::multiple_crate_versions)]
 
-//! Clarity Client - Dioxus Frontend Application
+//! Clarity Client - Dioxus Desktop Application
 //!
-//! This is the web frontend for Clarity, built with Dioxus.
-//! It provides a modern, reactive UI for managing interviews and documentation.
+//! This is the desktop application for Clarity, built with Dioxus.
+//! It provides a modern, reactive native UI for managing interviews and documentation.
 
 pub mod app;
+pub mod beads;
+pub mod db;
 
 pub use app::{App, AppError, AppState};
+pub use beads::{BeadDetailPage, BeadFormPage, BeadListPage};
+pub use db::DesktopDb;

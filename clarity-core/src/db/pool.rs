@@ -7,8 +7,8 @@
 //! Database connection pool management
 
 use crate::db::error::{DbError, DbResult};
-use sqlx::postgres::PgPoolOptions;
-use sqlx::PgPool;
+use sqlx::sqlite::SqlitePoolOptions;
+use sqlx::SqlitePool;
 use std::time::Duration;
 
 /// Database configuration
@@ -24,7 +24,7 @@ pub struct DbConfig {
 impl Default for DbConfig {
   fn default() -> Self {
     Self {
-      database_url: "postgresql://localhost/clarity".to_string(),
+      database_url: "sqlite:clarity.db".to_string(),
       max_connections: 10,
       acquire_timeout: Duration::from_secs(30),
       idle_timeout: Duration::from_secs(600),
@@ -72,8 +72,8 @@ impl DbConfig {
 ///
 /// # Errors
 /// - Returns a `DbError::DatabaseError` if connection fails
-pub async fn create_pool(config: &DbConfig) -> DbResult<PgPool> {
-  PgPoolOptions::new()
+pub async fn create_pool(config: &DbConfig) -> DbResult<SqlitePool> {
+  SqlitePoolOptions::new()
     .max_connections(config.max_connections)
     .acquire_timeout(config.acquire_timeout)
     .idle_timeout(config.idle_timeout)
@@ -87,7 +87,7 @@ pub async fn create_pool(config: &DbConfig) -> DbResult<PgPool> {
 ///
 /// # Errors
 /// - Returns a `DbError::DatabaseError` if the connection test fails
-pub async fn test_connection(pool: &PgPool) -> DbResult<()> {
+pub async fn test_connection(pool: &SqlitePool) -> DbResult<()> {
   sqlx::query("SELECT 1")
     .fetch_one(pool)
     .await
@@ -110,19 +110,19 @@ mod tests {
   fn test_db_config_default() {
     let config = DbConfig::default();
     assert_eq!(config.max_connections, 10);
-    assert_eq!(config.database_url, "postgresql://localhost/clarity");
+    assert_eq!(config.database_url, "sqlite:clarity.db");
   }
 
   #[test]
   fn test_db_config_new() {
-    let config = DbConfig::new("postgresql://localhost/test".to_string());
-    assert_eq!(config.database_url, "postgresql://localhost/test");
+    let config = DbConfig::new("sqlite:test.db".to_string());
+    assert_eq!(config.database_url, "sqlite:test.db");
     assert_eq!(config.max_connections, 10);
   }
 
   #[test]
   fn test_db_config_with_max_connections() {
-    let config = DbConfig::new("postgresql://localhost/test".to_string()).with_max_connections(20);
+    let config = DbConfig::new("sqlite:test.db".to_string()).with_max_connections(20);
     assert_eq!(config.max_connections, 20);
   }
 
@@ -144,11 +144,11 @@ mod tests {
   #[allow(clippy::expect_used)]
   fn test_db_config_from_env_set() {
     let _lock = ENV_TEST_LOCK.lock().unwrap();
-    std::env::set_var("DATABASE_URL", "postgresql://localhost/fromenv");
+    std::env::set_var("DATABASE_URL", "sqlite:fromenv.db");
     let result = DbConfig::from_env();
     assert!(result.is_ok());
     let config = result.expect("Failed to get DbConfig from environment");
-    assert_eq!(config.database_url, "postgresql://localhost/fromenv");
+    assert_eq!(config.database_url, "sqlite:fromenv.db");
     std::env::remove_var("DATABASE_URL");
   }
 }

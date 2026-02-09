@@ -3,7 +3,19 @@ name = "clarity-client"
 version.workspace = true
 edition.workspace = true
 
+[[bin]]
+name = "clarity-client"
+path = "src/main.rs"
+
 [dependencies]
 clarity-core = { path = "../clarity-core" }
-dioxus.workspace = true
+dioxus = { version = "0.7.3", features = ["desktop"] }
+dioxus-desktop = "0.7.3"
 tokio.workspace = true
+chrono.workspace = true
+rusqlite.workspace = true
+anyhow.workspace = true
+itertools.workspace = true
+dirs = "5.0"
+uuid.workspace = true
+sqlx = { workspace = true, features = ["runtime-tokio", "sqlite"] }

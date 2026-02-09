@@ -10,10 +10,15 @@
 //! Provides database access, migrations, and repository pattern for entities.
 
 pub mod error;
-pub mod migrate;
 pub mod models;
-pub mod pool;
+pub mod schema;
 pub mod sqlite_pool;
+
+// PostgreSQL-specific modules - only compile when postgres feature is enabled
+#[cfg(feature = "postgres")]
+pub mod migrate;
+#[cfg(feature = "postgres")]
+pub mod pool;
 
 // TODO: Re-enable repository module when database infrastructure is ready
 // The repository module requires SQLX to connect to a database at compile time
@@ -27,10 +32,15 @@ pub mod sqlite_pool;
 mod tests;
 
 pub use error::{DbError, DbResult};
-pub use migrate::*;
 pub use models::*;
-pub use pool::*;
 pub use sqlite_pool::*;
+
+// Re-export PostgreSQL-specific types when feature is enabled
+#[cfg(feature = "postgres")]
+pub use migrate::*;
+#[cfg(feature = "postgres")]
+pub use pool::*;
+
 // pub use repository::*;
 
 // Re-export commonly used types

@@ -1,4 +1,4 @@
-//! Main Dioxus application component
+//! Main Dioxus desktop application component
 //!
 //! This module contains the root App component and its supporting functionality.
 
@@ -111,9 +111,20 @@ pub fn App() -> Element {
                   "/dashboard" => rsx! {
                       DashboardPage {}
                   },
-                  path => rsx! {
-                      NotFoundPage { path: path.to_string() }
+                  "/beads" => rsx! {
+                      super::BeadListPage {}
                   },
+                  path => {
+                      if let Some(rest) = path.strip_prefix("/beads/") {
+                          rsx! {
+                              super::BeadDetailPage {
+                                  id: rest.to_string()
+                              }
+                          }
+                      } else {
+                          rsx! { NotFoundPage { path: path.to_string() } }
+                      }
+                  }
               }
           }
           // Display error if present
@@ -132,7 +143,7 @@ fn HomePage() -> Element {
   rsx! {
       div { class: "home-page",
           h2 { "Welcome to Clarity" }
-          p { "A modern web application built with Dioxus" }
+          p { "A modern desktop application built with Dioxus" }
           Link { to: "/about", text: "Learn More" }
       }
   }
@@ -144,7 +155,7 @@ fn AboutPage() -> Element {
   rsx! {
       div { class: "about-page",
           h2 { "About Clarity" }
-          p { "Clarity is a web application for managing interviews and documentation." }
+          p { "Clarity is a desktop application for managing interviews and documentation." }
           Link { to: "/", text: "Back Home" }
       }
   }

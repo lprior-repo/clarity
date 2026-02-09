@@ -8,33 +8,15 @@
 //! Database migrations
 
 use crate::db::error::{DbError, DbResult};
-use sqlx::PgPool;
+use sqlx::SqlitePool;
 
-/// Run all pending migrations
+/// Run all pending migrations for SQLite
 ///
 /// # Errors
 /// - Returns a `DbError::Migration` if migrations fail to execute
-pub fn run_migrations(_pool: &PgPool) -> DbResult<()> {
-  // TODO: Uncomment when migrations directory is set up
-  // sqlx::migrate!("./migrations")
-  //   .run(pool)
-  //   .await
-  //   .map_err(|e| DbError::Migration(format!("Migration failed: {e}")))
-  Err(DbError::Migration(
-    "Migrations not yet implemented".to_string(),
-  ))
-}
-
-/// Get migration version information
-///
-/// # Errors
-/// - Returns a `DbError::DatabaseError` if the query fails
-pub fn get_migration_version(pool: &PgPool) -> DbResult<Option<i64>> {
-  // TODO: Implement when migrations are set up
-  let _ = pool;
-  Err(DbError::Migration(
-    "Migration version not yet implemented".to_string(),
-  ))
+pub async fn run_migrations(pool: &SqlitePool) -> DbResult<()> {
+  // Use schema initialization instead of migrations for now
+  crate::db::schema::init_schema(pool).await
 }
 
 #[cfg(test)]
