@@ -192,7 +192,7 @@ fn test_question_type_should_support_date_question() {
   let result = QuestionType::date("When is your birthday?", None);
   assert!(result.is_ok(), "Should create date question");
 
-  let question = result.unwrap();
+  let question = result.expect("Should create date question");
   assert_eq!(question.prompt(), "When is your birthday?");
   assert!(question.validate().is_ok(), "Validation should pass");
 

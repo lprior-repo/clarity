@@ -160,17 +160,19 @@ impl QuestionType {
     }
 
     // Validate default index
-    if let Some(idx) = default {
+    default.map_or_else(Ok, |idx| {
       if idx >= options.len() {
-        return Err(QuestionTypeError::Validation {
+        Err(QuestionTypeError::Validation {
           reason: format!(
             "default index {} out of bounds (valid range: 0-{})",
             idx,
             options.len() - 1
           ),
-        });
+        })
+      } else {
+        Ok(())
       }
-    }
+    })?;
 
     Ok(Self::MultipleChoice {
       prompt: trimmed.to_string(),
