@@ -224,13 +224,15 @@ impl QuestionType {
     }
 
     // Validate default is within range
-    if let Some(val) = default {
+    default.map_or_else(Ok, |val| {
       if val < min || val > max {
-        return Err(QuestionTypeError::Validation {
+        Err(QuestionTypeError::Validation {
           reason: format!("default value {val} is outside valid range [{min}, {max}]"),
-        });
+        })
+      } else {
+        Ok(())
       }
-    }
+    })?;
 
     Ok(Self::NumericRange {
       prompt: trimmed.to_string(),

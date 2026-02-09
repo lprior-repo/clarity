@@ -206,7 +206,7 @@ fn test_question_type_should_support_long_text_question() {
   let result = QuestionType::long_text("Describe your experience", None, 500);
   assert!(result.is_ok(), "Should create long text question");
 
-  let question = result.unwrap();
+  let question = result.expect("Should create long text question");
   assert_eq!(question.prompt(), "Describe your experience");
   assert!(question.validate().is_ok(), "Validation should pass");
 
