@@ -218,6 +218,9 @@ pub fn is_absolute(path: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+
   use super::*;
 
   // validate_path_chars tests

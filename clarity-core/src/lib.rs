@@ -46,6 +46,9 @@ pub fn greet(name: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+
   use super::*;
 
   #[test]

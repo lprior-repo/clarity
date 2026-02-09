@@ -53,12 +53,34 @@ impl HttpMethod {
   }
 
   /// Check if this is a safe method (doesn't modify data)
+  ///
+  /// # Examples
+  ///
+  /// ```
+  /// use clarity_core::types::HttpMethod;
+  ///
+  /// assert!(HttpMethod::Get.is_safe());
+  /// assert!(HttpMethod::Head.is_safe());
+  /// assert!(HttpMethod::Options.is_safe());
+  /// assert!(!HttpMethod::Post.is_safe());
+  /// ```
   #[must_use]
   pub const fn is_safe(&self) -> bool {
     matches!(self, Self::Get | Self::Head | Self::Options)
   }
 
   /// Check if this method has a body
+  ///
+  /// # Examples
+  ///
+  /// ```
+  /// use clarity_core::types::HttpMethod;
+  ///
+  /// assert!(!HttpMethod::Get.has_body());
+  /// assert!(HttpMethod::Post.has_body());
+  /// assert!(HttpMethod::Put.has_body());
+  /// assert!(HttpMethod::Patch.has_body());
+  /// ```
   #[must_use]
   pub const fn has_body(&self) -> bool {
     matches!(self, Self::Post | Self::Put | Self::Patch)
@@ -95,6 +117,22 @@ pub struct SpecName(String);
 
 impl SpecName {
   /// Create a new `SpecName` with validation
+  ///
+  /// # Examples
+  ///
+  /// ```
+  /// use clarity_core::types::SpecName;
+  ///
+  /// // Valid spec names
+  /// assert!(SpecName::new("my_spec".to_string()).is_ok());
+  /// assert!(SpecName::new("spec-123".to_string()).is_ok());
+  /// assert!(SpecName::new("spec_v2".to_string()).is_ok());
+  ///
+  /// // Invalid spec names
+  /// assert!(SpecName::new("".to_string()).is_err());
+  /// assert!(SpecName::new("spec name".to_string()).is_err());
+  /// assert!(SpecName::new("spec!@#".to_string()).is_err());
+  /// ```
   ///
   /// # Errors
   /// - Returns `SpecNameError::Empty` if the spec name is empty
@@ -171,6 +209,21 @@ pub struct Url(String);
 
 impl Url {
   /// Create a new URL with validation
+  ///
+  /// # Examples
+  ///
+  /// ```
+  /// use clarity_core::types::Url;
+  ///
+  /// // Valid URLs
+  /// assert!(Url::new("http://example.com".to_string()).is_ok());
+  /// assert!(Url::new("https://example.com/path".to_string()).is_ok());
+  ///
+  /// // Invalid URLs
+  /// assert!(Url::new("".to_string()).is_err());
+  /// assert!(Url::new("example.com".to_string()).is_err()); // missing scheme
+  /// assert!(Url::new("ftp://example.com".to_string()).is_err()); // wrong scheme
+  /// ```
   ///
   /// # Errors
   /// - Returns `UrlError::Empty` if the URL is empty
@@ -284,6 +337,16 @@ impl Url {
   }
 
   /// Get a URL with a new path
+  ///
+  /// # Examples
+  ///
+  /// ```
+  /// use clarity_core::types::Url;
+  ///
+  /// let base = Url::new("http://example.com".to_string()).unwrap();
+  /// let new_url = base.with_path("/api/v1/resource").unwrap();
+  /// assert_eq!(new_url.as_str(), "http://example.com/api/v1/resource");
+  /// ```
   ///
   /// # Errors
   /// - Returns a `UrlError` if the resulting URL is invalid

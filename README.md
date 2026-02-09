@@ -640,221 +640,62 @@ We use "beads" for issue tracking. See [AGENTS.md](AGENTS.md) for details on wor
 
 ## Troubleshooting
 
-### Database Issues
+For comprehensive troubleshooting information, see the [Troubleshooting Guide](docs/troubleshooting.md).
 
-#### "Connection refused" error
+### Quick Links
 
-**Problem**: Cannot connect to PostgreSQL
+- [Database Issues](docs/troubleshooting.md#database-issues) - Connection problems, migrations, permissions
+- [Build & Compilation Issues](docs/troubleshooting.md#build--compilation-issues) - Moon, Cargo, Clippy errors
+- [Testing Issues](docs/troubleshooting.md#testing-issues) - Test failures, panics, flaky tests
+- [Runtime Issues](docs/troubleshooting.md#runtime-issues) - Port conflicts, WebSocket, performance
+- [Development Environment Issues](docs/troubleshooting.md#development-environment-issues) - Tool setup, editor integration
+- [Performance Issues](docs/troubleshooting.md#performance-issues) - Compile times, test execution
 
-**Solutions**:
-1. Check if PostgreSQL is running:
-   ```bash
-   # Linux
-   sudo systemctl status postgresql
+### Quick Diagnostics
 
-   # macOS
-   brew services list
-   ```
+If you're experiencing issues, run these commands first:
 
-2. Start PostgreSQL if not running:
-   ```bash
-   # Linux
-   sudo systemctl start postgresql
-
-   # macOS
-   brew services start postgresql@14
-   ```
-
-3. Verify DATABASE_URL is set:
-   ```bash
-   echo $DATABASE_URL
-   ```
-
-#### "Database does not exist" error
-
-**Solution**:
 ```bash
-createdb clarity
+# Check your environment
+rustc --version && cargo --version && moon --version && psql --version
+
+# Check database connectivity
+psql -l | grep clarity
+
+# Check build status
+moon run :quick
 ```
 
-#### Migration failures
+### Common Issues
 
-**Solution**:
+**Database connection refused:**
 ```bash
-# Check current migration status
-sqlx migrate info
-
-# Re-run migrations (will skip already applied)
-moon run :db-migrate
-
-# If completely stuck, you can reset (WARNING: deletes data)
-dropdb clarity && createdb clarity
-moon run :db-migrate
+# Start PostgreSQL
+sudo systemctl start postgresql  # Linux
+brew services start postgresql@14  # macOS
 ```
 
-### Build Issues
-
-#### "Moon command not found"
-
-**Problem**: Moon is not installed or not in PATH
-
-**Solution**:
+**Moon command not found:**
 ```bash
-# Check if moon is installed
-which moon
-
-# If not found, install it
 curl -fsSL https://moonrepo.dev/install/setup.sh | bash
-
-# Restart your terminal or source your shell profile
-source ~/.bashrc  # or ~/.zshrc
 ```
 
-#### Cargo compilation errors
-
-**Problem**: Rust code fails to compile
-
-**Solutions**:
-1. Check Rust version:
-   ```bash
-   rustc --version  # Should be latest stable
-   ```
-
-2. Update Rust if needed:
-   ```bash
-   rustup update stable
-   ```
-
-3. Clean and rebuild:
-   ```bash
-   moon run :clean  # If available
-   cargo clean      # Manual clean
-   moon run :build
-   ```
-
-#### Clippy warnings
-
-**Problem**: Clippy reports warnings
-
-**Solution**:
-1. **NEVER** modify clippy configuration
-2. Fix the code instead
-3. Run:
-   ```bash
-   moon run :clippy
-   ```
-4. Address each warning
-
-### Testing Issues
-
-#### Tests fail with "database error"
-
-**Problem**: Tests cannot connect to database
-
-**Solution**:
-1. Ensure DATABASE_URL is set:
-   ```bash
-   export DATABASE_URL="postgresql://localhost/clarity"
-   ```
-
-2. Ensure database exists:
-   ```bash
-   psql -l | grep clarity
-   ```
-
-3. Run migrations:
-   ```bash
-   moon run :db-migrate
-   ```
-
-#### "Test panicked" error
-
-**Problem**: Code contains `panic!`, `unwrap()`, or `expect()`
-
-**Solution**:
-This violates our zero-panic policy. Replace with proper error handling:
-
-```rust
-// ❌ WRONG
-let value = option.unwrap();
-
-// ✅ CORRECT
-let value = option.ok_or_else(|| Error::NotFound)?;
-```
-
-### Performance Issues
-
-#### Moon cache not working
-
-**Problem**: Tasks always run from scratch
-
-**Solutions**:
-1. Check Moon version:
-   ```bash
-   moon --version
-   ```
-
-2. Clear Moon cache:
-   ```bash
-   moon cache clean
-   ```
-
-3. Verify cache is enabled:
-   ```bash
-   moon run :check --verbose
-   ```
-
-#### Slow compile times
-
-**Solutions**:
-1. Use Moon's cached tasks:
-   ```bash
-   moon run :quick  # Much faster than cargo
-   ```
-
-2. Ensure you're using `--all-features` consistently:
-   ```bash
-   moon run :check  # Faster
-   moon run :build  # Slower but complete
-   ```
-
-3. Consider using `sccache` for distributed compilation
-
-### Environment Issues
-
-#### "Command not found: cargo"
-
-**Problem**: Rust toolchain not in PATH
-
-**Solution**:
+**Clippy warnings:**
 ```bash
-# Add Rust to PATH
-source $HOME/.cargo/env
-
-# Add to shell profile for persistence
-echo 'source $HOME/.cargo/env' >> ~/.bashrc  # or ~/.zshrc
+# NEVER modify clippy config - fix the code instead
+moon run :clippy
+# See docs/troubleshooting.md for zero-unwrap patterns
 ```
 
-#### SQLx CLI not found
-
-**Problem**: `sqlx` command not available
-
-**Solution**:
+**Tests failing:**
 ```bash
-cargo install sqlx-cli --no-default-features --features rustls,postgres
+# Ensure database is set up
+export DATABASE_URL="postgresql://localhost/clarity"
+moon run :db-migrate
+moon run :test
 ```
 
-### Getting Help
-
-If you encounter issues not covered here:
-
-1. Check [AGENTS.md](AGENTS.md) for detailed development practices
-2. Review GitHub Issues for similar problems
-3. Create a new Issue with:
-   - Error messages
-   - Steps to reproduce
-   - Your environment (OS, Rust version, Moon version)
-   - What you've already tried
+For detailed solutions to these and other issues, see the full [Troubleshooting Guide](docs/troubleshooting.md).
 
 ## License
 

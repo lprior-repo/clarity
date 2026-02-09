@@ -17,7 +17,10 @@
 //! use clarity_core::formatter::{OutputFormat, OutputFormatter};
 //! use clarity_core::interview::Interview;
 //!
-//! let interview = get_interview()?;
+//! # let interview = Interview::builder()
+//! #   .id("550e8400-e29b-41d4-a716-446655440000".to_string())
+//! #   .spec_name("test-spec".to_string())
+//! #   .build()?;
 //! let formatter = OutputFormat::Json.formatter();
 //! let json_output = formatter.format(&interview)?;
 //! # Ok::<(), clarity_core::formatter::FormatError>(())
@@ -399,6 +402,10 @@ mod tests {
   #![allow(clippy::unwrap_used)]
   #![allow(clippy::expect_used)]
   #![allow(clippy::panic)]
+  #![allow(clippy::uninlined_format_args)]
+  #![allow(clippy::manual_string_new)]
+  #![allow(clippy::match_same_arms)]
+
   use super::*;
   use crate::interview::{InterviewBuilder, Question, QuestionType};
 

@@ -167,13 +167,16 @@ pub async fn test_sqlite_connection(pool: &SqlitePool) -> DbResult<()> {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+  #![allow(clippy::panic)]
+  #![allow(clippy::uninlined_format_args)]
+
   use super::*;
 
   // Mutex to serialize env var tests (they use shared mutable state)
   use std::sync::Mutex;
   static ENV_TEST_LOCK: Mutex<()> = Mutex::new(());
-
-  #[allow(clippy::expect_used)]
   #[test]
   fn test_sqlite_config_default() {
     let config = SqliteDbConfig::default();
@@ -294,8 +297,7 @@ mod tests {
     // In-memory databases will return 'memory' instead of 'wal'
     assert!(
       journal_mode.to_lowercase() == "memory" || journal_mode.to_lowercase() == "wal",
-      "Journal mode should be set (got {})",
-      journal_mode
+      "Journal mode should be set (got {journal_mode})"
     );
 
     pool.close().await;

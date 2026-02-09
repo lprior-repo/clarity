@@ -507,6 +507,14 @@ fn is_valid_transition(from: InterviewState, to: InterviewState) -> bool {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+  #![allow(clippy::panic)]
+  #![allow(clippy::option_if_let_else)]
+  #![allow(clippy::match_same_arms)]
+  #![allow(clippy::uninlined_format_args)]
+  #![allow(clippy::manual_string_new)]
+
   use super::*;
 
   #[test]
