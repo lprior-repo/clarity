@@ -61,7 +61,7 @@ Thumbs.db
 /dioxus/
 /app_assets/
 
-# Documentation reports (auto-generated)
+# Documentation reports (auto-generated) - but keep AGENTS.md and docs/
 AGENT*_REPORT.md
 SWARM_*.md
 ROUND*.md
@@ -74,3 +74,9 @@ PERFORMANCE_*.md
 CONTINUOUS_*.md
 DOCUMENTATION_*.md
 REMAINING_*.md
+
+# All other markdown files except AGENTS.md, CLAUDE.md, and docs/
+*.md
+!AGENTS.md
+!CLAUDE.md
+!docs/**/*.md
