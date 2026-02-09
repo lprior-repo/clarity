@@ -4,224 +4,31 @@
 [1m[92m    Checking[0m clarity-core v0.1.0-dev (/home/lewis/src/clarity/clarity-core)
 [1m[92m    Checking[0m clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client)
 [1m[92m    Checking[0m clarity-server v0.1.0-dev (/home/lewis/src/clarity/clarity-server)
-[1m[91merror[0m[1m: used `unwrap()` on a `Result` value[0m
-   [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:206:17
+[1m[91merror[0m[1m: empty String is being created manually[0m
+   [1m[94m--> [0mclarity-client/src/app.rs:232:36
     [1m[94m|[0m
-[1m[94m206[0m [1m[94m|[0m     let _lock = ENV_TEST_LOCK.lock().unwrap();
-    [1m[94m|[0m                 [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[1m[94m232[0m [1m[94m|[0m     let result = state.navigate_to("".to_string());
+    [1m[94m|[0m                                    [1m[91m^^^^^^^^^^^^^^[0m [1m[91mhelp: consider using: `String::new()`[0m
     [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: if this value is an `Err`, it will panic
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
-[1m[92mnote[0m: the lint level is defined here
-   [1m[94m--> [0mclarity-core/src/db/mod.rs:1:9
-    [1m[94m|[0m
-[1m[94m  1[0m [1m[94m|[0m #![deny(clippy::unwrap_used)]
-    [1m[94m|[0m         [1m[92m^^^^^^^^^^^^^^^^^^^[0m
+    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_string_new
+    [1m[94m= [0m[1mnote[0m: `-D clippy::manual-string-new` implied by `-D warnings`
+    [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::manual_string_new)]`
 
-[1m[91merror[0m[1m: used `unwrap()` on a `Result` value[0m
-   [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:219:17
-    [1m[94m|[0m
-[1m[94m219[0m [1m[94m|[0m     let _lock = ENV_TEST_LOCK.lock().unwrap();
-    [1m[94m|[0m                 [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: if this value is an `Err`, it will panic
-    [1m[94m= [0m[1mhelp[0m: consider using `expect()` to provide a better panic message
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
-
-[1m[91merror[0m[1m: used `expect()` on a `Result` value[0m
-   [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:231:16
-    [1m[94m|[0m
-[1m[94m231[0m [1m[94m|[0m       let pool = create_sqlite_pool(&config)
-    [1m[94m|[0m [1m[91m ________________^[0m
-[1m[94m232[0m [1m[94m|[0m [1m[91m|[0m       .await
-[1m[94m233[0m [1m[94m|[0m [1m[91m|[0m       .expect("Failed to create in-memory SQLite pool");
-    [1m[94m|[0m [1m[91m|_______________________________________________________^[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: if this value is an `Err`, it will panic
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
-[1m[92mnote[0m: the lint level is defined here
-   [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:1:9
-    [1m[94m|[0m
-[1m[94m  1[0m [1m[94m|[0m #![deny(clippy::expect_used)]
-    [1m[94m|[0m         [1m[92m^^^^^^^^^^^^^^^^^^^[0m
-
-[1m[91merror[0m[1m: used `expect()` on a `Result` value[0m
-   [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:235:5
-    [1m[94m|[0m
-[1m[94m235[0m [1m[94m|[0m [1m[91m/[0m     test_sqlite_connection(&pool)
-[1m[94m236[0m [1m[94m|[0m [1m[91m|[0m       .await
-[1m[94m237[0m [1m[94m|[0m [1m[91m|[0m       .expect("Failed to test SQLite connection");
-    [1m[94m|[0m [1m[91m|_________________________________________________^[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: if this value is an `Err`, it will panic
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
-
-[1m[91merror[0m[1m: used `expect()` on a `Result` value[0m
-   [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:245:16
-    [1m[94m|[0m
-[1m[94m245[0m [1m[94m|[0m       let pool = create_sqlite_pool(&config)
-    [1m[94m|[0m [1m[91m ________________^[0m
-[1m[94m246[0m [1m[94m|[0m [1m[91m|[0m       .await
-[1m[94m247[0m [1m[94m|[0m [1m[91m|[0m       .expect("Failed to create in-memory SQLite pool");
-    [1m[94m|[0m [1m[91m|_______________________________________________________^[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: if this value is an `Err`, it will panic
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
-
-[1m[91merror[0m[1m: used `expect()` on a `Result` value[0m
-   [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:249:5
-    [1m[94m|[0m
-[1m[94m249[0m [1m[94m|[0m [1m[91m/[0m     sqlx::query(
-[1m[94m250[0m [1m[94m|[0m [1m[91m|[0m       r"
-[1m[94m251[0m [1m[94m|[0m [1m[91m|[0m       CREATE TABLE test_table (
-[1m[94m252[0m [1m[94m|[0m [1m[91m|[0m         id INTEGER PRIMARY KEY,
-[1m[94m...[0m   [1m[91m|[0m
-[1m[94m258[0m [1m[94m|[0m [1m[91m|[0m     .await
-[1m[94m259[0m [1m[94m|[0m [1m[91m|[0m     .expect("Failed to create table");
-    [1m[94m|[0m [1m[91m|_____________________________________^[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: if this value is an `Err`, it will panic
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
-
-[1m[91merror[0m[1m: used `expect()` on a `Result` value[0m
-   [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:261:5
-    [1m[94m|[0m
-[1m[94m261[0m [1m[94m|[0m [1m[91m/[0m     sqlx::query("INSERT INTO test_table (name) VALUES (?)")
-[1m[94m262[0m [1m[94m|[0m [1m[91m|[0m       .bind("test_name")
-[1m[94m263[0m [1m[94m|[0m [1m[91m|[0m       .execute(&pool)
-[1m[94m264[0m [1m[94m|[0m [1m[91m|[0m       .await
-[1m[94m265[0m [1m[94m|[0m [1m[91m|[0m       .expect("Failed to insert data");
-    [1m[94m|[0m [1m[91m|______________________________________^[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: if this value is an `Err`, it will panic
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
-
-[1m[91merror[0m[1m: used `expect()` on a `Result` value[0m
-   [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:267:15
-    [1m[94m|[0m
-[1m[94m267[0m [1m[94m|[0m       let row = sqlx::query("SELECT name FROM test_table WHERE id = 1")
-    [1m[94m|[0m [1m[91m _______________^[0m
-[1m[94m268[0m [1m[94m|[0m [1m[91m|[0m       .fetch_one(&pool)
-[1m[94m269[0m [1m[94m|[0m [1m[91m|[0m       .await
-[1m[94m270[0m [1m[94m|[0m [1m[91m|[0m       .expect("Failed to query data");
-    [1m[94m|[0m [1m[91m|_____________________________________^[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: if this value is an `Err`, it will panic
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
-
-[1m[91merror[0m[1m: used `expect()` on a `Result` value[0m
-   [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:283:16
-    [1m[94m|[0m
-[1m[94m283[0m [1m[94m|[0m       let pool = create_sqlite_pool(&config)
-    [1m[94m|[0m [1m[91m ________________^[0m
-[1m[94m284[0m [1m[94m|[0m [1m[91m|[0m       .await
-[1m[94m285[0m [1m[94m|[0m [1m[91m|[0m       .expect("Failed to create in-memory SQLite pool");
-    [1m[94m|[0m [1m[91m|_______________________________________________________^[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: if this value is an `Err`, it will panic
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
-
-[1m[91merror[0m[1m: used `expect()` on a `Result` value[0m
-   [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:288:15
-    [1m[94m|[0m
-[1m[94m288[0m [1m[94m|[0m       let row = sqlx::query("PRAGMA journal_mode")
-    [1m[94m|[0m [1m[91m _______________^[0m
-[1m[94m289[0m [1m[94m|[0m [1m[91m|[0m       .fetch_one(&pool)
-[1m[94m290[0m [1m[94m|[0m [1m[91m|[0m       .await
-[1m[94m291[0m [1m[94m|[0m [1m[91m|[0m       .expect("Failed to query journal_mode");
-    [1m[94m|[0m [1m[91m|_____________________________________________^[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: if this value is an `Err`, it will panic
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
-
+[1m[91merror[0m: could not compile `clarity-client` (lib test) due to 1 previous error
+[1m[33mwarning[0m: build failed, waiting for other jobs to finish...
 [1m[91merror[0m[1m: variables can be used directly in the `format!` string[0m
-   [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:295:5
+   [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:304:5
     [1m[94m|[0m
-[1m[94m295[0m [1m[94m|[0m [1m[91m/[0m     assert!(
-[1m[94m296[0m [1m[94m|[0m [1m[91m|[0m       journal_mode.to_lowercase() == "memory" || journal_mode.to_lowercase() == "wal",
-[1m[94m297[0m [1m[94m|[0m [1m[91m|[0m       "Journal mode should be set (got {})",
-[1m[94m298[0m [1m[94m|[0m [1m[91m|[0m       journal_mode
-[1m[94m299[0m [1m[94m|[0m [1m[91m|[0m     );
+[1m[94m304[0m [1m[94m|[0m [1m[91m/[0m     assert!(
+[1m[94m305[0m [1m[94m|[0m [1m[91m|[0m       journal_mode.to_lowercase() == "memory" || journal_mode.to_lowercase() == "wal",
+[1m[94m306[0m [1m[94m|[0m [1m[91m|[0m       "Journal mode should be set (got {})",
+[1m[94m307[0m [1m[94m|[0m [1m[91m|[0m       journal_mode
+[1m[94m308[0m [1m[94m|[0m [1m[91m|[0m     );
     [1m[94m|[0m [1m[91m|_____^[0m
     [1m[94m|[0m
     [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#uninlined_format_args
     [1m[94m= [0m[1mnote[0m: `-D clippy::uninlined-format-args` implied by `-D warnings`
     [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::uninlined_format_args)]`
-
-[1m[91merror[0m[1m: used `expect()` on a `Result` value[0m
-   [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:307:16
-    [1m[94m|[0m
-[1m[94m307[0m [1m[94m|[0m       let pool = create_sqlite_pool(&config)
-    [1m[94m|[0m [1m[91m ________________^[0m
-[1m[94m308[0m [1m[94m|[0m [1m[91m|[0m       .await
-[1m[94m309[0m [1m[94m|[0m [1m[91m|[0m       .expect("Failed to create in-memory SQLite pool");
-    [1m[94m|[0m [1m[91m|_______________________________________________________^[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: if this value is an `Err`, it will panic
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
-
-[1m[91merror[0m[1m: used `expect()` on a `Result` value[0m
-   [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:312:15
-    [1m[94m|[0m
-[1m[94m312[0m [1m[94m|[0m       let row = sqlx::query("PRAGMA synchronous")
-    [1m[94m|[0m [1m[91m _______________^[0m
-[1m[94m313[0m [1m[94m|[0m [1m[91m|[0m       .fetch_one(&pool)
-[1m[94m314[0m [1m[94m|[0m [1m[91m|[0m       .await
-[1m[94m315[0m [1m[94m|[0m [1m[91m|[0m       .expect("Failed to query synchronous");
-    [1m[94m|[0m [1m[91m|____________________________________________^[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: if this value is an `Err`, it will panic
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
-
-[1m[91merror[0m[1m: used `expect()` on a `Result` value[0m
-   [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:329:16
-    [1m[94m|[0m
-[1m[94m329[0m [1m[94m|[0m       let pool = create_sqlite_pool(&config)
-    [1m[94m|[0m [1m[91m ________________^[0m
-[1m[94m330[0m [1m[94m|[0m [1m[91m|[0m       .await
-[1m[94m331[0m [1m[94m|[0m [1m[91m|[0m       .expect("Failed to create in-memory SQLite pool");
-    [1m[94m|[0m [1m[91m|_______________________________________________________^[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: if this value is an `Err`, it will panic
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
-
-[1m[91merror[0m[1m: used `expect()` on a `Result` value[0m
-   [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:334:15
-    [1m[94m|[0m
-[1m[94m334[0m [1m[94m|[0m       let row = sqlx::query("PRAGMA cache_size")
-    [1m[94m|[0m [1m[91m _______________^[0m
-[1m[94m335[0m [1m[94m|[0m [1m[91m|[0m       .fetch_one(&pool)
-[1m[94m336[0m [1m[94m|[0m [1m[91m|[0m       .await
-[1m[94m337[0m [1m[94m|[0m [1m[91m|[0m       .expect("Failed to query cache_size");
-    [1m[94m|[0m [1m[91m|___________________________________________^[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: if this value is an `Err`, it will panic
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
-
-[1m[91merror[0m[1m: used `expect()` on a `Result` value[0m
-   [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:351:16
-    [1m[94m|[0m
-[1m[94m351[0m [1m[94m|[0m       let pool = create_sqlite_pool(&config)
-    [1m[94m|[0m [1m[91m ________________^[0m
-[1m[94m352[0m [1m[94m|[0m [1m[91m|[0m       .await
-[1m[94m353[0m [1m[94m|[0m [1m[91m|[0m       .expect("Failed to create in-memory SQLite pool");
-    [1m[94m|[0m [1m[91m|_______________________________________________________^[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: if this value is an `Err`, it will panic
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
-
-[1m[91merror[0m[1m: used `expect()` on a `Result` value[0m
-   [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:356:15
-    [1m[94m|[0m
-[1m[94m356[0m [1m[94m|[0m       let row = sqlx::query("PRAGMA temp_store")
-    [1m[94m|[0m [1m[91m _______________^[0m
-[1m[94m357[0m [1m[94m|[0m [1m[91m|[0m       .fetch_one(&pool)
-[1m[94m358[0m [1m[94m|[0m [1m[91m|[0m       .await
-[1m[94m359[0m [1m[94m|[0m [1m[91m|[0m       .expect("Failed to query temp_store");
-    [1m[94m|[0m [1m[91m|___________________________________________^[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mnote[0m: if this value is an `Err`, it will panic
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
 
 [1m[91merror[0m[1m: empty String is being created manually[0m
    [1m[94m--> [0mclarity-core/src/formatter.rs:494:14
@@ -1464,41 +1271,4 @@
     [1m[94m= [0m[1mnote[0m: if this value is an `Err`, it will panic
     [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
 
-[1m[91merror[0m[1m: redundant clone[0m
-   [1m[94m--> [0mclarity-core/src/json_formatter.rs:353:66
-    [1m[94m|[0m
-[1m[94m353[0m [1m[94m|[0m     let response = ApiResponse::error("Validation failed", errors.clone());
-    [1m[94m|[0m                                                                  [1m[91m^^^^^^^^[0m [1m[91mhelp: remove this[0m
-    [1m[94m|[0m
-[1m[92mnote[0m: this value is dropped without further use
-   [1m[94m--> [0mclarity-core/src/json_formatter.rs:353:60
-    [1m[94m|[0m
-[1m[94m353[0m [1m[94m|[0m     let response = ApiResponse::error("Validation failed", errors.clone());
-    [1m[94m|[0m                                                            [1m[92m^^^^^^[0m
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#redundant_clone
-    [1m[94m= [0m[1mnote[0m: `-D clippy::redundant-clone` implied by `-D warnings`
-    [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::redundant_clone)]`
-
-[1m[91merror[0m[1m: accessing first element with `detail.next_actions.get(0)`[0m
-   [1m[94m--> [0mclarity-core/src/json_formatter.rs:373:7
-    [1m[94m|[0m
-[1m[94m373[0m [1m[94m|[0m       detail.next_actions.get(0),
-    [1m[94m|[0m       [1m[91m^^^^^^^^^^^^^^^^^^^^^^^^^^[0m [1m[91mhelp: try: `detail.next_actions.first()`[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#get_first
-    [1m[94m= [0m[1mnote[0m: `-D clippy::get-first` implied by `-D warnings`
-    [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::get_first)]`
-
-[1m[91merror[0m[1m: empty String is being created manually[0m
-   [1m[94m--> [0mclarity-client/src/app.rs:232:36
-    [1m[94m|[0m
-[1m[94m232[0m [1m[94m|[0m     let result = state.navigate_to("".to_string());
-    [1m[94m|[0m                                    [1m[91m^^^^^^^^^^^^^^[0m [1m[91mhelp: consider using: `String::new()`[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_string_new
-    [1m[94m= [0m[1mnote[0m: `-D clippy::manual-string-new` implied by `-D warnings`
-    [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::manual_string_new)]`
-
-[1m[91merror[0m: could not compile `clarity-client` (lib test) due to 1 previous error
-[1m[33mwarning[0m: build failed, waiting for other jobs to finish...
-[1m[91merror[0m: could not compile `clarity-core` (lib test) due to 135 previous errors
+[1m[91merror[0m: could not compile `clarity-core` (lib test) due to 117 previous errors

@@ -39,6 +39,15 @@ pub use path_utils::PathError;
 pub use types::{HttpMethod, HttpMethodError, SpecName, SpecNameError, Url, UrlError};
 
 /// A simple function to demonstrate core functionality
+///
+/// # Examples
+///
+/// ```
+/// use clarity_core::greet;
+///
+/// assert_eq!(greet("World"), "Hello, World!");
+/// assert_eq!(greet("Rust"), "Hello, Rust!");
+/// ```
 #[must_use]
 pub fn greet(name: &str) -> String {
   format!("Hello, {name}!")

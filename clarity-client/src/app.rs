@@ -229,7 +229,7 @@ mod tests {
   #[test]
   fn test_navigate_to_empty_route_fails() {
     let mut state = AppState::new();
-    let result = state.navigate_to("".to_string());
+    let result = state.navigate_to(String::new());
     assert!(result.is_err(), "Navigation should fail for empty route");
     assert!(matches!(result, Err(AppError::InvalidRoute(_))));
   }

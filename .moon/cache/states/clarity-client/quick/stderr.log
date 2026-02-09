@@ -1,18 +1,29 @@
 [1m[92m    Blocking[0m waiting for file lock on package cache
 [1m[92m    Blocking[0m waiting for file lock on package cache
 [1m[92m    Blocking[0m waiting for file lock on package cache
-[1m[92m    Blocking[0m waiting for file lock on package cache
 [1m[92m    Checking[0m clarity-core v0.1.0-dev (/home/lewis/src/clarity/clarity-core)
 [1m[92m    Checking[0m clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client)
 [1m[92m    Checking[0m clarity-server v0.1.0-dev (/home/lewis/src/clarity/clarity-server)
-[1m[91merror[0m[1m: variables can be used directly in the `format!` string[0m
-   [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:300:5
+[1m[91merror[0m[1m: empty String is being created manually[0m
+   [1m[94m--> [0mclarity-client/src/app.rs:232:36
     [1m[94m|[0m
-[1m[94m300[0m [1m[94m|[0m [1m[91m/[0m     assert!(
-[1m[94m301[0m [1m[94m|[0m [1m[91m|[0m       journal_mode.to_lowercase() == "memory" || journal_mode.to_lowercase() == "wal",
-[1m[94m302[0m [1m[94m|[0m [1m[91m|[0m       "Journal mode should be set (got {})",
-[1m[94m303[0m [1m[94m|[0m [1m[91m|[0m       journal_mode
-[1m[94m304[0m [1m[94m|[0m [1m[91m|[0m     );
+[1m[94m232[0m [1m[94m|[0m     let result = state.navigate_to("".to_string());
+    [1m[94m|[0m                                    [1m[91m^^^^^^^^^^^^^^[0m [1m[91mhelp: consider using: `String::new()`[0m
+    [1m[94m|[0m
+    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_string_new
+    [1m[94m= [0m[1mnote[0m: `-D clippy::manual-string-new` implied by `-D warnings`
+    [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::manual_string_new)]`
+
+[1m[91merror[0m: could not compile `clarity-client` (lib test) due to 1 previous error
+[1m[33mwarning[0m: build failed, waiting for other jobs to finish...
+[1m[91merror[0m[1m: variables can be used directly in the `format!` string[0m
+   [1m[94m--> [0mclarity-core/src/db/sqlite_pool.rs:304:5
+    [1m[94m|[0m
+[1m[94m304[0m [1m[94m|[0m [1m[91m/[0m     assert!(
+[1m[94m305[0m [1m[94m|[0m [1m[91m|[0m       journal_mode.to_lowercase() == "memory" || journal_mode.to_lowercase() == "wal",
+[1m[94m306[0m [1m[94m|[0m [1m[91m|[0m       "Journal mode should be set (got {})",
+[1m[94m307[0m [1m[94m|[0m [1m[91m|[0m       journal_mode
+[1m[94m308[0m [1m[94m|[0m [1m[91m|[0m     );
     [1m[94m|[0m [1m[91m|_____^[0m
     [1m[94m|[0m
     [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#uninlined_format_args
@@ -1260,21 +1271,6 @@
     [1m[94m= [0m[1mnote[0m: if this value is an `Err`, it will panic
     [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
 
-[1m[91merror[0m[1m: redundant clone[0m
-   [1m[94m--> [0mclarity-core/src/json_formatter.rs:353:66
-    [1m[94m|[0m
-[1m[94m353[0m [1m[94m|[0m     let response = ApiResponse::error("Validation failed", errors.clone());
-    [1m[94m|[0m                                                                  [1m[91m^^^^^^^^[0m [1m[91mhelp: remove this[0m
-    [1m[94m|[0m
-[1m[92mnote[0m: this value is dropped without further use
-   [1m[94m--> [0mclarity-core/src/json_formatter.rs:353:60
-    [1m[94m|[0m
-[1m[94m353[0m [1m[94m|[0m     let response = ApiResponse::error("Validation failed", errors.clone());
-    [1m[94m|[0m                                                            [1m[92m^^^^^^[0m
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#redundant_clone
-    [1m[94m= [0m[1mnote[0m: `-D clippy::redundant-clone` implied by `-D warnings`
-    [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::redundant_clone)]`
-
 [1m[91merror[0m[1m: accessing first element with `detail.next_actions.get(0)`[0m
    [1m[94m--> [0mclarity-core/src/json_formatter.rs:373:7
     [1m[94m|[0m
@@ -1285,16 +1281,4 @@
     [1m[94m= [0m[1mnote[0m: `-D clippy::get-first` implied by `-D warnings`
     [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::get_first)]`
 
-[1m[91merror[0m[1m: empty String is being created manually[0m
-   [1m[94m--> [0mclarity-client/src/app.rs:232:36
-    [1m[94m|[0m
-[1m[94m232[0m [1m[94m|[0m     let result = state.navigate_to("".to_string());
-    [1m[94m|[0m                                    [1m[91m^^^^^^^^^^^^^^[0m [1m[91mhelp: consider using: `String::new()`[0m
-    [1m[94m|[0m
-    [1m[94m= [0m[1mhelp[0m: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_string_new
-    [1m[94m= [0m[1mnote[0m: `-D clippy::manual-string-new` implied by `-D warnings`
-    [1m[94m= [0m[1mhelp[0m: to override `-D warnings` add `#[allow(clippy::manual_string_new)]`
-
-[1m[91merror[0m: could not compile `clarity-client` (lib test) due to 1 previous error
-[1m[33mwarning[0m: build failed, waiting for other jobs to finish...
-[1m[91merror[0m: could not compile `clarity-core` (lib test) due to 119 previous errors
+[1m[91merror[0m: could not compile `clarity-core` (lib test) due to 118 previous errors

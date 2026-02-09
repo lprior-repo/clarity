@@ -350,7 +350,7 @@ mod tests {
       "error",
       vec!["fix it".to_string()],
     )];
-    let response = ApiResponse::error("Validation failed", errors.clone());
+    let response = ApiResponse::error("Validation failed", errors);
 
     assert_eq!(response.status, "error");
     assert_eq!(response.message, Some("Validation failed".to_string()));
@@ -370,7 +370,7 @@ mod tests {
     assert_eq!(detail.message, "Invalid value");
     assert_eq!(detail.next_actions.len(), 1);
     assert_eq!(
-      detail.next_actions.get(0),
+      detail.next_actions.first(),
       Some(&"Check format".to_string())
     );
   }
