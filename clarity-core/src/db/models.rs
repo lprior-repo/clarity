@@ -22,7 +22,7 @@
 //!
 //! - [`Email`]: Validated email addresses
 //! - [`UserRole`]: User permission levels (Admin, User, Guest)
-//! - [`BeadStatus`]: Bead lifecycle states (Open, InProgress, Completed, etc.)
+//! - [`BeadStatus`]: Bead lifecycle states (Open, `InProgress`, Completed, etc.)
 //! - [`BeadType`]: Bead categorization (Feature, Bug, Task, etc.)
 //! - [`BeadPriority`]: Priority levels (P0-P3)
 //!

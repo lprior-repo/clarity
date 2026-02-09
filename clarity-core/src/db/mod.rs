@@ -17,7 +17,7 @@
 //! - [`migrate`]: Database migration management
 //! - [`models`]: Core data models (User, Bead, Interview, Spec, etc.)
 //! - [`pool`]: Connection pooling configuration
-//! - [`sqlite_pool`]: SQLite-specific connection pool implementation
+//! - [`sqlite_pool`]: `SQLite`-specific connection pool implementation
 //!
 //! ## Design Principles
 //!
@@ -40,7 +40,7 @@
 //! ## Example Usage
 //!
 //! See the [`SqliteDbConfig`] documentation for configuration examples.
-//! The database module uses SQLite via sqlx for embedded database scenarios.
+//! The database module uses `SQLite` via sqlx for embedded database scenarios.
 //!
 //! ## Error Handling
 //!
