@@ -96,14 +96,14 @@ fn test_question_type_should_reject_invalid_default_index() {
 #[test]
 fn test_question_type_should_serialize_to_json() {
   let questions = vec![
-    QuestionType::text("Text question", None).unwrap(),
+    QuestionType::text("Text question", None).expect("Should create text question"),
     QuestionType::multiple_choice(
       "MC question",
       vec!["A".to_string(), "B".to_string()],
       Some(0),
     )
-    .unwrap(),
-    QuestionType::boolean("Boolean question", None).unwrap(),
+    .expect("Should create multiple choice question"),
+    QuestionType::boolean("Boolean question", None).expect("Should create boolean question"),
   ];
 
   for question in questions {
@@ -124,13 +124,13 @@ fn test_question_type_should_serialize_to_json() {
 // 7. test_question_type_should_deserialize_from_json
 #[test]
 fn test_question_type_should_deserialize_from_json() {
-  let original = QuestionType::text("Test question", None).unwrap();
-  let json = serde_json::to_string(&original).unwrap();
+  let original = QuestionType::text("Test question", None).expect("Should create test question");
+  let json = serde_json::to_string(&original).expect("Should serialize test question to JSON");
 
   let deserialized: Result<QuestionType, _> = serde_json::from_str(&json);
   assert!(deserialized.is_ok(), "Should deserialize from JSON");
 
-  let parsed = deserialized.unwrap();
+  let parsed = deserialized.expect("Should deserialize question from JSON");
   assert_eq!(
     parsed, original,
     "Deserialized question should match original"
@@ -143,7 +143,7 @@ fn test_question_type_should_support_boolean_question() {
   let result = QuestionType::boolean("Do you agree?", Some(true));
   assert!(result.is_ok(), "Should create boolean question");
 
-  let question = result.unwrap();
+  let question = result.expect("Should create boolean question");
   assert_eq!(question.prompt(), "Do you agree?");
   assert!(question.validate().is_ok(), "Validation should pass");
 
@@ -157,7 +157,7 @@ fn test_question_type_should_support_numeric_range_question() {
   let result = QuestionType::numeric_range("Rate 1-5", 1, 5, Some(3));
   assert!(result.is_ok(), "Should create numeric range question");
 
-  let question = result.unwrap();
+  let question = result.expect("Should create numeric range question");
   assert_eq!(question.prompt(), "Rate 1-5");
   assert!(question.validate().is_ok(), "Validation should pass");
 
