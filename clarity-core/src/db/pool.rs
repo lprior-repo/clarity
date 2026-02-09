@@ -128,6 +128,7 @@ mod tests {
 
   #[test]
   #[allow(clippy::panic)]
+  #[allow(clippy::unwrap_used)]
   fn test_db_config_from_env_missing() {
     let _lock = ENV_TEST_LOCK.lock().unwrap();
     // Remove DATABASE_URL if it exists
@@ -142,6 +143,7 @@ mod tests {
 
   #[test]
   #[allow(clippy::expect_used)]
+  #[allow(clippy::unwrap_used)]
   fn test_db_config_from_env_set() {
     let _lock = ENV_TEST_LOCK.lock().unwrap();
     std::env::set_var("DATABASE_URL", "postgresql://localhost/fromenv");

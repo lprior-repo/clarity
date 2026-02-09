@@ -202,6 +202,7 @@ mod tests {
 
   #[test]
   #[allow(clippy::panic)]
+  #[allow(clippy::unwrap_used)]
   fn test_sqlite_config_from_env_missing() {
     let _lock = ENV_TEST_LOCK.lock().unwrap();
     std::env::remove_var("SQLITE_DATABASE_URL");
@@ -215,6 +216,7 @@ mod tests {
 
   #[test]
   #[allow(clippy::expect_used)]
+  #[allow(clippy::unwrap_used)]
   fn test_sqlite_config_from_env_set() {
     let _lock = ENV_TEST_LOCK.lock().unwrap();
     std::env::set_var("SQLITE_DATABASE_URL", "sqlite:fromenv.db");
@@ -226,6 +228,7 @@ mod tests {
   }
 
   #[tokio::test]
+  #[allow(clippy::expect_used)]
   async fn test_sqlite_pool_in_memory() {
     let config = SqliteDbConfig::in_memory();
     let pool = create_sqlite_pool(&config)
@@ -240,6 +243,7 @@ mod tests {
   }
 
   #[tokio::test]
+  #[allow(clippy::expect_used)]
   async fn test_sqlite_query_execution() {
     let config = SqliteDbConfig::in_memory();
     let pool = create_sqlite_pool(&config)
@@ -276,6 +280,7 @@ mod tests {
   }
 
   #[tokio::test]
+  #[allow(clippy::expect_used)]
   async fn test_wal_mode_enabled() {
     // Note: WAL mode is not supported for in-memory databases
     // In production with file-based databases, WAL will be enabled
@@ -302,6 +307,7 @@ mod tests {
   }
 
   #[tokio::test]
+  #[allow(clippy::expect_used)]
   async fn test_synchronous_normal() {
     let config = SqliteDbConfig::in_memory();
     let pool = create_sqlite_pool(&config)
@@ -324,6 +330,7 @@ mod tests {
   }
 
   #[tokio::test]
+  #[allow(clippy::expect_used)]
   async fn test_cache_size_configured() {
     let config = SqliteDbConfig::in_memory();
     let pool = create_sqlite_pool(&config)
@@ -346,6 +353,7 @@ mod tests {
   }
 
   #[tokio::test]
+  #[allow(clippy::expect_used)]
   async fn test_temp_store_memory() {
     let config = SqliteDbConfig::in_memory();
     let pool = create_sqlite_pool(&config)
