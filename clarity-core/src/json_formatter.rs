@@ -35,7 +35,7 @@
 //! ]);
 //!
 //! // Create API responses
-//! let response = ApiResponse::success(json);
+//! let response = ApiResponse::success("Data loaded successfully", Some(json));
 //! ```
 //!
 //! ## Performance
