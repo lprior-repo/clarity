@@ -32,6 +32,10 @@ The application uses a three-crate architecture with clear separation of concern
 
 ## Architecture
 
+**📚 Detailed Architecture Documentation**: For comprehensive architecture diagrams, system design, and component interactions, see:
+- [docs/architecture.md](docs/architecture.md) - Complete system architecture and design principles
+- [docs/diagrams.md](docs/diagrams.md) - Visual ASCII diagrams for all system components
+
 ### Three-Crate Structure
 
 ```
