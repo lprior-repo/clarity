@@ -439,7 +439,7 @@ impl QuestionType {
           });
         }
         default.map_or_else(Ok, |val| {
-          if *val < *min || *val > *max {
+          if val < *min || val > *max {
             Err(QuestionTypeError::Validation {
               reason: format!("default {val} outside range [{min}, {max}]"),
             })
