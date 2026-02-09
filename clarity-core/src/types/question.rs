@@ -160,7 +160,7 @@ impl QuestionType {
     }
 
     // Validate default index
-    default.map_or_else(Ok, |idx| {
+    default.map_or_else(|| Ok(()), |idx| {
       if idx >= options.len() {
         Err(QuestionTypeError::Validation {
           reason: format!(
@@ -224,7 +224,7 @@ impl QuestionType {
     }
 
     // Validate default is within range
-    default.map_or_else(Ok, |val| {
+    default.map_or_else(|| Ok(()), |val| {
       if val < min || val > max {
         Err(QuestionTypeError::Validation {
           reason: format!("default value {val} is outside valid range [{min}, {max}]"),
@@ -419,7 +419,7 @@ impl QuestionType {
             reason: "options cannot be empty".to_string(),
           });
         }
-        default.map_or_else(Ok, |idx| {
+        default.map_or_else(|| Ok(()), |idx| {
           if idx >= options.len() {
             Err(QuestionTypeError::Validation {
               reason: format!("default index {idx} out of bounds"),
@@ -438,7 +438,7 @@ impl QuestionType {
             reason: format!("min ({min}) cannot be greater than max ({max})"),
           });
         }
-        default.map_or_else(Ok, |val| {
+        default.map_or_else(|| Ok(()), |val| {
           if val < *min || val > *max {
             Err(QuestionTypeError::Validation {
               reason: format!("default {val} outside range [{min}, {max}]"),
