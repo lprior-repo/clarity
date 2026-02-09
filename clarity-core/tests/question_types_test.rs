@@ -12,7 +12,7 @@ fn test_question_type_should_create_text_question_successfully() {
   let result = QuestionType::text("What is your name?", None);
   assert!(result.is_ok(), "Should create text question successfully");
 
-  let question = result.unwrap();
+  let question = result.expect("Should create text question successfully");
   assert_eq!(question.prompt(), "What is your name?");
   assert!(question.validate().is_ok(), "Validation should pass");
 
@@ -31,7 +31,7 @@ fn test_question_type_should_create_multiple_choice_question() {
   );
   assert!(result.is_ok(), "Should create multiple choice question");
 
-  let question = result.unwrap();
+  let question = result.expect("Should create multiple choice question");
   assert_eq!(question.prompt(), "Choose one");
   assert!(question.validate().is_ok(), "Validation should pass");
 
