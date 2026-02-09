@@ -20,10 +20,13 @@
 //! # let interview = Interview::builder()
 //! #   .id("550e8400-e29b-41d4-a716-446655440000".to_string())
 //! #   .spec_name("test-spec".to_string())
-//! #   .build()?;
+//! #   .build()
+//! #   .expect("valid interview");
 //! let formatter = OutputFormat::Json.formatter();
-//! let json_output = formatter.format(&interview)?;
-//! # Ok::<(), clarity_core::formatter::FormatError>(())
+//! let json_output = formatter.format(&interview)
+//! #   .expect("formatting should succeed");
+//! # assert!(json_output.contains("\"id\":"));
+//! # assert!(json_output.contains("\"spec_name\":"));
 //! ```
 
 #![deny(clippy::unwrap_used)]
