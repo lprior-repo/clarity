@@ -109,8 +109,8 @@ fn test_question_type_should_serialize_to_json() {
     let json = serde_json::to_string(&question);
     assert!(json.is_ok(), "Should serialize to JSON");
 
-    let json_str = json.unwrap();
-    let parsed: serde_json::Value = serde_json::from_str(&json_str).unwrap();
+    let json_str = json.expect("Should serialize question to JSON");
+    let parsed: serde_json::Value = serde_json::from_str(&json_str).expect("Should parse question JSON");
     assert!(parsed.is_object(), "JSON should be an object");
     assert!(parsed.get("type").is_some(), "JSON should have type field");
     assert!(
