@@ -523,10 +523,7 @@ mod tests {
   fn test_interview_id_new_valid_uuid() {
     let result = InterviewId::new("550e8400-e29b-41d4-a716-446655440000".to_string());
     assert!(result.is_ok());
-    let id = match result {
-      Ok(id) => id,
-      Err(e) => panic!("Expected Ok InterviewId, got Err: {e}"),
-    };
+    let id = result.unwrap();
     assert_eq!(id.as_str(), "550e8400-e29b-41d4-a716-446655440000");
   }
 
@@ -538,7 +535,8 @@ mod tests {
       Err(InterviewError::InvalidIdFormat(s)) => {
         assert_eq!(s, "not-a-uuid");
       }
-      _ => panic!("Expected InvalidIdFormat error"),
+      Ok(_) => panic!("Expected InvalidIdFormat error, got Ok"),
+      Err(e) => panic!("Expected InvalidIdFormat error, got: {e}"),
     }
   }
 
@@ -558,10 +556,7 @@ mod tests {
   fn test_interview_id_display() {
     let id_result = InterviewId::new("550e8400-e29b-41d4-a716-446655440000".to_string());
     assert!(id_result.is_ok());
-    let id = match id_result {
-      Ok(id) => id,
-      Err(e) => panic!("Expected Ok InterviewId, got Err: {e}"),
-    };
+    let id = id_result.unwrap();
     assert_eq!(format!("{id}"), "550e8400-e29b-41d4-a716-446655440000");
   }
 
@@ -578,19 +573,13 @@ mod tests {
   fn test_interview_new() {
     let id_result = InterviewId::new("550e8400-e29b-41d4-a716-446655440000".to_string());
     assert!(id_result.is_ok());
-    let id = match id_result {
-      Ok(id) => id,
-      Err(e) => panic!("Expected Ok InterviewId, got Err: {e}"),
-    };
+    let id = id_result.unwrap();
     let spec_name = "my_spec".to_string();
     let created_at = Timestamp::from_secs(1_234_567_890);
 
     let interview_result = Interview::new(id.clone(), spec_name, created_at);
     assert!(interview_result.is_ok());
-    let interview = match interview_result {
-      Ok(i) => i,
-      Err(e) => panic!("Expected Ok Interview, got Err: {e}"),
-    };
+    let interview = interview_result.unwrap();
 
     assert_eq!(interview.id, id);
     assert_eq!(interview.spec_name, "my_spec");

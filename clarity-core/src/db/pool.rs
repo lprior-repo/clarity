@@ -146,7 +146,7 @@ mod tests {
     std::env::set_var("DATABASE_URL", "postgresql://localhost/fromenv");
     let result = DbConfig::from_env();
     assert!(result.is_ok());
-    let config = result.expect("Failed to get DbConfig from environment");
+    let config = result.unwrap_or_else(|_| panic!("Failed to get DbConfig from environment"));
     assert_eq!(config.database_url, "postgresql://localhost/fromenv");
     std::env::remove_var("DATABASE_URL");
   }
