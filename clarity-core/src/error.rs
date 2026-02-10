@@ -263,7 +263,9 @@ mod tests {
 
   #[test]
   fn test_map_db_migration_error() {
-    let error = DbError::Migration("test migration".to_string());
+    // Create a simple migration error for testing
+    let io_error = std::io::Error::new(std::io::ErrorKind::NotFound, "test migration");
+    let error = DbError::Migration(sqlx::migrate::MigrateError::Source(Box::new(io_error)));
     let result = map_db_error(&error);
     assert_eq!(result, Ok(ExitCode::CONFIG_ERROR));
   }

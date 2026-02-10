@@ -171,3 +171,624 @@ a:focus {
         outline-color: #64b5f6;
     }
 }
+
+/* ========================================
+   Form Validation Styles
+   ======================================== */
+
+/* Form container */
+.bead-form {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* Form groups */
+.form-group {
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Form labels */
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+/* Form controls */
+input[type="text"].form-control,
+textarea.form-control,
+select.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+input[type="text"].form-control:focus,
+textarea.form-control:focus,
+select.form-control:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+/* Valid state */
+.form-group.is-valid input[type="text"].form-control.valid,
+.form-group.is-valid textarea.form-control.valid,
+.form-group.is-valid select.form-control.valid {
+    border-color: #27ae60;
+    background-color: #f8fdf9;
+}
+
+.form-group.is-valid input[type="text"].form-control.valid:focus,
+.form-group.is-valid textarea.form-control.valid:focus,
+.form-group.is-valid select.form-control.valid:focus {
+    box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1);
+}
+
+/* Error state */
+.form-group.has-error input[type="text"].form-control.error,
+.form-group.has-error textarea.form-control.error,
+.form-group.has-error select.form-control.error {
+    border-color: #e74c3c;
+    background-color: #fdf8f8;
+}
+
+.form-group.has-error input[type="text"].form-control.error:focus,
+.form-group.has-error textarea.form-control.error:focus,
+.form-group.has-error select.form-control.error:focus {
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+}
+
+/* Field error messages */
+.field-error {
+    display: block;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background-color: #fadbd8;
+    color: #c0392b;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Global validation errors (alert box) */
+.alert {
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    border-radius: 4px;
+    border-left: 4px solid;
+    animation: slideDown 0.2s ease-out;
+}
+
+.alert-error {
+    background-color: #fadbd8;
+    border-left-color: #e74c3c;
+    color: #c0392b;
+}
+
+.alert-error h3 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.alert-error ul {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
+.alert-error li {
+    margin-bottom: 0.5rem;
+}
+
+.alert-error li:last-child {
+    margin-bottom: 0;
+}
+
+/* Form actions */
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #ddd;
+}
+
+/* Buttons */
+button.btn,
+a.btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background-color: #3498db;
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: #2980b9;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.btn-primary:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.btn-secondary {
+    background-color: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #7f8c8d;
+}
+
+/* Success message */
+.success {
+    padding: 1rem 1.5rem;
+    margin-top: 1rem;
+    background-color: #d5f4e6;
+    color: #27ae60;
+    border-radius: 4px;
+    border-left: 4px solid #27ae60;
+    animation: slideDown 0.2s ease-out;
+}
+
+/* Error message */
+.error {
+    padding: 1rem 1.5rem;
+    margin-top: 1rem;
+    background-color: #fadbd8;
+    color: #c0392b;
+    border-radius: 4px;
+    border-left: 4px solid #e74c3c;
+    animation: slideDown 0.2s ease-out;
+}
+
+/* Dark mode support for forms */
+@media (prefers-color-scheme: dark) {
+    .form-group label {
+        color: #90caf9;
+    }
+
+    input[type="text"].form-control,
+    textarea.form-control,
+    select.form-control {
+        background-color: #3a3a3a;
+        border-color: #555;
+        color: #e0e0e0;
+    }
+
+    input[type="text"].form-control:focus,
+    textarea.form-control:focus,
+    select.form-control:focus {
+        border-color: #64b5f6;
+        box-shadow: 0 0 0 3px rgba(100, 181, 246, 0.1);
+    }
+
+    /* Valid state in dark mode */
+    .form-group.is-valid input[type="text"].form-control.valid,
+    .form-group.is-valid textarea.form-control.valid,
+    .form-group.is-valid select.form-control.valid {
+        border-color: #66bb6a;
+        background-color: #1e3a28;
+    }
+
+    /* Error state in dark mode */
+    .form-group.has-error input[type="text"].form-control.error,
+    .form-group.has-error textarea.form-control.error,
+    .form-group.has-error select.form-control.error {
+        border-color: #ef5350;
+        background-color: #3a1e1e;
+    }
+
+    /* Field error messages in dark mode */
+    .field-error {
+        background-color: #5c2b2b;
+        color: #ff8a80;
+    }
+
+    /* Alert errors in dark mode */
+    .alert-error {
+        background-color: #5c2b2b;
+        border-left-color: #ef5350;
+        color: #ff8a80;
+    }
+
+    /* Form actions in dark mode */
+    .form-actions {
+        border-top-color: #555;
+    }
+
+    /* Buttons in dark mode */
+    .btn-primary {
+        background-color: #1976d2;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        background-color: #1565c0;
+    }
+
+    .btn-secondary {
+        background-color: #616161;
+    }
+
+    .btn-secondary:hover {
+        background-color: #757575;
+    }
+
+    /* Success message in dark mode */
+    .success {
+        background-color: #1b3a28;
+        color: #66bb6a;
+        border-left-color: #66bb6a;
+    }
+
+    /* Error message in dark mode */
+    .error {
+        background-color: #3a1e1e;
+        color: #ef5350;
+        border-left-color: #ef5350;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    input[type="text"].form-control,
+    textarea.form-control,
+    select.form-control {
+        border-width: 3px;
+    }
+
+    .field-error {
+        border: 2px solid #c0392b;
+    }
+
+    .alert {
+        border-width: 3px;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .field-error,
+    .alert,
+    .success,
+    .error {
+        animation: none;
+    }
+
+    button.btn,
+    a.btn {
+        transition: none;
+    }
+}
+
+/* ========================================
+   Error Boundary Styles
+   ======================================== */
+
+.error-boundary {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background-color: #f5f5f5;
+}
+
+.error-container {
+    max-width: 600px;
+    width: 100%;
+    background-color: white;
+    border-radius: 12px;
+    padding: 2.5rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    text-align: center;
+}
+
+.error-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem;
+    color: #e74c3c;
+}
+
+.error-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.error-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 1rem;
+}
+
+.error-message {
+    font-size: 1rem;
+    line-height: 1.625;
+    color: #555;
+    margin-bottom: 2rem;
+}
+
+.error-details {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    text-align: left;
+}
+
+.error-details h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.error-internal {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: #666;
+    background-color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin-top: 0.75rem;
+    border: 1px solid #e0e0e0;
+}
+
+.error-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 9999px;
+    margin-top: 0.75rem;
+    margin-right: 0.5rem;
+}
+
+.error-badge.critical {
+    background-color: rgba(231, 76, 60, 0.15);
+    color: #c0392b;
+}
+
+.error-badge.non-critical {
+    background-color: rgba(245, 124, 0, 0.15);
+    color: #d35400;
+}
+
+.error-badge.retryable {
+    background-color: rgba(52, 152, 219, 0.15);
+    color: #2980b9;
+}
+
+.error-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 2rem;
+    justify-content: center;
+}
+
+.error-button {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+    text-decoration: none;
+}
+
+.error-button.primary {
+    background-color: #3498db;
+    color: white;
+}
+
+.error-button.primary:hover {
+    background-color: #2980b9;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.error-button.secondary {
+    background-color: #e0e0e0;
+    color: #333;
+    border: 1px solid #bdbdbd;
+}
+
+.error-button.secondary:hover {
+    background-color: #d5d5d5;
+    border-color: #9e9e9e;
+}
+
+.error-button.link {
+    background-color: transparent;
+    color: #3498db;
+    text-decoration: none;
+}
+
+.error-button.link:hover {
+    text-decoration: underline;
+}
+
+.error-help {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e0e0e0;
+}
+
+.error-help p {
+    font-size: 0.875rem;
+    color: #666;
+    margin-bottom: 1rem;
+}
+
+.error-help-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.help-link {
+    font-size: 0.875rem;
+    color: #3498db;
+    text-decoration: none;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.help-link:hover {
+    background-color: rgba(52, 152, 219, 0.1);
+    text-decoration: underline;
+}
+
+/* Responsive adjustments for error boundary */
+@media (max-width: 768px) {
+    .error-container {
+        padding: 1.5rem;
+    }
+
+    .error-icon {
+        width: 60px;
+        height: 60px;
+    }
+
+    .error-title {
+        font-size: 1.5rem;
+    }
+
+    .error-actions {
+        flex-direction: column;
+    }
+
+    .error-button {
+        width: 100%;
+    }
+}
+
+/* Dark mode support for error boundary */
+@media (prefers-color-scheme: dark) {
+    .error-boundary {
+        background-color: #1a1a1a;
+    }
+
+    .error-container {
+        background-color: #2d2d2d;
+        box-shadow: 0 20px 25px -5px rgba(255, 255, 255, 0.05);
+    }
+
+    .error-title {
+        color: #64b5f6;
+    }
+
+    .error-message {
+        color: #b0bec5;
+    }
+
+    .error-details {
+        background-color: #3a3a3a;
+    }
+
+    .error-details h3 {
+        color: #90caf9;
+    }
+
+    .error-internal {
+        background-color: #2d2d2d;
+        color: #e0e0e0;
+        border-color: #555;
+    }
+
+    .error-button.secondary {
+        background-color: #424242;
+        color: #e0e0e0;
+        border-color: #616161;
+    }
+
+    .error-button.secondary:hover {
+        background-color: #4d4d4d;
+        border-color: #757575;
+    }
+
+    .error-help {
+        border-top-color: #424242;
+    }
+
+    .error-help p {
+        color: #9e9e9e;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .error-button {
+        border-width: 2px;
+    }
+
+    .error-internal {
+        border-width: 2px;
+    }
+}
+
+/* Reduced motion support for error boundary */
+@media (prefers-reduced-motion: reduce) {
+    .error-button {
+        transition: none;
+    }
+}
+

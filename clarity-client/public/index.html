@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clarity Application</title>
+    <link rel="stylesheet" href="/style.css">
+    <link rel="modulepreload" href="/assets/dioxus/clarity-client.js">
+    <link rel="modulepreload" href="/assets/dioxus/dioxus.js">
+</head>
+<body>
+    <div id="main"></div>
+    <script type="module">
+        import init from "/assets/dioxus/clarity-client.js";
+
+        async function main() {
+            await init("/assets/dioxus/clarity-client_bg.wasm");
+        }
+
+        main();
+    </script>
+</body>
+</html>

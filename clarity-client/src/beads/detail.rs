@@ -63,21 +63,43 @@ pub fn BeadDetailPage(id: String) -> Element {
     }
 }
 
+/// Bead detail component properties
+#[derive(Clone, Props, PartialEq, Eq)]
+pub struct BeadDetailProps {
+  /// The bead ID
+  pub id: BeadId,
+  /// The bead title
+  pub title: String,
+  /// The bead description
+  pub description: Option<String>,
+  /// The bead status
+  pub status: clarity_core::db::models::BeadStatus,
+  /// The bead type
+  pub bead_type: clarity_core::db::models::BeadType,
+  /// The bead priority
+  pub priority: clarity_core::db::models::BeadPriority,
+  /// Who created the bead
+  pub created_by: Option<clarity_core::db::models::UserId>,
+  /// When the bead was created
+  pub created_at: chrono::DateTime<chrono::Utc>,
+  /// When the bead was last updated
+  pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
 /// Bead detail component
 ///
 /// Renders the full bead information with action buttons.
 #[component]
-fn BeadDetail(
-    id: BeadId,
-    title: String,
-    description: Option<String>,
-    status: clarity_core::db::models::BeadStatus,
-    bead_type: clarity_core::db::models::BeadType,
-    priority: clarity_core::db::models::BeadPriority,
-    created_by: Option<clarity_core::db::models::UserId>,
-    created_at: chrono::DateTime<chrono::Utc>,
-    updated_at: chrono::DateTime<chrono::Utc>,
-) -> Element {
+fn BeadDetail(props: BeadDetailProps) -> Element {
+  let id = props.id;
+  let title = props.title;
+  let description = props.description;
+  let status = props.status;
+  let bead_type = props.bead_type;
+  let priority = props.priority;
+  let created_by = props.created_by;
+  let created_at = props.created_at;
+  let updated_at = props.updated_at;
     let status_class = format!("status-{}", status.as_str());
     let type_class = format!("type-{}", bead_type.as_str());
     let priority_label = match priority.0 {
@@ -152,14 +174,22 @@ fn BeadDetail(
     }
 }
 
+/// Delete bead button component properties
+#[derive(Clone, Props, PartialEq, Eq)]
+pub struct DeleteBeadButtonProps {
+  /// The bead ID to delete
+  pub bead_id: BeadId,
+}
+
 /// Delete bead button component
 ///
 /// A button that shows a confirmation dialog before deleting a bead.
 /// Uses direct database access to perform the deletion.
 #[component]
-fn DeleteBeadButton(bead_id: BeadId) -> Element {
+fn DeleteBeadButton(props: DeleteBeadButtonProps) -> Element {
     let mut show_confirm = use_signal(|| false);
     let mut is_deleting = use_signal(|| false);
+    let bead_id = props.bead_id;
 
     rsx! {
         div { class: "delete-bead-wrapper",
@@ -183,7 +213,7 @@ fn DeleteBeadButton(bead_id: BeadId) -> Element {
                                 }
                                 Err(e) => {
                                     // Error handling would go here
-                                    eprintln!("Delete error: {}", e);
+                                    eprintln!("Delete error: {e}");
                                 }
                             }
                         }
@@ -215,15 +245,31 @@ fn DeleteBeadButton(bead_id: BeadId) -> Element {
     }
 }
 
+/// Delete handler component properties
+#[derive(Clone, Props)]
+pub struct DeleteHandlerProps {
+  /// The bead ID to delete
+  pub bead_id: BeadId,
+  /// Callback when deletion is complete
+  pub on_complete: EventHandler<Result<(), String>>,
+}
+
+// Manual PartialEq implementation since EventHandler doesn't implement PartialEq
+impl PartialEq for DeleteHandlerProps {
+  fn eq(&self, other: &Self) -> bool {
+    self.bead_id == other.bead_id
+      && true // Always consider equal since we can't compare EventHandlers
+  }
+}
+
 /// Delete handler component
 ///
 /// Handles the actual deletion by calling direct database functions.
 #[component]
-fn DeleteHandler(
-    bead_id: BeadId,
-    on_complete: EventHandler<Result<(), String>>,
-) -> Element {
+fn DeleteHandler(props: DeleteHandlerProps) -> Element {
     let mut is_done = use_signal(|| false);
+    let bead_id = props.bead_id;
+    let on_complete = props.on_complete;
     let result = use_signal(|| {
         match try_delete_bead(bead_id) {
             Ok(()) => {
@@ -268,7 +314,7 @@ fn DeleteHandler(
 
 /// Format a datetime for display
 ///
-/// Converts a chrono DateTime to a human-readable date and time string.
+/// Converts a chrono `DateTime` to a human-readable date and time string.
 fn format_datetime(dt: &chrono::DateTime<chrono::Utc>) -> String {
     dt.format("%Y-%m-%d at %H:%M UTC").to_string()
 }
@@ -278,10 +324,11 @@ fn format_datetime(dt: &chrono::DateTime<chrono::Utc>) -> String {
 /// This function attempts to initialize the database and load a bead by ID.
 fn try_load_bead(id: BeadId) -> Result<Bead, String> {
     let db = crate::db::DesktopDb::new()
-        .map_err(|e| format!("Failed to initialize database: {}", e))?;
+        .map_err(|e| format!("Failed to initialize database: {e}"))?;
 
-    db.get_bead(id)
-        .map_err(|e| format!("Failed to load bead: {}", e))
+    // Use blocking version since this is a sync function
+    db.get_bead_sync(id)
+        .map_err(|e| format!("Failed to load bead: {e}"))
 }
 
 /// Helper function to delete a bead from the database
@@ -289,10 +336,11 @@ fn try_load_bead(id: BeadId) -> Result<Bead, String> {
 /// This function attempts to initialize the database and delete a bead by ID.
 fn try_delete_bead(id: BeadId) -> Result<(), String> {
     let db = crate::db::DesktopDb::new()
-        .map_err(|e| format!("Failed to initialize database: {}", e))?;
+        .map_err(|e| format!("Failed to initialize database: {e}"))?;
 
-    db.delete_bead(id)
-        .map_err(|e| format!("Failed to delete bead: {}", e))
+    // Use blocking version since this is a sync function
+    db.delete_bead_sync(id)
+        .map_err(|e| format!("Failed to delete bead: {e}"))
 }
 
 #[cfg(test)]

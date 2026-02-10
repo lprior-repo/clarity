@@ -149,6 +149,23 @@ pub enum UserRole {
   User,
 }
 
+impl UserRole {
+  /// Get the role as a lowercase string
+  #[must_use]
+  pub const fn as_str(&self) -> &'static str {
+    match self {
+      Self::Admin => "admin",
+      Self::User => "user",
+    }
+  }
+}
+
+impl std::fmt::Display for UserRole {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", self.as_str())
+  }
+}
+
 impl std::str::FromStr for UserRole {
   type Err = DbError;
 
@@ -307,7 +324,7 @@ pub struct NewUser {
 }
 
 /// Bead entity
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Bead {
   pub id: BeadId,
   pub title: String,
@@ -380,7 +397,7 @@ impl BeadFilters {
       || self.bead_type.is_some()
       || self.priority.is_some()
       || self.created_by.is_some()
-      || self.search.as_ref().map_or(false, |s| !s.is_empty())
+      || self.search.as_ref().is_some_and(|s| !s.is_empty())
   }
 }
 

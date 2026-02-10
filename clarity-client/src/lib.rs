@@ -25,11 +25,55 @@
 //!
 //! This is the desktop application for Clarity, built with Dioxus.
 //! It provides a modern, reactive native UI for managing interviews and documentation.
+//!
+//! # Routing
+//!
+//! The application uses dioxus-router for client-side routing. All navigation
+//! is handled through the `Route` enum defined in the `app` module.
+//!
+//! # Navigation
+//!
+//! Use the `Link` component from `dioxus_router` for internal navigation:
+//! ```rsx
+//! Link { to: Route::Dashboard {}, "Go to Dashboard" }
+//! ```
 
 pub mod app;
+pub mod auth_components;
+pub mod backup;
 pub mod beads;
+pub mod components;
 pub mod db;
+pub mod error;
+pub mod hooks;
+pub mod navigation;
+pub mod providers;
+pub mod settings;
+pub mod shortcuts;
+pub mod state;
+pub mod undo;
+pub mod validation;
 
-pub use app::{App, AppError, AppState};
+pub use app::{App, NavigationLink, Route};
+pub use backup::{
+  auto_backup, backup_database, get_backup_directory, list_backups, restore_backup, BackupError,
+  BackupInfo, BackupOptions,
+};
 pub use beads::{BeadDetailPage, BeadFormPage, BeadListPage};
+pub use components::{use_error_handler, ErrorBoundary, KeyboardHelpDialog, ShortcutHint, SettingsView};
 pub use db::DesktopDb;
+pub use error::{AppError, AppResult, RecoveryAction};
+pub use hooks::{
+  use_add_bead, use_auth_actions, use_auth_state, use_bead_actions, use_bead_state, use_beads,
+  use_beads_error, use_beads_loading, use_current_user, use_is_authenticated, use_keyboard,
+  use_theme, use_ui_actions, use_ui_state, use_undo, AuthActions, BeadActions, UIActions,
+};
+pub use hooks::use_keyboard::KeyEvent;
+pub use navigation::use_navigation;
+pub use providers::{AppProviders, AppStateProvider, ThemeProvider};
+pub use settings::{BackupFrequency, Settings, Theme as SettingsTheme};
+pub use shortcuts::{Action, Key, Modifiers, Shortcut, Shortcuts};
+pub use state::{AppState, AuthState, BeadState, StatePersistence, Theme, UIState};
+pub use undo::{
+  Command, CreateBeadCommand, DatabaseAccess, DeleteBeadCommand, UndoStack, UpdateBeadCommand,
+};

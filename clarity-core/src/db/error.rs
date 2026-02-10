@@ -12,7 +12,7 @@ pub enum DbError {
   Connection(#[from] sqlx::Error),
 
   #[error("Migration error: {0}")]
-  Migration(String),
+  Migration(#[from] sqlx::migrate::MigrateError),
 
   #[error("Record not found: {entity} with id '{id}'")]
   NotFound { entity: String, id: String },

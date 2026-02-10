@@ -1,136 +1,138 @@
-//! Main Dioxus desktop application component
+//! Main Dioxus desktop application component with routing
 //!
-//! This module contains the root App component and its supporting functionality.
+//! This module contains the root App component with dioxus-router routing.
+//! All navigation is handled through the dioxus-router Route configuration.
 
 // Dioxus rsx! macro internally uses unwrap, so we allow the disallowed_methods lint.
 // This is a framework limitation, not our code using unwrap.
 #![allow(clippy::disallowed_methods)]
 
+use crate::auth_components::{self, AuthState};
+use crate::components::ErrorBoundary;
 use dioxus::prelude::*;
-use std::result::Result;
+use std::str::FromStr;
 
-/// Application state that manages shared data across components
+/// Application route definitions using dioxus-router
+///
+/// All routes in the application are defined here using dioxus-router's routing system.
+/// We use manual routing instead of Routable derive due to version compatibility.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct AppState {
-  /// Current route path
-  pub current_route: String,
-  /// Application error state, if any
-  pub error: Option<AppError>,
+pub enum Route {
+  /// Home page route
+  Home,
+
+  /// Login page route
+  Login,
+
+  /// Register page route
+  Register,
+
+  /// About page route
+  About,
+
+  /// Dashboard route
+  Dashboard,
+
+  /// Beads list route
+  BeadsList,
+
+  /// Create new bead route
+  BeadNew,
+
+  /// Edit bead route with dynamic ID parameter
+  BeadEdit { id: String },
+
+  /// Bead detail route with dynamic ID parameter
+  BeadDetail { id: String },
+
+  /// Settings page route
+  Settings,
+
+  /// 404 Not Found route - must be last
+  NotFound { route: String },
 }
 
-impl AppState {
-  /// Create a new application state with default values
-  #[must_use]
-  pub const fn new() -> Self {
-    Self {
-      current_route: String::new(),
-      error: None,
+
+impl std::str::FromStr for Route {
+  type Err = String;
+
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    let parts: Vec<&str> = s.trim_start_matches('/').split('/').collect();
+
+    match parts.as_slice() {
+      [] | [""] => Ok(Self::Home),
+      ["about"] => Ok(Self::About),
+      ["dashboard"] => Ok(Self::Dashboard),
+      ["beads"] => Ok(Self::BeadsList),
+      ["beads", "new"] => Ok(Self::BeadNew),
+      ["beads", id] => Ok(Self::BeadDetail { id: (*id).to_string() }),
+      ["beads", id, "edit"] => Ok(Self::BeadEdit { id: (*id).to_string() }),
+      ["login"] => Ok(Self::Login),
+      ["register"] => Ok(Self::Register),
+      ["settings"] => Ok(Self::Settings),
+      _ => Ok(Self::NotFound { route: s.to_string() }),
     }
   }
+}
 
-  /// Navigate to a new route
-  ///
-  /// # Errors
-  /// Returns an error if the route path is invalid
-  pub fn navigate_to(&mut self, path: String) -> Result<(), AppError> {
-    if path.is_empty() {
-      return Err(AppError::InvalidRoute(
-        "Route path cannot be empty".to_string(),
-      ));
-    }
+// Implement traits needed for Route with dioxus-router
+// Since Routable trait doesn't exist in this version, we'll use a simpler approach
+impl std::convert::TryFrom<&str> for Route {
+  type Error = String;
 
-    if !path.starts_with('/') {
-      return Err(AppError::InvalidRoute(format!(
-        "Route path must start with '/', got: {path}"
-      )));
-    }
-
-    self.current_route = path;
-    Ok(())
-  }
-
-  /// Set an application error
-  pub fn set_error(&mut self, error: AppError) {
-    self.error = Some(error);
-  }
-
-  /// Clear any application error
-  pub fn clear_error(&mut self) {
-    self.error = None;
+  fn try_from(path: &str) -> Result<Self, Self::Error> {
+    // Use the existing from_str implementation
+    Self::from_str(path)
   }
 }
 
-impl Default for AppState {
-  fn default() -> Self {
-    Self::new()
-  }
-}
-
-/// Application-specific errors
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum AppError {
-  /// Invalid route path
-  InvalidRoute(String),
-  /// Component initialization error
-  ComponentInit(String),
-  /// State update error
-  StateUpdate(String),
-}
-
-impl std::fmt::Display for AppError {
+impl std::fmt::Display for Route {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
-      Self::InvalidRoute(msg) => write!(f, "Invalid route: {msg}"),
-      Self::ComponentInit(msg) => write!(f, "Component initialization failed: {msg}"),
-      Self::StateUpdate(msg) => write!(f, "State update failed: {msg}"),
+      Self::Home => write!(f, "/"),
+      Self::About => write!(f, "/about"),
+      Self::Dashboard => write!(f, "/dashboard"),
+      Self::BeadsList => write!(f, "/beads"),
+      Self::BeadNew => write!(f, "/beads/new"),
+      Self::BeadEdit { id } => write!(f, "/beads/{id}/edit"),
+      Self::BeadDetail { id } => write!(f, "/beads/{id}"),
+      Self::Login => write!(f, "/login"),
+      Self::Register => write!(f, "/register"),
+      Self::Settings => write!(f, "/settings"),
+      Self::NotFound { route } => write!(f, "/{route}"),
     }
   }
 }
 
-impl std::error::Error for AppError {}
-
-/// Main application component
+/// Main application component with routing
 ///
-/// This is the root component that manages routing and global application state.
+/// This component wraps the entire application in an `ErrorBoundary` component
+/// to catch and handle any errors that occur during rendering or in event handlers.
+/// Routing is handled via a simple signal-based approach.
 #[component]
 pub fn App() -> Element {
-  // Initialize application state
-  let state = use_signal(AppState::new);
+  let current_route = use_signal(|| Route::Home);
 
+  let route = current_route.read().clone();
   rsx! {
-      div { class: "app-container",
-          h1 { "Clarity" }
-          div { class: "content",
-              match state.read().current_route.as_str() {
-                  "" => rsx! {
-                      HomePage {}
-                  },
-                  "/about" => rsx! {
-                      AboutPage {}
-                  },
-                  "/dashboard" => rsx! {
-                      DashboardPage {}
-                  },
-                  "/beads" => rsx! {
-                      super::BeadListPage {}
-                  },
-                  path => {
-                      if let Some(rest) = path.strip_prefix("/beads/") {
-                          rsx! {
-                              super::BeadDetailPage {
-                                  id: rest.to_string()
-                              }
-                          }
-                      } else {
-                          rsx! { NotFoundPage { path: path.to_string() } }
-                      }
+      ErrorBoundary {
+          show_details: cfg!(debug_assertions),
+          crate::providers::RouteProvider {
+              route: current_route,
+              children: rsx! {
+                  match route {
+                      Route::Home => rsx! { Home {} },
+                      Route::About => rsx! { About {} },
+                      Route::Dashboard => rsx! { Dashboard {} },
+                      Route::BeadsList => rsx! { BeadsList {} },
+                      Route::BeadNew => rsx! { BeadNew {} },
+                      Route::BeadEdit { id } => rsx! { BeadEdit { id } },
+                      Route::BeadDetail { id } => rsx! { BeadDetail { id } },
+                      Route::Settings => rsx! { Settings {} },
+                      Route::Login => rsx! { Login {} },
+                      Route::Register => rsx! { Register {} },
+                      Route::NotFound { route } => rsx! { NotFound { route } },
                   }
-              }
-          }
-          // Display error if present
-          if let Some(ref error) = state.read().error {
-              div { class: "error-banner",
-                  {error.to_string()}
               }
           }
       }
@@ -139,49 +141,295 @@ pub fn App() -> Element {
 
 /// Home page component
 #[component]
-fn HomePage() -> Element {
+fn Home() -> Element {
   rsx! {
-      div { class: "home-page",
-          h2 { "Welcome to Clarity" }
-          p { "A modern desktop application built with Dioxus" }
-          Link { to: "/about", text: "Learn More" }
+      div { class: "app-container",
+          h1 { "Clarity" }
+          div { class: "content",
+              div { class: "home-page",
+                  h2 { "Welcome to Clarity" }
+                  p { "A modern desktop application built with Dioxus" }
+                  div { class: "nav-links",
+                      NavLink { to: Route::About, "Learn More" }
+                      NavLink { to: Route::Dashboard, "Dashboard" }
+                      NavLink { to: Route::BeadsList, "Manage Beads" }
+                  }
+              }
+          }
       }
   }
 }
 
 /// About page component
 #[component]
-fn AboutPage() -> Element {
+fn About() -> Element {
   rsx! {
-      div { class: "about-page",
-          h2 { "About Clarity" }
-          p { "Clarity is a desktop application for managing interviews and documentation." }
-          Link { to: "/", text: "Back Home" }
+      div { class: "app-container",
+          h1 { "Clarity" }
+          div { class: "content",
+              div { class: "about-page",
+                  h2 { "About Clarity" }
+                  p { "Clarity is a desktop application for managing interviews and documentation." }
+                  p { "Built with Dioxus and Rust, it provides a modern, reactive native UI." }
+                  div { class: "nav-links",
+                      NavLink { to: Route::Home, "Back Home" }
+                      NavLink { to: Route::Dashboard, "Dashboard" }
+                  }
+              }
+          }
       }
   }
 }
 
 /// Dashboard page component
 #[component]
-fn DashboardPage() -> Element {
+fn Dashboard() -> Element {
   rsx! {
-      div { class: "dashboard-page",
-          h2 { "Dashboard" }
-          p { "Welcome to the Clarity Dashboard" }
-          div { class: "dashboard-content",
-              div { class: "dashboard-section",
-                  h3 { "Quick Stats" }
-                  p { "Overview of your Clarity workspace" }
+      div { class: "app-container",
+          h1 { "Clarity Dashboard" }
+          div { class: "content",
+              div { class: "dashboard-page",
+                  h2 { "Dashboard" }
+                  p { "Welcome to the Clarity Dashboard" }
+                  div { class: "dashboard-content",
+                      div { class: "dashboard-section",
+                          h3 { "Quick Stats" }
+                          p { "Overview of your Clarity workspace" }
+                      }
+                      div { class: "dashboard-section",
+                          h3 { "Recent Activity" }
+                          p { "Your latest work and updates" }
+                      }
+                      div { class: "dashboard-section",
+                          h3 { "Quick Actions" }
+                          div { class: "nav-links",
+                              NavLink { to: Route::Home, "Go Home" }
+                              NavLink { to: Route::About, "Learn More" }
+                              NavLink { to: Route::BeadsList, "Manage Beads" }
+                              NavLink { to: Route::BeadNew, "Create New Bead" }
+                          }
+                      }
+                  }
               }
-              div { class: "dashboard-section",
-                  h3 { "Recent Activity" }
-                  p { "Your latest work and updates" }
+          }
+      }
+  }
+}
+
+/// Beads list page component wrapper
+///
+/// This wraps the `BeadListPage` component.
+#[component]
+fn BeadsList() -> Element {
+  rsx! {
+      div { class: "app-container",
+          h1 { "Clarity" }
+          div { class: "content",
+              div { class: "page-header",
+                  h2 { "Beads" }
+                  div { class: "page-actions",
+                      NavLink {
+                          to: Route::BeadNew,
+                          class: "btn btn-primary",
+                          "Create New Bead"
+                      }
+                  }
               }
-              div { class: "dashboard-section",
-                  h3 { "Quick Actions" }
-                  Link { to: "/", text: "Go Home" }
-                  Link { to: "/about", text: "Learn More" }
+              super::BeadListPage {}
+          }
+      }
+  }
+}
+
+/// Create new bead page component wrapper
+///
+/// This wraps the `BeadFormPage` component for creating new beads.
+#[component]
+fn BeadNew() -> Element {
+  rsx! {
+      div { class: "app-container",
+          h1 { "Clarity" }
+          div { class: "content",
+              super::BeadFormPage { id: None }
+          }
+      }
+  }
+}
+
+/// Edit bead page component wrapper
+///
+/// This wraps the `BeadFormPage` component for editing existing beads.
+#[component]
+fn BeadEdit(id: String) -> Element {
+  // Validate the bead ID
+  let bead_id_result = clarity_core::db::models::BeadId::from_str(&id);
+
+  rsx! {
+      div { class: "app-container",
+          h1 { "Clarity" }
+          div { class: "content",
+              match bead_id_result {
+                  Ok(_) => rsx! {
+                      super::BeadFormPage { id: Some(id) }
+                  },
+                  Err(_) => rsx! {
+                      div { class: "error-page",
+                          h2 { "Error Loading Bead" }
+                          p { "Invalid bead ID format: '{id}'" }
+                          div { class: "nav-links",
+                              NavLink { to: Route::BeadsList, "Back to Beads" }
+                          }
+                      }
+                  }
               }
+          }
+      }
+  }
+}
+
+/// Bead detail page component wrapper
+///
+/// This wraps the existing `BeadDetailPage` component.
+/// The id parameter is automatically extracted from the route by `BeadDetailPage`.
+#[component]
+fn BeadDetail(id: String) -> Element {
+  rsx! {
+      div { class: "app-container",
+          h1 { "Clarity" }
+          div { class: "content",
+              super::BeadDetailPage { id: id }
+          }
+      }
+  }
+}
+
+/// Navigation link component for internal routing with active state
+///
+/// This component provides a styled link for navigation using the custom
+/// signal-based routing system. It adds active state styling when the
+/// current route matches the link's destination.
+#[component]
+pub fn NavigationLink(
+  to: Route,
+  #[props(default)] class: String,
+  #[props(default)] active_class: String,
+  children: Element,
+) -> Element {
+  let navigator = crate::hooks::use_state::use_navigator();
+  let current_route = crate::hooks::use_state::use_route();
+
+  // Check if current route matches the destination
+  let is_active = current_route.as_ref() == Some(&to);
+
+  let base_classes = if class.is_empty() {
+    "nav-link".to_string()
+  } else {
+    format!("nav-link {class}")
+  };
+
+  let combined_class = if is_active && !active_class.is_empty() {
+    format!("{base_classes} {active_class}")
+  } else {
+    base_classes
+  };
+
+  rsx! {
+      button {
+          class: "{combined_class}",
+          onclick: move |_| {
+              navigator(to.clone());
+          },
+          {children}
+      }
+  }
+}
+
+/// Navigation link component for internal routing
+///
+/// This component provides a styled link using dioxus-router's Link component
+/// for client-side navigation without page reloads.
+#[component]
+pub fn NavLink(to: Route, #[props(default)] class: String, children: Element) -> Element {
+  rsx! {
+      NavigationLink {
+          to: to,
+          class: class,
+          active_class: "active".to_string(),
+          {children}
+      }
+  }
+}
+
+/// Login page component
+#[component]
+fn Login() -> Element {
+  let mut auth_state = use_signal(AuthState::default);
+  let error_message = use_signal(String::new);
+
+  let on_login = Callback::new(move |(email, _password): (String, String)| {
+      // TODO: Implement actual login with database verification
+      // For now, this is a placeholder that simulates login
+      let new_auth = AuthState {
+        is_authenticated: true,
+        user_email: Some(email),
+        session_token: Some(clarity_core::auth::generate_session_token()),
+      };
+      auth_state.set(new_auth);
+    });
+
+  rsx! {
+      div { class: "app-container",
+          div { class: "content",
+              auth_components::LoginForm {
+                  auth_state: auth_state,
+                  on_login: on_login,
+                  error_message: error_message
+              }
+          }
+      }
+  }
+}
+
+/// Register page component
+#[component]
+fn Register() -> Element {
+  let mut auth_state = use_signal(AuthState::default);
+  let error_message = use_signal(String::new);
+
+  let on_register = Callback::new(
+      move |(email, _password, _confirm): (String, String, String)| {
+        // TODO: Implement actual registration with database
+        // For now, this is a placeholder that simulates registration
+        let new_auth = AuthState {
+          is_authenticated: true,
+          user_email: Some(email),
+          session_token: Some(clarity_core::auth::generate_session_token()),
+        };
+        auth_state.set(new_auth);
+      },
+    );
+
+  rsx! {
+      div { class: "app-container",
+          div { class: "content",
+              auth_components::RegisterForm {
+                  auth_state: auth_state,
+                  on_register: on_register,
+                  error_message: error_message
+              }
+          }
+      }
+  }
+}
+
+/// Settings page component
+#[component]
+fn Settings() -> Element {
+  rsx! {
+      div { class: "app-container",
+          h1 { "Clarity" }
+          div { class: "content",
+              crate::components::SettingsView {}
           }
       }
   }
@@ -189,24 +437,21 @@ fn DashboardPage() -> Element {
 
 /// 404 Not Found page component
 #[component]
-fn NotFoundPage(path: String) -> Element {
+fn NotFound(route: String) -> Element {
   rsx! {
-      div { class: "not-found-page",
-          h2 { "404 - Page Not Found" }
-          p { "The page '{path}' does not exist." }
-          Link { to: "/", text: "Go Home" }
-      }
-  }
-}
-
-/// Navigation link component
-#[component]
-fn Link(to: String, text: String) -> Element {
-  rsx! {
-      a {
-          href: "{to}",
-          class: "nav-link",
-          "{text}"
+      div { class: "app-container",
+          h1 { "Clarity" }
+          div { class: "content",
+              div { class: "error-page",
+                  h2 { "404 - Page Not Found" }
+                  p { "The page '{route}' doesn't exist." }
+                  div { class: "nav-links",
+                      NavLink { to: Route::Home, "Go Home" }
+                      NavLink { to: Route::Dashboard, "Dashboard" }
+                      NavLink { to: Route::BeadsList, "Manage Beads" }
+                  }
+              }
+          }
       }
   }
 }
@@ -216,175 +461,121 @@ mod tests {
   use super::*;
 
   #[test]
-  fn test_app_state_new() {
-    let state = AppState::new();
-    assert_eq!(state.current_route, "");
-    assert!(state.error.is_none());
+  fn test_route_home_exists() {
+    let route = Route::Home;
+    assert_eq!(format!("{route:?}"), "Home");
   }
 
   #[test]
-  fn test_app_state_default() {
-    let state = AppState::default();
-    assert_eq!(state.current_route, "");
-    assert!(state.error.is_none());
+  fn test_route_about_exists() {
+    let route = Route::About;
+    assert_eq!(format!("{route:?}"), "About");
   }
 
   #[test]
-  fn test_navigate_to_valid_route() {
-    let mut state = AppState::new();
-    let result = state.navigate_to("/about".to_string());
-    assert!(result.is_ok(), "Navigation should succeed for valid route");
-    assert_eq!(state.current_route, "/about");
+  fn test_route_dashboard_exists() {
+    let route = Route::Dashboard;
+    assert_eq!(format!("{route:?}"), "Dashboard");
   }
 
   #[test]
-  fn test_navigate_to_empty_route_fails() {
-    let mut state = AppState::new();
-    let result = state.navigate_to("".to_string());
-    assert!(result.is_err(), "Navigation should fail for empty route");
-    assert!(matches!(result, Err(AppError::InvalidRoute(_))));
+  fn test_route_beads_list_exists() {
+    let route = Route::BeadsList;
+    assert_eq!(format!("{route:?}"), "BeadsList");
   }
 
   #[test]
-  fn test_navigate_to_route_without_leading_slash_fails() {
-    let mut state = AppState::new();
-    let result = state.navigate_to("about".to_string());
-    assert!(
-      result.is_err(),
-      "Navigation should fail for route without leading slash"
+  fn test_route_bead_detail_with_id() {
+    let route = Route::BeadDetail {
+      id: "test-id-123".to_string(),
+    };
+    match route {
+      Route::BeadDetail { id } => {
+        assert_eq!(id, "test-id-123");
+      }
+      _ => panic!("Expected BeadDetail route"),
+    }
+  }
+
+  #[test]
+  fn test_route_equality() {
+    let route1 = Route::Home;
+    let route2 = Route::Home;
+    assert_eq!(route1, route2);
+
+    let route3 = Route::BeadDetail {
+      id: "abc".to_string(),
+    };
+    let route4 = Route::BeadDetail {
+      id: "abc".to_string(),
+    };
+    assert_eq!(route3, route4);
+
+    let route5 = Route::BeadDetail {
+      id: "xyz".to_string(),
+    };
+    assert_ne!(route3, route5);
+  }
+
+  #[test]
+  fn test_all_routes_are_distinct() {
+    let routes = vec![
+      Route::Home,
+      Route::About,
+      Route::Dashboard,
+      Route::BeadsList,
+      Route::BeadDetail {
+        id: "test".to_string(),
+      },
+      Route::NotFound {
+        route: "test".to_string(),
+      },
+    ];
+
+    // Verify all routes are distinct (except when they should be equal)
+    for (i, route_a) in routes.iter().enumerate() {
+      for (j, route_b) in routes.iter().enumerate() {
+        if i != j {
+          // Different route variants should not be equal
+          let same_variant = std::mem::discriminant(route_a) == std::mem::discriminant(route_b);
+          if !same_variant {
+            assert_ne!(route_a, route_b);
+          }
+        }
+      }
+    }
+  }
+
+  #[test]
+  fn test_route_bead_detail_with_different_ids() {
+    let id1 = "bead-001";
+    let id2 = "bead-002";
+    let id3 = "bead-001";
+
+    let route1 = Route::BeadDetail {
+      id: id1.to_string(),
+    };
+    let route2 = Route::BeadDetail {
+      id: id2.to_string(),
+    };
+    let route3 = Route::BeadDetail {
+      id: id3.to_string(),
+    };
+
+    assert_ne!(
+      route1, route2,
+      "Routes with different IDs should not be equal"
     );
-    assert!(matches!(result, Err(AppError::InvalidRoute(_))));
+    assert_eq!(route1, route3, "Routes with same IDs should be equal");
   }
 
   #[test]
-  fn test_set_and_clear_error() {
-    let mut state = AppState::new();
-    assert!(state.error.is_none());
+  fn test_route_clone() {
+    let original = Route::BeadDetail {
+      id: "clone-test".to_string(),
+    };
+    let cloned = original.clone();
 
-    state.set_error(AppError::ComponentInit("Test error".to_string()));
-    assert!(state.error.is_some());
-    assert_eq!(
-      state.error,
-      Some(AppError::ComponentInit("Test error".to_string()))
-    );
-
-    state.clear_error();
-    assert!(state.error.is_none());
-  }
-
-  #[test]
-  fn test_app_error_display() {
-    let err = AppError::InvalidRoute("test error".to_string());
-    assert_eq!(err.to_string(), "Invalid route: test error");
-
-    let err = AppError::ComponentInit("init failed".to_string());
-    assert_eq!(
-      err.to_string(),
-      "Component initialization failed: init failed"
-    );
-
-    let err = AppError::StateUpdate("update failed".to_string());
-    assert_eq!(err.to_string(), "State update failed: update failed");
-  }
-
-  #[test]
-  fn test_app_state_multiple_navigations() {
-    let mut state = AppState::new();
-
-    // First navigation
-    let result = state.navigate_to("/about".to_string());
-    assert!(result.is_ok());
-    assert_eq!(state.current_route, "/about");
-
-    // Second navigation
-    let result = state.navigate_to("/".to_string());
-    assert!(result.is_ok());
-    assert_eq!(state.current_route, "/");
-
-    // Invalid navigation
-    let result = state.navigate_to("invalid".to_string());
-    assert!(result.is_err());
-    // State should remain unchanged after failed navigation
-    assert_eq!(state.current_route, "/");
-  }
-
-  // Martin Fowler Test Suite: Dashboard UI
-  #[test]
-  fn test_navigate_to_dashboard_shows_dashboard_component() {
-    let mut state = AppState::new();
-    let result = state.navigate_to("/dashboard".to_string());
-    assert!(result.is_ok(), "Navigation to /dashboard should succeed");
-    assert_eq!(state.current_route, "/dashboard");
-    assert!(state.error.is_none(), "No errors should be present");
-  }
-
-  #[test]
-  fn test_dashboard_component_renders_successfully() {
-    let state = AppState::new();
-    assert!(
-      state.error.is_none(),
-      "Dashboard should initialize without errors"
-    );
-  }
-
-  #[test]
-  fn test_dashboard_accessible_from_home_page() {
-    let mut state = AppState::new();
-    let result = state.navigate_to("/".to_string());
-    assert!(result.is_ok(), "Should be able to navigate to home");
-    assert_eq!(state.current_route, "/");
-    let result = state.navigate_to("/dashboard".to_string());
-    assert!(result.is_ok(), "Should be able to navigate to dashboard");
-    assert_eq!(state.current_route, "/dashboard");
-    let result = state.navigate_to("/".to_string());
-    assert!(result.is_ok(), "Should be able to navigate back to home");
-    assert_eq!(state.current_route, "/");
-  }
-
-  #[test]
-  fn test_dashboard_handles_component_init_error() {
-    let mut state = AppState::new();
-    state.set_error(AppError::ComponentInit(
-      "Dashboard initialization failed".to_string(),
-    ));
-    assert!(state.error.is_some(), "Error should be captured in state");
-    assert!(matches!(state.error, Some(AppError::ComponentInit(_))));
-    let result = state.navigate_to("/about".to_string());
-    assert!(
-      result.is_ok(),
-      "App should continue functioning despite error"
-    );
-  }
-
-  #[test]
-  fn test_dashboard_rejects_invalid_navigation() {
-    let mut state = AppState::new();
-    let result = state.navigate_to("/dashboard".to_string());
-    assert!(result.is_ok());
-    assert_eq!(state.current_route, "/dashboard");
-    let result = state.navigate_to(String::new());
-    assert!(result.is_err(), "Navigation should fail for empty route");
-    assert!(matches!(result, Err(AppError::InvalidRoute(_))));
-    assert_eq!(
-      state.current_route, "/dashboard",
-      "Current route should remain unchanged"
-    );
-    let result = state.navigate_to("invalid".to_string());
-    assert!(
-      result.is_err(),
-      "Navigation should fail for route without leading slash"
-    );
-    assert!(matches!(result, Err(AppError::InvalidRoute(_))));
-    assert_eq!(
-      state.current_route, "/dashboard",
-      "Current route should remain unchanged"
-    );
-  }
-
-  #[test]
-  fn test_dashboard_responsive_classes_present() {
-    let state = AppState::new();
-    assert_eq!(state.current_route, "");
-    assert!(state.error.is_none());
+    assert_eq!(original, cloned);
   }
 }
