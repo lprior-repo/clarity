@@ -305,11 +305,10 @@ pub fn exported_to_domain(beads: Vec<ExportedBead>) -> ExportResult<Vec<Bead>> {
           ExportError::CsvSerialization(format!("Invalid bead type: {}", exported.bead_type))
         })?,
         created_by: match exported.created_by {
-          Some(user_id) => {
-            Some(crate::db::models::UserId::from_str(&user_id).map_err(|_| {
-              ExportError::CsvSerialization(format!("Invalid user ID: {user_id}"))
-            })?)
-          }
+          Some(user_id) => Some(
+            crate::db::models::UserId::from_str(&user_id)
+              .map_err(|_| ExportError::CsvSerialization(format!("Invalid user ID: {user_id}")))?,
+          ),
           None => None,
         },
         created_at,

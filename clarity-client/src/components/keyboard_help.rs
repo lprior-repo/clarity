@@ -242,8 +242,7 @@ pub fn use_keyboard_help() -> (Signal<bool>, Callback, Callback, Callback) {
 /// - `hide`: Callback to hide the dialog
 /// - `toggle`: Callback to toggle dialog visibility
 #[must_use]
-pub fn use_keyboard_help_with_shortcuts() -> (Signal<bool>, Callback, Callback, Callback)
-{
+pub fn use_keyboard_help_with_shortcuts() -> (Signal<bool>, Callback, Callback, Callback) {
   let (visible, show, hide, toggle) = use_keyboard_help();
 
   // Set up keyboard handler for showing/hiding help

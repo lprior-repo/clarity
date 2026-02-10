@@ -7,7 +7,6 @@
 // This is a framework limitation, not our code using unwrap.
 #![allow(clippy::disallowed_methods)]
 
-use crate::auth_components::{self, AuthState};
 use crate::components::ErrorBoundary;
 use dioxus::prelude::*;
 use std::str::FromStr;
@@ -20,12 +19,6 @@ use std::str::FromStr;
 pub enum Route {
   /// Home page route
   Home,
-
-  /// Login page route
-  Login,
-
-  /// Register page route
-  Register,
 
   /// About page route
   About,
@@ -52,7 +45,6 @@ pub enum Route {
   NotFound { route: String },
 }
 
-
 impl std::str::FromStr for Route {
   type Err = String;
 
@@ -65,12 +57,16 @@ impl std::str::FromStr for Route {
       ["dashboard"] => Ok(Self::Dashboard),
       ["beads"] => Ok(Self::BeadsList),
       ["beads", "new"] => Ok(Self::BeadNew),
-      ["beads", id] => Ok(Self::BeadDetail { id: (*id).to_string() }),
-      ["beads", id, "edit"] => Ok(Self::BeadEdit { id: (*id).to_string() }),
-      ["login"] => Ok(Self::Login),
-      ["register"] => Ok(Self::Register),
+      ["beads", id] => Ok(Self::BeadDetail {
+        id: (*id).to_string(),
+      }),
+      ["beads", id, "edit"] => Ok(Self::BeadEdit {
+        id: (*id).to_string(),
+      }),
       ["settings"] => Ok(Self::Settings),
-      _ => Ok(Self::NotFound { route: s.to_string() }),
+      _ => Ok(Self::NotFound {
+        route: s.to_string(),
+      }),
     }
   }
 }
@@ -96,8 +92,6 @@ impl std::fmt::Display for Route {
       Self::BeadNew => write!(f, "/beads/new"),
       Self::BeadEdit { id } => write!(f, "/beads/{id}/edit"),
       Self::BeadDetail { id } => write!(f, "/beads/{id}"),
-      Self::Login => write!(f, "/login"),
-      Self::Register => write!(f, "/register"),
       Self::Settings => write!(f, "/settings"),
       Self::NotFound { route } => write!(f, "/{route}"),
     }
@@ -129,8 +123,6 @@ pub fn App() -> Element {
                       Route::BeadEdit { id } => rsx! { BeadEdit { id } },
                       Route::BeadDetail { id } => rsx! { BeadDetail { id } },
                       Route::Settings => rsx! { Settings {} },
-                      Route::Login => rsx! { Login {} },
-                      Route::Register => rsx! { Register {} },
                       Route::NotFound { route } => rsx! { NotFound { route } },
                   }
               }
@@ -306,8 +298,8 @@ fn BeadDetail(id: String) -> Element {
 /// Navigation link component for internal routing with active state
 ///
 /// This component provides a styled link for navigation using the custom
-/// signal-based routing system. It adds active state styling when the
-/// current route matches the link's destination.
+/// signal-based routing system from RouteProvider. It adds active state
+/// styling when the current route matches the link's destination.
 #[component]
 pub fn NavigationLink(
   to: Route,
@@ -315,11 +307,16 @@ pub fn NavigationLink(
   #[props(default)] active_class: String,
   children: Element,
 ) -> Element {
-  let navigator = crate::hooks::use_state::use_navigator();
-  let current_route = crate::hooks::use_state::use_route();
+  // Get the route signal from RouteProvider context
+  let route = use_context::<Signal<Route>>();
+
+  // Clone for the onclick handler
+  let mut route_for_click = route.clone();
+  let target_route = to.clone();
 
   // Check if current route matches the destination
-  let is_active = current_route.as_ref() == Some(&to);
+  let current: Route = route.read().clone();
+  let is_active = current == to;
 
   let base_classes = if class.is_empty() {
     "nav-link".to_string()
@@ -337,7 +334,7 @@ pub fn NavigationLink(
       button {
           class: "{combined_class}",
           onclick: move |_| {
-              navigator(to.clone());
+              route_for_click.set(target_route.clone());
           },
           {children}
       }
@@ -356,68 +353,6 @@ pub fn NavLink(to: Route, #[props(default)] class: String, children: Element) ->
           class: class,
           active_class: "active".to_string(),
           {children}
-      }
-  }
-}
-
-/// Login page component
-#[component]
-fn Login() -> Element {
-  let mut auth_state = use_signal(AuthState::default);
-  let error_message = use_signal(String::new);
-
-  let on_login = Callback::new(move |(email, _password): (String, String)| {
-      // TODO: Implement actual login with database verification
-      // For now, this is a placeholder that simulates login
-      let new_auth = AuthState {
-        is_authenticated: true,
-        user_email: Some(email),
-        session_token: Some(clarity_core::auth::generate_session_token()),
-      };
-      auth_state.set(new_auth);
-    });
-
-  rsx! {
-      div { class: "app-container",
-          div { class: "content",
-              auth_components::LoginForm {
-                  auth_state: auth_state,
-                  on_login: on_login,
-                  error_message: error_message
-              }
-          }
-      }
-  }
-}
-
-/// Register page component
-#[component]
-fn Register() -> Element {
-  let mut auth_state = use_signal(AuthState::default);
-  let error_message = use_signal(String::new);
-
-  let on_register = Callback::new(
-      move |(email, _password, _confirm): (String, String, String)| {
-        // TODO: Implement actual registration with database
-        // For now, this is a placeholder that simulates registration
-        let new_auth = AuthState {
-          is_authenticated: true,
-          user_email: Some(email),
-          session_token: Some(clarity_core::auth::generate_session_token()),
-        };
-        auth_state.set(new_auth);
-      },
-    );
-
-  rsx! {
-      div { class: "app-container",
-          div { class: "content",
-              auth_components::RegisterForm {
-                  auth_state: auth_state,
-                  on_register: on_register,
-                  error_message: error_message
-              }
-          }
       }
   }
 }

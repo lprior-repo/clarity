@@ -11,7 +11,7 @@
 //! and supply global state through Dioxus context.
 
 use crate::app::Route;
-use crate::state::{AppState, StatePersistence};
+use crate::state::AppState;
 use dioxus::prelude::*;
 
 // ===== Route Provider =====
@@ -19,14 +19,12 @@ use dioxus::prelude::*;
 /// Provider component for routing
 ///
 /// This component provides a simple signal-based routing system.
+/// It exposes the route signal through context so components can read and navigate.
 #[component]
 pub fn RouteProvider(route: Signal<Route>, children: Element) -> Element {
-  // Provide navigation function through context
-  let navigator = move |target: Route| {
-    route.set(target);
-  };
-
-  let _ = use_context_provider(move || navigator);
+  // Provide the route signal through context
+  // Components can use this to both read the current route and navigate
+  let _ = use_context_provider(move || route);
 
   rsx! {
       {children}
@@ -61,15 +59,6 @@ pub fn AppStateProvider(children: Element) -> Element {
     use_effect(move || {
       let state_for_clone = state_for_load.clone();
 
-      // Load persisted auth token synchronously
-      if let Ok(persistence) = StatePersistence::new() {
-        if let Ok(Some(token)) = persistence.load_auth_token() {
-          // In a real app, we would validate the token here
-          // For now, just mark as authenticated
-          state_for_clone.set_auth("persisted_user".to_string(), token);
-        }
-      }
-
       // Load initial beads from database synchronously
       state_for_clone.set_beads_loading();
 
@@ -80,7 +69,9 @@ pub fn AppStateProvider(children: Element) -> Element {
             tokio::runtime::Runtime::new()
               .map(|rt| rt.block_on(db.list_beads()))
               .map_err(|e| format!("Runtime error: {e}"))
-          }).join() {
+          })
+          .join()
+          {
             Ok(Ok(Ok(beads))) => {
               state_for_clone.set_beads(beads);
             }
@@ -101,30 +92,6 @@ pub fn AppStateProvider(children: Element) -> Element {
       }
     });
   }
-
-  // Persist auth state changes to disk
-  use_effect(move || {
-    let state_for_clone = state_for_load.clone();
-
-    let auth_state = state_for_clone.auth();
-
-    if let Ok(persistence) = StatePersistence::new() {
-      match auth_state.session_token {
-        Some(token) => {
-          // Save token to disk
-          if let Err(e) = persistence.save_auth_token(&token) {
-            eprintln!("Failed to save auth token: {e}");
-          }
-        }
-        None => {
-          // Clear token from disk
-          if let Err(e) = persistence.clear_auth_token() {
-            eprintln!("Failed to clear auth token: {e}");
-          }
-        }
-      }
-    }
-  });
 
   rsx! {
       {children}
@@ -223,16 +190,7 @@ pub fn AppProviders(children: Element) -> Element {
 
   // Load persisted state on mount
   use_effect(move || {
-    let state = state_for_effects.clone();
-
-    // Load persisted auth token synchronously
-    if let Ok(persistence) = StatePersistence::new() {
-      if let Ok(Some(token)) = persistence.load_auth_token() {
-        // In a real app, we would validate the token here
-        // For now, just mark as authenticated
-        state.set_auth("persisted_user".to_string(), token);
-      }
-    }
+    let _state = state_for_effects.clone();
 
     // Note: For async database operations, we would use spawn_local
     // in a web context, but for desktop we need to handle this differently

@@ -39,13 +39,13 @@
 //! ```
 
 pub mod app;
-pub mod auth_components;
 pub mod backup;
 pub mod beads;
 pub mod components;
 pub mod db;
 pub mod error;
 pub mod hooks;
+pub mod import;
 pub mod navigation;
 pub mod providers;
 pub mod settings;
@@ -60,20 +60,22 @@ pub use backup::{
   BackupInfo, BackupOptions,
 };
 pub use beads::{BeadDetailPage, BeadFormPage, BeadListPage};
-pub use components::{use_error_handler, ErrorBoundary, KeyboardHelpDialog, ShortcutHint, SettingsView};
+pub use components::{
+  use_error_handler, ErrorBoundary, KeyboardHelpDialog, SettingsView, ShortcutHint,
+};
 pub use db::DesktopDb;
 pub use error::{AppError, AppResult, RecoveryAction};
-pub use hooks::{
-  use_add_bead, use_auth_actions, use_auth_state, use_bead_actions, use_bead_state, use_beads,
-  use_beads_error, use_beads_loading, use_current_user, use_is_authenticated, use_keyboard,
-  use_theme, use_ui_actions, use_ui_state, use_undo, AuthActions, BeadActions, UIActions,
-};
 pub use hooks::use_keyboard::KeyEvent;
+pub use hooks::{
+  use_add_bead, use_bead_actions, use_bead_state, use_beads, use_beads_error, use_beads_loading,
+  use_keyboard, use_theme, use_ui_actions, use_ui_state, use_undo, BeadActions, UIActions,
+};
+pub use import::{import_from_intent_cli, intent_cli::find_intent_cli_db};
 pub use navigation::use_navigation;
 pub use providers::{AppProviders, AppStateProvider, ThemeProvider};
 pub use settings::{BackupFrequency, Settings, Theme as SettingsTheme};
 pub use shortcuts::{Action, Key, Modifiers, Shortcut, Shortcuts};
-pub use state::{AppState, AuthState, BeadState, StatePersistence, Theme, UIState};
+pub use state::{AppState, BeadState, StatePersistence, Theme, UIState};
 pub use undo::{
   Command, CreateBeadCommand, DatabaseAccess, DeleteBeadCommand, UndoStack, UpdateBeadCommand,
 };

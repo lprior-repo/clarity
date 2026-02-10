@@ -11,7 +11,7 @@
 //! and performing common operations.
 
 use crate::app::Route;
-use crate::state::{AppState, AuthState, BeadState, Theme, UIState};
+use crate::state::{AppState, BeadState, Theme, UIState};
 use dioxus::prelude::*;
 use std::rc::Rc;
 
@@ -27,31 +27,6 @@ use std::rc::Rc;
 #[must_use]
 pub fn use_app_state() -> AppState {
   use_context::<AppState>()
-}
-
-// ===== Auth State Hooks =====
-
-/// Hook to access authentication state
-///
-/// Returns an immutable snapshot of the current auth state.
-#[must_use]
-pub fn use_auth_state() -> AuthState {
-  let state = use_app_state();
-  state.auth()
-}
-
-/// Hook to check if user is authenticated
-#[must_use]
-pub fn use_is_authenticated() -> bool {
-  let state = use_app_state();
-  state.is_authenticated()
-}
-
-/// Hook to get current user ID
-#[must_use]
-pub fn use_current_user() -> Option<String> {
-  let state = use_app_state();
-  state.current_user()
 }
 
 // ===== Bead State Hooks =====
@@ -152,47 +127,6 @@ pub fn use_route() -> Option<Route> {
 
 // ===== Action Hooks =====
 
-/// Hook to get authentication actions
-///
-/// Returns callbacks for login/logout operations.
-#[must_use]
-pub fn use_auth_actions() -> AuthActions {
-  let state = use_app_state();
-  let auth_signal = state.auth;
-
-  AuthActions {
-    login: {
-      let mut auth_signal = auth_signal;
-      Rc::new(move |user_id: String, token: String| {
-        let new_auth = AuthState::authenticated(user_id, token);
-        auth_signal.set(new_auth);
-      })
-    },
-    logout: {
-      let mut auth_signal = auth_signal;
-      Rc::new(move || {
-        let new_auth = AuthState::unauthenticated();
-        auth_signal.set(new_auth);
-      })
-    },
-  }
-}
-
-/// Authentication action callbacks
-#[derive(Clone)]
-pub struct AuthActions {
-  /// Login action: sets authenticated state
-  pub login: std::rc::Rc<dyn FnMut(String, String)>,
-  /// Logout action: clears authenticated state
-  pub logout: std::rc::Rc<dyn FnMut()>,
-}
-
-impl PartialEq for AuthActions {
-  fn eq(&self, other: &Self) -> bool {
-    Rc::ptr_eq(&self.login, &other.login) && Rc::ptr_eq(&self.logout, &other.logout)
-  }
-}
-
 /// Hook to get bead actions
 ///
 /// Returns callbacks for bead operations.
@@ -251,11 +185,11 @@ pub struct BeadActions {
 
 impl PartialEq for BeadActions {
   fn eq(&self, other: &Self) -> bool {
-    Rc::ptr_eq(&self.set_loading, &other.set_loading) &&
-    Rc::ptr_eq(&self.set_beads, &other.set_beads) &&
-    Rc::ptr_eq(&self.set_error, &other.set_error) &&
-    Rc::ptr_eq(&self.clear_error, &other.clear_error) &&
-    Rc::ptr_eq(&self.add_bead, &other.add_bead)
+    Rc::ptr_eq(&self.set_loading, &other.set_loading)
+      && Rc::ptr_eq(&self.set_beads, &other.set_beads)
+      && Rc::ptr_eq(&self.set_error, &other.set_error)
+      && Rc::ptr_eq(&self.clear_error, &other.clear_error)
+      && Rc::ptr_eq(&self.add_bead, &other.add_bead)
   }
 }
 
@@ -301,9 +235,9 @@ pub struct UIActions {
 
 impl PartialEq for UIActions {
   fn eq(&self, other: &Self) -> bool {
-    Rc::ptr_eq(&self.set_route, &other.set_route) &&
-    Rc::ptr_eq(&self.toggle_theme, &other.toggle_theme) &&
-    Rc::ptr_eq(&self.set_theme, &other.set_theme)
+    Rc::ptr_eq(&self.set_route, &other.set_route)
+      && Rc::ptr_eq(&self.toggle_theme, &other.toggle_theme)
+      && Rc::ptr_eq(&self.set_theme, &other.set_theme)
   }
 }
 
@@ -356,17 +290,6 @@ mod tests {
 
   // Note: Most hook tests require a Dioxus runtime
   // These are placeholder tests to demonstrate the structure
-
-  #[test]
-  fn test_auth_actions_clone() {
-    // Verify action callbacks can be cloned
-    let actions = AuthActions {
-      login: std::rc::Rc::new(|_, _| {}),
-      logout: std::rc::Rc::new(|| {}),
-    };
-
-    let _ = actions.clone();
-  }
 
   #[test]
   fn test_bead_actions_clone() {

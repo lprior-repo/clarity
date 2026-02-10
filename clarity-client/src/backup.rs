@@ -372,7 +372,10 @@ pub async fn auto_backup(db_path: &Path, options: &BackupOptions) -> Result<Path
 
   // List existing backups and apply retention policy
   let existing_backups = list_backups_core(&backup_dir).await?;
-  let retained = apply_retention_policy(Vector::from_iter(existing_backups.iter().cloned()), options.max_auto_backups);
+  let retained = apply_retention_policy(
+    Vector::from_iter(existing_backups.iter().cloned()),
+    options.max_auto_backups,
+  );
 
   // Delete backups exceeding retention limit
   let to_delete = compute_deletions(&existing_backups, &retained);
@@ -629,9 +632,7 @@ mod tests {
     };
 
     let existing = vec![backup1.clone(), backup2.clone(), backup3.clone()];
-    let retained: Vector<BackupInfo> = vec![backup1.clone(), backup3.clone()]
-      .into_iter()
-      .collect();
+    let retained: Vector<BackupInfo> = vec![backup1.clone(), backup3.clone()].into_iter().collect();
 
     let deletions = compute_deletions(&existing, &retained);
 
@@ -668,9 +669,7 @@ mod tests {
     let backup_content = fs::read(&backup_path)
       .await
       .expect("Failed to read backup content");
-    let db_content = fs::read(&db_path)
-      .await
-      .expect("Failed to read db content");
+    let db_content = fs::read(&db_path).await.expect("Failed to read db content");
 
     assert_eq!(backup_content, db_content);
   }

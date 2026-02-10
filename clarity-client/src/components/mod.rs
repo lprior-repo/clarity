@@ -18,8 +18,7 @@ pub mod settings_view;
 
 pub use error_boundary::{use_error_handler, ErrorBoundary};
 pub use error_display::{
-  ErrorBanner, ErrorDisplay, ErrorDisplayProps,
-  ErrorInline, ErrorPage, ErrorVariant, FormError,
+  ErrorBanner, ErrorDisplay, ErrorDisplayProps, ErrorInline, ErrorPage, ErrorVariant, FormError,
 };
 pub use keyboard_help::{use_keyboard_help, KeyboardHelpDialog, ShortcutHint};
 pub use loading::{

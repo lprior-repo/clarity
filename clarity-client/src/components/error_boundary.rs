@@ -94,9 +94,7 @@ impl ErrorState {
 pub fn use_error_handler() -> ErrorHandler {
   let error_state = use_context_provider(MutableErrorState::new);
 
-  ErrorHandler {
-    error_state,
-  }
+  ErrorHandler { error_state }
 }
 
 /// Error handler for triggering and clearing errors

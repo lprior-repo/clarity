@@ -19,6 +19,7 @@ use clarity_core::db::models::{Bead, BeadFilters, BeadId, Email, NewBead, User, 
 use clarity_core::db::{sqlite_pool, DbError, DbResult, SqliteDbConfig};
 use sqlx::{Row, SqlitePool};
 use std::path::{Path, PathBuf};
+use tracing::{debug, error, info, instrument, warn};
 
 /// Desktop database wrapper using `SQLx` connection pool
 #[derive(Debug, Clone)]
@@ -35,30 +36,34 @@ impl DesktopDb {
   ///
   /// # Errors
   /// - Returns error if data directory cannot be determined
-  /// - Returns error if database directory cannot be created
   /// - Returns error if pool creation fails
   pub fn new() -> Result<Self> {
-    // Try to use existing runtime, or create a new one
-    let rt = tokio::runtime::Handle::try_current()
-      .or_else(|_| tokio::runtime::Runtime::new().map(|rt| rt.handle().clone()))
-      .map_err(|e| anyhow::anyhow!("Failed to get runtime: {e}"))?;
+    // Try to use existing runtime handle
+    match tokio::runtime::Handle::try_current() {
+      Ok(handle) => {
+        // Runtime already exists, use it
+        handle.block_on(Self::new_async())
+      }
+      Err(_) => {
+        // No runtime exists, create a new one and use it directly
+        let rt = tokio::runtime::Runtime::new()
+          .map_err(|e| anyhow::anyhow!("Failed to create runtime: {e}"))?;
 
-    rt.block_on(Self::new_async())
+        rt.block_on(Self::new_async())
+      }
+    }
   }
 
   /// Create a new `DesktopDb` with default path (async)
   ///
   /// # Errors
   /// - Returns error if data directory cannot be determined
-  /// - Returns error if database directory cannot be created
   /// - Returns error if pool creation fails
   pub async fn new_async() -> Result<Self> {
     let data_dir = dirs::data_local_dir()
       .ok_or_else(|| anyhow::anyhow!("Failed to determine local data directory"))?;
 
     let app_dir = data_dir.join("clarity");
-    tokio::fs::create_dir_all(&app_dir).await?;
-
     let db_path = app_dir.join("clarity.db");
     Self::with_path_async(db_path).await
   }
@@ -168,7 +173,10 @@ impl DesktopDb {
   /// - Returns `DbError::Connection` if query execution fails
   /// - Returns `DbError::InvalidUuid` if ID parsing fails
   /// - Returns `DbError::Validation` if status/type parsing fails
+  #[instrument(skip(self))]
   pub async fn list_beads(&self) -> DbResult<Vec<Bead>> {
+    debug!("Fetching all beads");
+
     let rows = sqlx::query(
             r"
             SELECT id, title, description, status, priority, bead_type, created_by, created_at, updated_at
@@ -177,9 +185,22 @@ impl DesktopDb {
             "
         )
         .fetch_all(&self.pool)
-        .await?;
+        .await
+        .map_err(|e| {
+          error!(error = %e, "Failed to fetch beads");
+          e
+        })?;
 
-    rows.into_iter().map(Self::row_to_bead).collect()
+    let count = rows.len();
+    let beads = rows.into_iter().map(Self::row_to_bead).collect::<DbResult<Vec<_>>>()
+      .map_err(|e| {
+        error!(error = %e, "Failed to parse bead row");
+        e
+      })?;
+
+    info!(count, "Successfully fetched beads");
+
+    Ok(beads)
   }
 
   /// List beads with filtering (SQL injection-safe using parameterized queries)
@@ -278,9 +299,12 @@ impl DesktopDb {
   /// - Returns `DbError::Connection` if query execution fails
   /// - Returns `DbError::InvalidUuid` if ID parsing fails
   /// - Returns `DbError::Validation` if status/type parsing fails
+  #[instrument(skip(self, bead), fields(bead_title = %bead.title, status = %bead.status, priority = bead.priority.0))]
   pub async fn create_bead(&self, bead: NewBead) -> DbResult<Bead> {
     let id = uuid::Uuid::new_v4();
     let now = chrono::Utc::now();
+
+    debug!(bead_id = %id, "Creating new bead");
 
     sqlx::query(
             r"
@@ -298,7 +322,13 @@ impl DesktopDb {
         .bind(now.to_rfc3339())
         .bind(now.to_rfc3339())
         .execute(&self.pool)
-        .await?;
+        .await
+        .map_err(|e| {
+          error!(error = %e, bead_id = %id, "Failed to create bead");
+          e
+        })?;
+
+    info!(bead_id = %id, title = %bead.title, "Successfully created bead");
 
     self.get_bead(BeadId::from(id)).await
   }
@@ -310,8 +340,11 @@ impl DesktopDb {
   /// - Returns `DbError::Connection` if query execution fails
   /// - Returns `DbError::InvalidUuid` if ID parsing fails
   /// - Returns `DbError::Validation` if status/type parsing fails
+  #[instrument(skip(self, bead), fields(bead_id = %id, bead_title = %bead.title))]
   pub async fn update_bead(&self, id: BeadId, bead: NewBead) -> DbResult<Bead> {
     let now = chrono::Utc::now();
+
+    debug!("Updating bead");
 
     let result = sqlx::query(
             r"
@@ -329,11 +362,18 @@ impl DesktopDb {
         .bind(now.to_rfc3339())
         .bind(id.to_string())
         .execute(&self.pool)
-        .await?;
+        .await
+        .map_err(|e| {
+          error!(error = %e, bead_id = %id, "Failed to update bead");
+          e
+        })?;
 
     if result.rows_affected() == 0 {
+      warn!(bead_id = %id, "Bead not found for update");
       return Err(DbError::not_found("Bead", id.to_string()));
     }
+
+    info!(bead_id = %id, title = %bead.title, "Successfully updated bead");
 
     self.get_bead(id).await
   }
@@ -465,51 +505,69 @@ impl DesktopDb {
     rt.block_on(self.delete_bead(id))
   }
 
+  /// Parse a datetime string, handling both RFC3339 and SQLite datetime formats
+  ///
+  /// # Errors
+  /// Returns error if the string cannot be parsed as either format
+  fn parse_sqlite_datetime(s: &str) -> Result<chrono::DateTime<chrono::Utc>, String> {
+    // Try RFC3339 format first (what new beads use)
+    if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(s) {
+      return Ok(dt.with_timezone(&chrono::Utc));
+    }
+
+    // Try SQLite datetime format: "YYYY-MM-DD HH:MM:SS"
+    if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S") {
+      return Ok(chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(
+        dt,
+        chrono::Utc,
+      ));
+    }
+
+    // Try SQLite datetime format with subseconds: "YYYY-MM-DD HH:MM:SS.SSS"
+    if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S%.f") {
+      return Ok(chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(
+        dt,
+        chrono::Utc,
+      ));
+    }
+
+    // Try ISO8601-like format: "YYYY-MM-DDTHH:MM:SS"
+    if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%dT%H:%M:%S") {
+      return Ok(chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(
+        dt,
+        chrono::Utc,
+      ));
+    }
+
+    Err(format!("Could not parse datetime: '{s}'"))
+  }
+
   /// Helper: Convert a query row to Bead
   ///
   /// # Errors
   /// - Returns `DbError::InvalidUuid` if ID parsing fails
   /// - Returns `DbError::Validation` if status/type parsing fails
   fn row_to_bead(row: sqlx::sqlite::SqliteRow) -> DbResult<Bead> {
-    let id_str: String = row
-      .try_get("id")
-      .map_err(DbError::Connection)?;
-    let title: String = row
-      .try_get("title")
-      .map_err(DbError::Connection)?;
-    let description: Option<String> = row
-      .try_get("description")
-      .map_err(DbError::Connection)?;
-    let status_str: String = row
-      .try_get("status")
-      .map_err(DbError::Connection)?;
-    let priority_val: i16 = row
-      .try_get("priority")
-      .map_err(DbError::Connection)?;
-    let type_str: String = row
-      .try_get("bead_type")
-      .map_err(DbError::Connection)?;
-    let created_by_str: Option<String> = row
-      .try_get("created_by")
-      .map_err(DbError::Connection)?;
-    let created_at_str: String = row
-      .try_get("created_at")
-      .map_err(DbError::Connection)?;
-    let updated_at_str: String = row
-      .try_get("updated_at")
-      .map_err(DbError::Connection)?;
+    let id_str: String = row.try_get("id").map_err(DbError::Connection)?;
+    let title: String = row.try_get("title").map_err(DbError::Connection)?;
+    let description: Option<String> = row.try_get("description").map_err(DbError::Connection)?;
+    let status_str: String = row.try_get("status").map_err(DbError::Connection)?;
+    let priority_val: i16 = row.try_get("priority").map_err(DbError::Connection)?;
+    let type_str: String = row.try_get("bead_type").map_err(DbError::Connection)?;
+    let created_by_str: Option<String> = row.try_get("created_by").map_err(DbError::Connection)?;
+    let created_at_str: String = row.try_get("created_at").map_err(DbError::Connection)?;
+    let updated_at_str: String = row.try_get("updated_at").map_err(DbError::Connection)?;
 
     let id = BeadId::from_str(&id_str)?;
     let status = status_str.parse()?;
     let bead_type = type_str.parse()?;
     let priority = clarity_core::db::models::BeadPriority::new(priority_val)?;
 
-    let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
-      .map_err(|e| DbError::Validation(format!("Invalid created_at format: {e}")))?
-      .with_timezone(&chrono::Utc);
-    let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_at_str)
-      .map_err(|e| DbError::Validation(format!("Invalid updated_at format: {e}")))?
-      .with_timezone(&chrono::Utc);
+    // Try parsing as RFC3339 first, then fall back to SQLite datetime format
+    let created_at = Self::parse_sqlite_datetime(&created_at_str)
+      .map_err(|e| DbError::Validation(format!("Invalid created_at format: {e}")))?;
+    let updated_at = Self::parse_sqlite_datetime(&updated_at_str)
+      .map_err(|e| DbError::Validation(format!("Invalid updated_at format: {e}")))?;
 
     let created_by = created_by_str
       .map(|s| clarity_core::db::models::UserId::from_str(&s))
@@ -706,35 +764,22 @@ impl DesktopDb {
   /// - Returns `DbError::InvalidUuid` if ID parsing fails
   /// - Returns `DbError::Validation` if email or role parsing fails
   fn row_to_user(row: sqlx::sqlite::SqliteRow) -> DbResult<User> {
-    let id_str: String = row
-      .try_get("id")
-      .map_err(DbError::Connection)?;
-    let email_str: String = row
-      .try_get("email")
-      .map_err(DbError::Connection)?;
-    let password_hash: String = row
-      .try_get("password_hash")
-      .map_err(DbError::Connection)?;
-    let role_str: String = row
-      .try_get("role")
-      .map_err(DbError::Connection)?;
-    let created_at_str: String = row
-      .try_get("created_at")
-      .map_err(DbError::Connection)?;
-    let updated_at_str: String = row
-      .try_get("updated_at")
-      .map_err(DbError::Connection)?;
+    let id_str: String = row.try_get("id").map_err(DbError::Connection)?;
+    let email_str: String = row.try_get("email").map_err(DbError::Connection)?;
+    let password_hash: String = row.try_get("password_hash").map_err(DbError::Connection)?;
+    let role_str: String = row.try_get("role").map_err(DbError::Connection)?;
+    let created_at_str: String = row.try_get("created_at").map_err(DbError::Connection)?;
+    let updated_at_str: String = row.try_get("updated_at").map_err(DbError::Connection)?;
 
     let id = UserId::from_str(&id_str)?;
     let email = Email::new(email_str)?;
     let role = role_str.parse()?;
 
-    let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
-      .map_err(|e| DbError::Validation(format!("Invalid created_at format: {e}")))?
-      .with_timezone(&chrono::Utc);
-    let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_at_str)
-      .map_err(|e| DbError::Validation(format!("Invalid updated_at format: {e}")))?
-      .with_timezone(&chrono::Utc);
+    // Try parsing as RFC3339 first, then fall back to SQLite datetime format
+    let created_at = Self::parse_sqlite_datetime(&created_at_str)
+      .map_err(|e| DbError::Validation(format!("Invalid created_at format: {e}")))?;
+    let updated_at = Self::parse_sqlite_datetime(&updated_at_str)
+      .map_err(|e| DbError::Validation(format!("Invalid updated_at format: {e}")))?;
 
     Ok(User {
       id,

@@ -61,6 +61,13 @@ Thumbs.db
 /dioxus/
 /app_assets/
 
+# E2E test artifacts
+e2e-tests/node_modules/
+e2e-tests/test-results/
+e2e-tests/playwright-report/
+e2e-tests/playwright/.cache/
+e2e-tests/coverage/
+
 # Documentation reports (auto-generated) - but keep AGENTS.md and docs/
 AGENT*_REPORT.md
 SWARM_*.md

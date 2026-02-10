@@ -24,6 +24,7 @@ rpds.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
 dirs.workspace = true
 uuid.workspace = true
 sqlx = { workspace = true, features = ["runtime-tokio", "sqlite"] }

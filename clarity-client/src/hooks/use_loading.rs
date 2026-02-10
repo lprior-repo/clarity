@@ -206,7 +206,6 @@ impl Default for LoadingManager {
 /// Returns a signal containing the loading manager.
 #[must_use]
 pub fn use_loading_manager() -> Signal<LoadingManager> {
-  
   use_signal(LoadingManager::new)
 }
 
@@ -294,11 +293,13 @@ pub fn use_loading_operations() -> LoadingOperations {
     },
     set: {
       let manager = manager;
-      Rc::new(move |(key, loading, message): (String, bool, Option<String>)| {
-        let current = manager.read().clone();
-        let mut mgr = manager;
-        mgr.set(current.set(key, loading, message));
-      })
+      Rc::new(
+        move |(key, loading, message): (String, bool, Option<String>)| {
+          let current = manager.read().clone();
+          let mut mgr = manager;
+          mgr.set(current.set(key, loading, message));
+        },
+      )
     },
     remove: {
       let manager = manager;

@@ -18,15 +18,19 @@ fn test_app_error_equality() {
 #[test]
 fn test_app_error_recovery_action_labels() {
   // Test network error recovery
-  let actions = AppError::network("test".to_string(), "internal".to_string(), true)
-    .recovery_actions();
+  let actions =
+    AppError::network("test".to_string(), "internal".to_string(), true).recovery_actions();
   assert!(!actions.is_empty());
   // Check that "Try Again" is one of the actions
   assert!(actions.iter().any(|a| a.label() == "Try Again"));
 
   // Test validation error recovery
-  let actions = AppError::validation_with_field("test".to_string(), "field".to_string(), "internal".to_string())
-    .recovery_actions();
+  let actions = AppError::validation_with_field(
+    "test".to_string(),
+    "field".to_string(),
+    "internal".to_string(),
+  )
+  .recovery_actions();
   assert!(!actions.is_empty());
   // Check that we have some recovery action for validation
   assert!(actions.iter().any(|a| !a.label().is_empty()));

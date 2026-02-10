@@ -238,10 +238,10 @@ impl Default for KeyboardState {
 /// - `on_key_down`: Event handler for keyboard events
 /// - `action_handler`: Callback to register action handlers
 #[must_use]
-pub fn use_keyboard() -> std::rc::Rc<dyn Fn(String, String, bool, bool, bool, bool, bool) -> MatchResult + Send + Sync> {
+pub fn use_keyboard(
+) -> std::rc::Rc<dyn Fn(String, String, bool, bool, bool, bool, bool) -> MatchResult + Send + Sync>
+{
   let shortcuts = Shortcuts::default_mappings();
-
-  
 
   (std::rc::Rc::new(
     move |key: String,
@@ -277,8 +277,6 @@ pub fn use_keyboard_with_handler(
 ) -> std::rc::Rc<dyn Fn(String, String, bool, bool, bool, bool, bool) -> MatchResult> {
   let shortcuts = Shortcuts::default_mappings();
   let handler = std::rc::Rc::new(action_handler);
-
-  
 
   (std::rc::Rc::new(
     move |key: String,

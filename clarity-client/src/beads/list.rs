@@ -6,7 +6,6 @@
 // Dioxus rsx! macro internally uses unwrap, so we allow the disallowed_methods lint.
 #![allow(clippy::disallowed_methods)]
 
-use crate::components::{ErrorDisplay, Loading, LoadingSize};
 use crate::error::AppError;
 use crate::hooks::{use_keyboard_with_handler, use_loading_manager, use_loading_operations};
 use crate::shortcuts::Action;
@@ -24,18 +23,24 @@ use std::rc::Rc;
 /// - Ctrl+?: Show help
 #[component]
 pub fn BeadListPage() -> Element {
-  // Access global state
-  let bead_state = crate::hooks::use_bead_state();
+  // Access global state - use AppState directly to get reactive access
+  let app_state = use_context::<crate::state::AppState>();
   let bead_actions = crate::hooks::use_bead_actions();
   let loading_manager = use_loading_manager();
   let loading_ops = use_loading_operations();
-  
+
+  // Reactively read beads from the signal - this will trigger re-renders when beads change
+  let beads = use_memo(move || app_state.bead_list());
+
   // Local filter signals (these are UI state, not app state)
   let mut status_filter = use_signal(String::new);
   let mut type_filter = use_signal(String::new);
   let mut priority_filter = use_signal(String::new);
   let mut search_query = use_signal(String::new);
   let mut error_state = use_signal(|| Option::<AppError>::None);
+
+  // Track if initial load has happened
+  let has_loaded_initial = use_signal(|| false);
 
   // Create filters signal that depends on all filter signals
   let filters = use_memo(move || {
@@ -65,52 +70,83 @@ pub fn BeadListPage() -> Element {
     }
   });
 
-  // Load filtered beads when filters change
+  // Load filtered beads when filters change or on initial mount
   use_effect({
     let bead_actions = bead_actions.clone();
     let loading_ops = loading_ops;
+    let mut has_loaded = has_loaded_initial.clone();
     move || {
       let filters = filters.read().clone();
       let bead_actions = bead_actions.clone();
       let loading_ops = loading_ops.clone();
 
-    if filters.is_active() {
-      // Set loading state
-      (loading_ops.start)(("bead-list".to_string(), "Loading beads...".to_string()));
+      // Check if we should load beads
+      let should_load = !*has_loaded.read()
+        || filters.status.is_some()
+        || filters.bead_type.is_some()
+        || filters.priority.is_some()
+        || filters.search.is_some();
 
-      // Spawn async task
-      spawn(async move {
-        match crate::db::DesktopDb::new() {
-          Ok(db) => match db.list_beads_filtered(&filters).await {
-            Ok(beads) => {
-              (bead_actions.set_beads)(beads);
-              (loading_ops.stop)("bead-list".to_string());
-              error_state.set(None);
+      eprintln!(
+        "[BeadList] Effect triggered - should_load: {}, has_loaded: {}, filters: {:?}",
+        should_load,
+        *has_loaded.read(),
+        filters
+      );
+
+      if should_load {
+        // Mark as loaded
+        has_loaded.set(true);
+
+        // Set loading state
+        (loading_ops.start)(("bead-list".to_string(), "Loading beads...".to_string()));
+
+        eprintln!("[BeadList] Loading beads with filters: {:?}", filters);
+
+        // Spawn async task
+        spawn(async move {
+          eprintln!("[BeadList] Spawning async task to load from database");
+          match crate::db::DesktopDb::new_async().await {
+            Ok(db) => {
+              eprintln!("[BeadList] Database initialized, querying beads");
+              match db.list_beads_filtered(&filters).await {
+                Ok(beads) => {
+                  eprintln!("[BeadList] Successfully loaded {} beads", beads.len());
+                  (bead_actions.set_beads)(beads);
+                  (loading_ops.stop)("bead-list".to_string());
+                  error_state.set(None);
+                }
+                Err(e) => {
+                  eprintln!("[BeadList] Error loading beads: {:?}", e);
+                  (loading_ops.stop)("bead-list".to_string());
+                  let app_err = AppError::from(e);
+                  error_state.set(Some(app_err));
+                }
+              }
             }
             Err(e) => {
+              eprintln!("[BeadList] Error initializing database: {:?}", e);
               (loading_ops.stop)("bead-list".to_string());
               let app_err = AppError::from(e);
               error_state.set(Some(app_err));
             }
-          },
-          Err(e) => {
-            (loading_ops.stop)("bead-list".to_string());
-            let app_err = AppError::from(e);
-            error_state.set(Some(app_err));
           }
-        }
-      });
+        });
+      }
     }
-  }
   });
 
   // Set up keyboard shortcuts handler
-  let navigator = crate::hooks::use_state::use_navigator();
+  // Use interior mutability (Rc<RefCell>) to work with Fn closure requirement
+  let route = use_context::<Signal<crate::app::Route>>();
+  let route_cell = std::rc::Rc::new(std::cell::RefCell::new(route));
   let _keyboard_handler = use_keyboard_with_handler(move |action: Action| {
     match action {
       Action::NewBead => {
         // Navigate to new bead form
-        navigator(crate::app::Route::BeadNew);
+        if let Ok(mut route_ref) = route_cell.try_borrow_mut() {
+          route_ref.set(crate::app::Route::BeadNew);
+        }
       }
       Action::ShowHelp => {
         // Show keyboard help dialog
@@ -126,15 +162,16 @@ pub fn BeadListPage() -> Element {
               h1 { "Beads" }
               div { class: "page-actions",
                   crate::beads::ExportButton {
-                      beads: Rc::new(bead_state.beads.iter().map(|b| b.as_ref().clone()).collect())
+                      beads: Rc::new(beads.read().iter().map(|b: &Rc<clarity_core::db::models::Bead>| b.as_ref().clone()).collect())
                   }
                   crate::beads::ImportButton {
-                      on_import_success: Callback::new({
+                      on_import_success: Callback::<usize>::new({
                           let clear_error = bead_actions.clear_error.clone();
-                          move |()| {
+                          move |count: usize| {
                               // Reload beads after import
                               // For now, just clear the error state - actual reload will happen on next render
                               // TODO: Implement proper async callback handling
+                              eprintln!("[BeadList] Imported {count} beads, reloading...");
                               clear_error();
                           }
                       })
@@ -145,9 +182,8 @@ pub fn BeadListPage() -> Element {
           // Show loading state
           {if loading_manager.read().is_loading_key("bead-list") {
               rsx! {
-                  Loading {
-                      size: LoadingSize::Medium,
-                      message: loading_manager.read().primary_message()
+                  div { class: "loading",
+                      p { "Loading..." }
                   }
               }
           } else {
@@ -156,10 +192,10 @@ pub fn BeadListPage() -> Element {
 
           // Show error state
           {error_state.read().as_ref().map(|error| {
-              let error_clone = error.clone();
+              let error_message = error.to_string();
               rsx! {
-                  ErrorDisplay {
-                      error: error_clone
+                  div { class: "error",
+                      p { "{error_message}" }
                   }
               }
           })}
@@ -226,7 +262,7 @@ pub fn BeadListPage() -> Element {
                       }
                   }
                   tbody {
-                      for bead in bead_state.beads.iter() {
+                      for bead in beads.read().iter() {
                           BeadRow {
                               id: bead.id,
                               title: bead.title.clone(),

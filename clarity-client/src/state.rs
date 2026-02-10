@@ -16,51 +16,6 @@ use std::rc::Rc;
 
 // ===== Domain State Types =====
 
-/// Immutable authentication state snapshot
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct AuthState {
-  /// Whether a user is currently authenticated
-  pub is_authenticated: bool,
-  /// Current user ID (if authenticated)
-  pub current_user: Option<String>,
-  /// Session token (if authenticated)
-  pub session_token: Option<String>,
-}
-
-impl AuthState {
-  /// Create a new unauthenticated state
-  #[must_use]
-  pub const fn unauthenticated() -> Self {
-    Self {
-      is_authenticated: false,
-      current_user: None,
-      session_token: None,
-    }
-  }
-
-  /// Create an authenticated state
-  #[must_use]
-  pub const fn authenticated(user_id: String, token: String) -> Self {
-    Self {
-      is_authenticated: true,
-      current_user: Some(user_id),
-      session_token: Some(token),
-    }
-  }
-
-  /// Clear authentication (logout)
-  #[must_use]
-  pub const fn clear(&self) -> Self {
-    Self::unauthenticated()
-  }
-}
-
-impl Default for AuthState {
-  fn default() -> Self {
-    Self::unauthenticated()
-  }
-}
-
 /// Immutable bead list state snapshot
 #[derive(Clone, Debug)]
 pub struct BeadState {
@@ -74,10 +29,14 @@ pub struct BeadState {
 
 impl PartialEq for BeadState {
   fn eq(&self, other: &Self) -> bool {
-    self.loading == other.loading &&
-    self.error == other.error &&
-    self.beads.len() == other.beads.len() &&
-    self.beads.iter().zip(other.beads.iter()).all(|(a, b)| Rc::ptr_eq(a, b))
+    self.loading == other.loading
+      && self.error == other.error
+      && self.beads.len() == other.beads.len()
+      && self
+        .beads
+        .iter()
+        .zip(other.beads.iter())
+        .all(|(a, b)| Rc::ptr_eq(a, b))
   }
 }
 
@@ -220,8 +179,6 @@ impl Default for UIState {
 /// It provides immutable getters and setters for state updates.
 #[derive(Clone)]
 pub struct AppState {
-  /// Authentication state signal
-  pub auth: Signal<AuthState>,
   /// Bead list state signal
   pub beads: Signal<BeadState>,
   /// UI state signal
@@ -233,43 +190,9 @@ impl AppState {
   #[must_use]
   pub fn new() -> Self {
     Self {
-      auth: Signal::new(AuthState::default()),
       beads: Signal::new(BeadState::default()),
       ui: Signal::new(UIState::default()),
     }
-  }
-
-  // ===== Auth State Accessors =====
-
-  /// Get the current auth state (immutable snapshot)
-  #[must_use]
-  pub fn auth(&self) -> AuthState {
-    self.auth.read().clone()
-  }
-
-  /// Check if user is authenticated
-  #[must_use]
-  pub fn is_authenticated(&self) -> bool {
-    self.auth.read().is_authenticated
-  }
-
-  /// Get the current user ID
-  #[must_use]
-  pub fn current_user(&self) -> Option<String> {
-    self.auth.read().current_user.clone()
-  }
-
-  /// Set authentication state (login)
-  pub fn set_auth(&self, user_id: String, token: String) {
-    let new_auth = AuthState::authenticated(user_id, token);
-    let mut auth = self.auth;
-    auth.set(new_auth);
-  }
-
-  /// Clear authentication state (logout)
-  pub fn clear_auth(&mut self) {
-    let new_auth = AuthState::unauthenticated();
-    self.auth.set(new_auth);
   }
 
   // ===== Bead State Accessors =====
@@ -391,7 +314,7 @@ impl Default for AppState {
 
 /// State persistence manager for saving/loading state to disk
 pub struct StatePersistence {
-  db_path: std::path::PathBuf,
+  _db_path: std::path::PathBuf,
 }
 
 impl StatePersistence {
@@ -407,55 +330,8 @@ impl StatePersistence {
     std::fs::create_dir_all(&app_dir)?;
 
     Ok(Self {
-      db_path: app_dir.join("state.json"),
+      _db_path: app_dir.join("state.json"),
     })
-  }
-
-  /// Save auth token to disk
-  ///
-  /// # Errors
-  /// Returns error if file write fails
-  pub fn save_auth_token(&self, token: &str) -> anyhow::Result<()> {
-    let auth_data = serde_json::json!({
-        "session_token": token,
-        "saved_at": chrono::Utc::now().to_rfc3339(),
-    });
-
-    let json = serde_json::to_string_pretty(&auth_data)?;
-    std::fs::write(&self.db_path, json)?;
-
-    Ok(())
-  }
-
-  /// Load auth token from disk
-  ///
-  /// # Errors
-  /// Returns error if file read or parse fails
-  pub fn load_auth_token(&self) -> anyhow::Result<Option<String>> {
-    if !self.db_path.exists() {
-      return Ok(None);
-    }
-
-    let content = std::fs::read_to_string(&self.db_path)?;
-    let data: serde_json::Value = serde_json::from_str(&content)?;
-
-    Ok(
-      data
-        .get("session_token")
-        .and_then(|v| v.as_str())
-        .map(String::from),
-    )
-  }
-
-  /// Clear saved auth token
-  ///
-  /// # Errors
-  /// Returns error if file deletion fails
-  pub fn clear_auth_token(&self) -> anyhow::Result<()> {
-    if self.db_path.exists() {
-      std::fs::remove_file(&self.db_path)?;
-    }
-    Ok(())
   }
 }
 
@@ -466,7 +342,7 @@ impl Default for StatePersistence {
     let app_dir = temp_dir.join("clarity");
     std::fs::create_dir_all(&app_dir).ok();
     Self {
-      db_path: app_dir.join("state.json"),
+      _db_path: app_dir.join("state.json"),
     }
   }
 }
@@ -474,29 +350,6 @@ impl Default for StatePersistence {
 #[cfg(test)]
 mod tests {
   use super::*;
-
-  #[test]
-  fn test_auth_state_default() {
-    let state = AuthState::default();
-    assert!(!state.is_authenticated);
-    assert!(state.current_user.is_none());
-    assert!(state.session_token.is_none());
-  }
-
-  #[test]
-  fn test_auth_state_authenticated() {
-    let state = AuthState::authenticated("user123".to_string(), "token456".to_string());
-    assert!(state.is_authenticated);
-    assert_eq!(state.current_user, Some("user123".to_string()));
-    assert_eq!(state.session_token, Some("token456".to_string()));
-  }
-
-  #[test]
-  fn test_auth_state_clear() {
-    let state = AuthState::authenticated("user123".to_string(), "token456".to_string());
-    let cleared = state.clear();
-    assert!(!cleared.is_authenticated);
-  }
 
   #[test]
   fn test_bead_state_empty() {

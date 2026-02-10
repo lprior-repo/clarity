@@ -25,10 +25,7 @@ use sqlx::{migrate::MigrateDatabase, sqlite::Sqlite, SqlitePool};
 pub async fn run_migrations(pool: &SqlitePool) -> DbResult<()> {
   // Use the migrate! macro which embeds migrations at compile time
   // The migrations should be in the migrations/ directory relative to the crate root
-  sqlx::migrate!()
-    .run(pool)
-    .await
-    .map_err(DbError::from)
+  sqlx::migrate!().run(pool).await.map_err(DbError::from)
 }
 
 /// Create a new `SQLite` database file and run migrations
@@ -150,7 +147,10 @@ mod tests {
       .execute(&pool)
       .await;
 
-    assert!(result.is_err(), "Should reject invalid priority (5) due to CHECK constraint");
+    assert!(
+      result.is_err(),
+      "Should reject invalid priority (5) due to CHECK constraint"
+    );
 
     pool.close().await;
   }

@@ -212,23 +212,19 @@ pub fn parse_json(json: &str) -> ImportResult<ParsedImport> {
   }
 
   // Validate and categorize beads
-  let (valid_beads, errors) = export
-    .beads
-    .into_iter()
-    .map(validate_exported_bead)
-    .fold(
-      (Vector::new(), Vector::new()),
-      |(mut ok, mut err), item| match item {
-        Ok(v) => {
-          ok = ok.push_back(v);
-          (ok, err)
-        }
-        Err(e) => {
-          err = err.push_back(e);
-          (ok, err)
-        }
-      },
-    );
+  let (valid_beads, errors) = export.beads.into_iter().map(validate_exported_bead).fold(
+    (Vector::new(), Vector::new()),
+    |(mut ok, mut err), item| match item {
+      Ok(v) => {
+        ok = ok.push_back(v);
+        (ok, err)
+      }
+      Err(e) => {
+        err = err.push_back(e);
+        (ok, err)
+      }
+    },
+  );
 
   Ok(ParsedImport::new(valid_beads, errors))
 }
@@ -384,10 +380,7 @@ pub fn preview_import(
 /// # Errors
 /// Returns `ImportError::InvalidDateFormat` if date parsing fails
 pub fn imported_to_domain(beads: Vector<ExportedBead>) -> ImportResult<Vector<Bead>> {
-  beads
-    .iter()
-    .map(exported_to_domain_bead)
-    .collect()
+  beads.iter().map(exported_to_domain_bead).collect()
 }
 
 /// Convert a single exported bead to domain bead

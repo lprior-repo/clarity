@@ -51,21 +51,19 @@ mod tests {
   async fn test_database_schema_creation() {
     let config = in_memory_config();
 
-  let pool = create_sqlite_pool(&config)
-    .await
-    .expect("Should create pool");
+    let pool = create_sqlite_pool(&config)
+      .await
+      .expect("Should create pool");
 
-  run_migrations(&pool)
-    .await
-    .expect("Should run migrations");
+    run_migrations(&pool).await.expect("Should run migrations");
 
-  // Verify tables exist
-  let result = sqlx::query("SELECT name FROM sqlite_master WHERE type='table' AND name='beads'")
-    .fetch_one(&pool)
-    .await;
+    // Verify tables exist
+    let result = sqlx::query("SELECT name FROM sqlite_master WHERE type='table' AND name='beads'")
+      .fetch_one(&pool)
+      .await;
 
-  assert!(result.is_ok(), "Should query sqlite_master");
+    assert!(result.is_ok(), "Should query sqlite_master");
 
-  pool.close().await;
-}
+    pool.close().await;
+  }
 }

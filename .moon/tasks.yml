@@ -145,14 +145,10 @@ tasks:
       cache: false
       runInCI: false
 
-  client:
-    command: "cargo run -p clarity-client"
-    description: "Run the Dioxus client"
-    deps:
-      - build-client
-    options:
-      cache: false
-      runInCI: false
+  # ============================================================================
+  # NOTE: The 'client' task is defined in clarity-client/.moon/tasks.yml
+  # to ensure it only runs once (not in all workspace projects)
+  # ============================================================================
 
   # ============================================================================
   # STAGE 6: FULL PIPELINE (CI)

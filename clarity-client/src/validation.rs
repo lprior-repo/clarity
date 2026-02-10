@@ -12,6 +12,7 @@
 
 use clarity_core::db::models::{BeadPriority, BeadStatus, BeadType};
 use thiserror::Error;
+use tracing::{debug, instrument, warn};
 
 /// Validation result type
 ///
@@ -138,9 +139,12 @@ pub trait FieldValidator<T> {
 /// - Required (non-empty)
 /// - Minimum 3 characters
 /// - Maximum 100 characters
-#[must_use] 
+#[must_use]
+#[instrument]
 pub fn validate_title(title: &str) -> ValidationResult<String> {
   let trimmed = title.trim();
+
+  debug!(original_len = title.len(), trimmed_len = trimmed.len(), "Validating title");
 
   let errors = [
     (trimmed.is_empty(), "Title is required"),
@@ -154,18 +158,26 @@ pub fn validate_title(title: &str) -> ValidationResult<String> {
     .map(|(_, msg)| ValidationError::Title(msg.to_string()))
     .collect::<Vec<_>>();
 
-  if validation_errors.is_empty() { ValidationResult::Valid(trimmed.to_string()) } else { ValidationResult::Invalid(validation_errors) }
+  if validation_errors.is_empty() {
+    debug!(title = %trimmed, "Title validation passed");
+    ValidationResult::Valid(trimmed.to_string())
+  } else {
+    warn!(error_count = validation_errors.len(), "Title validation failed");
+    ValidationResult::Invalid(validation_errors)
+  }
 }
 
 /// Description validation rules
 ///
 /// - Optional
 /// - Maximum 1000 characters if present
-#[must_use] 
+#[must_use]
 pub fn validate_description(description: &str) -> ValidationResult<Option<String>> {
   let trimmed = description.trim();
 
-  if trimmed.is_empty() { ValidationResult::Valid(None) } else {
+  if trimmed.is_empty() {
+    ValidationResult::Valid(None)
+  } else {
     let errors = [(
       trimmed.len() > 1000,
       "Description must be at most 1000 characters",
@@ -177,7 +189,11 @@ pub fn validate_description(description: &str) -> ValidationResult<Option<String
       .map(|(_, msg)| ValidationError::Description(msg.to_string()))
       .collect::<Vec<_>>();
 
-    if validation_errors.is_empty() { ValidationResult::Valid(Some(trimmed.to_string())) } else { ValidationResult::Invalid(validation_errors) }
+    if validation_errors.is_empty() {
+      ValidationResult::Valid(Some(trimmed.to_string()))
+    } else {
+      ValidationResult::Invalid(validation_errors)
+    }
   }
 }
 
@@ -198,11 +214,15 @@ pub fn validate_status(status: &str) -> ValidationResult<BeadStatus> {
 /// Priority validation rules
 ///
 /// - Must be between 1 and 3
-#[must_use] 
+#[must_use]
 pub fn validate_priority(priority: i16) -> ValidationResult<BeadPriority> {
-  if (1..=3).contains(&priority) { ValidationResult::Valid(BeadPriority(priority)) } else { ValidationResult::Invalid(vec![ValidationError::Priority(
-    "Priority must be between 1 and 3".to_string(),
-  )]) }
+  if (1..=3).contains(&priority) {
+    ValidationResult::Valid(BeadPriority(priority))
+  } else {
+    ValidationResult::Invalid(vec![ValidationError::Priority(
+      "Priority must be between 1 and 3".to_string(),
+    )])
+  }
 }
 
 /// Bead type validation rules
@@ -267,7 +287,9 @@ impl BeadFormData {
     .iter()
     .all(|v| *v);
 
-    if all_valid { ValidationResult::Valid(self.clone()) } else {
+    if all_valid {
+      ValidationResult::Valid(self.clone())
+    } else {
       let all_errors = [
         title_result.errors(),
         description_result.errors(),
@@ -514,7 +536,7 @@ mod tests {
   fn test_bead_form_data_validate_multiple_errors() {
     let form = BeadFormData {
       title: "ab".to_string(),          // Too short
-      description: "a".repeat(1001),   // Too long
+      description: "a".repeat(1001),    // Too long
       status: "invalid".to_string(),    // Invalid status
       priority: 5,                      // Invalid priority
       bead_type: "invalid".to_string(), // Invalid type

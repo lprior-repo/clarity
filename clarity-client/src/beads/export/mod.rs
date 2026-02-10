@@ -10,6 +10,7 @@ use clarity_core::import::{ConflictResolution, ImportPreview};
 use dioxus::prelude::*;
 use std::collections::HashSet;
 use std::rc::Rc;
+use tracing::{error, info, instrument};
 
 /// Export modal component properties
 #[derive(Clone, Props)]
@@ -23,8 +24,7 @@ pub struct ExportModalProps {
 // Manual PartialEq implementation since Signal doesn't implement PartialEq
 impl PartialEq for ExportModalProps {
   fn eq(&self, other: &Self) -> bool {
-    self.is_open == other.is_open
-      && std::rc::Rc::ptr_eq(&self.beads, &other.beads)
+    self.is_open == other.is_open && std::rc::Rc::ptr_eq(&self.beads, &other.beads)
   }
 }
 
@@ -71,8 +71,10 @@ pub fn ExportModal(props: ExportModalProps) -> Element {
       let beads_vec = (*beads).clone();
 
       dioxus::prelude::spawn(async move {
-        match tokio::task::spawn_blocking(move || clarity_core::export::export_beads(&beads_vec, format))
-          .await
+        match tokio::task::spawn_blocking(move || {
+          clarity_core::export::export_beads(&beads_vec, format)
+        })
+        .await
         {
           Ok(Ok(content)) => {
             // Trigger file download
@@ -191,8 +193,8 @@ pub fn ExportModal(props: ExportModalProps) -> Element {
 pub struct ImportModalProps {
   /// Whether the modal is open
   pub is_open: Signal<bool>,
-  /// Callback when import is successful
-  pub on_import_success: Callback<()>,
+  /// Callback when import is successful (passes the count of imported beads)
+  pub on_import_success: Callback<usize>,
 }
 
 // Manual PartialEq implementation since Signal and Callback don't implement PartialEq
@@ -211,10 +213,19 @@ impl Eq for ImportModalProps {}
 pub fn ImportModal(props: ImportModalProps) -> Element {
   let mut is_open = props.is_open;
   let on_import_success = props.on_import_success;
+
+  // Import source: None (not selected), Some("file"), or Some("cli")
+  let mut import_source = use_signal(|| Option::<String>::None);
+
+  // File import state
   let mut selected_file = use_signal(|| Option::<String>::None);
   let mut file_content = use_signal(|| Option::<String>::None);
   let mut import_format = use_signal(|| Option::<ExportFormat>::None);
-  let mut preview = use_signal(|| Option::<ImportPreview>::None);
+  let mut file_preview = use_signal(|| Option::<ImportPreview>::None);
+
+  // Beads CLI import state
+  let mut cli_preview = use_signal(|| Option::<crate::import::BeadsCliImportPreview>::None);
+
   let mut is_loading = use_signal(|| false);
   let mut import_error = use_signal(|| Option::<String>::None);
   let mut resolution = use_signal(|| ConflictResolution::Skip);
@@ -222,7 +233,7 @@ pub fn ImportModal(props: ImportModalProps) -> Element {
 
   let handle_file_select = move |_| {
     import_error.set(None);
-    preview.set(None);
+    file_preview.set(None);
 
     async move {
       match pick_file().await {
@@ -244,7 +255,7 @@ pub fn ImportModal(props: ImportModalProps) -> Element {
           if let Some(fmt) = format {
             is_loading.set(true);
             match generate_preview(&content, fmt).await {
-              Ok(p) => preview.set(Some(p)),
+              Ok(p) => file_preview.set(Some(p)),
               Err(e) => import_error.set(Some(format!("Failed to parse file: {e}"))),
             }
             is_loading.set(false);
@@ -264,29 +275,104 @@ pub fn ImportModal(props: ImportModalProps) -> Element {
     }
   };
 
+  let handle_cli_import = move |_| {
+    is_loading.set(true);
+    import_error.set(None);
+    cli_preview.set(None);
+
+    let mut cli_preview = cli_preview.clone();
+    let mut is_loading = is_loading.clone();
+    let mut import_error = import_error.clone();
+
+    dioxus::prelude::spawn(async move {
+      // Get existing bead titles for duplicate detection
+      let existing_titles_result = tokio::task::spawn_blocking(|| match crate::db::DesktopDb::new() {
+        Ok(db) => match db.list_beads_sync() {
+          Ok(beads) => Ok(beads.into_iter().map(|b: clarity_core::db::models::Bead| b.title).collect::<Vec<String>>()),
+          Err(e) => Err(format!("Failed to load existing beads: {e}")),
+        },
+        Err(e) => Err(format!("Failed to connect to database: {e}")),
+      })
+      .await;
+
+      let existing_titles = match existing_titles_result {
+        Ok(Ok(titles)) => rpds::Vector::from_iter(titles),
+        Ok(Err(e)) => {
+          import_error.set(Some(e));
+          is_loading.set(false);
+          return;
+        }
+        Err(_) => {
+          import_error.set(Some("Task failed".to_string()));
+          is_loading.set(false);
+          return;
+        }
+      };
+
+      // Import from beads CLI
+      match crate::import::import_from_beads_cli(
+        &crate::import::BeadsCliConfig::new(),
+        &existing_titles,
+      ) {
+        Ok(p) => {
+          cli_preview.set(Some(p));
+        }
+        Err(e) => {
+          import_error.set(Some(format!("Failed to load beads: {e}")));
+        }
+      }
+
+      is_loading.set(false);
+    });
+  };
+
   let handle_import = move |_| {
     is_importing.set(true);
     import_error.set(None);
 
-    let preview_data = preview.read().clone();
-    let resolution_strategy = *resolution.read();
+    let source = import_source.read().clone();
+    let on_import_success = on_import_success.clone();
+    let mut is_open = is_open;
 
     async move {
-      if let Some(p) = preview_data {
-        match execute_import(p, resolution_strategy).await {
-          Ok(count) => {
-            tracing::info!("Imported {count} beads");
-            on_import_success.call(());
-            is_open.set(false);
-          }
-          Err(e) => {
-            import_error.set(Some(format!("Import failed: {e}")));
+      match source.as_deref() {
+        Some("file") => {
+          let preview_data = file_preview.read().clone();
+          if let Some(p) = preview_data {
+            match execute_import(p, ConflictResolution::Skip).await {
+              Ok(count) => {
+                tracing::info!("Imported {count} beads from file");
+                on_import_success.call(count);
+                is_open.set(false);
+              }
+              Err(e) => {
+                import_error.set(Some(format!("Import failed: {e}")));
+              }
+            }
           }
         }
+        Some("cli") => {
+          let preview_data = cli_preview.read().clone();
+          if let Some(p) = preview_data {
+            match execute_beads_cli_import(p).await {
+              Ok(count) => {
+                tracing::info!("Imported {count} beads from Beads CLI");
+                on_import_success.call(count);
+                is_open.set(false);
+              }
+              Err(e) => {
+                import_error.set(Some(format!("Import failed: {e}")));
+              }
+            }
+          }
+        }
+        _ => {}
       }
       is_importing.set(false);
     }
   };
+
+  let has_any_preview = file_preview.read().is_some() || cli_preview.read().is_some();
 
   rsx! {
       div { class: "modal-overlay",
@@ -301,91 +387,94 @@ pub fn ImportModal(props: ImportModalProps) -> Element {
               }
 
               div { class: "modal-body",
-                  if selected_file.read().is_none() {
-                      div { class: "file-selection",
-                          p { "Select a file to import beads from." }
-                          button {
-                              class: "btn btn-primary",
-                              onclick: handle_file_select,
-                              "Select File"
+                  // Source selection screen
+                  if import_source.read().is_none() {
+                      div { class: "import-source-selection",
+                          p { "Choose where to import beads from:" }
+                          div { class: "import-options",
+                              div { class: "import-option",
+                                  h3 { "From File" }
+                                  p { "Import beads from a JSON or CSV file." }
+                                  button {
+                                      class: "btn btn-primary",
+                                      onclick: move |_| import_source.set(Some("file".to_string())),
+                                      "Select File"
+                                  }
+                              }
+                              div { class: "import-option",
+                                  h3 { "From Beads CLI" }
+                                  p { "Import beads from .beads/issues.jsonl (beads_rust CLI format)." }
+                                  button {
+                                      class: "btn btn-primary",
+                                      onclick: handle_cli_import,
+                                      "Load from Beads CLI"
+                                  }
+                              }
                           }
                       }
-                  } else {
-                      div { class: "import-preview",
-                          div { class: "file-info",
-                              p { strong { "File: " }
-                                  {selected_file.read().as_ref().map_or("", std::string::String::as_str)}
+                  }
+                  // File import flow
+                  else if import_source.read().as_deref() == Some("file") {
+                      if selected_file.read().is_none() {
+                          div { class: "file-selection",
+                              p { "Select a file to import beads from." }
+                              button {
+                                  class: "btn btn-primary",
+                                  onclick: handle_file_select,
+                                  "Select File"
                               }
-                              p { strong { "Format: " }
-                                  {import_format.read().map_or_else(|| "unknown".to_string(), |f| f.extension().to_string())}
+                              button {
+                                  class: "btn btn-secondary",
+                                  onclick: move |_| import_source.set(None),
+                                  "Back"
                               }
                           }
-
-                          if *is_loading.read() {
-                              div { class: "loading", "Parsing file..." }
-                          }
-
-                          if let Some(ref p) = *preview.read() {
-                              div { class: "preview-summary",
-                                  h3 { "Preview" }
-                                  div { class: "preview-stats",
-                                      div { class: "stat",
-                                          span { class: "stat-label", "To Add" }
-                                          span { class: "stat-value", "{p.to_add.len()}" }
-                                      }
-                                      div { class: "stat",
-                                          span { class: "stat-label", "To Replace" }
-                                          span { class: "stat-value", "{p.to_replace.len()}" }
-                                      }
-                                      div { class: "stat",
-                                          span { class: "stat-label", "To Merge" }
-                                          span { class: "stat-value", "{p.to_merge.len()}" }
-                                      }
-                                      div { class: "stat",
-                                          span { class: "stat-label", "To Skip" }
-                                          span { class: "stat-value", "{p.to_skip.len()}" }
-                                      }
+                      } else {
+                          div { class: "import-preview",
+                              div { class: "file-info",
+                                  p { strong { "File: " }
+                                      {selected_file.read().as_ref().map_or("", std::string::String::as_str)}
                                   }
+                                  p { strong { "Format: " }
+                                      {import_format.read().map_or_else(|| "unknown".to_string(), |f| f.extension().to_string())}
+                                  }
+                              }
 
-                                  if p.has_errors() {
-                                      details { class: "errors-details",
-                                          summary { "Errors ({p.errors.len()})" }
-                                          ul { class: "error-list",
-                                              for error in p.errors.iter() {
-                                                  li { "{error}" }
+                              if *is_loading.read() {
+                                  div { class: "loading", "Parsing file..." }
+                              }
+
+                              if let Some(ref p) = *file_preview.read() {
+                                  div { class: "preview-summary",
+                                      h3 { "Preview" }
+                                      div { class: "preview-stats",
+                                          div { class: "stat",
+                                              span { class: "stat-label", "To Add" }
+                                              span { class: "stat-value", "{p.to_add.len()}" }
+                                          }
+                                          div { class: "stat",
+                                              span { class: "stat-label", "To Skip" }
+                                              span { class: "stat-value", "{p.to_skip.len()}" }
+                                          }
+                                      }
+
+                                      if p.has_errors() {
+                                          details { class: "errors-details",
+                                              summary { "Errors ({p.errors.len()})" }
+                                              ul { class: "error-list",
+                                                  for error in p.errors.iter() {
+                                                      li { "{error}" }
+                                                  }
                                               }
                                           }
                                       }
                                   }
 
-                                  div { class: "conflict-resolution",
-                                      label { "Conflict Resolution" }
-                                      select {
-                                          value: match *resolution.read() {
-                                              ConflictResolution::Skip => "skip",
-                                              ConflictResolution::Replace => "replace",
-                                              ConflictResolution::Merge => "merge",
-                                          },
-                                          onchange: move |evt: Event<FormData>| {
-                                              let r = match evt.value().as_str() {
-                                                  "skip" => ConflictResolution::Skip,
-                                                  "replace" => ConflictResolution::Replace,
-                                                  "merge" => ConflictResolution::Merge,
-                                                  _ => ConflictResolution::Skip,
-                                              };
-                                              resolution.set(r);
-                                          },
-                                          option { value: "skip", "Skip existing beads" }
-                                          option { value: "replace", "Replace existing beads" }
-                                          option { value: "merge", "Merge with existing beads" }
-                                      }
+                                  button {
+                                      class: "btn btn-secondary btn-sm",
+                                      onclick: move |_| selected_file.set(None),
+                                      "Choose Different File"
                                   }
-                              }
-
-                              button {
-                                  class: "btn btn-secondary btn-sm",
-                                  onclick: move |_| selected_file.set(None),
-                                  "Choose Different File"
                               }
                           }
                       }
@@ -401,6 +490,67 @@ pub fn ImportModal(props: ImportModalProps) -> Element {
                           }
                       }
                   }
+                  // Beads CLI import flow
+                  else if import_source.read().as_deref() == Some("cli") {
+                      if *is_loading.read() {
+                          div { class: "loading",
+                              p { "Loading beads from .beads/issues.jsonl..." }
+                          }
+                      } else if let Some(ref error) = *import_error.read() {
+                          div { class: "error-message",
+                              "{error}"
+                              button {
+                                  class: "btn btn-secondary btn-sm",
+                                  onclick: move |_| import_error.set(None),
+                                  "Dismiss"
+                              }
+                              button {
+                                  class: "btn btn-secondary btn-sm",
+                                  onclick: move |_| import_source.set(None),
+                                  "Back"
+                              }
+                          }
+                      } else if let Some(ref p) = *cli_preview.read() {
+                          div { class: "import-preview",
+                              div { class: "preview-summary",
+                                  h3 { "Preview" }
+                                  div { class: "preview-stats",
+                                      div { class: "stat",
+                                          span { class: "stat-label", "To Add" }
+                                          span { class: "stat-value", "{p.to_add.len()}" }
+                                      }
+                                      div { class: "stat",
+                                          span { class: "stat-label", "To Skip (Duplicates)" }
+                                          span { class: "stat-value", "{p.to_skip.len()}" }
+                                      }
+                                  }
+
+                                  if p.has_errors() {
+                                      details { class: "errors-details",
+                                          summary { "Errors ({p.errors.len()})" }
+                                          ul { class: "error-list",
+                                              for error in p.errors.iter() {
+                                                  li { "{error}" }
+                                              }
+                                          }
+                                      }
+                                  }
+
+                                  if p.to_add.is_empty() && p.to_skip.is_empty() {
+                                      p { class: "info-message",
+                                          "No new beads to import. All beads from the Beads CLI already exist."
+                                      }
+                                  }
+                              }
+
+                              button {
+                                  class: "btn btn-secondary btn-sm",
+                                  onclick: move |_| import_source.set(None),
+                                  "Back"
+                              }
+                          }
+                      }
+                  }
               }
 
               div { class: "modal-footer",
@@ -409,7 +559,7 @@ pub fn ImportModal(props: ImportModalProps) -> Element {
                       onclick: move |_| is_open.set(false),
                       "Cancel"
                   }
-                  if preview.read().is_some() {
+                  if has_any_preview {
                       button {
                           class: "btn btn-primary",
                           disabled: *is_importing.read(),
@@ -472,8 +622,8 @@ pub fn ExportButton(props: ExportButtonProps) -> Element {
 /// Import button component properties
 #[derive(Clone, Props)]
 pub struct ImportButtonProps {
-  /// Callback when import is successful
-  pub on_import_success: Callback<()>,
+  /// Callback when import is successful (passes the count of imported beads)
+  pub on_import_success: Callback<usize>,
 }
 
 // Manual PartialEq implementation since Callback doesn't implement PartialEq
@@ -584,11 +734,15 @@ async fn generate_preview(content: &str, format: ExportFormat) -> Result<ImportP
 ///
 /// # Errors
 /// Returns error if import fails
+#[instrument(skip(preview), fields(to_add = preview.to_add.len(), to_replace = preview.to_replace.len(), to_merge = preview.to_merge.len()))]
 async fn execute_import(
   preview: ImportPreview,
   _resolution: ConflictResolution,
 ) -> Result<usize, String> {
   use rpds::Vector;
+  use tracing::{error, info};
+
+  info!("Starting file import execution");
 
   // Collect all beads to import based on resolution
   let to_import: Vector<_> = preview
@@ -600,12 +754,18 @@ async fn execute_import(
     .collect();
 
   if to_import.is_empty() {
+    info!("No beads to import");
     return Ok(0);
   }
 
+  info!(total_to_import = to_import.len(), "Converting beads for import");
+
   // Convert to NewBeads
   let new_beads =
-    clarity_core::import::imported_to_new_beads(to_import).map_err(|e| e.to_string())?;
+    clarity_core::import::imported_to_new_beads(to_import).map_err(|e| {
+      error!(error = %e, "Failed to convert imported beads");
+      e.to_string()
+    })?;
 
   // Convert to Vec to avoid Rc issues with spawn_blocking
   let beads_vec: Vec<_> = new_beads.iter().cloned().collect();
@@ -629,15 +789,20 @@ async fn execute_import(
       match db.create_bead_sync(bead_for_db) {
         Ok(_) => imported += 1,
         Err(e) => {
-          tracing::error!("Failed to import bead: {e}");
+          error!(error = %e, title = %new_bead.title, "Failed to import bead");
         }
       }
     }
 
+    info!(imported, total_attempted = beads_vec.len(), "File import execution complete");
+
     Ok(imported)
   })
   .await
-  .map_err(|e| format!("Task failed: {e}"))?
+  .map_err(|e| {
+    error!(error = %e, "Spawn blocking task failed");
+    format!("Task failed: {e}")
+  })?
 }
 
 #[cfg(test)]
@@ -656,4 +821,61 @@ mod tests {
     assert_eq!(format!("{:?}", ConflictResolution::Replace), "Replace");
     assert_eq!(format!("{:?}", ConflictResolution::Merge), "Merge");
   }
+}
+
+/// Execute import from Beads CLI
+///
+/// # Errors
+/// Returns error if import fails
+#[instrument(skip(preview), fields(to_add = preview.to_add.len(), to_skip = preview.to_skip.len()))]
+async fn execute_beads_cli_import(
+  preview: crate::import::BeadsCliImportPreview,
+) -> Result<usize, String> {
+  use tracing::{error, info};
+
+  info!("Starting Beads CLI import execution");
+
+  // Convert to Vec to avoid Rc issues with spawn_blocking
+  let beads_vec: Vec<_> = preview.to_add.iter().cloned().collect();
+
+  if beads_vec.is_empty() {
+    info!("No beads to import from Beads CLI");
+    return Ok(0);
+  }
+
+  info!(total_to_import = beads_vec.len(), "Importing beads from Beads CLI");
+
+  // Import to database
+  tokio::task::spawn_blocking(move || {
+    let db = crate::db::DesktopDb::new().map_err(|e| format!("Database error: {e}"))?;
+
+    let mut imported = 0;
+    for new_bead in &beads_vec {
+      // Clone the bead to avoid move issues
+      let bead_for_db = clarity_core::db::models::NewBead {
+        title: new_bead.title.clone(),
+        description: new_bead.description.clone(),
+        status: new_bead.status,
+        priority: new_bead.priority,
+        bead_type: new_bead.bead_type,
+        created_by: new_bead.created_by,
+      };
+
+      match db.create_bead_sync(bead_for_db) {
+        Ok(_) => imported += 1,
+        Err(e) => {
+          error!(error = %e, title = %new_bead.title, "Failed to import bead from Beads CLI");
+        }
+      }
+    }
+
+    info!(imported, total_attempted = beads_vec.len(), "Beads CLI import execution complete");
+
+    Ok(imported)
+  })
+  .await
+  .map_err(|e| {
+    error!(error = %e, "Spawn blocking task failed");
+    format!("Task failed: {e}")
+  })?
 }

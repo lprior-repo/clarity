@@ -643,6 +643,7 @@ impl Eq for SubmitHandlerProps {}
 #[component]
 fn SubmitHandler(props: SubmitHandlerProps) -> Element {
   let mut is_done = use_signal(|| false);
+  let mut has_started = use_signal(|| false);
   let mode = props.mode;
   let title = props.title;
   let description = props.description;
@@ -650,9 +651,21 @@ fn SubmitHandler(props: SubmitHandlerProps) -> Element {
   let bead_type = props.bead_type;
   let priority = props.priority;
   let on_complete = props.on_complete;
-  let result = use_signal(|| {
+  let mut result = use_signal(|| Option::<Result<String, String>>::None);
+
+  // Start submission on mount
+  use_effect(move || {
+    if *has_started.read() {
+      return;
+    }
+    has_started.set(true);
+
+    // Validate title
     if title.is_empty() {
-      return Err("Title is required".to_string());
+      is_done.set(true);
+      result.set(Some(Err("Title is required".to_string())));
+      on_complete.call(Err("Title is required".to_string()));
+      return;
     }
 
     let bead_status = match status.as_str() {
@@ -661,7 +674,13 @@ fn SubmitHandler(props: SubmitHandlerProps) -> Element {
       "blocked" => BeadStatus::Blocked,
       "deferred" => BeadStatus::Deferred,
       "closed" => BeadStatus::Closed,
-      _ => return Err(format!("Invalid status: {status}")),
+      _ => {
+        let error = format!("Invalid status: {status}");
+        is_done.set(true);
+        result.set(Some(Err(error.clone())));
+        on_complete.call(Err(error));
+        return;
+      }
     };
 
     let new_bead_type = match bead_type.as_str() {
@@ -670,15 +689,21 @@ fn SubmitHandler(props: SubmitHandlerProps) -> Element {
       "refactor" => BeadType::Refactor,
       "test" => BeadType::Test,
       "docs" => BeadType::Docs,
-      _ => return Err(format!("Invalid type: {bead_type}")),
+      _ => {
+        let error = format!("Invalid type: {bead_type}");
+        is_done.set(true);
+        result.set(Some(Err(error.clone())));
+        on_complete.call(Err(error));
+        return;
+      }
     };
 
     let new_bead = NewBead {
-      title,
+      title: title.clone(),
       description: if description.is_empty() {
         None
       } else {
-        Some(description)
+        Some(description.clone())
       },
       status: bead_status,
       priority: BeadPriority(priority),
@@ -686,45 +711,58 @@ fn SubmitHandler(props: SubmitHandlerProps) -> Element {
       created_by: None,
     };
 
-    let result = match mode {
-      FormMode::Create => try_create_bead(new_bead),
-      FormMode::Edit(id) => match BeadId::from_str(&id) {
-        Ok(bead_id) => try_update_bead(bead_id, new_bead),
-        Err(e) => Err(format!("Invalid bead ID: {e}")),
-      },
-    };
+    let mode = mode.clone();
+    let mut result_signal = result.clone();
+    let mut is_done_signal = is_done.clone();
+    let on_complete = on_complete.clone();
 
-    result.map(|bead| bead.id.to_string())
+    spawn(async move {
+      eprintln!("[SubmitHandler] Saving bead: {}", new_bead.title);
+      let save_result = match mode {
+        FormMode::Create => try_create_bead_async(new_bead).await,
+        FormMode::Edit(id) => match BeadId::from_str(&id) {
+          Ok(bead_id) => try_update_bead_async(bead_id, new_bead).await,
+          Err(e) => Err(format!("Invalid bead ID: {e}")),
+        },
+      };
+
+      match save_result {
+        Ok(bead) => {
+          eprintln!("[SubmitHandler] Successfully saved bead: {}", bead.id);
+          let bead_id = bead.id.to_string();
+          is_done_signal.set(true);
+          result_signal.set(Some(Ok(bead_id.clone())));
+          on_complete.call(Ok(bead_id));
+        }
+        Err(e) => {
+          eprintln!("[SubmitHandler] Error saving bead: {:?}", e);
+          is_done_signal.set(true);
+          result_signal.set(Some(Err(e.clone())));
+          on_complete.call(Err(e));
+        }
+      }
+    });
   });
 
   rsx! {
       {match &*result.read() {
-          Err(e) => {
-              if !*is_done.read() {
-                  is_done.set(true);
-                  on_complete.call(Err(e.clone()));
+          None => rsx! {
+              div { class: "saving", "Saving..." }
+          },
+          Some(Err(e)) => rsx! {
+              div { class: "error",
+                  "Error: {e}"
               }
-              rsx! {
-                  div { class: "error",
-                      "Error: {e}"
+          },
+          Some(Ok(bead_id)) => rsx! {
+              div { class: "success",
+                  "Bead saved successfully! "
+                  crate::app::NavLink {
+                      to: crate::app::Route::BeadDetail { id: bead_id.clone() },
+                      "View bead"
                   }
               }
-          }
-          Ok(bead_id) => {
-              if !*is_done.read() {
-                  is_done.set(true);
-                  on_complete.call(Ok(bead_id.clone()));
-              }
-              rsx! {
-                  div { class: "success",
-                      "Bead saved successfully! "
-                      crate::app::NavLink {
-                          to: crate::app::Route::BeadDetail { id: bead_id.clone() },
-                          "View bead"
-                      }
-                  }
-              }
-          }
+          },
       }}
   }
 }
@@ -749,52 +787,41 @@ mod tests {
   }
 }
 
-/// Helper function to load a bead from the database
-///
-/// This function attempts to initialize the database and load a bead by ID.
-#[allow(dead_code)]
-fn try_load_bead(id: BeadId) -> Result<Bead, String> {
-  let db =
-    crate::db::DesktopDb::new().map_err(|e| format!("Failed to initialize database: {e}"))?;
-
-  db.get_bead_sync(id)
-    .map_err(|e| format!("Failed to load bead: {e}"))
-}
-
 /// Async helper function to load a bead from the database
 ///
 /// This function attempts to initialize the database and load a bead by ID asynchronously.
 async fn try_load_bead_async(id: BeadId) -> Result<Bead, String> {
-  let db = crate::db::DesktopDb::new()
+  let db = crate::db::DesktopDb::new_async()
+    .await
     .map_err(|e| format!("Failed to initialize database: {e}"))?;
 
-  // Use the sync method in a blocking task
-  tokio::task::spawn_blocking(move || {
-    db.get_bead_sync(id)
-  })
-  .await
-  .map_err(|e| format!("Task join error: {e}"))?
-  .map_err(|e| format!("Failed to load bead: {e}"))
+  db.get_bead(id)
+    .await
+    .map_err(|e| format!("Failed to load bead: {e}"))
 }
 
-/// Helper function to create a bead in the database
+/// Async helper function to create a bead in the database
 ///
 /// This function attempts to initialize the database and create a new bead.
-fn try_create_bead(bead: NewBead) -> Result<Bead, String> {
-  let db =
-    crate::db::DesktopDb::new().map_err(|e| format!("Failed to initialize database: {e}"))?;
+async fn try_create_bead_async(bead: NewBead) -> Result<Bead, String> {
+  let db = crate::db::DesktopDb::new_async()
+    .await
+    .map_err(|e| format!("Failed to initialize database: {e}"))?;
 
-  db.create_bead_sync(bead)
+  db.create_bead(bead)
+    .await
     .map_err(|e| format!("Failed to create bead: {e}"))
 }
 
-/// Helper function to update a bead in the database
+/// Async helper function to update a bead in the database
 ///
 /// This function attempts to initialize the database and update an existing bead.
-fn try_update_bead(id: BeadId, bead: NewBead) -> Result<Bead, String> {
-  let db =
-    crate::db::DesktopDb::new().map_err(|e| format!("Failed to initialize database: {e}"))?;
+async fn try_update_bead_async(id: BeadId, bead: NewBead) -> Result<Bead, String> {
+  let db = crate::db::DesktopDb::new_async()
+    .await
+    .map_err(|e| format!("Failed to initialize database: {e}"))?;
 
-  db.update_bead_sync(id, bead)
+  db.update_bead(id, bead)
+    .await
     .map_err(|e| format!("Failed to update bead: {e}"))
 }

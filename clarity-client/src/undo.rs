@@ -54,17 +54,17 @@ pub struct CreateBeadCommand {
 
 impl PartialEq for CreateBeadCommand {
   fn eq(&self, other: &Self) -> bool {
-    Rc::ptr_eq(&self.db, &other.db) &&
-    self.bead.title == other.bead.title &&
-    self.bead.description == other.bead.description &&
-    self.bead.status == other.bead.status &&
-    self.bead.priority == other.bead.priority &&
-    self.bead.bead_type == other.bead.bead_type &&
-    match (&self.created_bead, &other.created_bead) {
-      (None, None) => true,
-      (Some(a), Some(b)) => Rc::ptr_eq(a, b),
-      _ => false,
-    }
+    Rc::ptr_eq(&self.db, &other.db)
+      && self.bead.title == other.bead.title
+      && self.bead.description == other.bead.description
+      && self.bead.status == other.bead.status
+      && self.bead.priority == other.bead.priority
+      && self.bead.bead_type == other.bead.bead_type
+      && match (&self.created_bead, &other.created_bead) {
+        (None, None) => true,
+        (Some(a), Some(b)) => Rc::ptr_eq(a, b),
+        _ => false,
+      }
   }
 }
 
@@ -114,14 +114,14 @@ pub struct UpdateBeadCommand {
 
 impl PartialEq for UpdateBeadCommand {
   fn eq(&self, other: &Self) -> bool {
-    self.id == other.id &&
-    Rc::ptr_eq(&self.db, &other.db) &&
-    Rc::ptr_eq(&self.old, &other.old) &&
-    self.new.title == other.new.title &&
-    self.new.description == other.new.description &&
-    self.new.status == other.new.status &&
-    self.new.priority == other.new.priority &&
-    self.new.bead_type == other.new.bead_type
+    self.id == other.id
+      && Rc::ptr_eq(&self.db, &other.db)
+      && Rc::ptr_eq(&self.old, &other.old)
+      && self.new.title == other.new.title
+      && self.new.description == other.new.description
+      && self.new.status == other.new.status
+      && self.new.priority == other.new.priority
+      && self.new.bead_type == other.new.bead_type
   }
 }
 
@@ -162,8 +162,7 @@ pub struct DeleteBeadCommand {
 
 impl PartialEq for DeleteBeadCommand {
   fn eq(&self, other: &Self) -> bool {
-    Rc::ptr_eq(&self.db, &other.db) &&
-    Rc::ptr_eq(&self.bead, &other.bead)
+    Rc::ptr_eq(&self.db, &other.db) && Rc::ptr_eq(&self.bead, &other.bead)
   }
 }
 
@@ -233,11 +232,19 @@ pub struct UndoStack {
 
 impl PartialEq for UndoStack {
   fn eq(&self, other: &Self) -> bool {
-    self.max_size == other.max_size &&
-    self.undo_stack.len() == other.undo_stack.len() &&
-    self.redo_stack.len() == other.redo_stack.len() &&
-    self.undo_stack.iter().zip(other.undo_stack.iter()).all(|(a, b)| Rc::ptr_eq(a, b)) &&
-    self.redo_stack.iter().zip(other.redo_stack.iter()).all(|(a, b)| Rc::ptr_eq(a, b))
+    self.max_size == other.max_size
+      && self.undo_stack.len() == other.undo_stack.len()
+      && self.redo_stack.len() == other.redo_stack.len()
+      && self
+        .undo_stack
+        .iter()
+        .zip(other.undo_stack.iter())
+        .all(|(a, b)| Rc::ptr_eq(a, b))
+      && self
+        .redo_stack
+        .iter()
+        .zip(other.redo_stack.iter())
+        .all(|(a, b)| Rc::ptr_eq(a, b))
   }
 }
 
@@ -307,7 +314,12 @@ impl UndoStack {
     let message = command.undo()?;
 
     // Move command from undo to redo stack
-    let undo_stack = self.undo_stack.iter().take(self.undo_stack.len() - 1).cloned().collect::<Vector<_>>();
+    let undo_stack = self
+      .undo_stack
+      .iter()
+      .take(self.undo_stack.len() - 1)
+      .cloned()
+      .collect::<Vector<_>>();
     let redo_stack = self.redo_stack.push_back(command);
 
     Ok((
@@ -343,7 +355,12 @@ impl UndoStack {
     let message = command.execute()?;
 
     // Move command from redo to undo stack
-    let redo_stack = self.redo_stack.iter().take(self.redo_stack.len() - 1).cloned().collect::<Vector<_>>();
+    let redo_stack = self
+      .redo_stack
+      .iter()
+      .take(self.redo_stack.len() - 1)
+      .cloned()
+      .collect::<Vector<_>>();
     let undo_stack = self.undo_stack.push_back(command);
 
     Ok((
@@ -472,9 +489,10 @@ mod tests {
 
   impl DatabaseAccess for MockDatabase {
     fn create_bead(&self, bead: NewBead) -> DbResult<Bead> {
-      let mut beads = self.beads.lock().map_err(|e| {
-        clarity_core::db::error::DbError::Validation(format!("Lock poisoned: {e}"))
-      })?;
+      let mut beads = self
+        .beads
+        .lock()
+        .map_err(|e| clarity_core::db::error::DbError::Validation(format!("Lock poisoned: {e}")))?;
       let id = BeadId::new();
       let now = chrono::Utc::now();
       let new_bead = Bead {
@@ -493,9 +511,10 @@ mod tests {
     }
 
     fn update_bead(&self, id: BeadId, bead: NewBead) -> DbResult<Bead> {
-      let mut beads = self.beads.lock().map_err(|e| {
-        clarity_core::db::error::DbError::Validation(format!("Lock poisoned: {e}"))
-      })?;
+      let mut beads = self
+        .beads
+        .lock()
+        .map_err(|e| clarity_core::db::error::DbError::Validation(format!("Lock poisoned: {e}")))?;
       let pos = beads
         .iter()
         .position(|b| b.id == id)
@@ -519,9 +538,10 @@ mod tests {
     }
 
     fn delete_bead(&self, id: BeadId) -> DbResult<()> {
-      let mut beads = self.beads.lock().map_err(|e| {
-        clarity_core::db::error::DbError::Validation(format!("Lock poisoned: {e}"))
-      })?;
+      let mut beads = self
+        .beads
+        .lock()
+        .map_err(|e| clarity_core::db::error::DbError::Validation(format!("Lock poisoned: {e}")))?;
       let pos = beads
         .iter()
         .position(|b| b.id == id)
@@ -540,13 +560,13 @@ mod tests {
     assert_eq!(stack.undo_count(), 0);
     assert_eq!(stack.redo_count(), 0);
   }
-  
+
   #[test]
   fn test_undo_stack_with_max_size() {
     let stack = UndoStack::with_max_size(50);
     assert_eq!(stack.max_size, 50);
   }
-  
+
   #[test]
   fn test_undo_stack_clear() {
     let db = Rc::new(MockDatabase::new()) as Rc<dyn DatabaseAccess>;
@@ -558,19 +578,19 @@ mod tests {
       bead_type: BeadType::Feature,
       created_by: None,
     };
-  
+
     // Create a test bead first
     let created = db.create_bead(bead.clone()).unwrap();
     let command = Rc::new(DeleteBeadCommand::new(db.clone(), Rc::new(created)));
-  
+
     let stack = UndoStack::new().push_command(command);
     assert!(stack.can_undo());
-  
+
     let cleared = stack.clear();
     assert!(!cleared.can_undo());
     assert!(!cleared.can_redo());
   }
-  
+
   #[test]
   fn test_undo_peek() {
     let db = Rc::new(MockDatabase::new()) as Rc<dyn DatabaseAccess>;
@@ -582,19 +602,19 @@ mod tests {
       bead_type: BeadType::Feature,
       created_by: None,
     };
-  
+
     let created = db.create_bead(bead).unwrap();
     let command = Rc::new(DeleteBeadCommand::new(db, Rc::new(created)));
-  
+
     let stack = UndoStack::new().push_command(command);
-  
+
     assert_eq!(
       stack.peek_undo(),
       Some("Delete bead: Test Bead".to_string())
     );
     assert_eq!(stack.peek_redo(), None);
   }
-  
+
   #[test]
   fn test_delete_command_describe() {
     let db = Rc::new(MockDatabase::new()) as Rc<dyn DatabaseAccess>;
@@ -604,39 +624,39 @@ mod tests {
       status: BeadStatus::Open,
       priority: BeadPriority::MEDIUM,
       bead_type: BeadType::Feature,
-        created_by: None,
-      };
-  
-      let created = db.create_bead(bead).unwrap();
-      let command = DeleteBeadCommand::new(db, Rc::new(created));
-  
-      assert_eq!(command.describe(), "Delete bead: My Bead");
-    }
-  
-    #[test]
-    fn test_update_command_describe() {
-      let db = Rc::new(MockDatabase::new()) as Rc<dyn DatabaseAccess>;
-      let bead = NewBead {
-        title: "Original".to_string(),
-        description: None,
-        status: BeadStatus::Open,
-        priority: BeadPriority::MEDIUM,
-        bead_type: BeadType::Feature,
-        created_by: None,
-      };
-  
-      let created = db.create_bead(bead).unwrap();
-      let updated = NewBead {
-        title: "Updated".to_string(),
-        description: Some("New desc".to_string()),
-        status: BeadStatus::Closed,
-        priority: BeadPriority::HIGH,
-        bead_type: BeadType::Bugfix,
-        created_by: None,
-      };
-  
-      let command = UpdateBeadCommand::new(db, created.id, Rc::new(created), updated);
-  
-      assert_eq!(command.describe(), "Update bead: Original");
-    }
+      created_by: None,
+    };
+
+    let created = db.create_bead(bead).unwrap();
+    let command = DeleteBeadCommand::new(db, Rc::new(created));
+
+    assert_eq!(command.describe(), "Delete bead: My Bead");
+  }
+
+  #[test]
+  fn test_update_command_describe() {
+    let db = Rc::new(MockDatabase::new()) as Rc<dyn DatabaseAccess>;
+    let bead = NewBead {
+      title: "Original".to_string(),
+      description: None,
+      status: BeadStatus::Open,
+      priority: BeadPriority::MEDIUM,
+      bead_type: BeadType::Feature,
+      created_by: None,
+    };
+
+    let created = db.create_bead(bead).unwrap();
+    let updated = NewBead {
+      title: "Updated".to_string(),
+      description: Some("New desc".to_string()),
+      status: BeadStatus::Closed,
+      priority: BeadPriority::HIGH,
+      bead_type: BeadType::Bugfix,
+      created_by: None,
+    };
+
+    let command = UpdateBeadCommand::new(db, created.id, Rc::new(created), updated);
+
+    assert_eq!(command.describe(), "Update bead: Original");
+  }
 }

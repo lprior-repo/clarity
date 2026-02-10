@@ -5,7 +5,6 @@
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
-
 // Form validation hook
 //
 // Provides real-time debounced validation for form fields.
@@ -181,9 +180,7 @@ pub fn use_form_validation() -> (
             let field_name = error.field_name().to_string();
             let message = error.message().to_string();
 
-            let state = error_map
-              .entry(field_name.clone())
-              .or_default();
+            let state = error_map.entry(field_name.clone()).or_default();
 
             // Preserve touched state from existing errors
             if let Some(existing) = field_errors.read().get(&field_name) {
