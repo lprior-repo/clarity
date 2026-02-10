@@ -83,19 +83,19 @@ struct BeadsCliIssue {
   #[serde(rename = "issue_type")]
   issue_type: String,
   /// Creation timestamp (ISO 8601)
-  created_at: String,
+  _created_at: String,
   /// Creator username
   #[serde(default)]
-  created_by: Option<String>,
+  _created_by: Option<String>,
   /// Last update timestamp (ISO 8601)
   #[serde(default)]
-  updated_at: Option<String>,
+  _updated_at: Option<String>,
   /// Closure timestamp (ISO 8601)
   #[serde(default)]
-  closed_at: Option<String>,
+  _closed_at: Option<String>,
   /// Source repository
   #[serde(default)]
-  source_repo: Option<String>,
+  _source_repo: Option<String>,
 }
 
 /// Import preview showing what will be imported
@@ -399,20 +399,28 @@ mod tests {
       status: "open".to_string(),
       priority: 1,
       issue_type: "feature".to_string(),
-      created_at: "2024-01-01T00:00:00Z".to_string(),
-      created_by: Some("lewis".to_string()),
-      updated_at: None,
-      closed_at: None,
-      source_repo: None,
+      _created_at: "2024-01-01T00:00:00Z".to_string(),
+      _created_by: Some("lewis".to_string()),
+      _updated_at: None,
+      _closed_at: None,
+      _source_repo: None,
     };
 
-    let bead = map_issue_to_bead(issue, 1).expect("Should map valid issue");
+    let result = map_issue_to_bead(issue, 1);
+    assert!(result.is_ok(), "Should map valid issue");
+    let bead = result.map_err(|e| panic!("Expected Ok, got Err: {e:?}"));
+    let bead = match bead {
+      Ok(b) => b,
+      Err(e) => panic!("Expected Ok, got Err: {e:?}"),
+    };
     assert_eq!(bead.title, "Test Issue");
     assert_eq!(bead.status, BeadStatus::Open);
     assert_eq!(bead.bead_type, BeadType::Feature);
     assert_eq!(bead.priority, BeadPriority::HIGH);
     assert!(bead.description.is_some());
-    assert!(bead.description.unwrap().contains("Imported from beads_rust issue"));
+    let contains_import = bead.description.as_ref()
+      .map_or(false, |d| d.contains("Imported from beads_rust issue"));
+    assert!(contains_import);
   }
 
   #[test]
@@ -424,14 +432,18 @@ mod tests {
       status: "closed".to_string(),
       priority: 1,
       issue_type: "bug".to_string(),
-      created_at: "2024-01-01T00:00:00Z".to_string(),
-      created_by: None,
-      updated_at: Some("2024-01-02T00:00:00Z".to_string()),
-      closed_at: Some("2024-01-02T00:00:00Z".to_string()),
-      source_repo: Some(".".to_string()),
+      _created_at: "2024-01-01T00:00:00Z".to_string(),
+      _created_by: None,
+      _updated_at: Some("2024-01-02T00:00:00Z".to_string()),
+      _closed_at: Some("2024-01-02T00:00:00Z".to_string()),
+      _source_repo: Some(".".to_string()),
     };
 
-    let bead = map_issue_to_bead(issue, 1).expect("Should map closed bug");
+    let result = map_issue_to_bead(issue, 1);
+    let bead = match result {
+      Ok(b) => b,
+      Err(e) => panic!("Expected Ok, got Err: {e:?}"),
+    };
     assert_eq!(bead.status, BeadStatus::Closed);
     assert_eq!(bead.bead_type, BeadType::Bugfix);
   }
@@ -445,11 +457,11 @@ mod tests {
       status: "invalid_status".to_string(),
       priority: 2,
       issue_type: "feature".to_string(),
-      created_at: "2024-01-01T00:00:00Z".to_string(),
-      created_by: None,
-      updated_at: None,
-      closed_at: None,
-      source_repo: None,
+      _created_at: "2024-01-01T00:00:00Z".to_string(),
+      _created_by: None,
+      _updated_at: None,
+      _closed_at: None,
+      _source_repo: None,
     };
 
     let result = map_issue_to_bead(issue, 1);
@@ -458,7 +470,8 @@ mod tests {
       Err(BeadsCliImportError::InvalidData { field, .. }) => {
         assert_eq!(field, "status");
       }
-      _ => panic!("Expected InvalidData error"),
+      Ok(_) => panic!("Expected InvalidData error, got Ok"),
+      Err(e) => panic!("Expected InvalidData error, got: {e:?}"),
     }
   }
 

@@ -6,14 +6,14 @@ use std::convert::Infallible;
 #[test]
 fn test_client_result_error_handling() {
   let result: Result<i32, Infallible> = Ok(42);
-  let value = result.unwrap_or(0);
+  let value = result.map_or(0, |v| v);
   assert_eq!(value, 42);
 }
 
 #[test]
 fn test_client_option_none_handling() {
   let option: Option<i32> = None;
-  let value = option.unwrap_or(0);
+  let value = option.map_or(0, |v| v);
   assert_eq!(value, 0);
 }
 
@@ -27,13 +27,13 @@ fn test_client_result_with_expected_error() {
 fn test_client_result_with_ok_value() {
   let result: Result<i32, String> = Ok(42);
   assert!(result.is_ok());
-  assert_eq!(result.unwrap_or(0), 42);
+  assert_eq!(result.map_or(0, |v| v), 42);
 }
 
 #[test]
 fn test_client_option_some_handling() {
   let option: Option<i32> = Some(42);
-  let value = option.unwrap_or(0);
+  let value = option.map_or(0, |v| v);
   assert_eq!(value, 42);
 }
 

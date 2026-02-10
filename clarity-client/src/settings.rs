@@ -75,7 +75,7 @@ impl BackupFrequency {
     match self {
       Self::Hourly => Some(Duration::from_secs(3600)),
       Self::Daily => Some(Duration::from_secs(86400)),
-      Self::Weekly => Some(Duration::from_secs(604800)),
+      Self::Weekly => Some(Duration::from_secs(604_800)),
       Self::Never => None,
     }
   }
@@ -374,7 +374,7 @@ mod tests {
     );
     assert_eq!(
       BackupFrequency::Weekly.as_duration(),
-      Some(Duration::from_secs(604800))
+      Some(Duration::from_secs(604_800))
     );
     assert_eq!(BackupFrequency::Never.as_duration(), None);
   }

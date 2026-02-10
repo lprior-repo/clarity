@@ -10,7 +10,7 @@ use clarity_core::import::{ConflictResolution, ImportPreview};
 use dioxus::prelude::*;
 use std::collections::HashSet;
 use std::rc::Rc;
-use tracing::{error, info, instrument};
+use tracing::instrument;
 
 /// Export modal component properties
 #[derive(Clone, Props)]
@@ -45,15 +45,13 @@ pub fn ExportModal(props: ExportModalProps) -> Element {
   let handle_export = {
     let beads = beads.clone();
     let selected_format = selected_format;
-    let is_exporting = is_exporting;
+    let mut is_exporting = is_exporting;
     let export_error = export_error;
-    let export_success = export_success;
     let is_open = is_open;
 
     move |_| {
       let beads = beads.clone();
       let format = *selected_format.read();
-      let mut is_exporting = is_exporting;
       let mut export_error = export_error;
       let mut export_success = export_success;
       let mut is_open = is_open;
@@ -124,7 +122,6 @@ pub fn ExportModal(props: ExportModalProps) -> Element {
                           value: "{selected_format.read().extension()}",
                           onchange: move |evt: Event<FormData>| {
                               let format = match evt.value().as_str() {
-                                  "json" => ExportFormat::Json,
                                   "csv" => ExportFormat::Csv,
                                   _ => ExportFormat::Json,
                               };
@@ -228,7 +225,6 @@ pub fn ImportModal(props: ImportModalProps) -> Element {
 
   let mut is_loading = use_signal(|| false);
   let mut import_error = use_signal(|| Option::<String>::None);
-  let mut resolution = use_signal(|| ConflictResolution::Skip);
   let mut is_importing = use_signal(|| false);
 
   let handle_file_select = move |_| {
@@ -238,10 +234,12 @@ pub fn ImportModal(props: ImportModalProps) -> Element {
     async move {
       match pick_file().await {
         Ok(Some((path, content))) => {
-          // Detect format from extension
-          let format = if path.ends_with(".json") {
+          // Detect format from extension (case-insensitive)
+          let path_lower = path.to_lowercase();
+          #[allow(clippy::case_sensitive_file_extension_comparisons)]
+          let format = if path_lower.ends_with(".json") {
             Some(ExportFormat::Json)
-          } else if path.ends_with(".csv") {
+          } else if path_lower.ends_with(".csv") {
             Some(ExportFormat::Csv)
           } else {
             None
@@ -280,9 +278,9 @@ pub fn ImportModal(props: ImportModalProps) -> Element {
     import_error.set(None);
     cli_preview.set(None);
 
-    let mut cli_preview = cli_preview.clone();
-    let mut is_loading = is_loading.clone();
-    let mut import_error = import_error.clone();
+    let mut cli_preview = cli_preview;
+    let mut is_loading = is_loading;
+    let mut import_error = import_error;
 
     dioxus::prelude::spawn(async move {
       // Get existing bead titles for duplicate detection
@@ -331,7 +329,7 @@ pub fn ImportModal(props: ImportModalProps) -> Element {
     import_error.set(None);
 
     let source = import_source.read().clone();
-    let on_import_success = on_import_success.clone();
+    let on_import_success = on_import_success;
     let mut is_open = is_open;
 
     async move {
@@ -339,7 +337,7 @@ pub fn ImportModal(props: ImportModalProps) -> Element {
         Some("file") => {
           let preview_data = file_preview.read().clone();
           if let Some(p) = preview_data {
-            match execute_import(p, ConflictResolution::Skip).await {
+            match execute_import(p).await {
               Ok(count) => {
                 tracing::info!("Imported {count} beads from file");
                 on_import_success.call(count);
@@ -735,10 +733,7 @@ async fn generate_preview(content: &str, format: ExportFormat) -> Result<ImportP
 /// # Errors
 /// Returns error if import fails
 #[instrument(skip(preview), fields(to_add = preview.to_add.len(), to_replace = preview.to_replace.len(), to_merge = preview.to_merge.len()))]
-async fn execute_import(
-  preview: ImportPreview,
-  _resolution: ConflictResolution,
-) -> Result<usize, String> {
+async fn execute_import(preview: ImportPreview) -> Result<usize, String> {
   use rpds::Vector;
   use tracing::{error, info};
 
@@ -762,7 +757,7 @@ async fn execute_import(
 
   // Convert to NewBeads
   let new_beads =
-    clarity_core::import::imported_to_new_beads(to_import).map_err(|e| {
+    clarity_core::import::imported_to_new_beads(&to_import).map_err(|e| {
       error!(error = %e, "Failed to convert imported beads");
       e.to_string()
     })?;

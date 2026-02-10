@@ -240,7 +240,7 @@ async fn verify_backup_integrity(pool: &SqlitePool) -> Result<(), BackupError> {
 ///
 /// # Returns
 /// A new Vector containing the backups to retain (sorted by timestamp, newest first)
-fn apply_retention_policy(backups: Vector<BackupInfo>, max_count: usize) -> Vector<BackupInfo> {
+fn apply_retention_policy(backups: &Vector<BackupInfo>, max_count: usize) -> Vector<BackupInfo> {
   backups
     .iter()
     .sorted_by(|a, b| b.timestamp.cmp(&a.timestamp))
@@ -360,6 +360,11 @@ async fn verify_backup_file(backup_path: &Path) -> Result<(), BackupError> {
 /// * `db_path` - Path to the source database file
 /// * `options` - Backup options including retention policy
 ///
+/// # Errors
+/// - Returns `BackupError::BackupDirectoryInaccessible` if default backup directory cannot be found
+/// - Returns `BackupError::BackupFailed` if database backup fails
+/// - Returns `BackupError::Io` if file operations fail
+///
 /// # Returns
 /// - `Ok(PathBuf)` with the path to the created backup
 /// - `Err(BackupError)` if backup creation fails
@@ -371,14 +376,16 @@ pub async fn auto_backup(db_path: &Path, options: &BackupOptions) -> Result<Path
   let backup_path = backup_database(db_path, &backup_dir, options.verify_integrity).await?;
 
   // List existing backups and apply retention policy
-  let existing_backups = list_backups_core(&backup_dir).await?;
+  let existing_backups: Vector<BackupInfo> =
+    list_backups_core(&backup_dir).await?.into_iter().collect();
   let retained = apply_retention_policy(
-    Vector::from_iter(existing_backups.iter().cloned()),
+    &existing_backups,
     options.max_auto_backups,
   );
 
   // Delete backups exceeding retention limit
-  let to_delete = compute_deletions(&existing_backups, &retained);
+  let existing_vec: Vec<_> = existing_backups.iter().cloned().collect();
+  let to_delete = compute_deletions(&existing_vec, &retained);
   for path in &to_delete {
     let _ = fs::remove_file(path).await;
   }
@@ -462,6 +469,10 @@ pub async fn restore_backup(
 /// * `backup_dir` - Directory containing backup files
 /// * `verify_integrity` - Whether to verify each backup's integrity
 ///
+/// # Errors
+/// - Returns `BackupError::Io` if directory cannot be read
+/// - Returns `BackupError::BackupFileCorrupted` if a backup file has invalid metadata
+///
 /// # Returns
 /// - `Ok(Vec<BackupInfo>)` with backup metadata, sorted newest first
 /// - `Err(BackupError)` if directory scanning fails
@@ -524,6 +535,10 @@ async fn list_backups_core(backup_dir: &Path) -> Result<Vec<BackupInfo>, BackupE
 ///
 /// Returns the platform-specific default location for storing backups.
 /// Creates the directory if it doesn't exist.
+///
+/// # Errors
+/// - Returns `BackupError::BackupDirectoryInaccessible` if default directory cannot be determined
+/// - Returns `BackupError::Io` if directory creation fails
 ///
 /// # Returns
 /// - `Ok(PathBuf)` with the backup directory path
@@ -598,7 +613,7 @@ mod tests {
       .collect();
 
     // Apply retention policy of max 10
-    let retained = apply_retention_policy(backups.clone(), 10);
+    let retained = apply_retention_policy(&backups, 10);
 
     assert_eq!(retained.len(), 10);
     // Should keep the newest 10

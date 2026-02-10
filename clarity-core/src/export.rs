@@ -177,11 +177,11 @@ impl ExportedBead {
     let fields: Vec<String> = [
       escape(&self.id),
       escape(&self.title),
-      escape(self.description.as_deref().unwrap_or("")),
+      escape(self.description.as_deref().map_or("", |s| s)),
       escape(&self.status),
       escape(&self.priority.to_string()),
       escape(&self.bead_type),
-      escape(self.created_by.as_deref().unwrap_or("")),
+      escape(self.created_by.as_deref().map_or("", |s| s)),
       escape(&self.created_at),
       escape(&self.updated_at),
     ]
@@ -410,7 +410,10 @@ mod tests {
     let result = export_beads(&beads, ExportFormat::Json);
     assert!(result.is_ok());
 
-    let json = result.unwrap();
+    let json = match result {
+      Ok(json) => json,
+      Err(e) => panic!("Expected Ok, got Err: {e}"),
+    };
     assert!(json.contains("Test Bead"));
     assert!(json.contains("\"version\""));
   }
@@ -432,7 +435,10 @@ mod tests {
     let result = export_beads(&beads, ExportFormat::Csv);
     assert!(result.is_ok());
 
-    let csv = result.unwrap();
+    let csv = match result {
+      Ok(csv) => csv,
+      Err(e) => panic!("Expected Ok, got Err: {e}"),
+    };
     assert!(csv.contains("id,title,description"));
     assert!(csv.contains("Test Bead"));
   }
@@ -458,8 +464,14 @@ mod tests {
       updated_at: Utc::now().to_rfc3339(),
     };
 
-    let csv_row = original.to_csv_row().unwrap();
-    let restored = ExportedBead::from_csv_row(&csv_row).unwrap();
+    let csv_row = match original.to_csv_row() {
+      Ok(row) => row,
+      Err(e) => panic!("Failed to create CSV row: {e}"),
+    };
+    let restored = match ExportedBead::from_csv_row(&csv_row) {
+      Ok(bead) => bead,
+      Err(e) => panic!("Failed to parse CSV row: {e}"),
+    };
 
     assert_eq!(restored.id, original.id);
     assert_eq!(restored.title, original.title);
@@ -482,9 +494,14 @@ mod tests {
       updated_at: Utc::now().to_rfc3339(),
     };
 
-    let csv_row = bead.to_csv_row().unwrap();
+    let csv_row = match bead.to_csv_row() {
+      Ok(row) => row,
+      Err(e) => panic!("Failed to create CSV row: {e}"),
+    };
     assert!(csv_row.contains('"'));
-    assert!(csv_row.starts_with(bead.id.split(',').next().unwrap_or(&bead.id)));
+    assert!(csv_row.starts_with(
+      bead.id.split(',').next().map_or_else(|| bead.id.as_str(), |s| s)
+    ));
   }
 
   #[test]
@@ -501,8 +518,14 @@ mod tests {
       updated_at: Utc::now().to_rfc3339(),
     };
 
-    let csv_row = bead.to_csv_row().unwrap();
-    let restored = ExportedBead::from_csv_row(&csv_row).unwrap();
+    let csv_row = match bead.to_csv_row() {
+      Ok(row) => row,
+      Err(e) => panic!("Failed to create CSV row: {e}"),
+    };
+    let restored = match ExportedBead::from_csv_row(&csv_row) {
+      Ok(bead) => bead,
+      Err(e) => panic!("Failed to parse CSV row: {e}"),
+    };
 
     assert_eq!(restored.description, None);
   }

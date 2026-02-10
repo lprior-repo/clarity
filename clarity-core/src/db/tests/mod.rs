@@ -6,6 +6,3 @@
 #![forbid(unsafe_code)]
 
 mod models_test;
-
-#[cfg(feature = "integration-tests")]
-mod integration_test;

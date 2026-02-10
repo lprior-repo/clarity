@@ -237,7 +237,7 @@ pub fn parse_csv(csv: &str) -> ImportResult<ParsedImport> {
   let mut lines = csv.lines();
   let header = lines
     .next()
-    .ok_or(ImportError::CsvParse("Empty CSV".to_string()))?;
+    .ok_or_else(|| ImportError::CsvParse("Empty CSV".to_string()))?;
 
   // Validate header
   let expected_header =
@@ -336,10 +336,10 @@ fn validate_exported_bead(bead: ExportedBead) -> ImportResult<ExportedBead> {
 ///
 /// # Errors
 /// Returns errors from parsing
-pub fn preview_import(
+pub fn preview_import<S: std::hash::BuildHasher>(
   data: &str,
   format: crate::export::ExportFormat,
-  existing_ids: &HashSet<String>,
+  existing_ids: &HashSet<String, S>,
   resolution: ConflictResolution,
 ) -> ImportResult<ImportPreview> {
   let parsed = match format {
@@ -379,7 +379,7 @@ pub fn preview_import(
 ///
 /// # Errors
 /// Returns `ImportError::InvalidDateFormat` if date parsing fails
-pub fn imported_to_domain(beads: Vector<ExportedBead>) -> ImportResult<Vector<Bead>> {
+pub fn imported_to_domain(beads: &Vector<ExportedBead>) -> ImportResult<Vector<Bead>> {
   beads.iter().map(exported_to_domain_bead).collect()
 }
 
@@ -423,7 +423,7 @@ fn exported_to_domain_bead(exported: &ExportedBead) -> ImportResult<Bead> {
 ///
 /// # Errors
 /// Returns `ImportError::InvalidDateFormat` if date parsing fails
-pub fn imported_to_new_beads(beads: Vector<ExportedBead>) -> ImportResult<Vector<NewBead>> {
+pub fn imported_to_new_beads(beads: &Vector<ExportedBead>) -> ImportResult<Vector<NewBead>> {
   beads
     .iter()
     .map(|exported| {
@@ -478,7 +478,10 @@ mod tests {
     let result = parse_json(json);
     assert!(result.is_ok());
 
-    let parsed = result.unwrap();
+    let parsed = match result {
+      Ok(p) => p,
+      Err(e) => panic!("Expected Ok, got Err: {e}"),
+    };
     assert!(parsed.has_valid_beads());
     assert_eq!(parsed.count(), 1);
     assert!(!parsed.has_errors());
@@ -495,8 +498,13 @@ mod tests {
 
     let result = parse_json(json);
     assert!(result.is_err());
+
+    let error = match result {
+      Err(e) => e,
+      Ok(_) => panic!("Expected Err, got Ok"),
+    };
     assert_eq!(
-      result.unwrap_err().to_string(),
+      error.to_string(),
       "Invalid JSON structure: Unsupported version: 2.0"
     );
   }
@@ -525,7 +533,10 @@ mod tests {
     let result = parse_json(json);
     assert!(result.is_ok());
 
-    let parsed = result.unwrap();
+    let parsed = match result {
+      Ok(p) => p,
+      Err(e) => panic!("Expected Ok, got Err: {e}"),
+    };
     assert!(!parsed.has_valid_beads());
     assert!(parsed.has_errors());
   }
@@ -538,7 +549,10 @@ mod tests {
     let result = parse_csv(csv);
     assert!(result.is_ok());
 
-    let parsed = result.unwrap();
+    let parsed = match result {
+      Ok(p) => p,
+      Err(e) => panic!("Expected Ok, got Err: {e}"),
+    };
     assert!(parsed.has_valid_beads());
     assert_eq!(parsed.count(), 1);
   }
@@ -584,16 +598,18 @@ mod tests {
             00000000-0000-0000-0000-000000000000,Bead 1,Description,open,1,feature,,2024-01-01T00:00:00Z,2024-01-01T00:00:00Z\n\
             00000000-0000-0000-0000-000000000001,Bead 2,Description,in_progress,2,bugfix,,2024-01-01T00:00:00Z,2024-01-01T00:00:00Z";
 
-    let mut existing_ids = HashSet::new();
-    existing_ids.insert("00000000-0000-0000-0000-000000000000".to_string());
+    let existing_ids: HashSet<String> =
+      HashSet::from_iter(vec!["00000000-0000-0000-0000-000000000000".to_string()]);
 
-    let preview = preview_import(
+    let preview = match preview_import(
       csv,
       ExportFormat::Csv,
       &existing_ids,
       ConflictResolution::Skip,
-    )
-    .unwrap();
+    ) {
+      Ok(p) => p,
+      Err(e) => panic!("Expected Ok, got Err: {e}"),
+    };
 
     assert_eq!(preview.to_add.len(), 1);
     assert_eq!(preview.to_skip.len(), 1);
@@ -614,12 +630,20 @@ mod tests {
       updated_at: "2024-01-01T00:00:00Z".to_string(),
     }]);
 
-    let result = imported_to_domain(beads);
+    let result = imported_to_domain(&beads);
     assert!(result.is_ok());
 
-    let domain_beads = result.unwrap();
+    let domain_beads = match result {
+      Ok(b) => b,
+      Err(e) => panic!("Expected Ok, got Err: {e}"),
+    };
     assert_eq!(domain_beads.len(), 1);
-    assert_eq!(domain_beads.first().unwrap().title, "Test Bead");
+
+    let first_bead = match domain_beads.first() {
+      Some(b) => b,
+      None => panic!("Expected at least one bead"),
+    };
+    assert_eq!(first_bead.title, "Test Bead");
   }
 
   #[test]
@@ -636,12 +660,20 @@ mod tests {
       updated_at: "2024-01-01T00:00:00Z".to_string(),
     }]);
 
-    let result = imported_to_new_beads(beads);
+    let result = imported_to_new_beads(&beads);
     assert!(result.is_ok());
 
-    let new_beads = result.unwrap();
+    let new_beads = match result {
+      Ok(b) => b,
+      Err(e) => panic!("Expected Ok, got Err: {e}"),
+    };
     assert_eq!(new_beads.len(), 1);
-    assert_eq!(new_beads.first().unwrap().title, "Test Bead");
+
+    let first_bead = match new_beads.first() {
+      Some(b) => b,
+      None => panic!("Expected at least one bead"),
+    };
+    assert_eq!(first_bead.title, "Test Bead");
   }
 
   #[test]

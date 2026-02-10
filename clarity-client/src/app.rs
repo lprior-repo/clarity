@@ -298,7 +298,7 @@ fn BeadDetail(id: String) -> Element {
 /// Navigation link component for internal routing with active state
 ///
 /// This component provides a styled link for navigation using the custom
-/// signal-based routing system from RouteProvider. It adds active state
+/// signal-based routing system from `RouteProvider`. It adds active state
 /// styling when the current route matches the link's destination.
 #[component]
 pub fn NavigationLink(
@@ -311,7 +311,7 @@ pub fn NavigationLink(
   let route = use_context::<Signal<Route>>();
 
   // Clone for the onclick handler
-  let mut route_for_click = route.clone();
+  let mut route_for_click = route;
   let target_route = to.clone();
 
   // Check if current route matches the destination

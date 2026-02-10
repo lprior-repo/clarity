@@ -37,8 +37,6 @@ async fn initialize_in_memory_database() -> Result<SqliteDbConfig> {
 
 #[cfg(test)]
 mod tests {
-  #![allow(clippy::expect_used)]
-  #![allow(clippy::unwrap_used)]
   use super::*;
 
   #[tokio::test]
@@ -51,11 +49,21 @@ mod tests {
   async fn test_database_schema_creation() {
     let config = in_memory_config();
 
-    let pool = create_sqlite_pool(&config)
-      .await
-      .expect("Should create pool");
+    let pool_result = create_sqlite_pool(&config).await;
+    assert!(pool_result.is_ok(), "Should create pool");
 
-    run_migrations(&pool).await.expect("Should run migrations");
+    let pool = pool_result.map_err(|e| anyhow::anyhow!("Pool creation failed: {e}"))
+      .context("Failed to create pool for test");
+
+    let pool = match pool {
+      Ok(p) => p,
+      Err(e) => {
+        panic!("Pool creation failed: {e:?}");
+      }
+    };
+
+    let migrate_result = run_migrations(&pool).await;
+    assert!(migrate_result.is_ok(), "Should run migrations");
 
     // Verify tables exist
     let result = sqlx::query("SELECT name FROM sqlite_master WHERE type='table' AND name='beads'")

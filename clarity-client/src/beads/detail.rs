@@ -16,25 +16,20 @@ use std::rc::Rc;
 #[component]
 pub fn BeadDetailPage(id: String) -> Element {
   // Parse the bead ID from the string
-  let bead_id_result = BeadId::from_str(&id);
-
-  let bead_id = match bead_id_result {
-    Ok(id) => id,
-    Err(_) => {
-      return rsx! {
-          div { class: "bead-detail-page",
-              div { class: "error",
-                  h2 { "Error Loading Bead" }
-                  p { "Invalid bead ID format" }
-                  crate::app::NavLink {
-                      to: crate::app::Route::BeadsList,
-                      class: "back-link",
-                      "Back to Beads"
-                  }
-              }
-          }
-      };
-    }
+  let Ok(bead_id) = BeadId::from_str(&id) else {
+    return rsx! {
+        div { class: "bead-detail-page",
+            div { class: "error",
+                h2 { "Error Loading Bead" }
+                p { "Invalid bead ID format" }
+                crate::app::NavLink {
+                    to: crate::app::Route::BeadsList,
+                    class: "back-link",
+                    "Back to Beads"
+                }
+            }
+        }
+    };
   };
 
   // Load bead from database using async loading
@@ -50,8 +45,8 @@ pub fn BeadDetailPage(id: String) -> Element {
     has_loaded.set(true);
 
     let bead_id = bead_id;
-    let mut bead = bead.clone();
-    let mut error_state = error_state.clone();
+    let mut bead = bead;
+    let mut error_state = error_state;
 
     spawn(async move {
       eprintln!("[BeadDetail] Loading bead {bead_id} from database");
@@ -62,12 +57,12 @@ pub fn BeadDetailPage(id: String) -> Element {
             bead.set(Some(Rc::new(b)));
           }
           Err(e) => {
-            eprintln!("[BeadDetail] Error loading bead: {:?}", e);
+            eprintln!("[BeadDetail] Error loading bead: {e:?}");
             error_state.set(Some(format!("Failed to load bead: {e}")));
           }
         },
         Err(e) => {
-          eprintln!("[BeadDetail] Error initializing database: {:?}", e);
+          eprintln!("[BeadDetail] Error initializing database: {e:?}");
           error_state.set(Some(format!("Database error: {e}")));
         }
       }
@@ -205,7 +200,8 @@ fn BeadDetail(props: BeadDetailProps) -> Element {
                       "{format_datetime(&updated_at)}"
                   }
               }
-              {match created_by {
+              {#[allow(clippy::option_if_let_else)]
+              match created_by {
                   Some(user_id) => rsx! {
                       div { class: "info-row",
                           span { class: "info-label", "Created By:" }
@@ -316,7 +312,7 @@ pub struct DeleteHandlerProps {
 // Manual PartialEq implementation since EventHandler doesn't implement PartialEq
 impl PartialEq for DeleteHandlerProps {
   fn eq(&self, other: &Self) -> bool {
-    self.bead_id == other.bead_id && true // Always consider equal since we can't compare EventHandlers
+    self.bead_id == other.bead_id // Always consider equal since we can't compare EventHandlers
   }
 }
 
@@ -339,9 +335,9 @@ fn DeleteHandler(props: DeleteHandlerProps) -> Element {
     has_started.set(true);
 
     let bead_id = bead_id;
-    let mut result = result.clone();
-    let mut is_done = is_done.clone();
-    let on_complete = on_complete.clone();
+    let mut result = result;
+    let mut is_done = is_done;
+    let on_complete = on_complete;
 
     spawn(async move {
       eprintln!("[DeleteHandler] Deleting bead {bead_id}");
@@ -354,7 +350,7 @@ fn DeleteHandler(props: DeleteHandlerProps) -> Element {
             on_complete.call(Ok(()));
           }
           Err(e) => {
-            eprintln!("[DeleteHandler] Error deleting bead: {:?}", e);
+            eprintln!("[DeleteHandler] Error deleting bead: {e:?}");
             let error = format!("Failed to delete bead: {e}");
             result.set(Some(Err(error.clone())));
             is_done.set(true);
@@ -362,7 +358,7 @@ fn DeleteHandler(props: DeleteHandlerProps) -> Element {
           }
         },
         Err(e) => {
-          eprintln!("[DeleteHandler] Error initializing database: {:?}", e);
+          eprintln!("[DeleteHandler] Error initializing database: {e:?}");
           let error = format!("Database error: {e}");
           result.set(Some(Err(error.clone())));
           is_done.set(true);

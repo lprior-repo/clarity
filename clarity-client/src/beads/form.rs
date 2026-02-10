@@ -22,16 +22,19 @@ use crate::validation::BeadFormData;
 /// Uses direct database access for create/update operations.
 #[component]
 pub fn BeadFormPage(id: Option<String>) -> Element {
+  #[allow(clippy::option_if_let_else)]
+  let content = match id {
+      Some(bead_id) => rsx! {
+          BeadForm { mode: FormMode::Edit(bead_id) }
+      },
+      None => rsx! {
+          BeadForm { mode: FormMode::Create }
+      },
+  };
+
   rsx! {
       div { class: "bead-form-page",
-          match id {
-              Some(bead_id) => rsx! {
-                  BeadForm { mode: FormMode::Edit(bead_id) }
-              },
-              None => rsx! {
-                  BeadForm { mode: FormMode::Create }
-              },
-          }
+          {content}
       }
   }
 }
@@ -75,10 +78,6 @@ fn BeadForm(mode: FormMode) -> Element {
 
   // Load bead data if editing
   {
-    let existing_bead = existing_bead;
-    let is_loading = is_loading;
-    let load_error = load_error;
-
     use_effect(move || {
       if is_edit && existing_bead.read().is_none() && !*is_loading.read() {
         if let Some(ref id_str) = edit_id {
@@ -199,7 +198,6 @@ fn BeadForm(mode: FormMode) -> Element {
     let mut submit_trigger = submit_trigger;
     let mut is_submitting = is_submitting;
     let form_data_clone = form_data;
-    let touch_field = touch_field;
     let _is_valid = is_valid();
 
     use_effect(move || {
@@ -590,7 +588,7 @@ fn BeadForm(mode: FormMode) -> Element {
                               }
                               Err(e) => {
                                   // Show error - could add error state here
-                                  let _e = e;
+                                  let _ = e;
                               }
                           }
                       }
@@ -631,7 +629,7 @@ impl PartialEq for SubmitHandlerProps {
       && self.status == other.status
       && self.bead_type == other.bead_type
       && self.priority == other.priority
-      && true // Always consider equal since we can't compare Callbacks
+    // Always consider equal since we can't compare Callbacks
   }
 }
 
@@ -712,9 +710,9 @@ fn SubmitHandler(props: SubmitHandlerProps) -> Element {
     };
 
     let mode = mode.clone();
-    let mut result_signal = result.clone();
-    let mut is_done_signal = is_done.clone();
-    let on_complete = on_complete.clone();
+    let mut result_signal = result;
+    let mut is_done_signal = is_done;
+    let on_complete = on_complete;
 
     spawn(async move {
       eprintln!("[SubmitHandler] Saving bead: {}", new_bead.title);
@@ -735,7 +733,7 @@ fn SubmitHandler(props: SubmitHandlerProps) -> Element {
           on_complete.call(Ok(bead_id));
         }
         Err(e) => {
-          eprintln!("[SubmitHandler] Error saving bead: {:?}", e);
+          eprintln!("[SubmitHandler] Error saving bead: {e:?}");
           is_done_signal.set(true);
           result_signal.set(Some(Err(e.clone())));
           on_complete.call(Err(e));

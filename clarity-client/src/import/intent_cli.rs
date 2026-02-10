@@ -477,7 +477,11 @@ mod tests {
       notes: String::new(),
     };
 
-    let bead = map_issue_to_bead(issue).expect("Should map valid issue");
+    let result = map_issue_to_bead(issue);
+    let bead = match result {
+      Ok(b) => b,
+      Err(e) => panic!("Should map valid issue, got Err: {e:?}"),
+    };
     assert_eq!(bead.title, "[intent-cli] Test Issue");
     assert_eq!(bead.status, BeadStatus::Open);
     assert_eq!(bead.bead_type, BeadType::Feature);
@@ -498,7 +502,11 @@ mod tests {
       notes: String::new(),
     };
 
-    let bead = map_issue_to_bead(issue).expect("Should map in_progress");
+    let result = map_issue_to_bead(issue);
+    let bead = match result {
+      Ok(b) => b,
+      Err(e) => panic!("Should map in_progress, got Err: {e:?}"),
+    };
     assert_eq!(bead.status, BeadStatus::InProgress);
     assert_eq!(bead.bead_type, BeadType::Bugfix);
   }
@@ -523,7 +531,8 @@ mod tests {
       Err(ImportError::InvalidIssueData { field, .. }) => {
         assert_eq!(field, "status");
       }
-      _ => panic!("Expected InvalidIssueData error"),
+      Ok(_) => panic!("Expected InvalidIssueData error, got Ok"),
+      Err(e) => panic!("Expected InvalidIssueData error, got: {e:?}"),
     }
   }
 

@@ -74,15 +74,17 @@ mod tests {
   use super::*;
 
   #[test]
-  fn test_get_database_path_file() {
-    let path = get_database_path("sqlite:/path/to/db.sqlite").unwrap();
+  fn test_get_database_path_file() -> DbResult<()> {
+    let path = get_database_path("sqlite:/path/to/db.sqlite")?;
     assert_eq!(path, std::path::PathBuf::from("/path/to/db.sqlite"));
+    Ok(())
   }
 
   #[test]
-  fn test_get_database_path_relative() {
-    let path = get_database_path("sqlite:clarity.db").unwrap();
+  fn test_get_database_path_relative() -> DbResult<()> {
+    let path = get_database_path("sqlite:clarity.db")?;
     assert_eq!(path, std::path::PathBuf::from("clarity.db"));
+    Ok(())
   }
 
   #[test]
@@ -98,10 +100,10 @@ mod tests {
   }
 
   #[tokio::test]
-  async fn test_run_migrations_in_memory() {
+  async fn test_run_migrations_in_memory() -> DbResult<()> {
     let pool = SqlitePool::connect("sqlite::memory:")
       .await
-      .expect("Failed to connect to in-memory database");
+      .map_err(DbError::from)?;
 
     let result = run_migrations(&pool).await;
     assert!(result.is_ok(), "Migrations should succeed: {result:?}");
@@ -115,7 +117,7 @@ mod tests {
       .bind(table)
       .fetch_one(&pool)
       .await
-      .expect("Failed to check if table exists");
+      .map_err(DbError::from)?;
 
       assert!(exists, "{table} table should exist after migrations");
     }
@@ -136,7 +138,7 @@ mod tests {
       .bind(index)
       .fetch_one(&pool)
       .await
-      .expect("Failed to check if index exists");
+      .map_err(DbError::from)?;
 
       assert!(exists, "{index} index should exist after migrations");
     }
@@ -153,5 +155,6 @@ mod tests {
     );
 
     pool.close().await;
+    Ok(())
   }
 }
