@@ -20,9 +20,22 @@
 #![allow(clippy::multiple_crate_versions)]
 
 //! Core functionality for the Clarity application
+//!
+//! This crate provides the core domain logic following Domain-Driven Design principles.
+//!
+//! ## Domain Structure
+//!
+//! The `domain` module contains the core business logic organized as:
+//! - **Aggregates**: Consistency boundaries (UserAggregate, BeadAggregate, PlanSessionAggregate)
+//! - **Entities**: Objects with identity (User, Bead)
+//! - **Value Objects**: Immutable objects defined by their values (Email, BeadId, UserId, etc.)
+//! - **Domain Events**: Messages capturing domain occurrences
+//! - **Repositories**: Persistence abstractions
+//! - **Domain Services**: Stateless business logic
 
 pub mod auth;
 pub mod db;
+pub mod domain;
 pub mod error;
 pub mod export;
 pub mod formatter;
