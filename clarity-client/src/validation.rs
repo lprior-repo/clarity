@@ -144,7 +144,11 @@ pub trait FieldValidator<T> {
 pub fn validate_title(title: &str) -> ValidationResult<String> {
   let trimmed = title.trim();
 
-  debug!(original_len = title.len(), trimmed_len = trimmed.len(), "Validating title");
+  debug!(
+    original_len = title.len(),
+    trimmed_len = trimmed.len(),
+    "Validating title"
+  );
 
   let errors = [
     (trimmed.is_empty(), "Title is required"),
@@ -162,7 +166,10 @@ pub fn validate_title(title: &str) -> ValidationResult<String> {
     debug!(title = %trimmed, "Title validation passed");
     ValidationResult::Valid(trimmed.to_string())
   } else {
-    warn!(error_count = validation_errors.len(), "Title validation failed");
+    warn!(
+      error_count = validation_errors.len(),
+      "Title validation failed"
+    );
     ValidationResult::Invalid(validation_errors)
   }
 }

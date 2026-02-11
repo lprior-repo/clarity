@@ -52,7 +52,8 @@ mod tests {
     let pool_result = create_sqlite_pool(&config).await;
     assert!(pool_result.is_ok(), "Should create pool");
 
-    let pool = pool_result.map_err(|e| anyhow::anyhow!("Pool creation failed: {e}"))
+    let pool = pool_result
+      .map_err(|e| anyhow::anyhow!("Pool creation failed: {e}"))
       .context("Failed to create pool for test");
 
     let pool = match pool {

@@ -311,10 +311,7 @@ pub fn import_from_beads_cli(
 ///
 /// # Errors
 /// Returns `BeadsCliImportError::InvalidData` if status, priority, or type mapping fails
-fn map_issue_to_bead(
-  issue: BeadsCliIssue,
-  line_num: usize,
-) -> BeadsCliImportResult<NewBead> {
+fn map_issue_to_bead(issue: BeadsCliIssue, line_num: usize) -> BeadsCliImportResult<NewBead> {
   // Map beads_rust status to bead status
   let bead_status = match issue.status.as_str() {
     "open" => BeadStatus::Open,
@@ -418,7 +415,9 @@ mod tests {
     assert_eq!(bead.bead_type, BeadType::Feature);
     assert_eq!(bead.priority, BeadPriority::HIGH);
     assert!(bead.description.is_some());
-    let contains_import = bead.description.as_ref()
+    let contains_import = bead
+      .description
+      .as_ref()
       .map_or(false, |d| d.contains("Imported from beads_rust issue"));
     assert!(contains_import);
   }

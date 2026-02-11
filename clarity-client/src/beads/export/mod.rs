@@ -284,14 +284,20 @@ pub fn ImportModal(props: ImportModalProps) -> Element {
 
     dioxus::prelude::spawn(async move {
       // Get existing bead titles for duplicate detection
-      let existing_titles_result = tokio::task::spawn_blocking(|| match crate::db::DesktopDb::new() {
-        Ok(db) => match db.list_beads_sync() {
-          Ok(beads) => Ok(beads.into_iter().map(|b: clarity_core::db::models::Bead| b.title).collect::<Vec<String>>()),
-          Err(e) => Err(format!("Failed to load existing beads: {e}")),
-        },
-        Err(e) => Err(format!("Failed to connect to database: {e}")),
-      })
-      .await;
+      let existing_titles_result =
+        tokio::task::spawn_blocking(|| match crate::db::DesktopDb::new() {
+          Ok(db) => match db.list_beads_sync() {
+            Ok(beads) => Ok(
+              beads
+                .into_iter()
+                .map(|b: clarity_core::db::models::Bead| b.title)
+                .collect::<Vec<String>>(),
+            ),
+            Err(e) => Err(format!("Failed to load existing beads: {e}")),
+          },
+          Err(e) => Err(format!("Failed to connect to database: {e}")),
+        })
+        .await;
 
       let existing_titles = match existing_titles_result {
         Ok(Ok(titles)) => rpds::Vector::from_iter(titles),
@@ -753,14 +759,16 @@ async fn execute_import(preview: ImportPreview) -> Result<usize, String> {
     return Ok(0);
   }
 
-  info!(total_to_import = to_import.len(), "Converting beads for import");
+  info!(
+    total_to_import = to_import.len(),
+    "Converting beads for import"
+  );
 
   // Convert to NewBeads
-  let new_beads =
-    clarity_core::import::imported_to_new_beads(&to_import).map_err(|e| {
-      error!(error = %e, "Failed to convert imported beads");
-      e.to_string()
-    })?;
+  let new_beads = clarity_core::import::imported_to_new_beads(&to_import).map_err(|e| {
+    error!(error = %e, "Failed to convert imported beads");
+    e.to_string()
+  })?;
 
   // Convert to Vec to avoid Rc issues with spawn_blocking
   let beads_vec: Vec<_> = new_beads.iter().cloned().collect();
@@ -789,7 +797,11 @@ async fn execute_import(preview: ImportPreview) -> Result<usize, String> {
       }
     }
 
-    info!(imported, total_attempted = beads_vec.len(), "File import execution complete");
+    info!(
+      imported,
+      total_attempted = beads_vec.len(),
+      "File import execution complete"
+    );
 
     Ok(imported)
   })
@@ -838,7 +850,10 @@ async fn execute_beads_cli_import(
     return Ok(0);
   }
 
-  info!(total_to_import = beads_vec.len(), "Importing beads from Beads CLI");
+  info!(
+    total_to_import = beads_vec.len(),
+    "Importing beads from Beads CLI"
+  );
 
   // Import to database
   tokio::task::spawn_blocking(move || {
@@ -864,7 +879,11 @@ async fn execute_beads_cli_import(
       }
     }
 
-    info!(imported, total_attempted = beads_vec.len(), "Beads CLI import execution complete");
+    info!(
+      imported,
+      total_attempted = beads_vec.len(),
+      "Beads CLI import execution complete"
+    );
 
     Ok(imported)
   })

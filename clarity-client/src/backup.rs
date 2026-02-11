@@ -378,10 +378,7 @@ pub async fn auto_backup(db_path: &Path, options: &BackupOptions) -> Result<Path
   // List existing backups and apply retention policy
   let existing_backups: Vector<BackupInfo> =
     list_backups_core(&backup_dir).await?.into_iter().collect();
-  let retained = apply_retention_policy(
-    &existing_backups,
-    options.max_auto_backups,
-  );
+  let retained = apply_retention_policy(&existing_backups, options.max_auto_backups);
 
   // Delete backups exceeding retention limit
   let existing_vec: Vec<_> = existing_backups.iter().cloned().collect();

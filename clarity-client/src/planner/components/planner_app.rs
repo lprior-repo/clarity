@@ -1,0 +1,465 @@
+//! Planner App Component
+//!
+//! Main application component for the Diamond methodology planner.
+//! Handles phase routing and provides the header bar.
+
+// Dioxus rsx! macro internally uses unwrap, so we allow the disallowed_methods lint.
+#![allow(clippy::disallowed_methods)]
+
+use crate::planner::components::diamond_stepper::DiamondStepper;
+use crate::planner::components::phase_define::PhaseDefine;
+use crate::planner::components::phase_deliver::PhaseDeliver;
+use crate::planner::components::phase_develop::PhaseDevelop;
+use crate::planner::components::phase_discover::PhaseDiscover;
+use crate::planner::state::{PlannerState, PlannerUIState};
+use crate::planner::types::DiamondPhase;
+use dioxus::prelude::*;
+
+/// Save result type
+pub type SaveResult = Result<String, String>;
+
+/// Planner app component
+///
+/// Main application component with phase routing and header.
+#[component]
+pub fn PlannerApp() -> Element {
+  let state = use_signal(|| PlannerState::new());
+  let ui_state = use_signal(|| PlannerUIState::new());
+  let save_status = use_signal(|| SaveStatus::Idle);
+
+  rsx! {
+      div { class: "planner-app",
+          PlannerHeader {
+              state: state,
+              ui_state: ui_state,
+              save_status: save_status,
+              on_save: Callback::new({
+                  let state = state;
+                  let mut save_status = save_status;
+                  move |_| {
+                      handle_save(&state, &mut save_status);
+                  }
+              })
+          }
+
+          DiamondStepper {
+              current_phase: state.read().current_phase,
+              on_phase_change: Callback::new({
+                  let mut state = state;
+                  move |phase| {
+                      let updated = state.read().set_phase(phase);
+                      state.set(updated);
+                  }
+              }),
+              show_labels: Some(true),
+              labels: None,
+              interactive: Some(true),
+          }
+
+          div { class: "planner-content",
+              {match state.read().current_phase {
+                  DiamondPhase::Top => rsx! {
+                      PhaseDiscover {
+                          state: state,
+                          selected_entity: use_signal(|| None)
+                      }
+                  },
+                  DiamondPhase::Right => rsx! {
+                      PhaseDefine {
+                          state: state,
+                          selected_entity: use_signal(|| None)
+                      }
+                  },
+                  DiamondPhase::Bottom => rsx! {
+                      PhaseDevelop {
+                          state: state,
+                          selected_entity: use_signal(|| None)
+                      }
+                  },
+                  DiamondPhase::Left => rsx! {
+                      PhaseDeliver {
+                          state: state,
+                          selected_entity: use_signal(|| None)
+                      }
+                  },
+              }}
+          }
+      }
+  }
+}
+
+/// Save status for UI feedback
+#[derive(Clone, Debug, PartialEq)]
+enum SaveStatus {
+  Idle,
+  Saving,
+  Success(String),
+  Error(String),
+}
+
+/// Handle save operation
+fn handle_save(state: &Signal<PlannerState>, save_status: &mut Signal<SaveStatus>) {
+  save_status.set(SaveStatus::Saving);
+
+  // In a real implementation, this would:
+  // 1. Validate the current state
+  // 2. Serialize to JSON
+  // 3. Save to database or file
+  // 4. Return appropriate status
+
+  let current_state = state.read();
+  let _project_name = current_state.context.project_name.clone();
+
+  // Simulate async save operation
+  let result = save_plan_to_state(&current_state);
+
+  match result {
+    Ok(message) => {
+      save_status.set(SaveStatus::Success(message));
+    }
+    Err(error) => {
+      save_status.set(SaveStatus::Error(error));
+    }
+  }
+}
+
+/// Save plan to persistent storage
+///
+/// This is a placeholder implementation. In a real application, this would:
+/// - Connect to a database via the repository layer
+/// - Serialize the plan session to JSON
+/// - Handle save conflicts and merging
+/// - Return proper error types
+fn save_plan_to_state(state: &PlannerState) -> Result<String, String> {
+  // Validate that we have minimal required data
+  let has_thesis = state.thesis.is_some();
+  let has_content =
+    !state.personas.is_empty() || !state.use_cases.is_empty() || !state.tasks.is_empty();
+
+  if !has_thesis && !has_content {
+    return Err(
+      "Cannot save: Plan is empty. Please add at least a thesis, personas, use cases, or tasks."
+        .to_string(),
+    );
+  }
+
+  // In a real implementation, we would serialize the full plan session
+  // and save it to the database. For now, we return a success message.
+
+  let project_name = if state.context.project_name.is_empty() {
+    "Untitled Plan"
+  } else {
+    &state.context.project_name
+  };
+
+  let phase = state.current_phase;
+  let persona_count = state.personas.len();
+  let use_case_count = state.use_cases.len();
+  let task_count = state.tasks.len();
+
+  Ok(format!(
+    "Saved '{project_name}' ({phase}) with {persona_count} personas, {use_case_count} use cases, and {task_count} tasks"
+  ))
+}
+
+/// Planner header component
+///
+/// Header bar with navigation and actions including save functionality.
+#[component]
+fn PlannerHeader(
+  state: Signal<PlannerState>,
+  ui_state: Signal<PlannerUIState>,
+  save_status: Signal<SaveStatus>,
+  on_save: Callback<()>,
+) -> Element {
+  let project_name = state.read().context.project_name.clone();
+  let progress = state.read().progress();
+
+  rsx! {
+      header { class: "planner-header",
+          div { class: "header-left",
+              h1 { class: "header-title",
+                  {if project_name.is_empty() {
+                      "Diamond Planner"
+                  } else {
+                      "{project_name}"
+                  }}
+              }
+
+              div { class: "header-progress",
+                  div { class: "progress-bar",
+                      div {
+                          class: "progress-fill",
+                          style: "width: {progress * 100.0}%;"
+                      }
+                  }
+                  span { class: "progress-text", "{progress * 100.0:.0}%" }
+              }
+          }
+
+          nav { class: "header-nav",
+              a {
+                  class: "nav-link",
+                  href: "#",
+                  "Home"
+              }
+
+              a {
+                  class: "nav-link",
+                  href: "#",
+                  "Dashboard"
+              }
+
+              a {
+                  class: "nav-link",
+                  href: "#",
+                  "Beads"
+              }
+          }
+
+          div { class: "header-actions",
+              button {
+                  class: "btn btn-secondary",
+                  onclick: move |_| {
+                      let ui = ui_state.read();
+                      let new_ui = ui.toggle_sidebar();
+                      drop(ui);
+                      ui_state.set(new_ui);
+                  },
+                  "Toggle Sidebar"
+              }
+
+              button {
+                  class: format!(
+                      "btn {} {}",
+                      "btn-primary",
+                      if matches!(&*save_status.read(), SaveStatus::Saving) {
+                          "btn-loading"
+                      } else {
+                          ""
+                      }
+                  ),
+                  onclick: move |_| {
+                      on_save.call(());
+                  },
+                  disabled: matches!(&*save_status.read(), SaveStatus::Saving),
+                  {match &*save_status.read() {
+                      SaveStatus::Idle => rsx! { "Save Plan" },
+                      SaveStatus::Saving => rsx! {
+                          span { class: "spinner", "⏳" }
+                          span { "Saving..." }
+                      },
+                      SaveStatus::Success(_) => rsx! {
+                          span { class: "success-icon", "✓" }
+                          span { "Saved!" }
+                      },
+                      SaveStatus::Error(_) => rsx! {
+                          span { class: "error-icon", "✕" }
+                          span { "Failed" }
+                      },
+                  }}
+              }
+
+              // Save status notification (toasts)
+              {match &*save_status.read() {
+                  SaveStatus::Idle => rsx! {},
+                  SaveStatus::Saving => rsx! {
+                      div { class: "save-status saving",
+                          p { "Saving plan..." }
+                      }
+                  },
+                  SaveStatus::Success(message) => rsx! {
+                      div { class: "save-status success",
+                          p { strong { "Success! " } "{message}" }
+                          button {
+                              class: "btn-close",
+                              onclick: move |_| {
+                                  save_status.set(SaveStatus::Idle);
+                              },
+                              "×"
+                          }
+                      }
+                  },
+                  SaveStatus::Error(error) => rsx! {
+                      div { class: "save-status error",
+                          p { strong { "Save Failed: " } "{error}" }
+                          button {
+                              class: "btn-close",
+                              onclick: move |_| {
+                                  save_status.set(SaveStatus::Idle);
+                              },
+                              "×"
+                          }
+                      }
+                  },
+              }}
+          }
+      }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::planner::types::{Persona, ProductThesis, UseCase};
+
+  #[test]
+  fn test_planner_app_renders() {
+    // Test component structure - actual rendering requires Dioxus DOM
+    let state = PlannerState::new();
+    assert_eq!(state.current_phase, DiamondPhase::Top);
+  }
+
+  #[test]
+  fn test_planner_state_progress() {
+    let state = PlannerState::new();
+    assert_eq!(state.progress(), 0.0);
+
+    let state = state.set_phase(DiamondPhase::Right);
+    assert!((state.progress() - 0.33).abs() < 0.01);
+
+    let state = state.set_phase(DiamondPhase::Bottom);
+    assert!((state.progress() - 0.66).abs() < 0.01);
+
+    let state = state.set_phase(DiamondPhase::Left);
+    assert_eq!(state.progress(), 1.0);
+  }
+
+  #[test]
+  fn test_save_plan_empty_state() {
+    let state = PlannerState::new();
+    let result = save_plan_to_state(&state);
+    assert!(result.is_err());
+    let error_msg = result.unwrap_err();
+    assert!(error_msg.contains("Cannot save") || error_msg.contains("empty"));
+  }
+
+  #[test]
+  fn test_save_plan_with_thesis() {
+    let mut state = PlannerState::new();
+    let thesis = ProductThesis::new(
+      "Test Thesis".to_string(),
+      "Test Problem".to_string(),
+      "Test Audience".to_string(),
+      "Test Solution".to_string(),
+      "Test Value".to_string(),
+    );
+    state = state.update_thesis(thesis);
+
+    let result = save_plan_to_state(&state);
+    assert!(result.is_ok());
+    assert!(result.unwrap().contains("Saved"));
+  }
+
+  #[test]
+  fn test_save_plan_with_personas() {
+    let mut state = PlannerState::new();
+    let persona = Persona::new(
+      "Test User".to_string(),
+      "Developer".to_string(),
+      "A test persona".to_string(),
+    );
+    state = state.add_persona(persona).unwrap();
+
+    let result = save_plan_to_state(&state);
+    assert!(result.is_ok());
+    assert!(result.unwrap().contains("1 personas"));
+  }
+
+  #[test]
+  fn test_save_plan_with_multiple_items() {
+    let mut state = PlannerState::new();
+    state = state.update_project_name("Test Project".to_string());
+
+    let thesis = ProductThesis::new(
+      "Test".to_string(),
+      "Problem".to_string(),
+      "Audience".to_string(),
+      "Solution".to_string(),
+      "Value".to_string(),
+    );
+    state = state.update_thesis(thesis);
+
+    let persona = Persona::new("User".to_string(), "Dev".to_string(), "Test".to_string());
+    state = state.add_persona(persona).unwrap();
+
+    let use_case = UseCase::new(
+      "Test Use Case".to_string(),
+      "Description".to_string(),
+      "Trigger".to_string(),
+    );
+    state = state.add_use_case(use_case).unwrap();
+
+    let result = save_plan_to_state(&state);
+    assert!(result.is_ok());
+    let message = result.unwrap();
+    assert!(message.contains("Saved 'Test Project'"));
+    assert!(message.contains("1 personas"));
+    assert!(message.contains("1 use cases"));
+  }
+
+  #[test]
+  fn test_save_status_equality() {
+    assert_eq!(SaveStatus::Idle, SaveStatus::Idle);
+    assert_ne!(SaveStatus::Idle, SaveStatus::Saving);
+    assert_ne!(
+      SaveStatus::Success("test".to_string()),
+      SaveStatus::Error("test".to_string())
+    );
+  }
+
+  #[test]
+  fn test_save_plan_named_project() {
+    let mut state = PlannerState::new();
+    state = state.update_project_name("My Awesome Project".to_string());
+
+    let thesis = ProductThesis::new(
+      "Test".to_string(),
+      "Problem".to_string(),
+      "Audience".to_string(),
+      "Solution".to_string(),
+      "Value".to_string(),
+    );
+    state = state.update_thesis(thesis);
+
+    let result = save_plan_to_state(&state);
+    assert!(result.is_ok());
+    assert!(result.unwrap().contains("My Awesome Project"));
+  }
+
+  #[test]
+  fn test_save_plan_unnamed_project() {
+    let mut state = PlannerState::new();
+    let thesis = ProductThesis::new(
+      "Test".to_string(),
+      "Problem".to_string(),
+      "Audience".to_string(),
+      "Solution".to_string(),
+      "Value".to_string(),
+    );
+    state = state.update_thesis(thesis);
+
+    let result = save_plan_to_state(&state);
+    assert!(result.is_ok());
+    assert!(result.unwrap().contains("Untitled Plan"));
+  }
+
+  #[test]
+  fn test_save_plan_includes_phase() {
+    let mut state = PlannerState::new();
+    state = state.set_phase(DiamondPhase::Bottom);
+
+    let thesis = ProductThesis::new(
+      "Test".to_string(),
+      "Problem".to_string(),
+      "Audience".to_string(),
+      "Solution".to_string(),
+      "Value".to_string(),
+    );
+    state = state.update_thesis(thesis);
+
+    let result = save_plan_to_state(&state);
+    assert!(result.is_ok());
+    assert!(result.unwrap().contains("Development"));
+  }
+}

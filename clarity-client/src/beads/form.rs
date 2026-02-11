@@ -24,12 +24,12 @@ use crate::validation::BeadFormData;
 pub fn BeadFormPage(id: Option<String>) -> Element {
   #[allow(clippy::option_if_let_else)]
   let content = match id {
-      Some(bead_id) => rsx! {
-          BeadForm { mode: FormMode::Edit(bead_id) }
-      },
-      None => rsx! {
-          BeadForm { mode: FormMode::Create }
-      },
+    Some(bead_id) => rsx! {
+        BeadForm { mode: FormMode::Edit(bead_id) }
+    },
+    None => rsx! {
+        BeadForm { mode: FormMode::Create }
+    },
   };
 
   rsx! {

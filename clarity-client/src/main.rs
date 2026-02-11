@@ -20,10 +20,9 @@ use std::path::PathBuf;
 ///
 /// Sets up tracing with JSON Lines output (one JSON per line) for log aggregation
 fn init_tracing() {
-  use tracing_subscriber::{EnvFilter, fmt, prelude::*};
+  use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
-  let env_filter = EnvFilter::from_default_env()
-    .add_directive(tracing::Level::INFO.into());
+  let env_filter = EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into());
 
   tracing_subscriber::registry()
     .with(env_filter)
@@ -35,7 +34,7 @@ fn init_tracing() {
         .with_thread_names(false)
         .with_file(false)
         .with_line_number(false)
-        .with_writer(std::io::stdout)
+        .with_writer(std::io::stdout),
     )
     .init();
 }

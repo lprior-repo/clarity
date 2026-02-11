@@ -192,7 +192,10 @@ impl DesktopDb {
         })?;
 
     let count = rows.len();
-    let beads = rows.into_iter().map(Self::row_to_bead).collect::<DbResult<Vec<_>>>()
+    let beads = rows
+      .into_iter()
+      .map(Self::row_to_bead)
+      .collect::<DbResult<Vec<_>>>()
       .map_err(|e| {
         error!(error = %e, "Failed to parse bead row");
         e

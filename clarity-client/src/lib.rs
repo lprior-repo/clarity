@@ -47,6 +47,7 @@ pub mod error;
 pub mod hooks;
 pub mod import;
 pub mod navigation;
+pub mod planner;
 pub mod providers;
 pub mod settings;
 pub mod shortcuts;

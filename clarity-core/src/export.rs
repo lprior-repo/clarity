@@ -500,7 +500,11 @@ mod tests {
     };
     assert!(csv_row.contains('"'));
     assert!(csv_row.starts_with(
-      bead.id.split(',').next().map_or_else(|| bead.id.as_str(), |s| s)
+      bead
+        .id
+        .split(',')
+        .next()
+        .map_or_else(|| bead.id.as_str(), |s| s)
     ));
   }
 
