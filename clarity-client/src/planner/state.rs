@@ -14,6 +14,7 @@ use crate::planner::types::{
   DiamondPhase, NorthStarScenario, Persona, PlanSession, PlanTask, ProductThesis, StateError,
   UseCase, MAX_COLLECTION_SIZE, MIN_DISCOVERY_PERSONAS, MIN_DISCOVERY_SCENARIOS,
 };
+use clarity_core::progress::{ProgressMetrics, ProgressStatus};
 use rpds::Vector;
 use std::rc::Rc;
 use uuid::Uuid;
@@ -695,6 +696,67 @@ impl PlannerState {
       DiamondPhase::Bottom => 0.66,
       DiamondPhase::Left => 1.0,
     }
+  }
+
+  /// Get all task statuses
+  #[must_use]
+  pub fn get_all_task_statuses(&self) -> Vec<ProgressStatus> {
+    self
+      .tasks
+      .iter()
+      .map(|task| self.get_task_status(task))
+      .collect()
+  }
+
+  /// Get status for a single task
+  #[must_use]
+  pub fn get_task_status(&self, task: &Rc<PlanTask>) -> ProgressStatus {
+    if task.completion >= 1.0 {
+      ProgressStatus::Completed
+    } else if task.completion > 0.0 {
+      ProgressStatus::InProgress
+    } else {
+      // Check if task has dependencies that are not completed
+      let all_deps_completed = task.dependencies.iter().all(|dep_id| {
+        self
+          .tasks
+          .iter()
+          .any(|t| t.id == *dep_id && t.completion >= 1.0)
+      });
+
+      if !all_deps_completed {
+        ProgressStatus::Blocked
+      } else {
+        ProgressStatus::NotStarted
+      }
+    }
+  }
+
+  /// Calculate status metrics from all tasks
+  #[must_use]
+  pub fn calculate_status_metrics(&self) -> ProgressMetrics {
+    let statuses = self.get_all_task_statuses();
+
+    let counts = statuses.iter().fold(
+      (0usize, 0usize, 0usize, 0usize, 0usize),
+      |(completed, in_progress, blocked, deferred, not_started), status| match status {
+        ProgressStatus::Completed => (completed + 1, in_progress, blocked, deferred, not_started),
+        ProgressStatus::InProgress => (completed, in_progress + 1, blocked, deferred, not_started),
+        ProgressStatus::Blocked => (completed, in_progress, blocked + 1, deferred, not_started),
+        ProgressStatus::Deferred => (completed, in_progress, blocked, deferred + 1, not_started),
+        ProgressStatus::NotStarted => (completed, in_progress, blocked, deferred, not_started + 1),
+      },
+    );
+
+    ProgressMetrics::new(
+      counts.0 + counts.1 + counts.2 + counts.3 + counts.4,
+      counts.0,
+      counts.1,
+      counts.2,
+      counts.3,
+      counts.4,
+    )
+    .unwrap_or_else(|_| ProgressMetrics::empty())
   }
 }
 

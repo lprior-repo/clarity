@@ -300,18 +300,32 @@ pub struct ActionDescription {
   pub action: Action,
   /// Human-readable description
   pub description: &'static str,
-  /// Keyboard shortcut
-  pub shortcut: Shortcut,
+  /// Keyboard shortcuts (can have multiple)
+  pub shortcuts: Vec<Shortcut>,
 }
 
 impl ActionDescription {
-  /// Create a new action description
+  /// Create a new action description with single shortcut
   #[must_use]
-  pub const fn new(action: Action, description: &'static str, shortcut: Shortcut) -> Self {
+  pub fn new(action: Action, description: &'static str, shortcut: Shortcut) -> Self {
     Self {
       action,
       description,
-      shortcut,
+      shortcuts: vec![shortcut],
+    }
+  }
+
+  /// Create a new action description with multiple shortcuts
+  #[must_use]
+  pub const fn new_multiple(
+    action: Action,
+    description: &'static str,
+    shortcuts: Vec<Shortcut>,
+  ) -> Self {
+    Self {
+      action,
+      description,
+      shortcuts,
     }
   }
 }
@@ -346,10 +360,13 @@ impl Shortcuts {
         "Focus search input",
         Shortcut::ctrl(Key::Character('f')),
       ),
-      ActionDescription::new(
+      ActionDescription::new_multiple(
         Action::SaveForm,
         "Save current form",
-        Shortcut::ctrl(Key::Character('s')),
+        vec![
+          Shortcut::ctrl(Key::Character('s')),
+          Shortcut::new(Modifiers::Meta, Key::Enter),
+        ],
       ),
       ActionDescription::new(
         Action::Cancel,
@@ -379,7 +396,9 @@ impl Shortcuts {
     ];
 
     for desc in &descriptions {
-      shortcuts.insert(desc.shortcut.clone(), desc.action);
+      for shortcut in &desc.shortcuts {
+        shortcuts.insert(shortcut.clone(), desc.action);
+      }
     }
 
     Self {

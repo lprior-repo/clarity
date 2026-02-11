@@ -97,7 +97,16 @@ fn main() -> Result<()> {
   tracing::info!("Application initialized successfully");
 
   // Launch the Dioxus desktop application with global state providers
-  dioxus::LaunchBuilder::desktop().launch(Root);
+  dioxus::LaunchBuilder::desktop()
+    .with_cfg(
+      dioxus::desktop::Config::new()
+        .with_window(
+          dioxus::desktop::WindowBuilder::new()
+            .with_title("Clarity")
+            .with_inner_size(dioxus::desktop::LogicalSize::new(1400, 900))
+        )
+    )
+    .launch(Root);
 
   Ok(())
 }

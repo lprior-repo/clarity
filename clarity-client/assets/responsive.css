@@ -1020,3 +1020,294 @@ input[type="submit"],
     background-color: var(--color-surface-dark);
   }
 }
+
+/* ===== br Show Component Styles ===== */
+.br-show-page {
+  min-height: 100vh;
+  background-color: var(--color-background);
+  padding: var(--spacing-xl) 0;
+}
+
+.br-show {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-lg);
+}
+
+.br-header {
+  margin-bottom: var(--spacing-2xl);
+  padding-bottom: var(--spacing-xl);
+  border-bottom: 2px solid var(--color-border);
+}
+
+.br-title {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-lg);
+  line-height: var(--line-height-tight);
+}
+
+.br-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  align-items: center;
+}
+
+.br-meta span {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.status {
+  background-color: rgba(25, 118, 210, 0.1);
+  color: var(--color-primary);
+}
+
+.status-open {
+  background-color: rgba(25, 118, 210, 0.1);
+  color: var(--color-primary);
+}
+
+.status-closed {
+  background-color: rgba(56, 142, 60, 0.1);
+  color: var(--color-success);
+}
+
+.status-blocked {
+  background-color: rgba(211, 47, 47, 0.1);
+  color: var(--color-error);
+}
+
+.status-deferred {
+  background-color: rgba(245, 124, 0, 0.1);
+  color: var(--color-warning);
+}
+
+.type {
+  background-color: var(--color-surface-variant);
+  color: var(--color-text-secondary);
+}
+
+.priority {
+  background-color: var(--color-surface-variant);
+  color: var(--color-text-secondary);
+}
+
+.br-info {
+  margin-bottom: var(--spacing-2xl);
+}
+
+.br-info h2 {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--spacing-2xl);
+}
+
+.info-section {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.info-section h3 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm) 0;
+  border-bottom: 1px solid var(--color-surface-variant);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.info-value {
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-normal);
+}
+
+.br-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: flex-start;
+  margin-top: var(--spacing-2xl);
+  padding-top: var(--spacing-xl);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Loading state */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: var(--spacing-2xl);
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.loading p {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-secondary);
+  margin-left: var(--spacing-md);
+}
+
+/* Error state */
+.error {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-2xl);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+}
+
+.error h2 {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.error p {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-lg);
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background-color: var(--color-primary);
+  color: white;
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  transition: all var(--transition-base);
+}
+
+.back-link:hover {
+  background-color: var(--color-primary-variant);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Responsive adjustments for br show */
+@media (max-width: 768px) {
+  .br-show {
+    padding: 0 var(--spacing-md);
+  }
+
+  .br-title {
+    font-size: var(--font-size-2xl);
+  }
+
+  .br-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+  }
+
+  .br-actions {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .br-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .br-show {
+    background-color: var(--color-background-dark);
+  }
+
+  .br-header {
+    border-bottom-color: var(--color-border-dark);
+  }
+
+  .br-title {
+    color: var(--color-text-primary-dark);
+  }
+
+  .info-section {
+    background-color: var(--color-surface-dark);
+  }
+
+  .info-section h3 {
+    color: var(--color-text-primary-dark);
+    border-bottom-color: var(--color-border-dark);
+  }
+
+  .info-label {
+    color: var(--color-text-secondary-dark);
+  }
+
+  .info-value {
+    color: var(--color-text-primary-dark);
+  }
+
+  .info-row {
+    border-bottom-color: var(--color-surface-variant-dark);
+  }
+
+  .br-actions {
+    border-top-color: var(--color-border-dark);
+  }
+
+  .loading {
+    background-color: var(--color-surface-dark);
+  }
+
+  .error {
+    background-color: var(--color-surface-dark);
+  }
+
+  .error h2 {
+    color: var(--color-text-primary-dark);
+  }
+
+  .error p {
+    color: var(--color-text-secondary-dark);
+  }
+}

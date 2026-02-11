@@ -12,6 +12,7 @@
 
 pub mod error_boundary;
 pub mod error_display;
+pub mod keyboard_button;
 pub mod keyboard_help;
 pub mod loading;
 pub mod settings_view;
@@ -20,6 +21,7 @@ pub use error_boundary::{use_error_handler, ErrorBoundary};
 pub use error_display::{
   ErrorBanner, ErrorDisplay, ErrorDisplayProps, ErrorInline, ErrorPage, ErrorVariant, FormError,
 };
+pub use keyboard_button::{KeyboardButton, SaveButton};
 pub use keyboard_help::{use_keyboard_help, KeyboardHelpDialog, ShortcutHint};
 pub use loading::{
   CardSkeleton, Loading, LoadingInline, LoadingPage, LoadingProps, LoadingSize, LoadingVariant,

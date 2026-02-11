@@ -7,11 +7,13 @@
 #![allow(clippy::disallowed_methods)]
 
 use crate::app::{NavLink, Route};
+use crate::components::SaveButton;
 use crate::planner::components::diamond_stepper::DiamondStepper;
 use crate::planner::components::phase_define::PhaseDefine;
 use crate::planner::components::phase_deliver::PhaseDeliver;
 use crate::planner::components::phase_develop::PhaseDevelop;
 use crate::planner::components::phase_discover::PhaseDiscover;
+use crate::planner::components::status_display::StatusSummary;
 use crate::planner::state::{PlannerState, PlannerUIState};
 use crate::planner::types::DiamondPhase;
 use dioxus::prelude::*;
@@ -57,32 +59,59 @@ pub fn PlannerApp() -> Element {
               interactive: Some(true),
           }
 
+          // Status summary section
+          div { class: "planner-status-summary px-6 py-4",
+              StatusSummary {
+                  state: state,
+                  on_status_click: None,
+              }
+          }
+
           div { class: "planner-content",
-              {match state.read().current_phase {
-                  DiamondPhase::Top => rsx! {
-                      PhaseDiscover {
-                          state: state,
-                          selected_entity: use_signal(|| None)
-                      }
-                  },
-                  DiamondPhase::Right => rsx! {
-                      PhaseDefine {
-                          state: state,
-                          selected_entity: use_signal(|| None)
-                      }
-                  },
-                  DiamondPhase::Bottom => rsx! {
-                      PhaseDevelop {
-                          state: state,
-                          selected_entity: use_signal(|| None)
-                      }
-                  },
-                  DiamondPhase::Left => rsx! {
-                      PhaseDeliver {
-                          state: state,
-                          selected_entity: use_signal(|| None)
-                      }
-                  },
+              // Lazy rendering: only render active or complete phases
+              {{
+                let state_read = state.read();
+                let current_phase = state_read.current_phase;
+
+                // Determine which phases to render
+                let render_discovery = DiamondPhase::Top.should_render(current_phase);
+                let render_design = DiamondPhase::Right.should_render(current_phase);
+                let render_development = DiamondPhase::Bottom.should_render(current_phase);
+                let render_delivery = DiamondPhase::Left.should_render(current_phase);
+
+                rsx! {
+                    // Render discovery phase if active or complete
+                    {render_discovery.then(|| rsx! {
+                        PhaseDiscover {
+                            state: state,
+                            selected_entity: use_signal(|| None)
+                        }
+                    })}
+
+                    // Render design phase if active or complete
+                    {render_design.then(|| rsx! {
+                        PhaseDefine {
+                            state: state,
+                            selected_entity: use_signal(|| None)
+                        }
+                    })}
+
+                    // Render development phase if active or complete
+                    {render_development.then(|| rsx! {
+                        PhaseDevelop {
+                            state: state,
+                            selected_entity: use_signal(|| None)
+                        }
+                    })}
+
+                    // Render delivery phase if active or complete
+                    {render_delivery.then(|| rsx! {
+                        PhaseDeliver {
+                            state: state,
+                            selected_entity: use_signal(|| None)
+                        }
+                    })}
+                }
               }}
           }
       }
@@ -216,35 +245,11 @@ fn PlannerHeader(
                   "Toggle Sidebar"
               }
 
-              button {
-                  class: format!(
-                      "btn {} {}",
-                      "btn-primary",
-                      if matches!(&*save_status.read(), SaveStatus::Saving) {
-                          "btn-loading"
-                      } else {
-                          ""
-                      }
-                  ),
+              SaveButton {
                   onclick: move |_| {
                       on_save.call(());
                   },
                   disabled: matches!(&*save_status.read(), SaveStatus::Saving),
-                  {match &*save_status.read() {
-                      SaveStatus::Idle => rsx! { "Save Plan" },
-                      SaveStatus::Saving => rsx! {
-                          span { class: "spinner", "⏳" }
-                          span { "Saving..." }
-                      },
-                      SaveStatus::Success(_) => rsx! {
-                          span { class: "success-icon", "✓" }
-                          span { "Saved!" }
-                      },
-                      SaveStatus::Error(_) => rsx! {
-                          span { class: "error-icon", "✕" }
-                          span { "Failed" }
-                      },
-                  }}
               }
 
               // Save status notification (toasts)
@@ -282,6 +287,151 @@ fn PlannerHeader(
               }}
           }
       }
+  }
+}
+
+// Integration tests for lazy phase rendering
+#[cfg(test)]
+mod lazy_rendering_tests {
+  use super::*;
+  use crate::planner::state::PlannerState;
+
+  #[test]
+  fn test_discovery_phase_only_rendered() {
+    let state = PlannerState::new().set_phase(DiamondPhase::Top);
+
+    // When in Discovery phase, only Discovery should be rendered
+    let rendered = DiamondPhase::get_rendered_phases(DiamondPhase::Top);
+    assert_eq!(rendered, vec![DiamondPhase::Top]);
+
+    assert!(DiamondPhase::Top.should_render(DiamondPhase::Top));
+    assert!(!DiamondPhase::Right.should_render(DiamondPhase::Top));
+    assert!(!DiamondPhase::Bottom.should_render(DiamondPhase::Top));
+    assert!(!DiamondPhase::Left.should_render(DiamondPhase::Top));
+  }
+
+  #[test]
+  fn test_discovery_and_design_rendered() {
+    let state = PlannerState::new().set_phase(DiamondPhase::Right);
+
+    // When in Design phase, Discovery and Design should be rendered
+    let rendered = DiamondPhase::get_rendered_phases(DiamondPhase::Right);
+    assert_eq!(rendered, vec![DiamondPhase::Top, DiamondPhase::Right]);
+
+    assert!(DiamondPhase::Top.should_render(DiamondPhase::Right));
+    assert!(DiamondPhase::Right.should_render(DiamondPhase::Right));
+    assert!(!DiamondPhase::Bottom.should_render(DiamondPhase::Right));
+    assert!(!DiamondPhase::Left.should_render(DiamondPhase::Right));
+  }
+
+  #[test]
+  fn test_three_phases_rendered() {
+    let state = PlannerState::new().set_phase(DiamondPhase::Bottom);
+
+    // When in Development phase, Discovery, Design, and Development should be rendered
+    let rendered = DiamondPhase::get_rendered_phases(DiamondPhase::Bottom);
+    assert_eq!(
+      rendered,
+      vec![DiamondPhase::Top, DiamondPhase::Right, DiamondPhase::Bottom]
+    );
+
+    assert!(DiamondPhase::Top.should_render(DiamondPhase::Bottom));
+    assert!(DiamondPhase::Right.should_render(DiamondPhase::Bottom));
+    assert!(DiamondPhase::Bottom.should_render(DiamondPhase::Bottom));
+    assert!(!DiamondPhase::Left.should_render(DiamondPhase::Bottom));
+  }
+
+  #[test]
+  fn test_all_phases_rendered() {
+    let state = PlannerState::new().set_phase(DiamondPhase::Left);
+
+    // When in Delivery phase, all phases should be rendered
+    let rendered = DiamondPhase::get_rendered_phases(DiamondPhase::Left);
+    assert_eq!(
+      rendered,
+      vec![
+        DiamondPhase::Top,
+        DiamondPhase::Right,
+        DiamondPhase::Bottom,
+        DiamondPhase::Left
+      ]
+    );
+
+    assert!(DiamondPhase::Top.should_render(DiamondPhase::Left));
+    assert!(DiamondPhase::Right.should_render(DiamondPhase::Left));
+    assert!(DiamondPhase::Bottom.should_render(DiamondPhase::Left));
+    assert!(DiamondPhase::Left.should_render(DiamondPhase::Left));
+  }
+
+  #[test]
+  fn test_phase_state_consistency() {
+    // Test that phase state is consistent across different phases
+    let phases = vec![
+      DiamondPhase::Top,
+      DiamondPhase::Right,
+      DiamondPhase::Bottom,
+      DiamondPhase::Left,
+    ];
+
+    for &current_phase in &phases {
+      let rendered_phases = DiamondPhase::get_rendered_phases(current_phase);
+
+      // Each rendered phase should either be active or complete
+      for &phase in &rendered_phases {
+        assert!(
+          phase == current_phase || phase.is_complete(current_phase),
+          "Phase {:?} should be either active or complete when current phase is {:?}",
+          phase,
+          current_phase
+        );
+      }
+
+      // All phases not in the rendered list should not be active and not complete
+      for &phase in &phases {
+        if !rendered_phases.contains(&phase) {
+          assert_ne!(
+            phase, current_phase,
+            "Current phase should always be in rendered phases"
+          );
+          assert!(
+            !phase.is_complete(current_phase),
+            "Phase {:?} should not be complete when current phase is {:?}",
+            phase,
+            current_phase
+          );
+        }
+      }
+    }
+  }
+
+  #[test]
+  fn test_component_render_logic() {
+    // Test that the component render logic matches our phase rendering logic
+    let test_cases = vec![
+      (DiamondPhase::Top, vec![DiamondPhase::Top]),
+      (
+        DiamondPhase::Right,
+        vec![DiamondPhase::Top, DiamondPhase::Right],
+      ),
+      (
+        DiamondPhase::Bottom,
+        vec![DiamondPhase::Top, DiamondPhase::Right, DiamondPhase::Bottom],
+      ),
+      (
+        DiamondPhase::Left,
+        vec![
+          DiamondPhase::Top,
+          DiamondPhase::Right,
+          DiamondPhase::Bottom,
+          DiamondPhase::Left,
+        ],
+      ),
+    ];
+
+    for (current_phase, expected_rendered) in test_cases {
+      let actual_rendered = DiamondPhase::get_rendered_phases(current_phase);
+      assert_eq!(actual_rendered, expected_rendered);
+    }
   }
 }
 

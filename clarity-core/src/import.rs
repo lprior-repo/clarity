@@ -414,8 +414,8 @@ fn exported_to_domain_bead(exported: &ExportedBead) -> ImportResult<Bead> {
       ),
       None => None,
     },
-    created_at,
-    updated_at,
+    created_at: created_at.to_string(),
+    updated_at: updated_at.to_string(),
   })
 }
 
@@ -432,8 +432,11 @@ pub fn imported_to_new_beads(beads: &Vector<ExportedBead>) -> ImportResult<Vecto
         description: exported.description.clone(),
         status: BeadStatus::from_str(&exported.status)
           .map_err(|_| ImportError::InvalidStatus(exported.status.clone()))?,
-        priority: BeadPriority::new(exported.priority)
-          .map_err(|_| ImportError::InvalidPriority(exported.priority.to_string()))?,
+        priority: {
+          let priority_value = exported.priority;
+          BeadPriority::new(priority_value)
+            .map_err(|_| ImportError::InvalidPriority(exported.priority.to_string()))?
+        },
         bead_type: BeadType::from_str(&exported.bead_type)
           .map_err(|_| ImportError::InvalidType(exported.bead_type.clone()))?,
         created_by: match &exported.created_by {

@@ -41,6 +41,7 @@
 pub mod app;
 pub mod backup;
 pub mod beads;
+pub mod br_show;
 pub mod components;
 pub mod db;
 pub mod error;
@@ -61,8 +62,10 @@ pub use backup::{
   BackupInfo, BackupOptions,
 };
 pub use beads::{BeadDetailPage, BeadFormPage, BeadListPage};
+pub use br_show::{Bd2zkShowPage, BrIssue, BrShowError, BrShowPage};
 pub use components::{
-  use_error_handler, ErrorBoundary, KeyboardHelpDialog, SettingsView, ShortcutHint,
+  use_error_handler, ErrorBoundary, KeyboardButton, KeyboardHelpDialog, SaveButton, SettingsView,
+  ShortcutHint,
 };
 pub use db::DesktopDb;
 pub use error::{AppError, AppResult, RecoveryAction};

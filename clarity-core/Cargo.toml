@@ -12,7 +12,7 @@ thiserror.workspace = true
 itertools.workspace = true
 tap.workspace = true
 rpds.workspace = true
-sqlx = { workspace = true, features = ["derive", "migrate"] }
+sqlx = { workspace = true, features = ["derive", "migrate", "runtime-tokio-rustls", "sqlite", "uuid", "chrono", "json"] }
 uuid.workspace = true
 chrono.workspace = true
 rusqlite.workspace = true
@@ -20,9 +20,11 @@ tempfile.workspace = true
 moka.workspace = true
 url.workspace = true
 urlencoding.workspace = true
-once_cell.workspace = true
+once_cell = { workspace = true, features = ["std"] }
 argon2.workspace = true
 rand.workspace = true
+async-trait.workspace = true
+futures-util.workspace = true
 
 [dev-dependencies]
 sqlx = { workspace = true, features = ["runtime-tokio", "sqlite", "uuid", "chrono", "json", "migrate"] }

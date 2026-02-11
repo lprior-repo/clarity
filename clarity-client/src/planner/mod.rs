@@ -10,10 +10,15 @@ pub mod presentation;
 pub mod adversarial_tests;
 pub mod components;
 pub mod hostile_attacks;
+pub mod parser;
+// pub mod prompts;  // Temporarily disabled - used by coach component
 pub mod state;
+pub mod tests;
 pub mod types;
+// pub mod types_coach;  // Temporarily disabled - used by coach component
 pub mod validation;
 
+pub use parser::{parse_use_case, parse_use_case_json, parse_use_cases, validate_use_case};
 pub use state::{PlannerContext, PlannerState, PlannerTab, PlannerUIState, SelectedEntity};
 pub use types::{
   Contracts, DiamondPhase, EarsRequirements, EarsValue, Effort, GraphHealth, Implementation,

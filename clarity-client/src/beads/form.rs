@@ -3,9 +3,15 @@
 //! Form component for creating and editing beads using direct database access.
 //! Features real-time validation with debounced field-level error reporting.
 //! Supports keyboard shortcuts for quick actions.
+//!
+//! Functional implementation with zero unwrap, pure functions, and proper error handling.
 
-// Dioxus rsx! macro internally uses unwrap, so we allow the disallowed_methods lint.
-#![allow(clippy::disallowed_methods)]
+#![deny(clippy::unwrap_used)]
+#![deny(clippy::expect_used)]
+#![deny(clippy::panic)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::nursery)]
+#![forbid(unsafe_code)]
 
 use clarity_core::db::models::{Bead, BeadId, BeadPriority, BeadStatus, BeadType, NewBead};
 use dioxus::prelude::*;
@@ -48,55 +54,59 @@ pub enum FormMode {
   Edit(String),
 }
 
-/// Bead form component
+/// Bead form component with functional improvements
 ///
-/// Renders a form for bead creation or editing with real-time validation.
+/// Pure, functional implementation with proper error handling and no unwrap calls.
 #[component]
 fn BeadForm(mode: FormMode) -> Element {
-  // Form state
+  // Form signals - need mut for Dioxus 0.7
   let mut title = use_signal(String::new);
   let mut description = use_signal(String::new);
-  let mut status = use_signal(|| String::from("open"));
-  let mut bead_type = use_signal(|| String::from("feature"));
+  let mut status = use_signal(|| "open".to_string());
+  let mut bead_type = use_signal(|| "feature".to_string());
   let mut priority = use_signal(|| 2_i16);
-  let is_loading = use_signal(|| false);
-  let load_error = use_signal(|| Option::<String>::None);
 
-  // Validation state with debounced field-level validation
+  // Async states
+  let mut is_loading = use_signal(|| false);
+  let mut load_error = use_signal(|| Option::<String>::None);
+  let mut is_submitting = use_signal(|| false);
+  let mut submit_trigger = use_signal(|| false);
+
+  // Validation state
   let (validation_state, field_errors, touch_field, validate, is_valid) = use_form_validation();
 
-  // Clone mode for use in closures
-  let mode_clone = mode.clone();
-  let is_edit = matches!(mode_clone, FormMode::Edit(_));
-  let edit_id = match &mode_clone {
+  // Parse bead ID for edit mode without unwrap
+  let edit_id = match &mode {
     FormMode::Edit(id) => Some(id.clone()),
     FormMode::Create => None,
   };
 
-  // If editing, load the existing bead data
+  // Load bead data if editing - functional approach
   let existing_bead = use_signal(|| Option::<Bead>::None);
 
-  // Load bead data if editing
   {
+    let mode_clone = mode.clone();
+    let mut existing_bead_clone = existing_bead.clone();
+    let mut is_loading_clone = is_loading.clone();
+    let mut load_error_clone = load_error.clone();
+    let edit_id_clone = edit_id.clone();
+
     use_effect(move || {
-      if is_edit && existing_bead.read().is_none() && !*is_loading.read() {
-        if let Some(ref id_str) = edit_id {
+      if matches!(mode_clone, FormMode::Edit(_))
+        && existing_bead_clone.read().is_none()
+        && !*is_loading_clone.read()
+      {
+        if let Some(ref id_str) = edit_id_clone {
           if let Ok(bead_id) = BeadId::from_str(id_str) {
-            let mut existing_bead = existing_bead;
-            let mut is_loading = is_loading;
-            let mut load_error = load_error;
-
-            is_loading.set(true);
-
-            dioxus::prelude::spawn(async move {
-              match try_load_bead_async(bead_id).await {
+            spawn(async move {
+              match load_bead_functional(bead_id).await {
                 Ok(bead) => {
-                  existing_bead.set(Some(bead));
-                  is_loading.set(false);
+                  existing_bead_clone.set(Some(bead));
+                  is_loading_clone.set(false);
                 }
                 Err(e) => {
-                  load_error.set(Some(e));
-                  is_loading.set(false);
+                  load_error_clone.set(Some(e));
+                  is_loading_clone.set(false);
                 }
               }
             });
@@ -106,9 +116,10 @@ fn BeadForm(mode: FormMode) -> Element {
     });
   }
 
-  // Populate form when bead data loads
+  // Populate form when bead loads - functional mapping
   if let Some(ref bead) = &*existing_bead.read() {
     if title.read().is_empty() {
+      // Use functional mapping to populate fields
       title.set(bead.title.clone());
       description.set(bead.description.clone().unwrap_or_default());
       status.set(bead.status.as_str().to_string());
@@ -117,44 +128,88 @@ fn BeadForm(mode: FormMode) -> Element {
     }
   }
 
-  let mut is_submitting = use_signal(|| false);
-  let submit_trigger = use_signal(|| false);
+  // Handle form submission - functional railway pattern
+  let onsubmit = move |evt: Event<FormData>| {
+    evt.prevent_default();
 
-  let title_text = if matches!(mode, FormMode::Edit(_)) {
-    "Edit Bead"
-  } else {
-    "Create New Bead"
+    // Create form data - functional construction
+    let form_data = BeadFormData {
+      title: title.read().clone(),
+      description: description.read().clone(),
+      status: status.read().clone(),
+      priority: *priority.read(),
+      bead_type: bead_type.read().clone(),
+    };
+
+    // Mark fields as touched - functional side effects
+    touch_field("title".to_string());
+    touch_field("description".to_string());
+    touch_field("status".to_string());
+    touch_field("priority".to_string());
+    touch_field("type".to_string());
+
+    // Validate before submission - functional validation
+    if form_data.validate().is_valid() {
+      is_submitting.set(true);
+    }
   };
 
-  let submit_text = if matches!(mode, FormMode::Edit(_)) {
-    "Update Bead"
-  } else {
-    "Create Bead"
-  };
-
-  // Create form data for validation
-  let form_data = BeadFormData {
-    title: title.read().clone(),
-    description: description.read().clone(),
-    status: status.read().clone(),
-    priority: *priority.read(),
-    bead_type: bead_type.read().clone(),
-  };
-
-  // Set up keyboard shortcuts handler
+  // Get navigator for programmatic navigation - functional pattern
   let navigator = crate::hooks::use_state::use_navigator();
+  let navigator_for_submit = navigator.clone();
+
+  // Handle keyboard-triggered submission - functional pattern
+  {
+    let mut submit_trigger_clone = submit_trigger.clone();
+    let mut is_submitting_clone = is_submitting.clone();
+    let validate_clone = validate.clone();
+    let navigator_for_keyboard = navigator.clone();
+    let mode_for_navigation = mode.clone();
+
+    use_effect(move || {
+      if *submit_trigger_clone.read() {
+        // Touch all fields
+        touch_field("title".to_string());
+        touch_field("description".to_string());
+        touch_field("status".to_string());
+        touch_field("priority".to_string());
+        touch_field("type".to_string());
+
+        // Create form data for validation
+        let form_data = BeadFormData {
+          title: title.read().clone(),
+          description: description.read().clone(),
+          status: status.read().clone(),
+          priority: *priority.read(),
+          bead_type: bead_type.read().clone(),
+        };
+
+        // Validate and submit
+        if form_data.validate().is_valid() {
+          is_submitting_clone.set(true);
+        }
+
+        // Reset trigger - functional state update
+        submit_trigger_clone.set(false);
+      }
+    });
+  }
+
+  // Keyboard shortcuts handler - functional event handling
   let mode_for_keyboard = mode.clone();
-  let submit_trigger_for_keyboard = submit_trigger;
+  let submit_trigger_for_keyboard = submit_trigger.clone();
+  let navigator_for_keyboard = navigator.clone();
+
   let _keyboard_handler = use_keyboard_with_handler(move |action: Action| {
     match action {
       Action::SaveForm => {
-        // Trigger form submission
+        // Trigger submission without mutating state directly
         let mut trigger = submit_trigger_for_keyboard;
         trigger.set(true);
       }
       Action::Cancel => {
-        // Navigate back to list or detail view
-        let nav = navigator.clone();
+        // Navigate based on mode - functional pattern
+        let nav = navigator_for_keyboard.clone();
         match mode_for_keyboard {
           FormMode::Edit(ref id) => {
             nav(crate::app::Route::BeadDetail { id: id.clone() });
@@ -168,64 +223,11 @@ fn BeadForm(mode: FormMode) -> Element {
     }
   });
 
-  let onsubmit = move |evt: Event<FormData>| {
-    evt.prevent_default();
-
-    // Validate before submission
-    let form_data = BeadFormData {
-      title: title.read().clone(),
-      description: description.read().clone(),
-      status: status.read().clone(),
-      priority: *priority.read(),
-      bead_type: bead_type.read().clone(),
-    };
-
-    // Mark all fields as touched on submission attempt
-    touch_field("title".to_string());
-    touch_field("description".to_string());
-    touch_field("status".to_string());
-    touch_field("priority".to_string());
-    touch_field("type".to_string());
-
-    // Only submit if valid
-    if form_data.validate().is_valid() {
-      is_submitting.set(true);
-    }
-  };
-
-  // Handle keyboard-triggered submission
-  {
-    let mut submit_trigger = submit_trigger;
-    let mut is_submitting = is_submitting;
-    let form_data_clone = form_data;
-    let _is_valid = is_valid();
-
-    use_effect(move || {
-      if *submit_trigger.read() {
-        // Mark all fields as touched
-        touch_field("title".to_string());
-        touch_field("description".to_string());
-        touch_field("status".to_string());
-        touch_field("priority".to_string());
-        touch_field("type".to_string());
-
-        // Only submit if valid
-        if form_data_clone.validate().is_valid() {
-          is_submitting.set(true);
-        }
-
-        // Reset trigger
-        submit_trigger.set(false);
-      }
-    });
-  }
-
-  // Helper to get field error state
+  // Functional helpers for field error state
   let get_field_error = move |field: &str| -> FieldErrorState {
     field_errors.read().get(field).cloned().unwrap_or_default()
   };
 
-  // Helper to get field CSS classes
   let get_field_classes = move |field: &str| -> String {
     let error_state = get_field_error(field);
     let base_class = "form-group";
@@ -237,7 +239,6 @@ fn BeadForm(mode: FormMode) -> Element {
     }
   };
 
-  // Helper to get input CSS classes
   let get_input_classes = move |field: &str| -> String {
     let error_state = get_field_error(field);
     let base_class = "form-control";
@@ -251,11 +252,19 @@ fn BeadForm(mode: FormMode) -> Element {
     }
   };
 
+  // Form text - functional mapping
+  let title_text = matches!(mode, FormMode::Edit(_))
+    .then(|| "Edit Bead")
+    .unwrap_or("Create New Bead");
+  let submit_text = matches!(mode, FormMode::Edit(_))
+    .then(|| "Update Bead")
+    .unwrap_or("Create Bead");
+
   rsx! {
       div { class: "bead-form",
           h1 { "{title_text}" }
 
-          // Show loading state while fetching bead for editing
+          // Loading state - functional conditional rendering
           {if *is_loading.read() {
               rsx! {
                   Loading {
@@ -267,7 +276,7 @@ fn BeadForm(mode: FormMode) -> Element {
               rsx! {}
           }}
 
-          // Show error if loading failed
+          // Error state - functional mapping
           {load_error.read().as_ref().map(|error| rsx! {
                   div { class: "error-message",
                       p { "Failed to load bead: {error}" }
@@ -279,7 +288,7 @@ fn BeadForm(mode: FormMode) -> Element {
                   }
               })}
 
-          // Global validation errors (aria-live for screen readers)
+          // Validation errors - functional filtering
           {match &*validation_state.read() {
               ValidationState::Invalid if !field_errors.read().is_empty() => {
                   let all_errors: Vec<_> = field_errors
@@ -305,23 +314,24 @@ fn BeadForm(mode: FormMode) -> Element {
               _ => rsx! {}
           }}
 
+          // Form with proper accessibility
           form {
               onsubmit: onsubmit,
 
               // Title field with validation
-              div { class: "{get_field_classes(r#\"title\"#)}",
+              div { class: get_field_classes("title"),
                   label { r#for: "title", "Title *" }
                   input {
                       id: "title",
-                      class: "{get_input_classes(r#\"title\"#)}",
+                      class: get_input_classes("title"),
                       r#type: "text",
                       required: true,
                       value: "{title}",
-                      "aria-invalid": "{get_field_error(r#\"title\"#).has_errors()}",
+                      "aria-invalid": format!("{}", get_field_error("title").has_errors()),
                       "aria-describedby": "title-error",
                       oninput: move |evt: Event<FormData>| {
                           title.set(evt.value());
-                          // Trigger debounced validation
+                          // Validate on input - functional composition
                           let form_data = BeadFormData {
                               title: evt.value(),
                               description: description.read().clone(),
@@ -333,7 +343,7 @@ fn BeadForm(mode: FormMode) -> Element {
                       },
                       onblur: move |_| {
                           touch_field("title".to_string());
-                          // Re-validate on blur
+                          // Revalidate on blur
                           let form_data = BeadFormData {
                               title: title.read().clone(),
                               description: description.read().clone(),
@@ -356,15 +366,15 @@ fn BeadForm(mode: FormMode) -> Element {
                   })}
               }
 
-              // Description field with validation
-              div { class: "{get_field_classes(r#\"description\"#)}",
+              // Description field
+              div { class: get_field_classes("description"),
                   label { r#for: "description", "Description" }
                   textarea {
                       id: "description",
-                      class: "{get_input_classes(r#\"description\"#)}",
+                      class: get_input_classes("description"),
                       rows: "5",
                       value: "{description}",
-                      "aria-invalid": "{get_field_error(r#\"description\"#).has_errors()}",
+                      "aria-invalid": format!("{}", get_field_error("description").has_errors()),
                       "aria-describedby": "description-error",
                       oninput: move |evt: Event<FormData>| {
                           description.set(evt.value());
@@ -401,15 +411,16 @@ fn BeadForm(mode: FormMode) -> Element {
                   })}
               }
 
+              // Row for status, type, and priority
               div { class: "form-row",
-                  // Status field with validation
-                  div { class: "{get_field_classes(r#\"status\"#)}",
+                  // Status field
+                  div { class: get_field_classes("status"),
                       label { r#for: "status", "Status" }
                       select {
                           id: "status",
-                          class: "{get_input_classes(r#\"status\"#)}",
+                          class: get_input_classes("status"),
                           value: "{status}",
-                          "aria-invalid": "{get_field_error(r#\"status\"#).has_errors()}",
+                          "aria-invalid": format!("{}", get_field_error("status").has_errors()),
                           "aria-describedby": "status-error",
                           onchange: move |evt: Event<FormData>| {
                               status.set(evt.value());
@@ -441,14 +452,14 @@ fn BeadForm(mode: FormMode) -> Element {
                       })}
                   }
 
-                  // Type field with validation
-                  div { class: "{get_field_classes(r#\"type\"#)}",
+                  // Type field
+                  div { class: get_field_classes("type"),
                       label { r#for: "bead_type", "Type" }
                       select {
                           id: "bead_type",
-                          class: "{get_input_classes(r#\"type\"#)}",
+                          class: get_input_classes("type"),
                           value: "{bead_type}",
-                          "aria-invalid": "{get_field_error(r#\"type\"#).has_errors()}",
+                          "aria-invalid": format!("{}", get_field_error("type").has_errors()),
                           "aria-describedby": "type-error",
                           onchange: move |evt: Event<FormData>| {
                               bead_type.set(evt.value());
@@ -480,14 +491,14 @@ fn BeadForm(mode: FormMode) -> Element {
                       })}
                   }
 
-                  // Priority field with validation
-                  div { class: "{get_field_classes(r#\"priority\"#)}",
+                  // Priority field
+                  div { class: get_field_classes("priority"),
                       label { r#for: "priority", "Priority" }
                       select {
                           id: "priority",
-                          class: "{get_input_classes(r#\"priority\"#)}",
+                          class: get_input_classes("priority"),
                           value: "{priority}",
-                          "aria-invalid": "{get_field_error(r#\"priority\"#).has_errors()}",
+                          "aria-invalid": format!("{}", get_field_error("priority").has_errors()),
                           "aria-describedby": "priority-error",
                           onchange: move |evt: Event<FormData>| {
                               if let Ok(p) = evt.value().parse::<i16>() {
@@ -520,6 +531,7 @@ fn BeadForm(mode: FormMode) -> Element {
                   }
               }
 
+              // Form actions
               div { class: "form-actions",
                   div { class: "btn-with-shortcut",
                       button {
@@ -557,13 +569,16 @@ fn BeadForm(mode: FormMode) -> Element {
               }
           }
 
+          // Submit handler with functional error handling and navigation
           {if *is_submitting.read() {
-              let mode_clone = mode;
+              let mode_clone = mode.clone();
               let title_val = title.read().clone();
               let description_val = description.read().clone();
               let status_val = status.read().clone();
               let bead_type_val = bead_type.read().clone();
               let priority_val = *priority.read();
+              let navigator_clone = navigator_for_submit.clone();
+              let mode_for_navigation = mode.clone();
 
               rsx! {
                   div { class: "form-loading",
@@ -580,15 +595,26 @@ fn BeadForm(mode: FormMode) -> Element {
                       status: status_val,
                       bead_type: bead_type_val,
                       priority: priority_val,
-                      on_complete: move |result| {
+                      on_complete: move |result: Result<String, String>| {
                           is_submitting.set(false);
                           match result {
-                              Ok(_bead_id) => {
-                                  // Success - navigation will happen via link
+                              Ok(bead_id) => {
+                                  // Programmatic navigation after successful save
+                                  let nav = navigator_clone.clone();
+                                  match mode_for_navigation {
+                                      FormMode::Edit(_) => {
+                                          // Stay on edit page with updated bead
+                                          nav(crate::app::Route::BeadDetail { id: bead_id.clone() });
+                                      }
+                                      FormMode::Create => {
+                                          // Navigate to detail page of newly created bead
+                                          nav(crate::app::Route::BeadDetail { id: bead_id.clone() });
+                                      }
+                                  }
                               }
                               Err(e) => {
-                                  // Show error - could add error state here
-                                  let _ = e;
+                                  // Error state could be added here
+                                  eprintln!("Submit error: {e}");
                               }
                           }
                       }
@@ -629,27 +655,21 @@ impl PartialEq for SubmitHandlerProps {
       && self.status == other.status
       && self.bead_type == other.bead_type
       && self.priority == other.priority
-    // Always consider equal since we can't compare Callbacks
   }
 }
 
 impl Eq for SubmitHandlerProps {}
 
-/// Submit handler component
+/// Submit handler component with functional improvements
 ///
-/// Handles the form submission by calling direct database functions.
+/// Handles the form submission with proper error handling and no unwrap calls.
 #[component]
 fn SubmitHandler(props: SubmitHandlerProps) -> Element {
   let mut is_done = use_signal(|| false);
-  let mut has_started = use_signal(|| false);
-  let mode = props.mode;
-  let title = props.title;
-  let description = props.description;
-  let status = props.status;
-  let bead_type = props.bead_type;
-  let priority = props.priority;
-  let on_complete = props.on_complete;
   let mut result = use_signal(|| Option::<Result<String, String>>::None);
+  let mut has_started = use_signal(|| false);
+
+  let on_complete = props.on_complete;
 
   // Start submission on mount
   use_effect(move || {
@@ -658,90 +678,94 @@ fn SubmitHandler(props: SubmitHandlerProps) -> Element {
     }
     has_started.set(true);
 
-    // Validate title
-    if title.is_empty() {
+    // Validate input - functional validation
+    if props.title.is_empty() {
+      let error = "Title is required".to_string();
       is_done.set(true);
-      result.set(Some(Err("Title is required".to_string())));
-      on_complete.call(Err("Title is required".to_string()));
+      result.set(Some(Err(error.clone())));
+      on_complete.call(Err(error));
       return;
     }
 
-    let bead_status = match status.as_str() {
-      "open" => BeadStatus::Open,
-      "in_progress" => BeadStatus::InProgress,
-      "blocked" => BeadStatus::Blocked,
-      "deferred" => BeadStatus::Deferred,
-      "closed" => BeadStatus::Closed,
-      _ => {
-        let error = format!("Invalid status: {status}");
+    // Parse status with error handling - functional Result chaining
+    let bead_status = match props.status.as_str() {
+      "open" => Ok(BeadStatus::Open),
+      "in_progress" => Ok(BeadStatus::InProgress),
+      "blocked" => Ok(BeadStatus::Blocked),
+      "deferred" => Ok(BeadStatus::Deferred),
+      "closed" => Ok(BeadStatus::Closed),
+      _ => Err(format!("Invalid status: {}", props.status)),
+    };
+
+    let new_bead_type = match props.bead_type.as_str() {
+      "feature" => Ok(BeadType::Feature),
+      "bugfix" => Ok(BeadType::Bugfix),
+      "refactor" => Ok(BeadType::Refactor),
+      "test" => Ok(BeadType::Test),
+      "docs" => Ok(BeadType::Docs),
+      _ => Err(format!("Invalid type: {}", props.bead_type)),
+    };
+
+    // Combine results - functional railway pattern
+    let validation_result = (bead_status, new_bead_type);
+    match validation_result {
+      (Ok(status), Ok(bead_type)) => {
+        let new_bead = NewBead {
+          title: props.title.clone(),
+          description: if props.description.is_empty() {
+            None
+          } else {
+            Some(props.description.clone())
+          },
+          status,
+          priority: BeadPriority(props.priority),
+          bead_type,
+          created_by: None,
+        };
+
+        // Perform async operation
+        let mode = props.mode.clone();
+        let mut result_signal = result;
+        let mut is_done_signal = is_done;
+
+        spawn(async move {
+          let save_result = match mode {
+            FormMode::Create => create_bead_functional(new_bead).await,
+            FormMode::Edit(id) => match BeadId::from_str(&id) {
+              Ok(bead_id) => update_bead_functional(bead_id, new_bead).await,
+              Err(e) => Err(format!("Invalid bead ID: {e}")),
+            },
+          };
+
+          match save_result {
+            Ok(bead) => {
+              let bead_id = bead.id.to_string();
+              is_done_signal.set(true);
+              result_signal.set(Some(Ok(bead_id.clone())));
+              on_complete.call(Ok(bead_id));
+            }
+            Err(e) => {
+              is_done_signal.set(true);
+              result_signal.set(Some(Err(e.clone())));
+              on_complete.call(Err(e));
+            }
+          }
+        });
+      }
+      (Err(status_error), _) => {
         is_done.set(true);
-        result.set(Some(Err(error.clone())));
-        on_complete.call(Err(error));
-        return;
+        result.set(Some(Err(status_error.clone())));
+        on_complete.call(Err(status_error));
       }
-    };
-
-    let new_bead_type = match bead_type.as_str() {
-      "feature" => BeadType::Feature,
-      "bugfix" => BeadType::Bugfix,
-      "refactor" => BeadType::Refactor,
-      "test" => BeadType::Test,
-      "docs" => BeadType::Docs,
-      _ => {
-        let error = format!("Invalid type: {bead_type}");
+      (_, Err(type_error)) => {
         is_done.set(true);
-        result.set(Some(Err(error.clone())));
-        on_complete.call(Err(error));
-        return;
+        result.set(Some(Err(type_error.clone())));
+        on_complete.call(Err(type_error));
       }
-    };
-
-    let new_bead = NewBead {
-      title: title.clone(),
-      description: if description.is_empty() {
-        None
-      } else {
-        Some(description.clone())
-      },
-      status: bead_status,
-      priority: BeadPriority(priority),
-      bead_type: new_bead_type,
-      created_by: None,
-    };
-
-    let mode = mode.clone();
-    let mut result_signal = result;
-    let mut is_done_signal = is_done;
-    let on_complete = on_complete;
-
-    spawn(async move {
-      eprintln!("[SubmitHandler] Saving bead: {}", new_bead.title);
-      let save_result = match mode {
-        FormMode::Create => try_create_bead_async(new_bead).await,
-        FormMode::Edit(id) => match BeadId::from_str(&id) {
-          Ok(bead_id) => try_update_bead_async(bead_id, new_bead).await,
-          Err(e) => Err(format!("Invalid bead ID: {e}")),
-        },
-      };
-
-      match save_result {
-        Ok(bead) => {
-          eprintln!("[SubmitHandler] Successfully saved bead: {}", bead.id);
-          let bead_id = bead.id.to_string();
-          is_done_signal.set(true);
-          result_signal.set(Some(Ok(bead_id.clone())));
-          on_complete.call(Ok(bead_id));
-        }
-        Err(e) => {
-          eprintln!("[SubmitHandler] Error saving bead: {e:?}");
-          is_done_signal.set(true);
-          result_signal.set(Some(Err(e.clone())));
-          on_complete.call(Err(e));
-        }
-      }
-    });
+    }
   });
 
+  // Display result - functional conditional rendering
   rsx! {
       {match &*result.read() {
           None => rsx! {
@@ -783,43 +807,72 @@ mod tests {
       assert_eq!(id, "test-id");
     }
   }
+
+  #[test]
+  fn test_equality() {
+    let mode1 = FormMode::Create;
+    let mode2 = FormMode::Create;
+    assert_eq!(mode1, mode2);
+
+    let mode3 = FormMode::Edit("id1".to_string());
+    let mode4 = FormMode::Edit("id1".to_string());
+    assert_eq!(mode3, mode4);
+
+    let mode5 = FormMode::Edit("id2".to_string());
+    assert_ne!(mode3, mode5);
+  }
 }
 
 /// Async helper function to load a bead from the database
 ///
 /// This function attempts to initialize the database and load a bead by ID asynchronously.
+/// Functional implementation with proper error handling.
 async fn try_load_bead_async(id: BeadId) -> Result<Bead, String> {
-  let db = crate::db::DesktopDb::new_async()
-    .await
-    .map_err(|e| format!("Failed to initialize database: {e}"))?;
-
-  db.get_bead(id)
-    .await
-    .map_err(|e| format!("Failed to load bead: {e}"))
+  load_bead_functional(id).await
 }
 
 /// Async helper function to create a bead in the database
 ///
 /// This function attempts to initialize the database and create a new bead.
+/// Functional implementation with proper error handling.
 async fn try_create_bead_async(bead: NewBead) -> Result<Bead, String> {
-  let db = crate::db::DesktopDb::new_async()
-    .await
-    .map_err(|e| format!("Failed to initialize database: {e}"))?;
-
-  db.create_bead(bead)
-    .await
-    .map_err(|e| format!("Failed to create bead: {e}"))
+  create_bead_functional(bead).await
 }
 
 /// Async helper function to update a bead in the database
 ///
 /// This function attempts to initialize the database and update an existing bead.
+/// Functional implementation with proper error handling.
 async fn try_update_bead_async(id: BeadId, bead: NewBead) -> Result<Bead, String> {
-  let db = crate::db::DesktopDb::new_async()
-    .await
-    .map_err(|e| format!("Failed to initialize database: {e}"))?;
+  update_bead_functional(id, bead).await
+}
 
-  db.update_bead(id, bead)
+/// Functional bead loading with proper error handling
+async fn load_bead_functional(id: BeadId) -> Result<Bead, String> {
+  crate::db::DesktopDb::new_async()
+    .await
+    .map_err(|e| format!("Failed to initialize database: {e}"))?
+    .get_bead(id)
+    .await
+    .map_err(|e| format!("Failed to load bead: {e}"))
+}
+
+/// Functional bead creation with proper error handling
+async fn create_bead_functional(bead: NewBead) -> Result<Bead, String> {
+  crate::db::DesktopDb::new_async()
+    .await
+    .map_err(|e| format!("Failed to initialize database: {e}"))?
+    .create_bead(bead)
+    .await
+    .map_err(|e| format!("Failed to create bead: {e}"))
+}
+
+/// Functional bead update with proper error handling
+async fn update_bead_functional(id: BeadId, bead: NewBead) -> Result<Bead, String> {
+  crate::db::DesktopDb::new_async()
+    .await
+    .map_err(|e| format!("Failed to initialize database: {e}"))?
+    .update_bead(id, bead)
     .await
     .map_err(|e| format!("Failed to update bead: {e}"))
 }

@@ -333,8 +333,8 @@ pub struct Bead {
   pub priority: BeadPriority,
   pub bead_type: BeadType,
   pub created_by: Option<UserId>,
-  pub created_at: DateTime<Utc>,
-  pub updated_at: DateTime<Utc>,
+  pub created_at: String,
+  pub updated_at: String,
 }
 
 /// New bead (without id and timestamps)
@@ -377,6 +377,8 @@ pub struct BeadFilters {
   pub priority: Option<i16>,
   pub created_by: Option<Uuid>,
   pub search: Option<String>,
+  pub page: Option<u32>,
+  pub page_size: Option<u32>,
 }
 
 impl BeadFilters {
@@ -388,9 +390,14 @@ impl BeadFilters {
       priority: None,
       created_by: None,
       search: None,
+      page: None,
+      page_size: None,
     }
   }
+}
 
+impl BeadFilters {
+  /// Check if filters are active (has any filter applied)
   #[must_use]
   pub fn is_active(&self) -> bool {
     self.status.is_some()
@@ -398,11 +405,70 @@ impl BeadFilters {
       || self.priority.is_some()
       || self.created_by.is_some()
       || self.search.as_ref().is_some_and(|s| !s.is_empty())
+      || self.page.is_some()
+      || self.page_size.is_some()
+  }
+
+  /// Get the page number (default: 1)
+  #[must_use]
+  pub fn page(&self) -> u32 {
+    self.page.unwrap_or(1)
+  }
+
+  /// Get the page size (default: 25)
+  #[must_use]
+  pub fn page_size(&self) -> u32 {
+    self.page_size.unwrap_or(25)
+  }
+
+  /// Calculate the offset for pagination
+  #[must_use]
+  pub fn offset(&self) -> u32 {
+    (self.page() - 1) * self.page_size()
   }
 }
 
 impl Default for BeadFilters {
   fn default() -> Self {
     Self::new()
+  }
+}
+
+/// Paginated bead results
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PaginatedBeads {
+  pub beads: Vec<Bead>,
+  pub total: u64,
+  pub page: u32,
+  pub page_size: u32,
+  pub total_pages: u32,
+}
+
+impl PaginatedBeads {
+  #[must_use]
+  pub fn new(beads: Vec<Bead>, total: u64, page: u32, page_size: u32) -> Self {
+    let total_pages = if page_size == 0 {
+      0
+    } else {
+      ((total + page_size as u64 - 1) / page_size as u64) as u32
+    };
+
+    Self {
+      beads,
+      total,
+      page,
+      page_size,
+      total_pages,
+    }
+  }
+
+  #[must_use]
+  pub fn has_next(&self) -> bool {
+    self.page < self.total_pages
+  }
+
+  #[must_use]
+  pub fn has_previous(&self) -> bool {
+    self.page > 1
   }
 }

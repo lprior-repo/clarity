@@ -42,6 +42,9 @@ pub enum Route {
   /// Bead detail route with dynamic ID parameter
   BeadDetail { id: String },
 
+  /// br show route with dynamic ID parameter
+  BrShow { id: String },
+
   /// Settings page route
   Settings,
 
@@ -66,6 +69,9 @@ impl std::str::FromStr for Route {
         id: (*id).to_string(),
       }),
       ["beads", id, "edit"] => Ok(Self::BeadEdit {
+        id: (*id).to_string(),
+      }),
+      ["br", id] => Ok(Self::BrShow {
         id: (*id).to_string(),
       }),
       ["settings"] => Ok(Self::Settings),
@@ -98,6 +104,7 @@ impl std::fmt::Display for Route {
       Self::BeadNew => write!(f, "/beads/new"),
       Self::BeadEdit { id } => write!(f, "/beads/{id}/edit"),
       Self::BeadDetail { id } => write!(f, "/beads/{id}"),
+      Self::BrShow { id } => write!(f, "/br/{id}"),
       Self::Settings => write!(f, "/settings"),
       Self::NotFound { route } => write!(f, "/{route}"),
     }
@@ -129,6 +136,7 @@ pub fn App() -> Element {
                       Route::BeadNew => rsx! { BeadNew {} },
                       Route::BeadEdit { id } => rsx! { BeadEdit { id } },
                       Route::BeadDetail { id } => rsx! { BeadDetail { id } },
+                      Route::BrShow { id } => rsx! { BrShow { id } },
                       Route::Settings => rsx! { Settings {} },
                       Route::NotFound { route } => rsx! { NotFound { route } },
                   }
@@ -304,6 +312,22 @@ fn BeadDetail(id: String) -> Element {
   }
 }
 
+/// br show page component wrapper
+///
+/// This wraps the existing `BrShowPage` component.
+/// The id parameter is automatically extracted from the route by `BrShowPage`.
+#[component]
+fn BrShow(id: String) -> Element {
+  rsx! {
+      div { class: "app-container",
+          h1 { "Clarity" }
+          div { class: "content",
+              super::BrShowPage { id: id }
+          }
+      }
+  }
+}
+
 /// AI planner page component wrapper
 #[component]
 fn Planner() -> Element {
@@ -458,6 +482,19 @@ mod tests {
         assert_eq!(id, "test-id-123");
       }
       _ => panic!("Expected BeadDetail route"),
+    }
+  }
+
+  #[test]
+  fn test_route_br_show_with_id() {
+    let route = Route::BrShow {
+      id: "bd-1bf".to_string(),
+    };
+    match route {
+      Route::BrShow { id } => {
+        assert_eq!(id, "bd-1bf");
+      }
+      _ => panic!("Expected BrShow route"),
     }
   }
 

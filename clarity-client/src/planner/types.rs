@@ -11,6 +11,7 @@
 #![forbid(unsafe_code)]
 
 use chrono::{DateTime, Utc};
+use clarity_core::progress::ProgressStatus;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use thiserror::Error;
@@ -47,6 +48,66 @@ pub enum DiamondPhase {
   Bottom,
   /// Delivery phase - validate and deliver
   Left,
+}
+
+impl DiamondPhase {
+  /// Check if phase is active (current phase)
+  #[must_use]
+  pub const fn is_active(&self) -> bool {
+    matches!(self, Self::Top | Self::Right | Self::Bottom | Self::Left)
+  }
+
+  /// Check if phase is complete (all phases before current are complete)
+  #[must_use]
+  pub fn is_complete(&self, current_phase: DiamondPhase) -> bool {
+    use DiamondPhase::*;
+    match (self, current_phase) {
+      // Current phase is always considered complete for rendering purposes
+      (phase, current) if *phase == current => true,
+      // All phases before the current one are complete
+      (Top, _) => true, // Discovery is always complete if we've moved past it
+      (Right, Bottom | Left) => true,
+      (Bottom, Left) => true,
+      (Left, _) => false, // Delivery is never "complete" as it's the final phase
+      _ => false,
+    }
+  }
+
+  /// Check if phase should be rendered (is active OR is complete)
+  #[must_use]
+  pub fn should_render(&self, current_phase: DiamondPhase) -> bool {
+    self.is_active() || self.is_complete(current_phase)
+  }
+
+  /// Get phase order for validation
+  #[must_use]
+  pub const fn order(&self) -> usize {
+    use DiamondPhase::*;
+    match self {
+      Top => 0,
+      Right => 1,
+      Bottom => 2,
+      Left => 3,
+    }
+  }
+
+  /// Check if phase can be retreated to
+  #[must_use]
+  pub const fn can_retreat_to(&self) -> bool {
+    !matches!(self, DiamondPhase::Top)
+  }
+
+  /// Get all phases that should be rendered for a given current phase
+  #[must_use]
+  pub fn get_rendered_phases(current_phase: DiamondPhase) -> Vec<DiamondPhase> {
+    use DiamondPhase::*;
+    match current_phase {
+      Top => vec![Top],                       // Only Discovery renders
+      Right => vec![Top, Right],              // Discovery and Design
+      Bottom => vec![Top, Right, Bottom],     // All but Delivery
+      Left => vec![Top, Right, Bottom, Left], // All phases
+    }
+  }
 }
 
 impl Default for DiamondPhase {
@@ -1817,6 +1878,108 @@ impl GraphHealth {
 impl Default for GraphHealth {
   fn default() -> Self {
     Self::new()
+  }
+}
+
+/// Test helper for phase rendering
+#[cfg(test)]
+mod phase_rendering_tests {
+  use super::*;
+
+  #[test]
+  fn test_phase_is_active() {
+    assert!(DiamondPhase::Top.is_active());
+    assert!(DiamondPhase::Right.is_active());
+    assert!(DiamondPhase::Bottom.is_active());
+    assert!(DiamondPhase::Left.is_active());
+  }
+
+  #[test]
+  fn test_phase_is_complete() {
+    // Discovery phase (Top)
+    assert!(DiamondPhase::Top.is_complete(DiamondPhase::Top)); // Current phase
+    assert!(DiamondPhase::Top.is_complete(DiamondPhase::Right)); // Before Right
+    assert!(DiamondPhase::Top.is_complete(DiamondPhase::Bottom)); // Before Bottom
+    assert!(DiamondPhase::Top.is_complete(DiamondPhase::Left)); // Before Left
+
+    // Design phase (Right)
+    assert!(!DiamondPhase::Right.is_complete(DiamondPhase::Top)); // Not reached yet
+    assert!(DiamondPhase::Right.is_complete(DiamondPhase::Right)); // Current phase
+    assert!(DiamondPhase::Right.is_complete(DiamondPhase::Bottom)); // Before Bottom
+    assert!(DiamondPhase::Right.is_complete(DiamondPhase::Left)); // Before Left
+
+    // Development phase (Bottom)
+    assert!(!DiamondPhase::Bottom.is_complete(DiamondPhase::Top)); // Not reached yet
+    assert!(!DiamondPhase::Bottom.is_complete(DiamondPhase::Right)); // Not reached yet
+    assert!(DiamondPhase::Bottom.is_complete(DiamondPhase::Bottom)); // Current phase
+    assert!(DiamondPhase::Bottom.is_complete(DiamondPhase::Left)); // Before Left
+
+    // Delivery phase (Left)
+    assert!(!DiamondPhase::Left.is_complete(DiamondPhase::Top)); // Not reached yet
+    assert!(!DiamondPhase::Left.is_complete(DiamondPhase::Right)); // Not reached yet
+    assert!(!DiamondPhase::Left.is_complete(DiamondPhase::Bottom)); // Not reached yet
+                                                                    // Note: Left is never "complete" as it's the final phase
+  }
+
+  #[test]
+  fn test_phase_should_render() {
+    use DiamondPhase::*;
+
+    // Discovery phase (Top)
+    assert!(Top.should_render(Top)); // Active
+    assert!(Top.should_render(Right)); // Complete
+    assert!(Top.should_render(Bottom)); // Complete
+    assert!(Top.should_render(Left)); // Complete
+
+    // Design phase (Right)
+    assert!(!Right.should_render(Top)); // Not active, not complete
+    assert!(Right.should_render(Right)); // Active
+    assert!(Right.should_render(Bottom)); // Complete
+    assert!(Right.should_render(Left)); // Complete
+
+    // Development phase (Bottom)
+    assert!(!Bottom.should_render(Top)); // Not active, not complete
+    assert!(!Bottom.should_render(Right)); // Not active, not complete
+    assert!(Bottom.should_render(Bottom)); // Active
+    assert!(Bottom.should_render(Left)); // Complete
+
+    // Delivery phase (Left)
+    assert!(!Left.should_render(Top)); // Not active, not complete
+    assert!(!Left.should_render(Right)); // Not active, not complete
+    assert!(!Left.should_render(Bottom)); // Not active, not complete
+    assert!(Left.should_render(Left)); // Active
+  }
+
+  #[test]
+  fn test_get_rendered_phases() {
+    use DiamondPhase::*;
+
+    assert_eq!(DiamondPhase::get_rendered_phases(Top), vec![Top]);
+    assert_eq!(DiamondPhase::get_rendered_phases(Right), vec![Top, Right]);
+    assert_eq!(
+      DiamondPhase::get_rendered_phases(Bottom),
+      vec![Top, Right, Bottom]
+    );
+    assert_eq!(
+      DiamondPhase::get_rendered_phases(Left),
+      vec![Top, Right, Bottom, Left]
+    );
+  }
+
+  #[test]
+  fn test_phase_order() {
+    assert_eq!(DiamondPhase::Top.order(), 0);
+    assert_eq!(DiamondPhase::Right.order(), 1);
+    assert_eq!(DiamondPhase::Bottom.order(), 2);
+    assert_eq!(DiamondPhase::Left.order(), 3);
+  }
+
+  #[test]
+  fn test_can_retreat_to() {
+    assert!(!DiamondPhase::Top.can_retreat_to()); // Cannot retreat from start
+    assert!(DiamondPhase::Right.can_retreat_to()); // Can retreat to Discovery
+    assert!(DiamondPhase::Bottom.can_retreat_to()); // Can retreat to Design
+    assert!(DiamondPhase::Left.can_retreat_to()); // Can retreat to Development
   }
 }
 

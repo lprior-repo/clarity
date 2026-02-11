@@ -503,8 +503,8 @@ mod tests {
         priority: bead.priority,
         bead_type: bead.bead_type,
         created_by: bead.created_by,
-        created_at: now,
-        updated_at: now,
+        created_at: now.to_string(),
+        updated_at: now.to_string(),
       };
       beads.push(new_bead.clone());
       Ok(new_bead)
@@ -529,8 +529,8 @@ mod tests {
         priority: bead.priority,
         bead_type: bead.bead_type,
         created_by: bead.created_by,
-        created_at: beads[pos].created_at,
-        updated_at: now,
+        created_at: beads[pos].created_at.clone(),
+        updated_at: now.to_string(),
       };
 
       beads[pos] = updated.clone();

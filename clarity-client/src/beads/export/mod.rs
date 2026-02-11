@@ -70,7 +70,7 @@ pub fn ExportModal(props: ExportModalProps) -> Element {
 
       dioxus::prelude::spawn(async move {
         match tokio::task::spawn_blocking(move || {
-          clarity_core::export::export_beads(&beads_vec, format)
+          clarity_core::export::export_beads(&beads_vec[..], format)
         })
         .await
         {

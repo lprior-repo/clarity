@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "clarity-core",
-    "clarity-client",
+    "clarity-client", "br_show_bd_2zk_demo",
 ]
 resolver = "2"
 
@@ -11,6 +11,7 @@ unsafe_code = "forbid"
 missing_docs = "allow"
 dead_code = "deny"
 unused_must_use = "deny"
+async_fn_in_trait = "allow"
 
 [workspace.lints.clippy]
 # Zero unwrap law - COMPILE ERRORS (relaxed in tests)
@@ -71,6 +72,7 @@ urlencoding = "2.1"
 once_cell = "1.19"
 argon2 = "0.5"
 rand = "0.8"
+async-trait = "0.1"
 
 [profile.dev]
 opt-level = 0

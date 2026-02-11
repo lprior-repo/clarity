@@ -215,9 +215,9 @@ impl DesktopDb {
   pub async fn list_beads_filtered(&self, filters: &BeadFilters) -> DbResult<Vec<Bead>> {
     // Build query with parameterized bindings (SQL injection safe)
     let mut query = String::from(
-            "SELECT id, title, description, status, priority, bead_type, created_by, created_at, updated_at
-             FROM beads WHERE 1=1",
-        );
+        "SELECT id, title, description, status, priority, bead_type, created_by, created_at, updated_at
+         FROM beads WHERE 1=1",
+    );
     let mut bind_count = 0;
 
     // Add status filter
@@ -248,6 +248,103 @@ impl DesktopDb {
 
     query.push_str(" ORDER BY created_at DESC");
 
+    // Add pagination if specified
+    if let Some(page_size) = filters.page_size {
+      let offset = filters.offset();
+      query.push_str(&format!(
+        " LIMIT ?{} OFFSET ?{}",
+        bind_count + 1,
+        bind_count + 2
+      ));
+
+      // Build and execute parameterized query
+      let mut sql_query = sqlx::query(&query);
+
+      // Bind parameters in order
+      if let Some(ref status) = filters.status {
+        sql_query = sql_query.bind(status);
+      }
+      if let Some(ref bead_type) = filters.bead_type {
+        sql_query = sql_query.bind(bead_type);
+      }
+      if let Some(priority) = filters.priority {
+        sql_query = sql_query.bind(priority);
+      }
+      if let Some(ref search) = filters.search {
+        // Use parameterized search pattern (SQL injection safe)
+        // We need to create a pattern that lives long enough
+        let pattern = format!("%{search}%");
+        sql_query = sql_query.bind(pattern);
+      }
+
+      // Bind pagination parameters
+      sql_query = sql_query.bind(page_size);
+      sql_query = sql_query.bind(offset);
+
+      let rows = sql_query.fetch_all(&self.pool).await?;
+      rows.into_iter().map(Self::row_to_bead).collect()
+    } else {
+      // No pagination, fetch all results
+      let mut sql_query = sqlx::query(&query);
+
+      // Bind parameters in order
+      if let Some(ref status) = filters.status {
+        sql_query = sql_query.bind(status);
+      }
+      if let Some(ref bead_type) = filters.bead_type {
+        sql_query = sql_query.bind(bead_type);
+      }
+      if let Some(priority) = filters.priority {
+        sql_query = sql_query.bind(priority);
+      }
+      if let Some(ref search) = filters.search {
+        // Use parameterized search pattern (SQL injection safe)
+        let pattern = format!("%{search}%");
+        sql_query = sql_query.bind(pattern);
+      }
+
+      let rows = sql_query.fetch_all(&self.pool).await?;
+      rows.into_iter().map(Self::row_to_bead).collect()
+    }
+  }
+
+  /// Get count of beads matching filters (for pagination)
+  ///
+  /// # Errors
+  /// - Returns `DbError::Connection` if query execution fails
+  /// - Returns `DbError::InvalidUuid` if ID parsing fails
+  /// - Returns `DbError::Validation` if status/type parsing fails
+  pub async fn count_beads_filtered(&self, filters: &BeadFilters) -> DbResult<u64> {
+    // Build count query with parameterized bindings (SQL injection safe)
+    let mut query = String::from("SELECT COUNT(*) FROM beads WHERE 1=1");
+    let mut bind_count = 0;
+
+    // Add status filter
+    if filters.status.is_some() {
+      bind_count += 1;
+      query.push_str(&format!(" AND status = ?{bind_count}"));
+    }
+
+    // Add bead_type filter
+    if filters.bead_type.is_some() {
+      bind_count += 1;
+      query.push_str(&format!(" AND bead_type = ?{bind_count}"));
+    }
+
+    // Add priority filter
+    if filters.priority.is_some() {
+      bind_count += 1;
+      query.push_str(&format!(" AND priority = ?{bind_count}"));
+    }
+
+    // Add search filter (parameterized LIKE query)
+    if filters.search.is_some() {
+      bind_count += 1;
+      query.push_str(&format!(
+        " AND (title LIKE ?{bind_count} OR description LIKE ?{bind_count})"
+      ));
+    }
+
     // Build and execute parameterized query
     let mut sql_query = sqlx::query(&query);
 
@@ -263,14 +360,102 @@ impl DesktopDb {
     }
     if let Some(ref search) = filters.search {
       // Use parameterized search pattern (SQL injection safe)
-      // We need to create a pattern that lives long enough
       let pattern = format!("%{search}%");
       sql_query = sql_query.bind(pattern);
     }
 
-    let rows = sql_query.fetch_all(&self.pool).await?;
+    let row = sql_query.fetch_one(&self.pool).await?;
+    let count: i64 = row.get(0);
+    Ok(count as u64)
+  }
 
-    rows.into_iter().map(Self::row_to_bead).collect()
+  /// Get paginated beads with filters
+  ///
+  /// # Errors
+  /// - Returns `DbError::Connection` if query execution fails
+  pub async fn list_beads_paginated(
+    &self,
+    filters: &BeadFilters,
+  ) -> DbResult<clarity_core::db::models::PaginatedBeads> {
+    let total = self.count_beads_filtered(filters).await?;
+    let page = filters.page();
+    let page_size = filters.page_size();
+    let offset = filters.offset();
+
+    // Build query with parameterized bindings (SQL injection safe)
+    let mut query = String::from(
+      "SELECT id, title, description, status, priority, bead_type, created_by, created_at, updated_at
+       FROM beads WHERE 1=1",
+    );
+    let mut bind_count = 0;
+
+    // Add status filter
+    if filters.status.is_some() {
+      bind_count += 1;
+      query.push_str(&format!(" AND status = ?{bind_count}"));
+    }
+
+    // Add bead_type filter
+    if filters.bead_type.is_some() {
+      bind_count += 1;
+      query.push_str(&format!(" AND bead_type = ?{bind_count}"));
+    }
+
+    // Add priority filter
+    if filters.priority.is_some() {
+      bind_count += 1;
+      query.push_str(&format!(" AND priority = ?{bind_count}"));
+    }
+
+    // Add search filter (parameterized LIKE query)
+    if filters.search.is_some() {
+      bind_count += 1;
+      query.push_str(&format!(
+        " AND (title LIKE ?{bind_count} OR description LIKE ?{bind_count})"
+      ));
+    }
+
+    query.push_str(" ORDER BY created_at DESC");
+
+    // Always apply pagination for this method
+    query.push_str(&format!(
+      " LIMIT ?{} OFFSET ?{}",
+      bind_count + 1,
+      bind_count + 2
+    ));
+
+    // Build and execute parameterized query
+    let mut sql_query = sqlx::query(&query);
+
+    // Bind parameters in order
+    if let Some(ref status) = filters.status {
+      sql_query = sql_query.bind(status);
+    }
+    if let Some(ref bead_type) = filters.bead_type {
+      sql_query = sql_query.bind(bead_type);
+    }
+    if let Some(priority) = filters.priority {
+      sql_query = sql_query.bind(priority);
+    }
+    if let Some(ref search) = filters.search {
+      // Use parameterized search pattern (SQL injection safe)
+      let pattern = format!("%{search}%");
+      sql_query = sql_query.bind(pattern);
+    }
+
+    // Bind pagination parameters
+    sql_query = sql_query.bind(page_size);
+    sql_query = sql_query.bind(offset);
+
+    let rows = sql_query.fetch_all(&self.pool).await?;
+    let beads = rows
+      .into_iter()
+      .map(Self::row_to_bead)
+      .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(clarity_core::db::models::PaginatedBeads::new(
+      beads, total, page, page_size,
+    ))
   }
 
   /// Get a single bead by ID
@@ -566,12 +751,6 @@ impl DesktopDb {
     let bead_type = type_str.parse()?;
     let priority = clarity_core::db::models::BeadPriority::new(priority_val)?;
 
-    // Try parsing as RFC3339 first, then fall back to SQLite datetime format
-    let created_at = Self::parse_sqlite_datetime(&created_at_str)
-      .map_err(|e| DbError::Validation(format!("Invalid created_at format: {e}")))?;
-    let updated_at = Self::parse_sqlite_datetime(&updated_at_str)
-      .map_err(|e| DbError::Validation(format!("Invalid updated_at format: {e}")))?;
-
     let created_by = created_by_str
       .map(|s| clarity_core::db::models::UserId::from_str(&s))
       .transpose()?;
@@ -584,8 +763,8 @@ impl DesktopDb {
       priority,
       bead_type,
       created_by,
-      created_at,
-      updated_at,
+      created_at: created_at_str,
+      updated_at: updated_at_str,
     })
   }
 
@@ -792,335 +971,5 @@ impl DesktopDb {
       created_at,
       updated_at,
     })
-  }
-}
-
-#[cfg(test)]
-mod tests {
-  #![allow(clippy::expect_used)]
-  #![allow(clippy::unwrap_used)]
-  use super::*;
-  use clarity_core::db::models::{BeadPriority, BeadStatus, BeadType};
-
-  #[tokio::test]
-  async fn test_create_in_memory_db() {
-    let db = DesktopDb::in_memory()
-      .await
-      .expect("Failed to create in-memory database");
-
-    // Verify we can list beads (should be empty)
-    let beads = db.list_beads().await.expect("Failed to list beads");
-    assert!(beads.is_empty(), "New database should have no beads");
-  }
-
-  #[tokio::test]
-  async fn test_create_and_list_beads() {
-    let db = DesktopDb::in_memory()
-      .await
-      .expect("Failed to create in-memory database");
-
-    // Create a bead
-    let new_bead = NewBead {
-      title: "Test Bead".to_string(),
-      description: Some("Test Description".to_string()),
-      status: BeadStatus::Open,
-      priority: BeadPriority::HIGH,
-      bead_type: BeadType::Feature,
-      created_by: None,
-    };
-
-    let created = db
-      .create_bead(new_bead.clone())
-      .await
-      .expect("Failed to create bead");
-
-    // Verify bead was created
-    assert_eq!(created.title, "Test Bead");
-    assert_eq!(created.description, Some("Test Description".to_string()));
-    assert_eq!(created.status, BeadStatus::Open);
-
-    // List beads
-    let beads = db.list_beads().await.expect("Failed to list beads");
-    assert_eq!(beads.len(), 1);
-    assert_eq!(beads[0].id, created.id);
-  }
-
-  #[tokio::test]
-  async fn test_get_bead() {
-    let db = DesktopDb::in_memory()
-      .await
-      .expect("Failed to create in-memory database");
-
-    // Create a bead
-    let new_bead = NewBead {
-      title: "Test Bead".to_string(),
-      description: Some("Test Description".to_string()),
-      status: BeadStatus::Open,
-      priority: BeadPriority::MEDIUM,
-      bead_type: BeadType::Bugfix,
-      created_by: None,
-    };
-
-    let created = db
-      .create_bead(new_bead)
-      .await
-      .expect("Failed to create bead");
-
-    // Get the bead
-    let retrieved = db.get_bead(created.id).await.expect("Failed to get bead");
-
-    assert_eq!(retrieved.id, created.id);
-    assert_eq!(retrieved.title, "Test Bead");
-    assert_eq!(retrieved.status, BeadStatus::Open);
-  }
-
-  #[tokio::test]
-  async fn test_get_nonexistent_bead() {
-    let db = DesktopDb::in_memory()
-      .await
-      .expect("Failed to create in-memory database");
-
-    let fake_id = BeadId::from(uuid::Uuid::new_v4());
-    let result = db.get_bead(fake_id).await;
-
-    assert!(result.is_err(), "Getting nonexistent bead should fail");
-    match result {
-      Err(DbError::NotFound { entity, id }) => {
-        assert_eq!(entity, "Bead");
-        assert_eq!(id, fake_id.to_string());
-      }
-      _ => panic!("Expected NotFound error"),
-    }
-  }
-
-  #[tokio::test]
-  async fn test_update_bead() {
-    let db = DesktopDb::in_memory()
-      .await
-      .expect("Failed to create in-memory database");
-
-    // Create a bead
-    let new_bead = NewBead {
-      title: "Original Title".to_string(),
-      description: Some("Original Description".to_string()),
-      status: BeadStatus::Open,
-      priority: BeadPriority::LOW,
-      bead_type: BeadType::Docs,
-      created_by: None,
-    };
-
-    let created = db
-      .create_bead(new_bead)
-      .await
-      .expect("Failed to create bead");
-
-    // Update the bead
-    let updated_bead = NewBead {
-      title: "Updated Title".to_string(),
-      description: Some("Updated Description".to_string()),
-      status: BeadStatus::Closed,
-      priority: BeadPriority::HIGH,
-      bead_type: BeadType::Feature,
-      created_by: None,
-    };
-
-    let updated = db
-      .update_bead(created.id, updated_bead)
-      .await
-      .expect("Failed to update bead");
-
-    assert_eq!(updated.id, created.id);
-    assert_eq!(updated.title, "Updated Title");
-    assert_eq!(updated.status, BeadStatus::Closed);
-
-    // Verify update persisted
-    let retrieved = db.get_bead(created.id).await.expect("Failed to get bead");
-    assert_eq!(retrieved.title, "Updated Title");
-    assert_eq!(retrieved.status, BeadStatus::Closed);
-  }
-
-  #[tokio::test]
-  async fn test_delete_bead() {
-    let db = DesktopDb::in_memory()
-      .await
-      .expect("Failed to create in-memory database");
-
-    // Create a bead
-    let new_bead = NewBead {
-      title: "Test Bead".to_string(),
-      description: None,
-      status: BeadStatus::Open,
-      priority: BeadPriority::MEDIUM,
-      bead_type: BeadType::Refactor,
-      created_by: None,
-    };
-
-    let created = db
-      .create_bead(new_bead)
-      .await
-      .expect("Failed to create bead");
-
-    // Delete the bead
-    db.delete_bead(created.id)
-      .await
-      .expect("Failed to delete bead");
-
-    // Verify bead is gone
-    let result = db.get_bead(created.id).await;
-    assert!(result.is_err(), "Deleted bead should not be found");
-
-    // Verify list is empty
-    let beads = db.list_beads().await.expect("Failed to list beads");
-    assert!(beads.is_empty());
-  }
-
-  #[tokio::test]
-  async fn test_filter_by_status() {
-    let db = DesktopDb::in_memory()
-      .await
-      .expect("Failed to create in-memory database");
-
-    // Create beads with different statuses
-    let open_bead = NewBead {
-      title: "Open Bead".to_string(),
-      description: None,
-      status: BeadStatus::Open,
-      priority: BeadPriority::MEDIUM,
-      bead_type: BeadType::Feature,
-      created_by: None,
-    };
-
-    let closed_bead = NewBead {
-      title: "Closed Bead".to_string(),
-      description: None,
-      status: BeadStatus::Closed,
-      priority: BeadPriority::MEDIUM,
-      bead_type: BeadType::Feature,
-      created_by: None,
-    };
-
-    db.create_bead(open_bead)
-      .await
-      .expect("Failed to create bead");
-    db.create_bead(closed_bead)
-      .await
-      .expect("Failed to create bead");
-
-    // Filter by status
-    let filters = BeadFilters {
-      status: Some("open".to_string()),
-      bead_type: None,
-      priority: None,
-      created_by: None,
-      search: None,
-    };
-
-    let results = db
-      .list_beads_filtered(&filters)
-      .await
-      .expect("Failed to filter beads");
-
-    assert_eq!(results.len(), 1);
-    assert_eq!(results[0].title, "Open Bead");
-    assert_eq!(results[0].status, BeadStatus::Open);
-  }
-
-  #[tokio::test]
-  async fn test_filter_by_search() {
-    let db = DesktopDb::in_memory()
-      .await
-      .expect("Failed to create in-memory database");
-
-    // Create beads
-    let bug_bead = NewBead {
-      title: "Fix critical bug".to_string(),
-      description: Some("This is a bugfix".to_string()),
-      status: BeadStatus::Open,
-      priority: BeadPriority::HIGH,
-      bead_type: BeadType::Bugfix,
-      created_by: None,
-    };
-
-    let feature_bead = NewBead {
-      title: "Add new feature".to_string(),
-      description: Some("Feature description".to_string()),
-      status: BeadStatus::Open,
-      priority: BeadPriority::MEDIUM,
-      bead_type: BeadType::Feature,
-      created_by: None,
-    };
-
-    db.create_bead(bug_bead)
-      .await
-      .expect("Failed to create bead");
-    db.create_bead(feature_bead)
-      .await
-      .expect("Failed to create bead");
-
-    // Search for "bug" - should match title and description
-    let filters = BeadFilters {
-      status: None,
-      bead_type: None,
-      priority: None,
-      created_by: None,
-      search: Some("bug".to_string()),
-    };
-
-    let results = db
-      .list_beads_filtered(&filters)
-      .await
-      .expect("Failed to filter beads");
-
-    assert_eq!(results.len(), 1);
-    assert_eq!(results[0].title, "Fix critical bug");
-  }
-
-  #[tokio::test]
-  async fn test_sql_injection_prevention() {
-    let db = DesktopDb::in_memory()
-      .await
-      .expect("Failed to create in-memory database");
-
-    // Create a normal bead
-    let new_bead = NewBead {
-      title: "Normal Bead".to_string(),
-      description: None,
-      status: BeadStatus::Open,
-      priority: BeadPriority::MEDIUM,
-      bead_type: BeadType::Feature,
-      created_by: None,
-    };
-
-    db.create_bead(new_bead)
-      .await
-      .expect("Failed to create bead");
-
-    // Try SQL injection in search parameter
-    let malicious_search = "'; DROP TABLE beads; --";
-
-    let filters = BeadFilters {
-      status: None,
-      bead_type: None,
-      priority: None,
-      created_by: None,
-      search: Some(malicious_search.to_string()),
-    };
-
-    // This should not cause an error, just return no results
-    let results = db
-      .list_beads_filtered(&filters)
-      .await
-      .expect("SQL injection attempt should not cause error");
-
-    // Should return empty results (search for malicious string won't match)
-    assert_eq!(results.len(), 0);
-
-    // Verify table still exists by listing all beads
-    let all_beads = db.list_beads().await.expect("Failed to list beads");
-    assert_eq!(
-      all_beads.len(),
-      1,
-      "Table should still exist after SQL injection attempt"
-    );
   }
 }

@@ -119,38 +119,43 @@ impl PartialEq for ShortcutRowProps {
 #[component]
 fn ShortcutRow(props: ShortcutRowProps) -> Element {
   let description = props.description;
-  let _shortcut_formatted = description.shortcut.format();
-  let is_ctrl = description.shortcut.modifiers().has_control();
-  let is_alt = description.shortcut.modifiers().has_alt();
-  let is_meta = description.shortcut.modifiers().has_meta();
 
-  rsx! {
-      tr {
-          td { class: "shortcut-key",
-              // Show modifiers with visual styling
-              if is_ctrl {
-                  kbd { class: "key-modifier", "Ctrl" }
-                  span { class: "key-separator", "+" }
-              }
-              if is_alt {
-                  kbd { class: "key-modifier", "Alt" }
-                  span { class: "key-separator", "+" }
-              }
-              if is_meta {
-                  kbd { class: "key-modifier", "⌘" }
-                  span { class: "key-separator", "+" }
-              }
+  // Display the first shortcut (if any)
+  if let Some(shortcut) = description.shortcuts.first() {
+    let is_ctrl = shortcut.modifiers().has_control();
+    let is_alt = shortcut.modifiers().has_alt();
+    let is_meta = shortcut.modifiers().has_meta();
 
-              // The main key
-              kbd {
-                  class: "key-main",
-                  "{format_main_key(&description.shortcut)}"
-              }
-          }
-          td { class: "shortcut-description",
-              "{description.description}"
-          }
-      }
+    rsx! {
+        tr {
+            td { class: "shortcut-key",
+                // Show modifiers with visual styling
+                if is_ctrl {
+                    kbd { class: "key-modifier", "Ctrl" }
+                    span { class: "key-separator", "+" }
+                }
+                if is_alt {
+                    kbd { class: "key-modifier", "Alt" }
+                    span { class: "key-separator", "+" }
+                }
+                if is_meta {
+                    kbd { class: "key-modifier", "⌘" }
+                    span { class: "key-separator", "+" }
+                }
+
+                // The main key
+                kbd {
+                    class: "key-main",
+                    "{format_main_key(shortcut)}"
+                }
+            }
+            td { class: "shortcut-description",
+                "{description.description}"
+            }
+        }
+    }
+  } else {
+    rsx! { tr { td { "No shortcuts configured" } } }
   }
 }
 
@@ -288,11 +293,12 @@ pub fn ShortcutHint(props: ShortcutHintProps) -> Element {
               .descriptions()
               .iter()
               .find(|d| d.action == action)
-              .map(|description| {
-                  let shortcut = description.shortcut.format();
+              .and_then(|description| description.shortcuts.first())
+              .map(|shortcut| {
+                  let formatted = shortcut.format();
                   rsx! {
                       kbd { class: "shortcut-hint",
-                          "{shortcut}"
+                          "{formatted}"
                       }
                   }
               })

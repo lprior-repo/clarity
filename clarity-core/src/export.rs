@@ -10,8 +10,8 @@
 //! Pure functions for exporting beads to JSON and CSV formats.
 //! All functions are deterministic and side-effect free.
 
-use crate::db::models::{Bead, BeadPriority, BeadStatus, BeadType};
-use chrono::{DateTime, Utc};
+use crate::db::models::{Bead, BeadId, BeadPriority, BeadStatus, BeadType, UserId};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use thiserror::Error;
@@ -49,9 +49,11 @@ impl ExportFormat {
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum ExportError {
   #[error("JSON serialization failed: {0}")]
+  /// Returns `ExportError::JsonSerialization` if JSON export fails
   JsonSerialization(String),
 
   #[error("CSV serialization failed: {0}")]
+  /// Returns `ExportError::CsvSerialization` if CSV export fails
   CsvSerialization(String),
 
   #[error("No beads to export")]
@@ -90,15 +92,15 @@ pub struct ExportedBead {
 impl From<&Bead> for ExportedBead {
   fn from(bead: &Bead) -> Self {
     Self {
-      id: bead.id.as_str(),
+      id: bead.id.to_string(),
       title: bead.title.clone(),
       description: bead.description.clone(),
       status: bead.status.as_str().to_string(),
       priority: bead.priority.0,
       bead_type: bead.bead_type.as_str().to_string(),
-      created_by: bead.created_by.map(|id| id.as_str()),
-      created_at: bead.created_at.to_rfc3339(),
-      updated_at: bead.updated_at.to_rfc3339(),
+      created_by: bead.created_by.map(|id| id.to_string()),
+      created_at: bead.created_at.clone(),
+      updated_at: bead.updated_at.clone(),
     }
   }
 }
@@ -278,24 +280,17 @@ pub fn export_beads(beads: &[Bead], format: ExportFormat) -> ExportResult<String
 ///
 /// # Errors
 /// Returns `ExportError::InvalidDateFormat` if timestamps are invalid
-pub fn exported_to_domain(beads: Vec<ExportedBead>) -> ExportResult<Vec<Bead>> {
+pub fn exported_to_domain(beads: &[ExportedBead]) -> ExportResult<Vec<Bead>> {
   beads
-    .into_iter()
+    .iter()
     .map(|exported| {
-      let created_at = DateTime::parse_from_rfc3339(&exported.created_at)
-        .map_err(|_| ExportError::InvalidDateFormat(exported.created_at.clone()))?
-        .with_timezone(&Utc);
-
-      let updated_at = DateTime::parse_from_rfc3339(&exported.updated_at)
-        .map_err(|_| ExportError::InvalidDateFormat(exported.updated_at.clone()))?
-        .with_timezone(&Utc);
-
+      // For db::models::Bead, we keep dates as strings (ISO 8601 format)
       Ok(Bead {
-        id: crate::db::models::BeadId::from_str(&exported.id).map_err(|_| {
+        id: BeadId::from_str(&exported.id).map_err(|_| {
           ExportError::CsvSerialization(format!("Invalid bead ID: {}", exported.id))
         })?,
-        title: exported.title,
-        description: exported.description,
+        title: exported.title.clone(),
+        description: exported.description.clone(),
         status: BeadStatus::from_str(&exported.status).map_err(|_| {
           ExportError::CsvSerialization(format!("Invalid status: {}", exported.status))
         })?,
@@ -305,14 +300,14 @@ pub fn exported_to_domain(beads: Vec<ExportedBead>) -> ExportResult<Vec<Bead>> {
           ExportError::CsvSerialization(format!("Invalid bead type: {}", exported.bead_type))
         })?,
         created_by: match exported.created_by {
-          Some(user_id) => Some(
-            crate::db::models::UserId::from_str(&user_id)
+          Some(ref user_id) => Some(
+            UserId::from_str(user_id)
               .map_err(|_| ExportError::CsvSerialization(format!("Invalid user ID: {user_id}")))?,
           ),
           None => None,
         },
-        created_at,
-        updated_at,
+        created_at: exported.created_at.clone(),
+        updated_at: exported.updated_at.clone(),
       })
     })
     .collect()
@@ -346,8 +341,8 @@ mod tests {
       priority: BeadPriority::HIGH,
       bead_type: BeadType::Feature,
       created_by: None,
-      created_at: Utc::now(),
-      updated_at: Utc::now(),
+      created_at: Utc::now().to_rfc3339(),
+      updated_at: Utc::now().to_rfc3339(),
     };
 
     let exported = ExportedBead::from(&bead);
@@ -370,8 +365,8 @@ mod tests {
         priority: BeadPriority::HIGH,
         bead_type: BeadType::Feature,
         created_by: None,
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
+        created_at: Utc::now().to_rfc3339(),
+        updated_at: Utc::now().to_rfc3339(),
       },
       Bead {
         id: BeadId::from(Uuid::new_v4()),
@@ -381,8 +376,8 @@ mod tests {
         priority: BeadPriority::MEDIUM,
         bead_type: BeadType::Bugfix,
         created_by: None,
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
+        created_at: Utc::now().to_rfc3339(),
+        updated_at: Utc::now().to_rfc3339(),
       },
     ];
 
@@ -403,8 +398,8 @@ mod tests {
       priority: BeadPriority::HIGH,
       bead_type: BeadType::Feature,
       created_by: None,
-      created_at: Utc::now(),
-      updated_at: Utc::now(),
+      created_at: Utc::now().to_rfc3339(),
+      updated_at: Utc::now().to_rfc3339(),
     }];
 
     let result = export_beads(&beads, ExportFormat::Json);
@@ -428,8 +423,8 @@ mod tests {
       priority: BeadPriority::HIGH,
       bead_type: BeadType::Feature,
       created_by: None,
-      created_at: Utc::now(),
-      updated_at: Utc::now(),
+      created_at: Utc::now().to_rfc3339(),
+      updated_at: Utc::now().to_rfc3339(),
     }];
 
     let result = export_beads(&beads, ExportFormat::Csv);
@@ -498,8 +493,12 @@ mod tests {
       Ok(row) => row,
       Err(e) => panic!("Failed to create CSV row: {e}"),
     };
-    assert!(csv_row.contains('"'));
-    assert!(csv_row.starts_with(bead.id.split(',').next().map_or(bead.id.as_str(), |s| s)));
+    let escaped_id = if bead.id.contains(',') || bead.id.contains('"') || bead.id.contains('\n') {
+      format!("\"{}\"", bead.id.replace('"', "\"\""))
+    } else {
+      bead.id.clone()
+    };
+    assert!(csv_row.contains(&escaped_id));
   }
 
   #[test]

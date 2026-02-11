@@ -1,9 +1,0 @@
-wayland_protocols::ext::background_effect::v1::generated::client::ext_background_effect_manager_v1::_::InternalBitFlags
-wayland_protocols::ext::image_copy_capture::v1::generated::client::ext_image_copy_capture_manager_v1::_::InternalBitFlags
-wayland_protocols::ext::workspace::v1::generated::client::ext_workspace_group_handle_v1::_::InternalBitFlags
-wayland_protocols::ext::workspace::v1::generated::client::ext_workspace_handle_v1::_::InternalBitFlags
-wayland_protocols::wp::linux_dmabuf::zv1::generated::client::zwp_linux_buffer_params_v1::_::InternalBitFlags
-wayland_protocols::wp::linux_dmabuf::zv1::generated::client::zwp_linux_dmabuf_feedback_v1::_::InternalBitFlags
-wayland_protocols::wp::presentation_time::generated::client::wp_presentation_feedback::_::InternalBitFlags
-wayland_protocols::wp::text_input::zv1::generated::client::zwp_text_input_v1::_::InternalBitFlags
-wayland_protocols::wp::text_input::zv3::generated::client::zwp_text_input_v3::_::InternalBitFlags

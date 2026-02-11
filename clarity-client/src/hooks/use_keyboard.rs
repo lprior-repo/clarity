@@ -332,7 +332,7 @@ pub fn use_shortcut_for_action(action: Action) -> Option<Shortcut> {
     .descriptions()
     .iter()
     .find(|d| d.action == action)
-    .map(|d| d.shortcut.clone())
+    .and_then(|d| d.shortcuts.first().cloned())
 }
 
 #[cfg(test)]
