@@ -220,8 +220,22 @@ fn PersonaList(
   mut state: Signal<PlannerState>,
   mut selected_entity: Signal<Option<SelectedEntity>>,
 ) -> Element {
-  // Convert Vector to Vec for use in rsx
-  let personas: Vec<_> = state.read().personas.iter().cloned().collect();
+  // Clone personas for rendering (persistent data structure, so clone is cheap)
+  let personas: Vec<_> = state
+    .read()
+    .personas
+    .iter()
+    .map(|rc_persona| (**rc_persona).clone())
+    .collect();
+
+  // Get currently selected entity ID for highlighting
+  let selected_id = selected_entity
+    .read()
+    .as_ref()
+    .and_then(|entity| match entity {
+      SelectedEntity::Persona(id) => Some(*id),
+      _ => None,
+    });
 
   let add_persona = move |_| {
     let new_persona = Persona::new(
@@ -240,19 +254,26 @@ fn PersonaList(
     }
   };
 
-  let remove_persona = move |id: Uuid| {
-    let updated = state.read().remove_persona(id);
-    state.set(updated);
-    selected_entity.set(Some(SelectedEntity::clear()));
-  };
+  // Create handlers for each persona by capturing ID
+  let render_persona_card = |persona: Persona| {
+    let persona_id = persona.id;
+    let is_selected = selected_id.map_or(false, |id| id == persona_id);
 
-  let select_persona = move |id: Uuid| {
-    selected_entity.set(Some(SelectedEntity::Persona(id)));
+    rsx! {
+        PersonaCard {
+            persona: std::rc::Rc::new(persona),
+            on_remove: move |_evt: MouseEvent| {
+                let updated = state.read().remove_persona(persona_id);
+                state.set(updated);
+                selected_entity.set(Some(SelectedEntity::clear()));
+            },
+            on_select: move |_evt: MouseEvent| {
+                selected_entity.set(Some(SelectedEntity::Persona(persona_id)));
+            },
+            is_selected: is_selected,
+        }
+    }
   };
-
-  // Note: The actual rendering of persona cards requires Dioxus runtime
-  // This is a simplified version for compilation
-  let _ = (personas, add_persona, remove_persona, select_persona);
 
   rsx! {
       div { class: "persona-list",
@@ -269,9 +290,17 @@ fn PersonaList(
           }
 
           div { class: "persona-cards",
-              div { class: "empty-state",
-                  p { "Persona list requires Dioxus runtime" }
-              }
+              {if personas.is_empty() {
+                  rsx! {
+                      div { class: "empty-state",
+                          p { "No personas yet. Click 'Add Persona' to create one." }
+                      }
+                  }
+              } else {
+                  rsx! {
+                      {personas.into_iter().map(render_persona_card)}
+                  }
+              }}
           }
       }
   }
@@ -443,20 +472,493 @@ fn ScenarioCard(
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::planner::types::DiamondPhase;
+  use crate::planner::state::{PlannerState, SelectedEntity};
+  use crate::planner::types::{DiamondPhase, Persona};
+  use uuid::Uuid;
+
+  /// Helper to create a test persona with valid defaults
+  fn create_test_persona(name: &str) -> Persona {
+    Persona::new(
+      name.to_string(),
+      "Test Role".to_string(),
+      "Test Description".to_string(),
+    )
+  }
+
+  //
+  // Bounded Context: Phase Discover (Discovery Phase)
+  // Aggregate Root: PlannerState
+  // Entity: Persona
+  //
 
   #[test]
-  fn test_discover_tab_equality() {
-    assert_eq!(DiscoverTab::Thesis, DiscoverTab::Thesis);
-    assert_ne!(DiscoverTab::Thesis, DiscoverTab::Personas);
-    assert_ne!(DiscoverTab::Personas, DiscoverTab::Scenarios);
+  fn hostile_attack_given_empty_state_when_add_persona_then_persona_card_renders() {
+    // Given: Empty planner state
+    let state = PlannerState::new();
+    assert_eq!(state.personas.len(), 0, "State should start empty");
+
+    // When: Add persona
+    let persona = create_test_persona("Alice");
+    let result = state.add_persona(persona);
+
+    // Then: Persona card renders (persona exists in state)
+    assert!(
+      result.is_ok(),
+      "Adding persona to empty state should succeed"
+    );
+    let updated_state = result.unwrap();
+    assert_eq!(
+      updated_state.personas.len(),
+      1,
+      "State should contain exactly one persona"
+    );
+    assert_eq!(
+      updated_state.personas.get(0).map(|p| &p.name),
+      Some(&"Alice".to_string()),
+      "Added persona should have correct name"
+    );
   }
 
   #[test]
-  fn test_phase_discover_renders() {
-    // Test component structure - actual rendering requires Dioxus DOM
+  fn hostile_attack_given_persona_selected_when_click_remove_then_persona_removed() {
+    // Given: State with selected persona
     let state = PlannerState::new();
-    let _ = format!("{:?}", state.current_phase);
-    assert_eq!(state.current_phase, DiamondPhase::Top);
+    let persona = create_test_persona("Selected Persona");
+    let state = state.add_persona(persona).unwrap();
+    let persona_id = state.personas.get(0).map(|p| p.id).unwrap();
+    let selected_entity = Some(SelectedEntity::Persona(persona_id));
+
+    // When: Remove persona (simulate clicking remove button)
+    let updated_state = state.remove_persona(persona_id);
+
+    // Then: Persona removed
+    assert_eq!(
+      updated_state.personas.len(),
+      0,
+      "Persona should be removed from state"
+    );
+    assert!(
+      updated_state.personas.iter().all(|p| p.id != persona_id),
+      "Removed persona ID should not exist"
+    );
+
+    // Selection should be cleared
+    let should_clear =
+      matches!(selected_entity, Some(SelectedEntity::Persona(id)) if id == persona_id);
+    assert!(should_clear, "Selection should be cleared when removed");
+  }
+
+  #[test]
+  fn hostile_attack_given_no_persona_selected_when_click_persona_then_persona_selected() {
+    // Given: State with persona but no selection
+    let state = PlannerState::new();
+    let persona = create_test_persona("Selectable Persona");
+    let state = state.add_persona(persona).unwrap();
+    let persona_id = state.personas.get(0).map(|p| p.id).unwrap();
+    let selected_entity = None;
+
+    // When: Click persona (simulate selection)
+    let new_selection = Some(SelectedEntity::Persona(persona_id));
+
+    // Then: Persona is selected
+    assert_eq!(
+      new_selection,
+      Some(SelectedEntity::Persona(persona_id)),
+      "Persona should be selected"
+    );
+    assert_ne!(
+      selected_entity, new_selection,
+      "Selection should change from None"
+    );
+  }
+
+  #[test]
+  fn hostile_attack_given_persona_selected_when_click_different_persona_then_selection_changes() {
+    // Given: State with two personas and first persona selected
+    let state = PlannerState::new();
+    let persona1 = create_test_persona("Persona One");
+    let persona2 = create_test_persona("Persona Two");
+    let state = state.add_persona(persona1).unwrap();
+    let state = state.add_persona(persona2).unwrap();
+    let first_id = state.personas.get(0).map(|p| p.id).unwrap();
+    let second_id = state.personas.get(1).map(|p| p.id).unwrap();
+
+    let mut selected_entity = Some(SelectedEntity::Persona(first_id));
+
+    // When: Select different persona (simulate clicking)
+    selected_entity = Some(SelectedEntity::Persona(second_id));
+
+    // Then: Selection changes
+    assert_eq!(
+      selected_entity,
+      Some(SelectedEntity::Persona(second_id)),
+      "Selection should change to second persona"
+    );
+    assert_ne!(
+      selected_entity,
+      Some(SelectedEntity::Persona(first_id)),
+      "Selection should not be first persona"
+    );
+  }
+
+  #[test]
+  fn hostile_attack_given_max_personas_reached_when_add_persona_then_returns_error() {
+    // Given: State at maximum capacity
+    let mut state = PlannerState::new();
+    const MAX_SIZE: usize = 10_000;
+
+    // Create personas up to MAX - 1
+    for i in 0..MAX_SIZE {
+      let persona = create_test_persona(&format!("Persona {}", i));
+      state = state.add_persona(persona).unwrap();
+    }
+    assert_eq!(
+      state.personas.len(),
+      MAX_SIZE,
+      "State should be at maximum capacity"
+    );
+
+    // When: Try to add one more persona
+    let extra_persona = create_test_persona("Extra Persona");
+    let result = state.add_persona(extra_persona);
+
+    // Then: Returns error
+    assert!(result.is_err(), "Adding beyond maximum should return error");
+    assert_eq!(
+      result.unwrap_err(),
+      crate::planner::types::StateError::CollectionTooLarge,
+      "Should return CollectionTooLarge error"
+    );
+  }
+
+  #[test]
+  fn hostile_attack_given_duplicate_id_when_add_persona_then_returns_error() {
+    // Given: State with existing persona
+    let state = PlannerState::new();
+    let mut persona = create_test_persona("Original");
+    let specific_id = Uuid::new_v4();
+    persona.id = specific_id;
+    let state = state.add_persona(persona).unwrap();
+
+    // When: Try to add persona with duplicate ID
+    let mut duplicate_persona = create_test_persona("Duplicate");
+    duplicate_persona.id = specific_id; // Same ID
+    let result = state.add_persona(duplicate_persona);
+
+    // Then: Returns error
+    assert!(result.is_err(), "Adding duplicate ID should return error");
+    assert_eq!(
+      result.unwrap_err(),
+      crate::planner::types::StateError::DuplicateId("persona".to_string()),
+      "Should return DuplicateId error"
+    );
+  }
+
+  #[test]
+  fn hostile_attack_given_multiple_personas_when_remove_one_then_others_preserved() {
+    // Given: State with multiple personas
+    let state = PlannerState::new();
+    let persona1 = create_test_persona("Keep 1");
+    let persona2 = create_test_persona("Remove");
+    let persona3 = create_test_persona("Keep 2");
+    let state = state.add_persona(persona1).unwrap();
+    let state = state.add_persona(persona2).unwrap();
+    let state = state.add_persona(persona3).unwrap();
+    let remove_id = state
+      .personas
+      .iter()
+      .find(|p| &p.name == "Remove")
+      .map(|p| p.id)
+      .unwrap();
+
+    // When: Remove middle persona
+    let updated_state = state.remove_persona(remove_id);
+
+    // Then: Others preserved
+    assert_eq!(
+      updated_state.personas.len(),
+      2,
+      "Should have two personas remaining"
+    );
+    assert!(
+      updated_state.personas.iter().any(|p| &p.name == "Keep 1"),
+      "First persona should be preserved"
+    );
+    assert!(
+      updated_state.personas.iter().any(|p| &p.name == "Keep 2"),
+      "Third persona should be preserved"
+    );
+    assert!(
+      !updated_state.personas.iter().any(|p| &p.name == "Remove"),
+      "Removed persona should not exist"
+    );
+  }
+
+  #[test]
+  fn hostile_attack_given_nonexistent_persona_id_when_remove_then_state_unchanged() {
+    // Given: Empty state
+    let state = PlannerState::new();
+    let fake_id = Uuid::new_v4();
+
+    // When: Try to remove non-existent persona
+    let updated_state = state.remove_persona(fake_id);
+
+    // Then: State unchanged
+    assert_eq!(updated_state.personas.len(), 0, "State should remain empty");
+    assert_eq!(updated_state, state, "State should be unchanged");
+  }
+
+  #[test]
+  fn hostile_attack_given_empty_state_when_add_multiple_personas_then_all_added() {
+    // Given: Empty state
+    let state = PlannerState::new();
+
+    // When: Add multiple personas
+    let persona1 = create_test_persona("Alice");
+    let persona2 = create_test_persona("Bob");
+    let persona3 = create_test_persona("Charlie");
+    let state = state.add_persona(persona1).unwrap();
+    let state = state.add_persona(persona2).unwrap();
+    let state = state.add_persona(persona3).unwrap();
+
+    // Then: All personas added
+    assert_eq!(state.personas.len(), 3, "Should have three personas");
+    assert!(
+      state.personas.iter().any(|p| &p.name == "Alice"),
+      "First persona should exist"
+    );
+    assert!(
+      state.personas.iter().any(|p| &p.name == "Bob"),
+      "Second persona should exist"
+    );
+    assert!(
+      state.personas.iter().any(|p| &p.name == "Charlie"),
+      "Third persona should exist"
+    );
+  }
+
+  #[test]
+  fn hostile_attack_given_persona_when_add_goal_then_goal_added() {
+    // Given: Persona
+    let persona = create_test_persona("Goal-oriented");
+
+    // When: Add goal
+    let persona_with_goal = persona.with_goal("Achieve success".to_string());
+
+    // Then: Goal added
+    assert_eq!(
+      persona_with_goal.goals.len(),
+      1,
+      "Persona should have one goal"
+    );
+    assert_eq!(
+      persona_with_goal.goals.get(0),
+      Some(&"Achieve success".to_string()),
+      "Goal should match"
+    );
+  }
+
+  #[test]
+  fn hostile_attack_given_persona_when_add_pain_point_then_pain_point_added() {
+    // Given: Persona
+    let persona = create_test_persona("Pain-aware");
+
+    // When: Add pain point
+    let persona_with_pain = persona.with_pain_point("Too complex".to_string());
+
+    // Then: Pain point added
+    assert_eq!(
+      persona_with_pain.pain_points.len(),
+      1,
+      "Persona should have one pain point"
+    );
+    assert_eq!(
+      persona_with_pain.pain_points.get(0),
+      Some(&"Too complex".to_string()),
+      "Pain point should match"
+    );
+  }
+
+  #[test]
+  fn hostile_attack_given_persona_when_add_behavior_then_behavior_added() {
+    // Given: Persona
+    let persona = create_test_persona("Behavioral");
+
+    // When: Add behavior
+    let persona_with_behavior = persona.with_behavior("Clicks buttons".to_string());
+
+    // Then: Behavior added
+    assert_eq!(
+      persona_with_behavior.behaviors.len(),
+      1,
+      "Persona should have one behavior"
+    );
+    assert_eq!(
+      persona_with_behavior.behaviors.get(0),
+      Some(&"Clicks buttons".to_string()),
+      "Behavior should match"
+    );
+  }
+
+  #[test]
+  fn hostile_attack_given_persona_when_add_multiple_goals_then_all_preserved() {
+    // Given: Persona
+    let persona = create_test_persona("Multi-goal");
+
+    // When: Add multiple goals
+    let persona = persona.with_goal("Goal 1".to_string());
+    let persona = persona.with_goal("Goal 2".to_string());
+    let persona = persona.with_goal("Goal 3".to_string());
+
+    // Then: All goals preserved
+    assert_eq!(persona.goals.len(), 3, "Should have three goals");
+    assert!(persona.goals.contains(&"Goal 1".to_string()));
+    assert!(persona.goals.contains(&"Goal 2".to_string()));
+    assert!(persona.goals.contains(&"Goal 3".to_string()));
+  }
+
+  #[test]
+  fn hostile_attack_given_discover_tabs_when_switch_tabs_then_tab_changes() {
+    // Given: Thesis tab active
+    let mut active_tab = DiscoverTab::Thesis;
+
+    // When: Switch to Personas tab
+    active_tab = DiscoverTab::Personas;
+
+    // Then: Tab changes
+    assert_eq!(
+      active_tab,
+      DiscoverTab::Personas,
+      "Should be on Personas tab"
+    );
+
+    // When: Switch to Scenarios tab
+    active_tab = DiscoverTab::Scenarios;
+
+    // Then: Tab changes
+    assert_eq!(
+      active_tab,
+      DiscoverTab::Scenarios,
+      "Should be on Scenarios tab"
+    );
+  }
+
+  #[test]
+  fn hostile_attack_given_persona_with_empty_name_when_create_then_still_valid() {
+    // Given: Empty name
+    let empty_name = "";
+
+    // When: Create persona with empty name
+    let persona = Persona::new(
+      empty_name.to_string(),
+      "Role".to_string(),
+      "Description".to_string(),
+    );
+
+    // Then: Persona is created (validation is UI-level, not domain-level)
+    assert_eq!(persona.name, "", "Empty name is allowed at domain level");
+    assert!(!persona.id.is_nil(), "Should have valid ID");
+  }
+
+  #[test]
+  fn hostile_attack_given_persona_with_empty_role_when_create_then_still_valid() {
+    // Given: Empty role
+    let empty_role = "";
+
+    // When: Create persona with empty role
+    let persona = Persona::new(
+      "Name".to_string(),
+      empty_role.to_string(),
+      "Description".to_string(),
+    );
+
+    // Then: Persona is created
+    assert_eq!(persona.role, "", "Empty role is allowed at domain level");
+    assert!(!persona.id.is_nil(), "Should have valid ID");
+  }
+
+  #[test]
+  fn hostile_attack_given_persona_with_empty_description_when_create_then_still_valid() {
+    // Given: Empty description
+    let empty_description = "";
+
+    // When: Create persona with empty description
+    let persona = Persona::new(
+      "Name".to_string(),
+      "Role".to_string(),
+      empty_description.to_string(),
+    );
+
+    // Then: Persona is created
+    assert_eq!(
+      persona.description, "",
+      "Empty description is allowed at domain level"
+    );
+    assert!(!persona.id.is_nil(), "Should have valid ID");
+  }
+
+  #[test]
+  fn hostile_attack_given_phase_discover_when_check_phase_then_is_top() {
+    // Given: Discovery phase
+    let state = PlannerState::new();
+
+    // When: Check current phase
+    let phase = state.current_phase;
+
+    // Then: Phase is Top (Discovery)
+    assert_eq!(phase, DiamondPhase::Top, "Discovery phase should be Top");
+  }
+
+  #[test]
+  fn hostile_attack_given_immutable_state_when_add_persona_then_original_unchanged() {
+    // Given: Original state
+    let original_state = PlannerState::new();
+    assert_eq!(original_state.personas.len(), 0);
+
+    // When: Add persona
+    let persona = create_test_persona("Immutable Test");
+    let _new_state = original_state.add_persona(persona).unwrap();
+
+    // Then: Original state unchanged
+    assert_eq!(
+      original_state.personas.len(),
+      0,
+      "Original state should be unchanged"
+    );
+  }
+
+  #[test]
+  fn hostile_attack_given_persona_when_set_quote_then_quote_set() {
+    // Given: Persona
+    let persona = create_test_persona("Quotable");
+
+    // When: Set quote
+    let persona_with_quote = persona
+      .clone()
+      .with_quote("I love this feature!".to_string());
+
+    // Then: Quote set
+    assert_eq!(
+      persona_with_quote.quote,
+      Some("I love this feature!".to_string()),
+      "Quote should be set"
+    );
+    assert_eq!(persona.quote, None, "Original persona unchanged");
+  }
+
+  #[test]
+  fn hostile_attack_given_persona_when_set_skill_level_then_skill_level_set() {
+    // Given: Persona
+    let persona = create_test_persona("Skilled");
+
+    // When: Set skill level
+    let persona_with_skill = persona.clone().with_skill_level("Expert".to_string());
+
+    // Then: Skill level set
+    assert_eq!(
+      persona_with_skill.skill_level, "Expert",
+      "Skill level should be set"
+    );
+    assert_eq!(persona.skill_level, "", "Original persona unchanged");
   }
 }

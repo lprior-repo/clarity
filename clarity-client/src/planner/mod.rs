@@ -3,6 +3,11 @@
 //! This module implements the Diamond design methodology for product planning,
 //! organized into four phases (top, right, bottom, left of the diamond).
 
+pub mod application;
+pub mod domain;
+pub mod presentation;
+
+pub mod adversarial_tests;
 pub mod components;
 pub mod hostile_attacks;
 pub mod state;
@@ -20,3 +25,8 @@ pub use validation::{
   detect_cycles, detect_cycles_with_path, get_graph_health, is_task_ready, validate_all_tasks,
   validate_task, CycleInfo, ValidationError,
 };
+
+// DDD-friendly exports
+pub use application as app;
+pub use domain as core;
+pub use presentation as ui;

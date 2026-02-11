@@ -8,6 +8,7 @@
 #![allow(clippy::disallowed_methods)]
 
 use crate::components::ErrorBoundary;
+use crate::planner::components::PlannerApp;
 use dioxus::prelude::*;
 use std::str::FromStr;
 
@@ -25,6 +26,9 @@ pub enum Route {
 
   /// Dashboard route
   Dashboard,
+
+  /// AI planner route
+  Planner,
 
   /// Beads list route
   BeadsList,
@@ -55,6 +59,7 @@ impl std::str::FromStr for Route {
       [] | [""] => Ok(Self::Home),
       ["about"] => Ok(Self::About),
       ["dashboard"] => Ok(Self::Dashboard),
+      ["planner"] => Ok(Self::Planner),
       ["beads"] => Ok(Self::BeadsList),
       ["beads", "new"] => Ok(Self::BeadNew),
       ["beads", id] => Ok(Self::BeadDetail {
@@ -88,6 +93,7 @@ impl std::fmt::Display for Route {
       Self::Home => write!(f, "/"),
       Self::About => write!(f, "/about"),
       Self::Dashboard => write!(f, "/dashboard"),
+      Self::Planner => write!(f, "/planner"),
       Self::BeadsList => write!(f, "/beads"),
       Self::BeadNew => write!(f, "/beads/new"),
       Self::BeadEdit { id } => write!(f, "/beads/{id}/edit"),
@@ -118,6 +124,7 @@ pub fn App() -> Element {
                       Route::Home => rsx! { Home {} },
                       Route::About => rsx! { About {} },
                       Route::Dashboard => rsx! { Dashboard {} },
+                      Route::Planner => rsx! { Planner {} },
                       Route::BeadsList => rsx! { BeadsList {} },
                       Route::BeadNew => rsx! { BeadNew {} },
                       Route::BeadEdit { id } => rsx! { BeadEdit { id } },
@@ -142,9 +149,10 @@ fn Home() -> Element {
                   h2 { "Welcome to Clarity" }
                   p { "A modern desktop application built with Dioxus" }
                   div { class: "nav-links",
-                      NavLink { to: Route::About, "Learn More" }
-                      NavLink { to: Route::Dashboard, "Dashboard" }
-                      NavLink { to: Route::BeadsList, "Manage Beads" }
+                       NavLink { to: Route::About, "Learn More" }
+                       NavLink { to: Route::Dashboard, "Dashboard" }
+                       NavLink { to: Route::Planner, "AI Planner" }
+                       NavLink { to: Route::BeadsList, "Manage Beads" }
                   }
               }
           }
@@ -195,10 +203,11 @@ fn Dashboard() -> Element {
                       div { class: "dashboard-section",
                           h3 { "Quick Actions" }
                           div { class: "nav-links",
-                              NavLink { to: Route::Home, "Go Home" }
-                              NavLink { to: Route::About, "Learn More" }
-                              NavLink { to: Route::BeadsList, "Manage Beads" }
-                              NavLink { to: Route::BeadNew, "Create New Bead" }
+                               NavLink { to: Route::Home, "Go Home" }
+                               NavLink { to: Route::About, "Learn More" }
+                               NavLink { to: Route::Planner, "AI Planner" }
+                               NavLink { to: Route::BeadsList, "Manage Beads" }
+                               NavLink { to: Route::BeadNew, "Create New Bead" }
                           }
                       }
                   }
@@ -295,6 +304,19 @@ fn BeadDetail(id: String) -> Element {
   }
 }
 
+/// AI planner page component wrapper
+#[component]
+fn Planner() -> Element {
+  rsx! {
+      div { class: "app-container",
+          h1 { "Clarity" }
+          div { class: "content",
+              PlannerApp {}
+          }
+      }
+  }
+}
+
 /// Navigation link component for internal routing with active state
 ///
 /// This component provides a styled link for navigation using the custom
@@ -381,9 +403,10 @@ fn NotFound(route: String) -> Element {
                   h2 { "404 - Page Not Found" }
                   p { "The page '{route}' doesn't exist." }
                   div { class: "nav-links",
-                      NavLink { to: Route::Home, "Go Home" }
-                      NavLink { to: Route::Dashboard, "Dashboard" }
-                      NavLink { to: Route::BeadsList, "Manage Beads" }
+                       NavLink { to: Route::Home, "Go Home" }
+                       NavLink { to: Route::Dashboard, "Dashboard" }
+                       NavLink { to: Route::Planner, "AI Planner" }
+                       NavLink { to: Route::BeadsList, "Manage Beads" }
                   }
               }
           }
@@ -411,6 +434,12 @@ mod tests {
   fn test_route_dashboard_exists() {
     let route = Route::Dashboard;
     assert_eq!(format!("{route:?}"), "Dashboard");
+  }
+
+  #[test]
+  fn test_route_planner_exists() {
+    let route = Route::Planner;
+    assert_eq!(format!("{route:?}"), "Planner");
   }
 
   #[test]
@@ -458,6 +487,7 @@ mod tests {
       Route::Home,
       Route::About,
       Route::Dashboard,
+      Route::Planner,
       Route::BeadsList,
       Route::BeadDetail {
         id: "test".to_string(),

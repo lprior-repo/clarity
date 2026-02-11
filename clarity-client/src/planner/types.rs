@@ -453,6 +453,25 @@ impl fmt::Display for TaskType {
   }
 }
 
+impl std::str::FromStr for TaskType {
+  type Err = String;
+
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    match s {
+      "Research" => Ok(Self::Research),
+      "Design" => Ok(Self::Design),
+      "Development" => Ok(Self::Development),
+      "Testing" => Ok(Self::Testing),
+      "Documentation" => Ok(Self::Documentation),
+      "Planning" => Ok(Self::Planning),
+      "Review" => Ok(Self::Review),
+      "Infrastructure" => Ok(Self::Infrastructure),
+      "Other" => Ok(Self::Other),
+      _ => Err(format!("Unknown TaskType: {s}")),
+    }
+  }
+}
+
 /// Task priority
 ///
 /// Indicates the urgency and importance of a task.
@@ -482,6 +501,20 @@ impl fmt::Display for TaskPriority {
       Self::High => write!(f, "High"),
       Self::Normal => write!(f, "Normal"),
       Self::Low => write!(f, "Low"),
+    }
+  }
+}
+
+impl std::str::FromStr for TaskPriority {
+  type Err = String;
+
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    match s {
+      "Urgent" => Ok(Self::Urgent),
+      "High" => Ok(Self::High),
+      "Normal" => Ok(Self::Normal),
+      "Low" => Ok(Self::Low),
+      _ => Err(format!("Unknown TaskPriority: {s}")),
     }
   }
 }
@@ -518,6 +551,21 @@ impl fmt::Display for Effort {
       Self::Medium => write!(f, "Medium (½ day)"),
       Self::Large => write!(f, "Large (1 day)"),
       Self::ExtraLarge => write!(f, "Extra Large (multi-day)"),
+    }
+  }
+}
+
+impl std::str::FromStr for Effort {
+  type Err = String;
+
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    match s {
+      "Trivial" => Ok(Self::Trivial),
+      "Small" => Ok(Self::Small),
+      "Medium" => Ok(Self::Medium),
+      "Large" => Ok(Self::Large),
+      "ExtraLarge" => Ok(Self::ExtraLarge),
+      _ => Err(format!("Unknown Effort: {s}")),
     }
   }
 }
@@ -1143,6 +1191,141 @@ pub struct Risk {
   pub mitigation: String,
 }
 
+/// Task detail - EARS requirements
+///
+/// Simplified EARS requirements for task-level use.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TaskEarsRequirements {
+  /// Ubiquitous requirements (THE SYSTEM SHALL...)
+  pub ubiquitous: Vec<String>,
+  /// Event-driven requirements (WHEN trigger THEN response)
+  pub event_driven: Vec<EventDrivenRequirement>,
+  /// Unwanted behaviors (IF condition SHALL NOT...)
+  pub unwanted: Vec<UnwantedRequirement>,
+}
+
+impl Default for TaskEarsRequirements {
+  fn default() -> Self {
+    Self {
+      ubiquitous: Vec::new(),
+      event_driven: Vec::new(),
+      unwanted: Vec::new(),
+    }
+  }
+}
+
+/// Event-driven requirement (WHEN trigger THEN response)
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EventDrivenRequirement {
+  /// Trigger event
+  pub trigger: String,
+  /// Response (THE SYSTEM SHALL...)
+  pub response: String,
+}
+
+/// Unwanted requirement (IF condition SHALL NOT...)
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UnwantedRequirement {
+  /// Condition
+  pub condition: String,
+  /// What shall not happen
+  pub shall_not: String,
+  /// Reason (BECAUSE...)
+  pub because: String,
+}
+
+/// Task detail - Contracts
+///
+/// Design-by-contract invariants for the task.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TaskContracts {
+  /// Preconditions (must be true BEFORE execution)
+  pub preconditions: Vec<String>,
+  /// Postconditions (must be true AFTER completion)
+  pub postconditions: Vec<String>,
+  /// Invariants (always true throughout)
+  pub invariants: Vec<String>,
+}
+
+impl Default for TaskContracts {
+  fn default() -> Self {
+    Self {
+      preconditions: Vec::new(),
+      postconditions: Vec::new(),
+      invariants: Vec::new(),
+    }
+  }
+}
+
+/// Task detail - Tests
+///
+/// Test scenarios for the task.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TaskTests {
+  /// Happy path tests (it works)
+  pub happy: Vec<String>,
+  /// Error path tests (it fails gracefully)
+  pub error: Vec<String>,
+  /// Edge case tests (boundary conditions)
+  pub edge: Vec<String>,
+}
+
+impl Default for TaskTests {
+  fn default() -> Self {
+    Self {
+      happy: Vec::new(),
+      error: Vec::new(),
+      edge: Vec::new(),
+    }
+  }
+}
+
+/// Task detail - Research
+///
+/// Research findings and questions.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TaskResearch {
+  /// Files to read
+  pub files: Vec<String>,
+  /// Patterns to find
+  pub patterns: Vec<String>,
+  /// Open questions
+  pub questions: Vec<String>,
+}
+
+impl Default for TaskResearch {
+  fn default() -> Self {
+    Self {
+      files: Vec::new(),
+      patterns: Vec::new(),
+      questions: Vec::new(),
+    }
+  }
+}
+
+/// Task detail - Implementation
+///
+/// Implementation phases for the task.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TaskImplementation {
+  /// Phase 0: Research steps
+  pub phase0: Vec<String>,
+  /// Phase 1: Tests to write
+  pub phase1: Vec<String>,
+  /// Phase 2: Implementation steps
+  pub phase2: Vec<String>,
+}
+
+impl Default for TaskImplementation {
+  fn default() -> Self {
+    Self {
+      phase0: Vec::new(),
+      phase1: Vec::new(),
+      phase2: Vec::new(),
+    }
+  }
+}
+
 /// Plan task
 ///
 /// Individual task within a plan session.
@@ -1168,6 +1351,16 @@ pub struct PlanTask {
   pub dependencies: Vec<Uuid>,
   /// Tags
   pub tags: Vec<String>,
+  /// EARS requirements
+  pub ears: TaskEarsRequirements,
+  /// Contracts
+  pub contracts: TaskContracts,
+  /// Tests
+  pub tests: TaskTests,
+  /// Research
+  pub research: TaskResearch,
+  /// Implementation phases
+  pub implementation: TaskImplementation,
   /// Creation timestamp
   pub created_at: DateTime<Utc>,
   /// Last update timestamp
@@ -1220,6 +1413,11 @@ impl PlanTask {
       completion: 0.0,
       dependencies: Vec::new(),
       tags: Vec::new(),
+      ears: TaskEarsRequirements::default(),
+      contracts: TaskContracts::default(),
+      tests: TaskTests::default(),
+      research: TaskResearch::default(),
+      implementation: TaskImplementation::default(),
       created_at: now,
       updated_at: now,
       due_date: None,
@@ -1282,6 +1480,41 @@ impl PlanTask {
   #[must_use]
   pub const fn with_due_date(mut self, due_date: DateTime<Utc>) -> Self {
     self.due_date = Some(due_date);
+    self
+  }
+
+  /// Set EARS requirements
+  #[must_use]
+  pub fn with_ears(mut self, ears: TaskEarsRequirements) -> Self {
+    self.ears = ears;
+    self
+  }
+
+  /// Set contracts
+  #[must_use]
+  pub fn with_contracts(mut self, contracts: TaskContracts) -> Self {
+    self.contracts = contracts;
+    self
+  }
+
+  /// Set tests
+  #[must_use]
+  pub fn with_tests(mut self, tests: TaskTests) -> Self {
+    self.tests = tests;
+    self
+  }
+
+  /// Set research
+  #[must_use]
+  pub fn with_research(mut self, research: TaskResearch) -> Self {
+    self.research = research;
+    self
+  }
+
+  /// Set implementation phases
+  #[must_use]
+  pub fn with_implementation(mut self, implementation: TaskImplementation) -> Self {
+    self.implementation = implementation;
     self
   }
 }

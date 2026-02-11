@@ -22,6 +22,7 @@ pub mod phase_develop;
 pub mod phase_discover;
 pub mod planner_app;
 pub mod section_label;
+pub mod task_detail_editor;
 pub mod text_area;
 
 pub use diamond_stepper::{get_progress_width, DiamondStepper};
@@ -33,4 +34,5 @@ pub use phase_develop::PhaseDevelop;
 pub use phase_discover::PhaseDiscover;
 pub use planner_app::{PlannerApp, SaveResult};
 pub use section_label::{SectionLabel, SectionLevel};
+pub use task_detail_editor::{EditorTab, TaskDetailEditor};
 pub use text_area::TextArea;

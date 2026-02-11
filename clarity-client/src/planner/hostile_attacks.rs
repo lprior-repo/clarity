@@ -18,12 +18,16 @@
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
-use crate::planner::state::{PlannerContext, PlannerState, PlannerUIState};
-use crate::planner::types::{
-  DiamondPhase, NorthStarScenario, Persona, PlanSession, PlanTask, ProductThesis,
-  StateError, TaskType, MAX_COLLECTION_SIZE,
+#[allow(unused_imports)]
+use crate::planner::validation;
+#[allow(unused_imports)]
+use crate::planner::validation::ValidationError;
+#[allow(unused_imports)]
+use crate::planner::{
+  DiamondPhase, NorthStarScenario, Persona, PlanSession, PlanTask, PlannerContext, PlannerState,
+  PlannerUIState, ProductThesis, StateError, TaskType, MAX_COLLECTION_SIZE,
 };
-use crate::planner::validation::{self, ValidationError};
+#[allow(unused_imports)]
 use uuid::Uuid;
 
 //
@@ -112,10 +116,10 @@ fn hostile_attack_unicode_malice() {
   // ATTACK: Inject malicious Unicode - emoji, RTL, zero-width chars
   // EXPECT: Should handle without panic or corruption
   let malicious_names = vec![
-    "🔥💀👻🎃", // Emoji storm
-    "\\u{202e}TEXT\\u{202c}", // RTL override (escaped)
-    "\\u{200b}\\u{200d}", // Zero-width characters (escaped)
-    "𝐅𝐚𝐧𝐜𝐲 𝐔𝐧𝐢𝐜𝐨𝐝𝐞", // Mathematical bold
+    "🔥💀👻🎃",                    // Emoji storm
+    "\\u{202e}TEXT\\u{202c}",      // RTL override (escaped)
+    "\\u{200b}\\u{200d}",          // Zero-width characters (escaped)
+    "𝐅𝐚𝐧𝐜𝐲 𝐔𝐧𝐢𝐜𝐨𝐝𝐞",               // Mathematical bold
     "\\u{200b}\\u{feff}\\u{2060}", // Various invisible chars (escaped)
   ];
 
@@ -307,7 +311,10 @@ fn hostile_attack_diamond_dependency() {
   let cycles = validation::detect_cycles(&tasks);
 
   // Diamond is NOT a cycle
-  assert!(cycles.is_empty(), "Diamond dependency should not be detected as cycle");
+  assert!(
+    cycles.is_empty(),
+    "Diamond dependency should not be detected as cycle"
+  );
 }
 
 #[test]
@@ -690,7 +697,12 @@ fn hostile_attack_multiple_cycles_in_different_components() {
     ..task_c.clone()
   };
 
-  let tasks = vec![task_a_with_cycle, task_b.clone(), task_c_with_cycle, task_d.clone()];
+  let tasks = vec![
+    task_a_with_cycle,
+    task_b.clone(),
+    task_c_with_cycle,
+    task_d.clone(),
+  ];
   let cycles = validation::detect_cycles_with_path(&tasks);
 
   // Should detect cycles (may be more than 2 due to algorithm)
@@ -709,14 +721,8 @@ fn hostile_attack_multiple_cycles_in_different_components() {
     has_d = has_d || cycle.nodes.contains(&task_d.id);
   }
 
-  assert!(
-    has_a && has_b,
-    "Should detect cycle involving A and B"
-  );
-  assert!(
-    has_c && has_d,
-    "Should detect cycle involving C and D"
-  );
+  assert!(has_a && has_b, "Should detect cycle involving A and B");
+  assert!(has_c && has_d, "Should detect cycle involving C and D");
 }
 
 #[test]
@@ -808,10 +814,10 @@ fn hostile_attack_serialization_special_characters() {
   let malicious_inputs = vec![
     "{\"malicious\": \"json\"}",
     "'\"'\\'\"",
-    "\x01\x02\x03\x04", // Control chars
-    "🔥💀👻", // Emoji
-    "&lt;script&gt;alert('xss')&lt;/script&gt;", // HTML/JS injection attempt
-    "${7*7}", // Template injection
+    "\x01\x02\x03\x04",                                // Control chars
+    "🔥💀👻",                                          // Emoji
+    "&lt;script&gt;alert('xss')&lt;/script&gt;",       // HTML/JS injection attempt
+    "${7*7}",                                          // Template injection
     "{{constructor.constructor('return process')()}}", // Prototype pollution
   ];
 
@@ -905,7 +911,10 @@ fn hostile_attack_circular_reference_at_depth() {
   // VULNERABILITY FOUND: Manual struct construction can create cycles
   // This is a trade-off between safety and Rust expressiveness
   // The validator catches it, but prevention at construction is bypassed
-  assert!(!cycles.is_empty(), "Should detect cycle created via manual construction");
+  assert!(
+    !cycles.is_empty(),
+    "Should detect cycle created via manual construction"
+  );
 }
 
 //
@@ -925,7 +934,7 @@ fn hostile_attack_completion_f32_extremes() {
     f32::NEG_INFINITY,
     -1.0,
     2.0,
-    0.9999999, // Should pass (within epsilon)
+    0.9999999,  // Should pass (within epsilon)
     1.0 - 1e-7, // Should pass
     1.0 + 1e-7, // Should fail
   ];
@@ -1237,7 +1246,10 @@ fn hostile_attack_binary_tree_depth() {
   // This is actually CORRECT for dependency graphs (root = no dependencies)
   // But may be counterintuitive
   // The depth is the number of outgoing edges, not levels in the tree
-  assert!(health.max_depth < depth, "Depth is calculated as longest forward path, not tree height");
+  assert!(
+    health.max_depth < depth,
+    "Depth is calculated as longest forward path, not tree height"
+  );
 }
 
 //
@@ -1251,13 +1263,14 @@ fn hostile_attack_binary_tree_depth() {
 fn hostile_attempt_uuid_nil() {
   // ATTACK: Use UUID nil (all zeros) which might be special-cased
   // EXPECT: Should handle normally
+  // Use TaskType::Other since Development requires EARS/contracts/tests
   let nil_uuid = uuid::Uuid::nil();
 
   // Create task and manually set its ID to nil (bypassing new())
   let task = PlanTask::new(
     "Test".to_string(),
     "Description".to_string(),
-    TaskType::Development,
+    TaskType::Other,
     DiamondPhase::Bottom,
   );
 
@@ -1276,12 +1289,13 @@ fn hostile_attempt_uuid_nil() {
 fn hostile_attempt_max_uuid() {
   // ATTACK: Use UUID max (all F's) which might be special-cased
   // EXPECT: Should handle normally
+  // Use TaskType::Other since Development requires EARS/contracts/tests
   let max_uuid = uuid::Uuid::from_u128(u128::MAX);
 
   let task = PlanTask::new(
     "Test".to_string(),
     "Description".to_string(),
-    TaskType::Development,
+    TaskType::Other,
     DiamondPhase::Bottom,
   );
 
@@ -1361,10 +1375,11 @@ fn hostile_attack_large_string_fields() {
 fn hostile_attack_many_tags() {
   // ATTACK: Add excessive tags to entities
   // EXPECT: Should handle gracefully
+  // Use TaskType::Other since Development requires EARS/contracts/tests
   let mut task = PlanTask::new(
     "Task".to_string(),
     "Description".to_string(),
-    TaskType::Development,
+    TaskType::Other,
     DiamondPhase::Bottom,
   );
 
@@ -1437,6 +1452,7 @@ fn hostile_attack_past_timestamps() {
 fn hostile_attack_mixed_phase_tasks() {
   // ATTACK: Create tasks for all phases in one state
   // EXPECT: Should handle correctly
+  // Use TaskType::Other since Development requires EARS/contracts/tests
   let mut state = PlannerState::new();
 
   let phases = [
@@ -1450,7 +1466,7 @@ fn hostile_attack_mixed_phase_tasks() {
     let task = PlanTask::new(
       format!("Task in {:?}", phase),
       "Description".to_string(),
-      TaskType::Development,
+      TaskType::Other,
       phase,
     );
     state = state.add_task(task).unwrap();
@@ -1483,12 +1499,52 @@ fn hostile_attack_all_task_types() {
   ];
 
   for task_type in task_types {
-    let task = PlanTask::new(
+    let mut task = PlanTask::new(
       format!("Task {:?}", task_type),
       "Description".to_string(),
       task_type,
       DiamondPhase::Bottom,
     );
+
+    // Add required fields for Development, Testing, and Infrastructure tasks
+    match task_type {
+      TaskType::Development | TaskType::Testing | TaskType::Infrastructure => {
+        use crate::planner::types::{
+          EventDrivenRequirement, TaskContracts, TaskEarsRequirements, TaskTests,
+        };
+
+        // Add minimal EARS requirements
+        task = task.with_ears(TaskEarsRequirements {
+          ubiquitous: vec!["The system shall function correctly".to_string()],
+          event_driven: vec![],
+          unwanted: vec![],
+        });
+
+        // Add minimal contracts
+        task = task.with_contracts(TaskContracts {
+          preconditions: vec!["System is initialized".to_string()],
+          postconditions: vec!["Operation completed".to_string()],
+          invariants: vec![],
+        });
+
+        // Add minimal tests
+        task = task.with_tests(TaskTests {
+          happy: vec!["Basic happy path".to_string()],
+          error: vec![],
+          edge: vec![],
+        });
+      }
+      TaskType::Research => {
+        use crate::planner::types::TaskResearch;
+        // Add minimal research fields for Research tasks
+        task = task.with_research(TaskResearch {
+          files: vec!["src/main.rs".to_string()],
+          patterns: vec![],
+          questions: vec![],
+        });
+      }
+      _ => {}
+    }
 
     let result = validation::validate_task(&task);
     assert!(result.is_ok());

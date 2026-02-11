@@ -46,12 +46,28 @@ pub enum ValidationError {
 
   #[error("duplicate task ID: {0}")]
   DuplicateTaskId(Uuid),
+
+  #[error(
+    "EARS requirements are empty: at least one ubiquitous or event-driven requirement required"
+  )]
+  EmptyEarsRequirements,
+
+  #[error("Contract invariants are empty: at least one precondition or postcondition required")]
+  EmptyContracts,
+
+  #[error("Test cases are empty: at least one happy or error path test required")]
+  EmptyTests,
+
+  #[error(
+    "Research fields are empty for research task: at least one file, pattern, or question required"
+  )]
+  EmptyResearchFields,
 }
 
 /// Validate a single task
 ///
 /// Checks that the task has valid title, description, and completion percentage.
-/// Also checks for self-dependencies.
+/// Also checks for self-dependencies, EARS requirements, contracts, and tests.
 ///
 /// # Errors
 /// Returns `ValidationError` if validation fails
@@ -79,6 +95,46 @@ pub fn validate_task(task: &PlanTask) -> Result<(), Vec<ValidationError>> {
   // Check for self-dependencies
   if task.dependencies.contains(&task.id) {
     errors.push(ValidationError::SelfDependency(task.id));
+  }
+
+  // Check EARS requirements for development/testing/infrastructure tasks
+  use crate::planner::types::TaskType;
+  let needs_ears = matches!(
+    task.task_type,
+    TaskType::Development | TaskType::Testing | TaskType::Infrastructure
+  );
+  if needs_ears {
+    let has_ears = !task.ears.ubiquitous.is_empty() || !task.ears.event_driven.is_empty();
+    if !has_ears {
+      errors.push(ValidationError::EmptyEarsRequirements);
+    }
+  }
+
+  // Check contracts for development/testing/infrastructure tasks
+  if needs_ears {
+    let has_contracts =
+      !task.contracts.preconditions.is_empty() || !task.contracts.postconditions.is_empty();
+    if !has_contracts {
+      errors.push(ValidationError::EmptyContracts);
+    }
+  }
+
+  // Check tests for development/testing/infrastructure tasks
+  if needs_ears {
+    let has_tests = !task.tests.happy.is_empty() || !task.tests.error.is_empty();
+    if !has_tests {
+      errors.push(ValidationError::EmptyTests);
+    }
+  }
+
+  // Check research fields for research tasks
+  if task.task_type == TaskType::Research {
+    let has_research = !task.research.files.is_empty()
+      || !task.research.patterns.is_empty()
+      || !task.research.questions.is_empty();
+    if !has_research {
+      errors.push(ValidationError::EmptyResearchFields);
+    }
   }
 
   match errors.is_empty() {
@@ -340,8 +396,8 @@ fn find_all_cycles_in_component(
 
 /// DFS that collects ALL cycles (not just the first one)
 ///
-/// Unlike dfs_detect_cycle which returns early, this continues searching
-/// for additional cycles after finding one.
+/// This implementation continues searching for further cycles instead of
+/// returning immediately after finding the first one.
 fn dfs_collect_all_cycles(
   node: Uuid,
   adj: &HashMap<Uuid, Vec<Uuid>>,
@@ -383,50 +439,6 @@ fn dfs_collect_all_cycles(
 
   rec_stack.pop();
   in_stack.remove(&node);
-}
-
-/// DFS visit for cycle detection with full path tracking
-///
-/// Returns Some(CycleInfo) if a cycle is found, None otherwise
-fn dfs_detect_cycle(
-  node: Uuid,
-  adj: &HashMap<Uuid, Vec<Uuid>>,
-  task_map: &HashMap<Uuid, &PlanTask>,
-  visited: &mut HashSet<Uuid>,
-  rec_stack: &mut Vec<Uuid>,
-  in_stack: &mut HashSet<Uuid>,
-) -> Option<CycleInfo> {
-  visited.insert(node);
-  rec_stack.push(node);
-  in_stack.insert(node);
-
-  if let Some(neighbors) = adj.get(&node) {
-    for &neighbor in neighbors {
-      if !visited.contains(&neighbor) {
-        if let Some(cycle) = dfs_detect_cycle(neighbor, adj, task_map, visited, rec_stack, in_stack)
-        {
-          return Some(cycle);
-        }
-      } else if in_stack.contains(&neighbor) {
-        // Found a cycle - extract the full cycle path
-        let cycle_start_idx = rec_stack.iter().position(|&id| id == neighbor)?;
-        let cycle_nodes: Vec<Uuid> = rec_stack[cycle_start_idx..].to_vec();
-        let cycle_nodes_clone = cycle_nodes.clone();
-
-        // Build readable path
-        let path = build_cycle_path(&cycle_nodes_clone, task_map);
-
-        return Some(CycleInfo {
-          nodes: cycle_nodes,
-          path,
-        });
-      }
-    }
-  }
-
-  rec_stack.pop();
-  in_stack.remove(&node);
-  None
 }
 
 /// Build a human-readable cycle path description
@@ -623,7 +635,9 @@ pub fn validate_all_tasks(tasks: &[PlanTask]) -> Vec<ValidationCheck> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::planner::types::{DiamondPhase, TaskType};
+  use crate::planner::types::{
+    DiamondPhase, TaskContracts, TaskEarsRequirements, TaskTests, TaskType,
+  };
 
   #[test]
   fn test_validate_task_valid() {
@@ -633,7 +647,22 @@ mod tests {
       TaskType::Development,
       DiamondPhase::Bottom,
     )
-    .with_completion(0.5);
+    .with_completion(0.5)
+    .with_ears(TaskEarsRequirements {
+      ubiquitous: vec!["The system shall work".to_string()],
+      event_driven: vec![],
+      unwanted: vec![],
+    })
+    .with_contracts(TaskContracts {
+      preconditions: vec!["User is logged in".to_string()],
+      postconditions: vec![],
+      invariants: vec![],
+    })
+    .with_tests(TaskTests {
+      happy: vec!["User clicks button".to_string()],
+      error: vec![],
+      edge: vec![],
+    });
 
     assert!(validate_task(&task).is_ok());
   }
@@ -645,7 +674,22 @@ mod tests {
       "A valid task description".to_string(),
       TaskType::Development,
       DiamondPhase::Bottom,
-    );
+    )
+    .with_ears(TaskEarsRequirements {
+      ubiquitous: vec!["The system shall work".to_string()],
+      event_driven: vec![],
+      unwanted: vec![],
+    })
+    .with_contracts(TaskContracts {
+      preconditions: vec!["User is logged in".to_string()],
+      postconditions: vec![],
+      invariants: vec![],
+    })
+    .with_tests(TaskTests {
+      happy: vec!["User clicks button".to_string()],
+      error: vec![],
+      edge: vec![],
+    });
 
     let result = validate_task(&task);
     assert!(result.is_err());
@@ -663,7 +707,22 @@ mod tests {
       "".to_string(),
       TaskType::Development,
       DiamondPhase::Bottom,
-    );
+    )
+    .with_ears(TaskEarsRequirements {
+      ubiquitous: vec!["The system shall work".to_string()],
+      event_driven: vec![],
+      unwanted: vec![],
+    })
+    .with_contracts(TaskContracts {
+      preconditions: vec!["User is logged in".to_string()],
+      postconditions: vec![],
+      invariants: vec![],
+    })
+    .with_tests(TaskTests {
+      happy: vec!["User clicks button".to_string()],
+      error: vec![],
+      edge: vec![],
+    });
 
     let result = validate_task(&task);
     assert!(result.is_err());
@@ -682,7 +741,22 @@ mod tests {
       TaskType::Development,
       DiamondPhase::Bottom,
     )
-    .with_completion(1.5);
+    .with_completion(1.5)
+    .with_ears(TaskEarsRequirements {
+      ubiquitous: vec!["The system shall work".to_string()],
+      event_driven: vec![],
+      unwanted: vec![],
+    })
+    .with_contracts(TaskContracts {
+      preconditions: vec!["User is logged in".to_string()],
+      postconditions: vec![],
+      invariants: vec![],
+    })
+    .with_tests(TaskTests {
+      happy: vec!["User clicks button".to_string()],
+      error: vec![],
+      edge: vec![],
+    });
 
     let result = validate_task(&task);
     assert!(result.is_err());
@@ -698,7 +772,7 @@ mod tests {
     let task = PlanTask::new(
       "Task".to_string(),
       "Description".to_string(),
-      TaskType::Development,
+      TaskType::Planning, // Planning doesn't require EARS/contracts/tests
       DiamondPhase::Bottom,
     );
 
@@ -711,7 +785,7 @@ mod tests {
     let dep = PlanTask::new(
       "Dep".to_string(),
       "Description".to_string(),
-      TaskType::Development,
+      TaskType::Planning, // Planning doesn't require EARS/contracts/tests
       DiamondPhase::Bottom,
     )
     .with_completion(1.0);
@@ -719,7 +793,7 @@ mod tests {
     let task = PlanTask::new(
       "Task".to_string(),
       "Description".to_string(),
-      TaskType::Development,
+      TaskType::Planning, // Planning doesn't require EARS/contracts/tests
       DiamondPhase::Bottom,
     )
     .with_dependency(dep.id);
@@ -736,7 +810,7 @@ mod tests {
     let dep = PlanTask::new(
       "Dep".to_string(),
       "Description".to_string(),
-      TaskType::Development,
+      TaskType::Planning, // Planning doesn't require EARS/contracts/tests
       DiamondPhase::Bottom,
     )
     .with_completion(0.5);

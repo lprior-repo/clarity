@@ -6,6 +6,7 @@
 // Dioxus rsx! macro internally uses unwrap, so we allow the disallowed_methods lint.
 #![allow(clippy::disallowed_methods)]
 
+use crate::app::{NavLink, Route};
 use crate::planner::components::diamond_stepper::DiamondStepper;
 use crate::planner::components::phase_define::PhaseDefine;
 use crate::planner::components::phase_deliver::PhaseDeliver;
@@ -198,23 +199,9 @@ fn PlannerHeader(
           }
 
           nav { class: "header-nav",
-              a {
-                  class: "nav-link",
-                  href: "#",
-                  "Home"
-              }
-
-              a {
-                  class: "nav-link",
-                  href: "#",
-                  "Dashboard"
-              }
-
-              a {
-                  class: "nav-link",
-                  href: "#",
-                  "Beads"
-              }
+              NavLink { to: Route::Home, "Home" }
+              NavLink { to: Route::Dashboard, "Dashboard" }
+              NavLink { to: Route::BeadsList, "Beads" }
           }
 
           div { class: "header-actions",

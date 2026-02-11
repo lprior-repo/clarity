@@ -1046,6 +1046,7 @@ fn HandoffView(state: Signal<PlannerState>) -> Element {
 
 /// Export status for UI feedback with validated state transitions
 #[derive(Clone, Debug, PartialEq)]
+#[allow(dead_code)] // Cancelled reserved for future cancellation feature
 enum ExportStatus {
   Idle,
   Exporting,
@@ -1099,6 +1100,7 @@ impl ExportStatus {
   }
 
   /// Check if export can be cancelled from current state
+  #[allow(dead_code)] // Reserved for future cancellation feature
   fn can_cancel(&self) -> bool {
     matches!(self, Self::Exporting)
   }
