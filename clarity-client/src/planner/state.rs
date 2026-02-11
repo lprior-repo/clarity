@@ -1082,6 +1082,176 @@ mod tests {
     assert!(!ui.sidebar_expanded);
   }
 
+  // CRITICAL-008 HOSTILE TEST: Concurrent toggle safety
+  #[test]
+  fn test_ui_state_concurrent_toggle_safety() {
+    let ui = PlannerUIState::new();
+
+    // Simulate concurrent operations from the same base state
+    let ui1 = ui.clone().toggle_validation();
+    let ui2 = ui.clone().toggle_graph();
+    let ui3 = ui.clone().toggle_sidebar();
+
+    // Each operation should create a consistent state
+    assert!(ui1.show_validation);
+    assert!(!ui1.show_graph);
+    assert!(ui1.sidebar_expanded);
+
+    assert!(!ui2.show_validation);
+    assert!(ui2.show_graph);
+    assert!(ui2.sidebar_expanded);
+
+    assert!(!ui3.show_validation);
+    assert!(!ui3.show_graph);
+    assert!(!ui3.sidebar_expanded);
+
+    // Chaining operations should be deterministic
+    let chained = ui
+      .toggle_validation()
+      .toggle_graph()
+      .toggle_sidebar()
+      .toggle_validation()
+      .toggle_graph();
+
+    assert!(!chained.show_validation); // toggled twice
+    assert!(!chained.show_graph); // toggled twice
+    assert!(!chained.sidebar_expanded); // toggled once
+  }
+
+  // CRITICAL-008 HOSTILE TEST: Rapid state transitions
+  #[test]
+  fn test_ui_state_rapid_transitions() {
+    let ui = PlannerUIState::new();
+
+    // Rapidly toggle validation 10 times
+    let mut ui = ui;
+    for _ in 0..10 {
+      ui = ui.toggle_validation();
+    }
+    // Should end up at original state (even number of toggles)
+    assert!(!ui.show_validation);
+
+    // Rapidly toggle all fields
+    let mut ui = PlannerUIState::new();
+    for i in 0..99 {
+      ui = match i % 3 {
+        0 => ui.toggle_validation(),
+        1 => ui.toggle_graph(),
+        _ => ui.toggle_sidebar(),
+      };
+    }
+
+    // State should be consistent
+    // 99 operations / 3 = 33 toggles of each (odd number)
+    // Original: all false except sidebar=true
+    // After 33 toggles: validation=true, graph=true, sidebar=false
+    assert!(ui.show_validation);
+    assert!(ui.show_graph);
+    assert!(!ui.sidebar_expanded);
+  }
+
+  // CRITICAL-008 HOSTILE TEST: Entity selection race safety
+  #[test]
+  fn test_ui_state_entity_selection_safety() {
+    let ui = PlannerUIState::new();
+
+    let id1 = Uuid::new_v4();
+    let id2 = Uuid::new_v4();
+
+    // Simulate concurrent entity selections from same base state
+    let ui1 = ui.clone().with_entity(SelectedEntity::Task(id1));
+    let ui2 = ui.clone().with_entity(SelectedEntity::Task(id2));
+
+    // Each state should be independent and consistent
+    match &ui1.selected_entity {
+      Some(SelectedEntity::Task(id)) => assert_eq!(*id, id1),
+      _ => panic!("Expected Task(id1)"),
+    }
+
+    match &ui2.selected_entity {
+      Some(SelectedEntity::Task(id)) => assert_eq!(*id, id2),
+      _ => panic!("Expected Task(id2)"),
+    }
+
+    // Clearing should work correctly
+    let ui1_cleared = ui1.clear_entity();
+    match &ui1_cleared.selected_entity {
+      Some(SelectedEntity::None) => {}
+      _ => panic!("Expected None after clear"),
+    }
+  }
+
+  // CRITICAL-008 HOSTILE TEST: Tab switching consistency
+  #[test]
+  fn test_ui_state_tab_switching_consistency() {
+    let ui = PlannerUIState::new();
+
+    // Rapid tab switching
+    let tabs = [
+      PlannerTab::Overview,
+      PlannerTab::Discovery,
+      PlannerTab::Design,
+      PlannerTab::Development,
+      PlannerTab::Delivery,
+      PlannerTab::Settings,
+    ];
+
+    let mut ui = ui;
+    for tab in tabs.iter().cycle().take(100) {
+      ui = ui.with_tab(*tab);
+    }
+
+    // Final state should be deterministic (100th tab, zero-indexed)
+    // We iterate 100 times starting from Overview (index 0)
+    // So we end up at index 99 (0-indexed)
+    // 99 % 6 = 3, which is the 4th tab (index 3) = Development
+    assert_eq!(ui.active_tab, PlannerTab::Development);
+  }
+
+  // CRITICAL-008 HOSTILE TEST: State cloning independence
+  #[test]
+  fn test_ui_state_clone_independence() {
+    let ui = PlannerUIState::new();
+
+    let ui1 = ui.clone().toggle_validation();
+    let ui2 = ui.clone().toggle_graph();
+    let ui3 = ui1.clone().toggle_sidebar();
+
+    // All clones should be independent
+    assert!(ui1.show_validation);
+    assert!(!ui2.show_validation);
+    assert!(ui3.show_validation);
+    assert!(!ui3.show_graph); // ui3 was cloned from ui1, which didn't toggle graph
+    assert!(!ui3.sidebar_expanded);
+
+    // Original should be unchanged
+    assert!(!ui.show_validation);
+    assert!(!ui.show_graph);
+    assert!(ui.sidebar_expanded);
+  }
+
+  // CRITICAL-008 HOSTILE TEST: With methods are deterministic
+  #[test]
+  fn test_ui_state_with_methods_deterministic() {
+    let ui = PlannerUIState::new();
+
+    // Calling with_* multiple times with same value should be idempotent
+    let ui1 = ui.clone().with_validation(true);
+    let ui2 = ui1.clone().with_validation(true);
+    let ui3 = ui2.clone().with_validation(true);
+
+    assert!(ui3.show_validation);
+    assert_eq!(ui1, ui2);
+    assert_eq!(ui2, ui3);
+
+    // Same for other fields
+    let ui1 = ui.clone().with_graph(true);
+    let ui2 = ui1.clone().with_graph(true);
+
+    assert!(ui2.show_graph);
+    assert_eq!(ui1, ui2);
+  }
+
   #[test]
   fn test_add_task_within_bounds() {
     let state = PlannerState::new();

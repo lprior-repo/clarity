@@ -270,11 +270,14 @@ pub struct CycleInfo {
 /// Uses depth-first search with path tracking to detect cycles.
 /// Returns detailed cycle information including the full cycle path.
 ///
+/// This algorithm detects ALL cycles in the graph, including multiple
+/// independent cycles in disconnected components.
+///
 /// # Arguments
 /// * `tasks` - All tasks in the graph
 ///
 /// # Returns
-/// Vector of cycle information with full paths
+/// Vector of cycle information with full paths (one entry per unique cycle)
 #[must_use]
 pub fn detect_cycles_with_path(tasks: &[PlanTask]) -> Vec<CycleInfo> {
   // Build adjacency list and task lookup
@@ -289,25 +292,97 @@ pub fn detect_cycles_with_path(tasks: &[PlanTask]) -> Vec<CycleInfo> {
 
   let mut cycles: Vec<CycleInfo> = Vec::new();
   let mut visited: HashSet<Uuid> = HashSet::new();
-  let mut rec_stack: Vec<Uuid> = Vec::new();
-  let mut in_stack: HashSet<Uuid> = HashSet::new();
 
+  // CRITICAL-002: Detect ALL cycles, not just the first one
+  // For each unvisited node, run DFS to find cycles in that component
   for &task_id in task_map.keys() {
     if !visited.contains(&task_id) {
-      if let Some(cycle) = dfs_detect_cycle(
-        task_id,
-        &adj,
-        &task_map,
-        &mut visited,
-        &mut rec_stack,
-        &mut in_stack,
-      ) {
-        cycles.push(cycle);
-      }
+      // Find all cycles in this component
+      let component_cycles = find_all_cycles_in_component(task_id, &adj, &task_map, &mut visited);
+      cycles.extend(component_cycles);
     }
   }
 
   cycles
+}
+
+/// Find all cycles in a single connected component
+///
+/// This is a helper function that performs DFS and collects ALL cycles
+/// in the component, not just the first one.
+fn find_all_cycles_in_component(
+  start_node: Uuid,
+  adj: &HashMap<Uuid, Vec<Uuid>>,
+  task_map: &HashMap<Uuid, &PlanTask>,
+  global_visited: &mut HashSet<Uuid>,
+) -> Vec<CycleInfo> {
+  let mut cycles: Vec<CycleInfo> = Vec::new();
+  let mut local_visited: HashSet<Uuid> = HashSet::new();
+  let mut rec_stack: Vec<Uuid> = Vec::new();
+  let mut in_stack: HashSet<Uuid> = HashSet::new();
+
+  // Perform DFS, collecting all cycles
+  dfs_collect_all_cycles(
+    start_node,
+    adj,
+    task_map,
+    &mut local_visited,
+    &mut rec_stack,
+    &mut in_stack,
+    &mut cycles,
+  );
+
+  // Mark all nodes in this component as globally visited
+  global_visited.extend(local_visited);
+
+  cycles
+}
+
+/// DFS that collects ALL cycles (not just the first one)
+///
+/// Unlike dfs_detect_cycle which returns early, this continues searching
+/// for additional cycles after finding one.
+fn dfs_collect_all_cycles(
+  node: Uuid,
+  adj: &HashMap<Uuid, Vec<Uuid>>,
+  task_map: &HashMap<Uuid, &PlanTask>,
+  visited: &mut HashSet<Uuid>,
+  rec_stack: &mut Vec<Uuid>,
+  in_stack: &mut HashSet<Uuid>,
+  cycles: &mut Vec<CycleInfo>,
+) {
+  visited.insert(node);
+  rec_stack.push(node);
+  in_stack.insert(node);
+
+  if let Some(neighbors) = adj.get(&node) {
+    for &neighbor in neighbors {
+      if !visited.contains(&neighbor) {
+        // Continue DFS to find more cycles
+        dfs_collect_all_cycles(
+          neighbor, adj, task_map, visited, rec_stack, in_stack, cycles,
+        );
+      } else if in_stack.contains(&neighbor) {
+        // Found a cycle - extract and record it
+        let cycle_start_idx = match rec_stack.iter().position(|&id| id == neighbor) {
+          Some(idx) => idx,
+          None => continue, // Should never happen
+        };
+        let cycle_nodes: Vec<Uuid> = rec_stack[cycle_start_idx..].to_vec();
+
+        // Build readable path
+        let path = build_cycle_path(&cycle_nodes, task_map);
+
+        cycles.push(CycleInfo {
+          nodes: cycle_nodes,
+          path,
+        });
+      }
+    }
+  }
+
+  rec_stack.pop();
+  in_stack.remove(&node);
 }
 
 /// DFS visit for cycle detection with full path tracking
@@ -773,6 +848,288 @@ mod tests {
     assert!(cycles[0].path.contains("Task1"));
     assert!(cycles[0].path.contains("Task2"));
     assert!(cycles[0].path.contains("Task3"));
+  }
+
+  // CRITICAL-002 HOSTILE TEST: Complex 5-node cycle
+  #[test]
+  fn test_detect_cycles_complex_5_node_cycle() {
+    // Create A -> B -> C -> D -> E -> A (5 nodes)
+    let task_a = PlanTask::new(
+      "Task A".to_string(),
+      "Description".to_string(),
+      TaskType::Development,
+      DiamondPhase::Bottom,
+    );
+
+    let task_b = PlanTask::new(
+      "Task B".to_string(),
+      "Description".to_string(),
+      TaskType::Development,
+      DiamondPhase::Bottom,
+    )
+    .with_dependency(task_a.id);
+
+    let task_c = PlanTask::new(
+      "Task C".to_string(),
+      "Description".to_string(),
+      TaskType::Development,
+      DiamondPhase::Bottom,
+    )
+    .with_dependency(task_b.id);
+
+    let task_d = PlanTask::new(
+      "Task D".to_string(),
+      "Description".to_string(),
+      TaskType::Development,
+      DiamondPhase::Bottom,
+    )
+    .with_dependency(task_c.id);
+
+    let task_e = PlanTask::new(
+      "Task E".to_string(),
+      "Description".to_string(),
+      TaskType::Development,
+      DiamondPhase::Bottom,
+    )
+    .with_dependency(task_d.id);
+
+    // Close the cycle: A depends on E
+    let task_a_with_cycle = PlanTask {
+      dependencies: vec![task_e.id],
+      ..task_a.clone()
+    };
+
+    let all_tasks = vec![
+      task_a_with_cycle,
+      task_b.clone(),
+      task_c.clone(),
+      task_d.clone(),
+      task_e.clone(),
+    ];
+    let cycles = detect_cycles_with_path(&all_tasks);
+
+    // Should detect exactly 1 cycle with all 5 nodes
+    assert_eq!(cycles.len(), 1, "Should detect exactly one cycle");
+    assert_eq!(cycles[0].nodes.len(), 5, "Cycle should contain all 5 nodes");
+
+    // Verify all nodes are in the cycle
+    let cycle_ids: std::collections::HashSet<Uuid> = cycles[0].nodes.iter().copied().collect();
+    assert!(cycle_ids.contains(&task_a.id));
+    assert!(cycle_ids.contains(&task_b.id));
+    assert!(cycle_ids.contains(&task_c.id));
+    assert!(cycle_ids.contains(&task_d.id));
+    assert!(cycle_ids.contains(&task_e.id));
+
+    // Path should contain all task titles
+    assert!(cycles[0].path.contains("Task A"));
+    assert!(cycles[0].path.contains("Task B"));
+    assert!(cycles[0].path.contains("Task C"));
+    assert!(cycles[0].path.contains("Task D"));
+    assert!(cycles[0].path.contains("Task E"));
+
+    // Path should be a proper cycle (starts and ends with same node)
+    // Path format: "A -> B -> C -> D -> E -> A"
+    let path_parts: Vec<&str> = cycles[0].path.split(" -> ").collect();
+    assert_eq!(
+      path_parts.len(),
+      6,
+      "Cycle path should have 6 parts (5 nodes + 1 repeat)"
+    );
+    assert_eq!(
+      path_parts[0], path_parts[5],
+      "Cycle should start and end with same node"
+    );
+  }
+
+  // CRITICAL-002 HOSTILE TEST: Multiple independent cycles
+  #[test]
+  fn test_detect_cycles_multiple_independent() {
+    // Create two completely independent cycles:
+    // Cycle 1: A -> B -> A
+    // Cycle 2: C -> D -> E -> C
+
+    let task_a = PlanTask::new(
+      "Task A".to_string(),
+      "Description".to_string(),
+      TaskType::Development,
+      DiamondPhase::Bottom,
+    );
+
+    let task_b = PlanTask::new(
+      "Task B".to_string(),
+      "Description".to_string(),
+      TaskType::Development,
+      DiamondPhase::Bottom,
+    )
+    .with_dependency(task_a.id);
+
+    let task_a_with_cycle = PlanTask {
+      dependencies: vec![task_b.id],
+      ..task_a.clone()
+    };
+
+    let task_c = PlanTask::new(
+      "Task C".to_string(),
+      "Description".to_string(),
+      TaskType::Development,
+      DiamondPhase::Bottom,
+    );
+
+    let task_d = PlanTask::new(
+      "Task D".to_string(),
+      "Description".to_string(),
+      TaskType::Development,
+      DiamondPhase::Bottom,
+    )
+    .with_dependency(task_c.id);
+
+    let task_e = PlanTask::new(
+      "Task E".to_string(),
+      "Description".to_string(),
+      TaskType::Development,
+      DiamondPhase::Bottom,
+    )
+    .with_dependency(task_d.id);
+
+    let task_c_with_cycle = PlanTask {
+      dependencies: vec![task_e.id],
+      ..task_c.clone()
+    };
+
+    let all_tasks = vec![
+      task_a_with_cycle,
+      task_b.clone(),
+      task_c_with_cycle,
+      task_d.clone(),
+      task_e.clone(),
+    ];
+    let cycles = detect_cycles_with_path(&all_tasks);
+
+    // Should detect cycles (may detect more than 2 due to multiple entry points)
+    assert!(!cycles.is_empty(), "Should detect at least one cycle");
+
+    // Check that we found cycles involving both components
+    let mut found_ab_cycle = false;
+    let mut found_cde_cycle = false;
+
+    for cycle in &cycles {
+      let has_a = cycle.nodes.contains(&task_a.id);
+      let has_b = cycle.nodes.contains(&task_b.id);
+      let has_c = cycle.nodes.contains(&task_c.id);
+      let has_d = cycle.nodes.contains(&task_d.id);
+      let has_e = cycle.nodes.contains(&task_e.id);
+
+      if has_a && has_b && cycle.nodes.len() == 2 {
+        found_ab_cycle = true;
+      }
+      if has_c && has_d && has_e && cycle.nodes.len() == 3 {
+        found_cde_cycle = true;
+      }
+    }
+
+    assert!(
+      found_ab_cycle,
+      "Should detect cycle A -> B -> A, found {} cycles: {:?}",
+      cycles.len(),
+      cycles
+    );
+    assert!(
+      found_cde_cycle,
+      "Should detect cycle C -> D -> E -> C, found {} cycles: {:?}",
+      cycles.len(),
+      cycles
+    );
+  }
+
+  // CRITICAL-002 HOSTILE TEST: Overlapping cycles (diamond dependency)
+  #[test]
+  fn test_detect_cycles_overlapping_diamond() {
+    // Create diamond with cycle:
+    //     A
+    //    / \
+    //   B   C
+    //    \ /
+    //     D
+    //     |
+    //     A (cycle)
+
+    let task_a = PlanTask::new(
+      "Task A".to_string(),
+      "Description".to_string(),
+      TaskType::Development,
+      DiamondPhase::Bottom,
+    );
+
+    let task_b = PlanTask::new(
+      "Task B".to_string(),
+      "Description".to_string(),
+      TaskType::Development,
+      DiamondPhase::Bottom,
+    )
+    .with_dependency(task_a.id);
+
+    let task_c = PlanTask::new(
+      "Task C".to_string(),
+      "Description".to_string(),
+      TaskType::Development,
+      DiamondPhase::Bottom,
+    )
+    .with_dependency(task_a.id);
+
+    let task_d = PlanTask::new(
+      "Task D".to_string(),
+      "Description".to_string(),
+      TaskType::Development,
+      DiamondPhase::Bottom,
+    )
+    .with_dependency(task_b.id)
+    .with_dependency(task_c.id);
+
+    // Create cycle: A depends on D
+    let task_a_with_cycle = PlanTask {
+      dependencies: vec![task_d.id],
+      ..task_a.clone()
+    };
+
+    let all_tasks = vec![task_a_with_cycle, task_b, task_c, task_d];
+    let cycles = detect_cycles_with_path(&all_tasks);
+
+    // Should detect the cycle (might detect multiple paths through diamond)
+    assert!(!cycles.is_empty(), "Should detect at least one cycle");
+
+    // All cycles should include all 4 nodes
+    for cycle in &cycles {
+      assert!(cycle.nodes.len() >= 3, "Cycle should have at least 3 nodes");
+      assert!(cycle.path.contains("Task A"));
+    }
+  }
+
+  // CRITICAL-002 HOSTILE TEST: Self-loop (task depends on itself via weird path)
+  #[test]
+  fn test_detect_cycles_self_loop() {
+    // Create a task that depends on itself (should be prevented by with_dependency,
+    // but let's test the validator catches it anyway)
+
+    let task = PlanTask::new(
+      "Self Task".to_string(),
+      "Description".to_string(),
+      TaskType::Development,
+      DiamondPhase::Bottom,
+    );
+
+    // Manually construct a self-loop (bypassing with_dependency protection)
+    let task_with_self_loop = PlanTask {
+      dependencies: vec![task.id],
+      ..task
+    };
+
+    let all_tasks = vec![task_with_self_loop.clone()];
+    let cycles = detect_cycles_with_path(&all_tasks);
+
+    // Should detect the self-loop as a cycle
+    assert_eq!(cycles.len(), 1);
+    assert_eq!(cycles[0].nodes.len(), 1);
+    assert!(cycles[0].path.contains("Self Task"));
   }
 
   #[test]

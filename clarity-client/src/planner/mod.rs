@@ -4,6 +4,7 @@
 //! organized into four phases (top, right, bottom, left of the diamond).
 
 pub mod components;
+pub mod hostile_attacks;
 pub mod state;
 pub mod types;
 pub mod validation;

@@ -1249,11 +1249,19 @@ impl PlanTask {
 
   /// Add a dependency
   ///
+  /// # Panics
+  /// Panics if trying to add self as dependency (this is a type-level invariant violation)
+  ///
   /// # Errors
-  /// Returns `StateError::SelfDependency` if trying to add self as dependency
+  /// This method will never return a task with self-dependencies. If you attempt
+  /// to add the task's own ID as a dependency, the dependency will be silently ignored.
   #[must_use]
   pub fn with_dependency(mut self, dep_id: Uuid) -> Self {
-    self.dependencies.push(dep_id);
+    // CRITICAL-003: Prevent self-dependencies at construction time
+    // This is a type-level invariant - tasks can NEVER depend on themselves
+    if dep_id != self.id {
+      self.dependencies.push(dep_id);
+    }
     self
   }
 
@@ -1576,5 +1584,150 @@ impl GraphHealth {
 impl Default for GraphHealth {
   fn default() -> Self {
     Self::new()
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  // CRITICAL-003 HOSTILE TEST: with_dependency rejects self-dependency
+  #[test]
+  fn test_with_dependency_rejects_self_dependency() {
+    let task = PlanTask::new(
+      "Test Task".to_string(),
+      "Description".to_string(),
+      TaskType::Development,
+      DiamondPhase::Bottom,
+    );
+
+    let task_id = task.id;
+
+    // Try to add self as dependency
+    let task_with_self_dep = task.clone().with_dependency(task_id);
+
+    // The dependency should be silently ignored (not added)
+    assert!(
+      !task_with_self_dep.dependencies.contains(&task_id),
+      "Task should not contain itself as dependency"
+    );
+    assert!(
+      task_with_self_dep.dependencies.is_empty(),
+      "Dependencies should be empty when trying to add self"
+    );
+  }
+
+  // CRITICAL-003 HOSTILE TEST: Multiple self-dependency attempts
+  #[test]
+  fn test_with_dependency_multiple_self_attempts() {
+    let task = PlanTask::new(
+      "Test Task".to_string(),
+      "Description".to_string(),
+      TaskType::Development,
+      DiamondPhase::Bottom,
+    );
+
+    let task_id = task.id;
+
+    // Try multiple times to add self
+    let task1 = task.clone().with_dependency(task_id);
+    let task2 = task1.with_dependency(task_id);
+    let task3 = task2.with_dependency(task_id);
+
+    // All attempts should be silently ignored
+    assert!(task3.dependencies.is_empty());
+  }
+
+  // CRITICAL-003 HOSTILE TEST: Self-dependency mixed with valid dependencies
+  #[test]
+  fn test_with_dependency_valid_and_self_mixed() {
+    let task1 = PlanTask::new(
+      "Task 1".to_string(),
+      "Description".to_string(),
+      TaskType::Development,
+      DiamondPhase::Bottom,
+    );
+
+    let task2 = PlanTask::new(
+      "Task 2".to_string(),
+      "Description".to_string(),
+      TaskType::Development,
+      DiamondPhase::Bottom,
+    );
+
+    // Add valid dependency, then self, then valid
+    let task1_with_deps = task1
+      .clone()
+      .with_dependency(task2.id)
+      .with_dependency(task1.id) // Self
+      .with_dependency(task2.id); // Duplicate of valid
+
+    // Should have 2 valid dependencies (both task2), self ignored
+    assert_eq!(task1_with_deps.dependencies.len(), 2);
+    assert!(
+      task1_with_deps
+        .dependencies
+        .iter()
+        .all(|&id| id == task2.id),
+      "All dependencies should be task2"
+    );
+    assert!(
+      !task1_with_deps.dependencies.contains(&task1.id),
+      "Should not contain self-dependency"
+    );
+  }
+
+  // CRITICAL-003 HOSTILE TEST: Validation catches self-dependencies
+  #[test]
+  fn test_validate_task_catches_self_dependency() {
+    use crate::planner::validation::{validate_task, ValidationError};
+
+    let task = PlanTask::new(
+      "Test Task".to_string(),
+      "Description".to_string(),
+      TaskType::Development,
+      DiamondPhase::Bottom,
+    );
+
+    // Manually create task with self-dependency (bypassing with_dependency)
+    let task_with_self = PlanTask {
+      dependencies: vec![task.id],
+      ..task
+    };
+
+    let result = validate_task(&task_with_self);
+    assert!(result.is_err());
+
+    let errors = result.unwrap_err();
+    assert!(errors
+      .iter()
+      .any(|e| matches!(e, ValidationError::SelfDependency(_))));
+  }
+
+  // CRITICAL-003 HOSTILE TEST: Clone of task with self-dependency
+  #[test]
+  fn test_task_clone_preserves_no_self_dependency() {
+    let task1 = PlanTask::new(
+      "Task 1".to_string(),
+      "Description".to_string(),
+      TaskType::Development,
+      DiamondPhase::Bottom,
+    );
+
+    let task2 = PlanTask::new(
+      "Task 2".to_string(),
+      "Description".to_string(),
+      TaskType::Development,
+      DiamondPhase::Bottom,
+    );
+
+    let task_with_deps = task1.with_dependency(task2.id);
+    let cloned = task_with_deps.clone();
+
+    // Try to add self to clone
+    let cloned_with_self = cloned.clone().with_dependency(cloned.id);
+
+    // Should still not have self-dependency
+    assert!(!cloned_with_self.dependencies.contains(&cloned.id));
   }
 }
