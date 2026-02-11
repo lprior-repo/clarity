@@ -499,9 +499,8 @@ mod tests {
     let result = parse_json(json);
     assert!(result.is_err());
 
-    let error = match result {
-      Err(e) => e,
-      Ok(_) => panic!("Expected Err, got Ok"),
+    let Err(error) = result else {
+      panic!("Expected Err, got Ok");
     };
     assert_eq!(
       error.to_string(),
@@ -639,9 +638,8 @@ mod tests {
     };
     assert_eq!(domain_beads.len(), 1);
 
-    let first_bead = match domain_beads.first() {
-      Some(b) => b,
-      None => panic!("Expected at least one bead"),
+    let Some(first_bead) = domain_beads.first() else {
+      panic!("Expected at least one bead");
     };
     assert_eq!(first_bead.title, "Test Bead");
   }
@@ -669,9 +667,8 @@ mod tests {
     };
     assert_eq!(new_beads.len(), 1);
 
-    let first_bead = match new_beads.first() {
-      Some(b) => b,
-      None => panic!("Expected at least one bead"),
+    let Some(first_bead) = new_beads.first() else {
+      panic!("Expected at least one bead");
     };
     assert_eq!(first_bead.title, "Test Bead");
   }

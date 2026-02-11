@@ -30,6 +30,11 @@ use crate::planner::{
 #[allow(unused_imports)]
 use uuid::Uuid;
 
+#[cfg(test)]
+const COMPLETION_EPSILON: f32 = 1e-7;
+#[cfg(test)]
+const COMPLETION_VALIDATION_MARGIN: f32 = 1e-5;
+
 //
 // ============================================================================
 // ATTACK VECTOR 1: BOUNDARY CONDITIONS
@@ -934,9 +939,9 @@ fn hostile_attack_completion_f32_extremes() {
     f32::NEG_INFINITY,
     -1.0,
     2.0,
-    0.9999999,  // Should pass (within epsilon)
-    1.0 - 1e-7, // Should pass
-    1.0 + 1e-7, // Should fail
+    0.999_999_9,              // Should pass (within epsilon)
+    1.0 - COMPLETION_EPSILON, // Should pass
+    1.0 + COMPLETION_EPSILON, // Should fail
   ];
 
   for value in extreme_values {
@@ -954,7 +959,7 @@ fn hostile_attack_completion_f32_extremes() {
     // So NaN passes the bounds check but should still be handled
     // The validation uses `value < 0.0 || value > 1.0` which is false for NaN
     // So NaN currently PASSES validation - this is a known behavior
-    if value.is_infinite() || value < 0.0 || value > 1.0 + 1e-5 {
+    if value.is_infinite() || value < 0.0 || value > 1.0 + COMPLETION_VALIDATION_MARGIN {
       assert!(result.is_err(), "Should reject completion value: {}", value);
     }
     // NaN and values close to 1.0 are edge cases that may pass
@@ -1425,7 +1430,7 @@ fn hostile_attack_future_timestamps() {
 fn hostile_attack_past_timestamps() {
   // ATTACK: Create entities with ancient timestamps
   // EXPECT: Should not affect validation
-  use chrono::{DateTime, Utc};
+  use chrono::DateTime;
 
   let ancient = DateTime::from_timestamp(0, 0).unwrap(); // Unix epoch
 
@@ -1509,9 +1514,7 @@ fn hostile_attack_all_task_types() {
     // Add required fields for Development, Testing, and Infrastructure tasks
     match task_type {
       TaskType::Development | TaskType::Testing | TaskType::Infrastructure => {
-        use crate::planner::types::{
-          EventDrivenRequirement, TaskContracts, TaskEarsRequirements, TaskTests,
-        };
+        use crate::planner::types::{TaskContracts, TaskEarsRequirements, TaskTests};
 
         // Add minimal EARS requirements
         task = task.with_ears(TaskEarsRequirements {

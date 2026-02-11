@@ -730,17 +730,17 @@ mod tests {
       .expect("Failed to create backup dir");
 
     // Create some backup files (note: .db is stripped before timestamp)
-    let backup1 = backup_dir.join("clarity.20250109_120000.backup");
-    let backup2 = backup_dir.join("clarity.20250109_130000.backup");
-    let backup3 = backup_dir.join("clarity.20250109_140000.backup");
+    let morning_backup = backup_dir.join("clarity.20250109_120000.backup");
+    let afternoon_backup = backup_dir.join("clarity.20250109_130000.backup");
+    let evening_backup = backup_dir.join("clarity.20250109_140000.backup");
 
-    fs::write(&backup1, b"backup1")
+    fs::write(&morning_backup, b"backup1")
       .await
       .expect("Failed to write backup1");
-    fs::write(&backup2, b"backup2")
+    fs::write(&afternoon_backup, b"backup2")
       .await
       .expect("Failed to write backup2");
-    fs::write(&backup3, b"backup3")
+    fs::write(&evening_backup, b"backup3")
       .await
       .expect("Failed to write backup3");
 
@@ -752,9 +752,9 @@ mod tests {
 
     assert_eq!(backups.len(), 3);
     // Should be sorted newest first
-    assert_eq!(backups[0].path, backup3);
-    assert_eq!(backups[1].path, backup2);
-    assert_eq!(backups[2].path, backup1);
+    assert_eq!(backups[0].path, evening_backup);
+    assert_eq!(backups[1].path, afternoon_backup);
+    assert_eq!(backups[2].path, morning_backup);
   }
 
   #[tokio::test]

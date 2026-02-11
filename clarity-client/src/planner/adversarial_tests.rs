@@ -442,7 +442,7 @@ mod performance_stress_tests {
   /// When: Add entities sequentially
   /// Then: All additions complete, last one rejected
   #[test]
-  #[ignore] // Expensive test - run manually
+  #[ignore = "Expensive test - run manually"]
   fn given_max_collection_when_add_entities_then_handles_boundary() {
     let mut state = PlannerState::new();
     let mut added = 0;
@@ -895,7 +895,7 @@ mod state_corruption_tests {
     )
     .with_dependency(task_a.id);
 
-    let task_a_cycle = PlanTask {
+    let cyclic_task_a = PlanTask {
       dependencies: vec![task_b.id],
       ..task_a.clone()
     };
@@ -916,12 +916,12 @@ mod state_corruption_tests {
     )
     .with_dependency(task_c.id);
 
-    let task_c_cycle = PlanTask {
+    let cyclic_task_c = PlanTask {
       dependencies: vec![task_d.id],
       ..task_c.clone()
     };
 
-    let tasks = vec![task_a_cycle, task_b.clone(), task_c_cycle, task_d.clone()];
+    let tasks = vec![cyclic_task_a, task_b.clone(), cyclic_task_c, task_d.clone()];
     let cycles = validation::detect_cycles_with_path(&tasks);
 
     // Should detect at least 2 cycles
@@ -1203,7 +1203,7 @@ mod race_condition_tests {
     let mut states = vec![PlannerState::new()];
 
     // Create chain of clones
-    for i in 0..100 {
+    for _ in 0..100 {
       let next = states.last().unwrap().clone();
       states.push(next);
     }

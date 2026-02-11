@@ -499,13 +499,7 @@ mod tests {
       Err(e) => panic!("Failed to create CSV row: {e}"),
     };
     assert!(csv_row.contains('"'));
-    assert!(csv_row.starts_with(
-      bead
-        .id
-        .split(',')
-        .next()
-        .map_or_else(|| bead.id.as_str(), |s| s)
-    ));
+    assert!(csv_row.starts_with(bead.id.split(',').next().map_or(bead.id.as_str(), |s| s)));
   }
 
   #[test]
