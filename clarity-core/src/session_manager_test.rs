@@ -82,14 +82,14 @@ async fn test_session_manager_in_memory() {
   let result = manager.authenticate(UserId::new(), "password").await;
   assert!(matches!(
     result,
-    Err(clarity_core::session_manager::SessionError::UserNotFound)
+    Err(crate::session_manager::SessionError::UserNotFound)
   ));
 
   // Validation should fail for non-existent session
   let result = manager.validate_session(token).await;
   assert!(matches!(
     result,
-    Err(clarity_core::session_manager::SessionError::SessionNotFound)
+    Err(crate::session_manager::SessionError::SessionNotFound)
   ));
 
   // Termination should not fail for non-existent session

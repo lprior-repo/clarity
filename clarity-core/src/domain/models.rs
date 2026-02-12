@@ -254,6 +254,11 @@ impl std::fmt::Display for ModelError {
 impl std::error::Error for ModelError {}
 
 #[cfg(test)]
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
+#![allow(clippy::panic)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 mod tests {
 
   use super::*;

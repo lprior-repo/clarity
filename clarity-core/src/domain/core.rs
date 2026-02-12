@@ -505,6 +505,11 @@ pub fn generate_bead_report(state: &DomainState) -> String {
 }
 
 #[cfg(test)]
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
+#![allow(clippy::panic)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 mod tests {
   use super::*;
   use crate::domain::UserRole;

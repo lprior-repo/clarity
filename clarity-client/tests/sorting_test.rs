@@ -55,11 +55,10 @@ mod tests {
       Self { by, direction }
     }
 
-    fn sort_beads(&self, beads: Vec<Bead>) -> Vec<Bead> {
+    fn sort_beads(&self, mut beads: Vec<Bead>) -> Vec<Bead> {
+      // Use standard library sort_by instead of itertools sorted_by
+      beads.sort_by(|a, b| self.compare_beads(a, b));
       beads
-        .into_iter()
-        .sorted_by(|a, b| self.compare_beads(a, b))
-        .collect()
     }
 
     fn compare_beads(&self, a: &Bead, b: &Bead) -> Ordering {

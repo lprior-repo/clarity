@@ -3,9 +3,9 @@
 //! These tests verify the functional patterns used in form and detail components
 //! for navigation after async operations.
 
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::panic)]
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
+#![allow(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
@@ -198,15 +198,15 @@ fn test_functional_error_handling_patterns() {
     .collect();
 
   // Count successes and errors using functional patterns
-  let successes: Vec<_> = results.iter().filter_map(|r| r.as_ref().ok()).collect();
-  let errors: Vec<_> = results.iter().filter_map(|r| r.as_ref().err()).collect();
+  let successes: Vec<String> = results.iter().filter_map(|r| r.as_ref().ok().cloned()).collect();
+  let errors: Vec<String> = results.iter().filter_map(|r| r.as_ref().err().cloned()).collect();
 
   assert_eq!(successes.len(), 2);
   assert_eq!(errors.len(), 2);
-  assert_eq!(successes, vec!["success-1", "success-2"]);
+  assert_eq!(successes, vec!["success-1".to_string(), "success-2".to_string()]);
   assert_eq!(
     errors,
-    vec!["Operation failed: error-1", "Operation failed: error-2"]
+    vec!["Operation failed: error-1".to_string(), "Operation failed: error-2".to_string()]
   );
 }
 

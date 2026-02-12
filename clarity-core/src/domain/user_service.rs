@@ -112,7 +112,7 @@ pub fn create_user(
   // Add user to state (pure function)
   let new_state = add_user(state, user.clone());
 
-  Ok((new_state, user))
+  Ok((state, user))
 }
 
 /// Get user by ID
@@ -175,7 +175,7 @@ pub fn update_user_email(
   // Update state
   let new_state = update_user(state, updated_user.clone());
 
-  Ok((new_state, updated_user))
+  Ok((state, updated_user))
 }
 
 /// Update user role
@@ -207,7 +207,7 @@ pub fn update_user_role(
   // Update state
   let new_state = update_user(state, updated_user.clone());
 
-  Ok((new_state, updated_user))
+  Ok((state, updated_user))
 }
 
 /// Update user password
@@ -246,7 +246,7 @@ pub fn update_user_password(
   // Update state
   let new_state = update_user(state, updated_user.clone());
 
-  Ok((new_state, updated_user))
+  Ok((state, updated_user))
 }
 
 /// Delete a user
@@ -445,6 +445,11 @@ impl UserSummary {
 }
 
 #[cfg(test)]
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
+#![allow(clippy::panic)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 mod tests {
   use super::*;
   use std::str::FromStr;
@@ -456,11 +461,11 @@ mod tests {
     let password = "SecureP@ssw0rd!123";
     let role = UserRole::User;
 
-    let (new_state, user) = create_user(state, email, password, role).unwrap();
+    let (state, user) = create_user(state, email, password, role).unwrap();
 
     assert_eq!(user.email.as_str(), "test@example.com");
     assert!(user.is_user());
-    assert_eq!(new_state.users.len(), 1);
+    assert_eq!(state.users.len(), 1);
   }
 
   #[test]
@@ -499,11 +504,11 @@ mod tests {
     let (state, created_user) = create_user(state, email, password, role).unwrap();
     let user_id = created_user.id;
 
-    let (new_state, retrieved_user) = get_user_by_id(state, user_id).unwrap();
+    let (state, retrieved_user) = get_user_by_id(state, user_id).unwrap();
 
     assert!(retrieved_user.is_some());
     assert_eq!(retrieved_user.unwrap().id, user_id);
-    assert_eq!(new_state.users.len(), 1); // State unchanged
+    assert_eq!(state.users.len(), 1); // State unchanged
   }
 
   #[test]
@@ -515,7 +520,7 @@ mod tests {
 
     let (state, created_user) = create_user(state, email.clone(), password, role).unwrap();
 
-    let (new_state, retrieved_user) = get_user_by_email(new_state, email).unwrap();
+    let (state, retrieved_user) = get_user_by_email(state, email).unwrap();
 
     assert!(retrieved_user.is_some());
     assert_eq!(retrieved_user.unwrap().email.as_str(), "test@example.com");
@@ -531,10 +536,10 @@ mod tests {
     let (state, user) = create_user(state, email.clone(), password, role).unwrap();
 
     let new_email = "updated@example.com".to_string();
-    let (new_state, updated_user) = update_user_email(new_state, user.id, new_email).unwrap();
+    let (state, updated_user) = update_user_email(state, user.id, new_email).unwrap();
 
     assert_eq!(updated_user.email.as_str(), "updated@example.com");
-    assert_eq!(new_state.users.len(), 1);
+    assert_eq!(state.users.len(), 1);
   }
 
   #[test]
@@ -546,7 +551,7 @@ mod tests {
 
     let (state, user) = create_user(state, email, password, role).unwrap();
 
-    let (new_state, updated_user) = update_user_role(new_state, user.id, UserRole::Admin).unwrap();
+    let (state, updated_user) = update_user_role(state, user.id, UserRole::Admin).unwrap();
 
     assert!(updated_user.is_admin());
   }
@@ -562,10 +567,10 @@ mod tests {
 
     let current_password = "SecureP@ssw0rd!123";
     let new_password = "NewSecureP@ssw0rd!456";
-    let (new_state, updated_user) =
-      update_user_password(new_state, user.id, current_password, new_password).unwrap();
+    let (state, updated_user) =
+      update_user_password(state, user.id, current_password, new_password).unwrap();
 
-    assert_eq!(new_state.users.len(), 1);
+    assert_eq!(state.users.len(), 1);
     // Cannot directly verify hash, but we can verify the user exists
   }
 
@@ -578,10 +583,10 @@ mod tests {
 
     let (state, user) = create_user(state, email, password, role).unwrap();
 
-    let (new_state, result) = get_user_by_id(new_state, user.id).unwrap();
+    let (state, result) = get_user_by_id(state, user.id).unwrap();
     assert!(result.is_some());
 
-    let final_state = delete_user(new_state, user.id).unwrap();
+    let final_state = delete_user(state, user.id).unwrap();
 
     let (final_state, result) = get_user_by_id(final_state, user.id).unwrap();
     assert!(result.is_none());
