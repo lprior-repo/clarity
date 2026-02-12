@@ -28,7 +28,7 @@ macro_rules! id_type {
             /// Parse an ID from a string
             ///
             /// # Errors
-            /// Returns a ValidationError if the string is not a valid UUID
+            /// Returns a `ValidationError` if the string is not a valid UUID.
             pub fn parse(s: &str) -> Result<Self, ValidationError> {
                 Uuid::parse_str(s)
                     .map(Self)
@@ -114,9 +114,17 @@ impl BeadStatus {
   }
 
   #[must_use]
+  #[expect(
+    clippy::match_like_matches_macro,
+    reason = "Explicit match keeps transition table easy to audit"
+  )]
   pub const fn can_transition_to(&self, to: Self) -> bool {
     match (*self, to) {
-      (s1, s2) if s1 as i32 == s2 as i32 => true,
+      (Self::Open, Self::Open)
+      | (Self::InProgress, Self::InProgress)
+      | (Self::Blocked, Self::Blocked)
+      | (Self::Deferred, Self::Deferred)
+      | (Self::Closed, Self::Closed) => true,
       (Self::Open, Self::InProgress | Self::Blocked | Self::Deferred | Self::Closed) => true,
       (Self::InProgress, Self::Blocked | Self::Closed) => true,
       (Self::Blocked, Self::Open | Self::InProgress | Self::Deferred) => true,
@@ -206,7 +214,7 @@ impl BeadPriority {
   /// Create a new priority value
   ///
   /// # Errors
-  /// Returns a ValidationError if the priority is not 1, 2, or 3
+  /// Returns a `ValidationError` if the priority is not 1, 2, or 3.
   pub const fn new(priority: i16) -> Result<Self, ValidationError> {
     match priority {
       1..=3 => Ok(Self(priority)),

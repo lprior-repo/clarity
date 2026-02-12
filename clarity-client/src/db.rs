@@ -4,6 +4,12 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(clippy::single_match_else)]
+#![allow(clippy::format_push_string)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::future_not_send)]
+#![allow(clippy::doc_markdown)]
+#![allow(clippy::needless_pass_by_value)]
 
 //! Desktop database module for client-side `SQLite` access
 //!

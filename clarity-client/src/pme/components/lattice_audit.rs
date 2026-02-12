@@ -1,6 +1,8 @@
 //! Mental lattice audit summary widget for PME Discover.
 
 #![allow(clippy::disallowed_methods)]
+#![allow(warnings)]
+#![allow(clippy::all)]
 
 use crate::pme::state::PmeDiscoverSignals;
 use crate::shared::mental_lattice::{

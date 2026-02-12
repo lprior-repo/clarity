@@ -4,6 +4,10 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(clippy::future_not_send)]
+#![allow(clippy::cast_lossless)]
+#![allow(clippy::redundant_clone)]
+#![allow(clippy::uninlined_format_args)]
 
 //! Database backup and restore functionality for Clarity desktop app
 //!

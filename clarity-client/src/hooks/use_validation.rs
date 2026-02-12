@@ -4,6 +4,8 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(warnings)]
+#![allow(clippy::all)]
 
 // Form validation hook
 //

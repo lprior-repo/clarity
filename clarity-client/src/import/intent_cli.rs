@@ -4,6 +4,8 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(clippy::match_same_arms)]
+#![allow(clippy::redundant_async_block)]
 
 //! Import from intent-cli
 //!

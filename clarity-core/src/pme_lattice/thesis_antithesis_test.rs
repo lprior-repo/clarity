@@ -5,6 +5,8 @@
 #![allow(clippy::all)]
 #![allow(clippy::pedantic)]
 #![allow(clippy::nursery)]
+#![allow(clippy::expect_used)]
+#![allow(clippy::manual_string_new)]
 #![forbid(unsafe_code)]
 
 use super::thesis_antithesis::{

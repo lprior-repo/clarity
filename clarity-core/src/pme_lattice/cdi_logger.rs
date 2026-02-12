@@ -12,6 +12,9 @@
 #![allow(clippy::cast_precision_loss)]
 #![allow(clippy::return_self_not_must_use)]
 #![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::doc_markdown)]
+#![allow(clippy::derive_partial_eq_without_eq)]
+#![allow(clippy::redundant_closure_for_method_calls)]
 
 use chrono::{DateTime, Utc};
 use rpds::Vector;

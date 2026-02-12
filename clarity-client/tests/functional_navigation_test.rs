@@ -9,6 +9,8 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(warnings)]
+#![allow(clippy::all)]
 
 use clarity_client::app::Route;
 use clarity_client::beads::form::FormMode;

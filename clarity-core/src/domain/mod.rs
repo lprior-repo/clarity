@@ -8,8 +8,8 @@
 //! Core types with validation and business rules
 //!
 //! This module provides:
-//! - Strongly typed IDs (BeadId) to prevent mixing up identifiers
-//! - Validated types (BeadPriority) that enforce constraints at construction
+//! - Strongly typed IDs (`BeadId`) to prevent mixing up identifiers
+//! - Validated types (`BeadPriority`) that enforce constraints at construction
 //! - Business logic for status transitions and permissions
 //! - Comprehensive tests for all validation rules
 

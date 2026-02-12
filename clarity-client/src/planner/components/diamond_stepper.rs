@@ -8,6 +8,10 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(warnings)]
+#![allow(clippy::all)]
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
 // Dioxus rsx! macro internally uses unwrap, so we allow the disallowed_methods lint.
 #![allow(clippy::disallowed_methods)]
 

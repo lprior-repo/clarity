@@ -4,6 +4,14 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(clippy::type_complexity)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::fn_params_excessive_bools)]
+#![allow(clippy::option_if_let_else)]
+#![allow(clippy::needless_pass_by_value)]
+#![allow(clippy::too_many_lines)]
+#![allow(clippy::double_must_use)]
+#![allow(clippy::redundant_locals)]
 
 //! Custom hooks for Dioxus components
 //!

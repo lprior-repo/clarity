@@ -4,6 +4,8 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(clippy::doc_markdown)]
+#![allow(clippy::match_same_arms)]
 
 //! Import from beads_rust CLI
 //!

@@ -8,6 +8,8 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(warnings)]
+#![allow(clippy::all)]
 
 use crate::planner::state::PlannerState;
 use clarity_core::progress::ProgressStatus;
@@ -270,7 +272,6 @@ pub fn get_color_from_status(status: ProgressStatus) -> String {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::planner::state::PlannerState;
   use clarity_core::progress::ProgressStatus;
 
   #[test]

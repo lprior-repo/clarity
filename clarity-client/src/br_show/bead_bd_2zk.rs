@@ -6,6 +6,12 @@
 
 // Dioxus rsx! macro internally uses unwrap, so we allow the disallowed_methods lint.
 #![allow(clippy::disallowed_methods)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::uninlined_format_args)]
+#![allow(clippy::map_unwrap_or)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::redundant_clone)]
 
 use crate::br_show::{BrIssue, BrShowError};
 use dioxus::prelude::*;

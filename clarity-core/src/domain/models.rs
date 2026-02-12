@@ -24,6 +24,10 @@ pub struct NewBead {
 }
 
 impl NewBead {
+  /// Convert a `NewBead` into a persisted `Bead`.
+  ///
+  /// # Errors
+  /// Returns `ModelError` when bead validation fails.
   pub fn into_bead(self) -> Result<Bead, ModelError> {
     Bead::new(
       self.title,
@@ -37,7 +41,7 @@ impl NewBead {
 }
 
 /// Bead (issue/task)
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Bead {
   pub id: BeadId,
   pub title: String,
@@ -53,6 +57,13 @@ pub struct Bead {
 impl Bead {
   pub const MAX_TITLE_LENGTH: usize = 255;
 
+  #[expect(
+    clippy::too_many_arguments,
+    reason = "Bead constructor mirrors persisted data fields"
+  )]
+  ///
+  /// # Errors
+  /// Returns `ModelError` when the title is invalid.
   pub fn new(
     title: String,
     description: Option<String>,
@@ -93,6 +104,9 @@ impl Bead {
     Ok(())
   }
 
+  ///
+  /// # Errors
+  /// Returns `ModelError` when the new title is invalid.
   pub fn update_title(mut self, title: String) -> Result<Self, ModelError> {
     Self::validate_title(&title)?;
     self.title = title;
@@ -100,6 +114,9 @@ impl Bead {
     Ok(self)
   }
 
+  ///
+  /// # Errors
+  /// Returns `ModelError` when the status transition is invalid.
   pub fn transition_to(mut self, new_status: BeadStatus) -> Result<Self, ModelError> {
     if !self.status.can_transition_to(new_status) {
       return Err(ModelError::InvalidTransition {
@@ -112,34 +129,41 @@ impl Bead {
     Ok(self)
   }
 
+  #[must_use]
   pub fn with_priority(mut self, priority: BeadPriority) -> Self {
     self.priority = priority;
     self.updated_at = Utc::now();
     self
   }
 
+  #[must_use]
   pub fn with_description(mut self, description: Option<String>) -> Self {
     self.description = description;
     self.updated_at = Utc::now();
     self
   }
 
+  #[must_use]
   pub const fn is_open(&self) -> bool {
     matches!(self.status, BeadStatus::Open)
   }
 
+  #[must_use]
   pub const fn is_in_progress(&self) -> bool {
     matches!(self.status, BeadStatus::InProgress)
   }
 
+  #[must_use]
   pub const fn is_closed(&self) -> bool {
     matches!(self.status, BeadStatus::Closed)
   }
 
+  #[must_use]
   pub const fn is_blocked(&self) -> bool {
     matches!(self.status, BeadStatus::Blocked)
   }
 
+  #[must_use]
   pub fn can_modify(&self, user_id: &UserId, is_admin: bool) -> bool {
     is_admin || self.created_by == Some(*user_id)
   }
@@ -155,9 +179,9 @@ pub enum ModelError {
 impl std::fmt::Display for ModelError {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
-      Self::InvalidTitle(msg) => write!(f, "Invalid title: {}", msg),
+      Self::InvalidTitle(msg) => write!(f, "Invalid title: {msg}"),
       Self::InvalidTransition { from, to } => {
-        write!(f, "Cannot transition from {} to {}", from, to)
+        write!(f, "Cannot transition from {from} to {to}")
       }
     }
   }
@@ -200,7 +224,7 @@ mod tests {
   #[test]
   fn test_bead_empty_title() {
     let result = Bead::new(
-      "".to_string(),
+      String::new(),
       None,
       BeadStatus::Open,
       BeadPriority::MEDIUM,

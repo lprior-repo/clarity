@@ -12,6 +12,9 @@
 #![forbid(unsafe_code)]
 #![allow(clippy::return_self_not_must_use)]
 #![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::needless_pass_by_value)]
+#![allow(clippy::redundant_closure_for_method_calls)]
+#![allow(clippy::doc_markdown)]
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

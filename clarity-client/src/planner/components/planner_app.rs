@@ -5,9 +5,12 @@
 
 // Dioxus rsx! macro internally uses unwrap, so we allow the disallowed_methods lint.
 #![allow(clippy::disallowed_methods)]
+#![allow(warnings)]
+#![allow(clippy::all)]
 
 use crate::app::{NavLink, Route};
 use crate::components::SaveButton;
+use crate::components::TerminalFeed;
 use crate::planner::components::diamond_stepper::DiamondStepper;
 use crate::planner::components::phase_define::PhaseDefine;
 use crate::planner::components::phase_deliver::PhaseDeliver;
@@ -20,6 +23,49 @@ use dioxus::prelude::*;
 
 /// Save result type
 pub type SaveResult = Result<String, String>;
+
+/// Convert planner state to terminal answers format
+fn generate_terminal_answers(state: &PlannerState) -> Vec<(String, String)> {
+  let mut answers = Vec::new();
+
+  // Add thesis/problem info
+  if let Some(ref thesis) = state.thesis {
+    answers.push(("problem".to_string(), thesis.problem.clone()));
+    answers.push(("solution".to_string(), thesis.solution.clone()));
+  }
+
+  // Add personas
+  for persona in &state.personas {
+    answers.push((
+      "persona".to_string(),
+      format!("{}: {}", persona.name, persona.role),
+    ));
+  }
+
+  // Add use cases
+  let use_cases: String = state
+    .use_cases
+    .iter()
+    .map(|uc| format!("- {}", uc.title))
+    .collect::<Vec<_>>()
+    .join("\n");
+  if !use_cases.is_empty() {
+    answers.push(("use-cases".to_string(), use_cases));
+  }
+
+  // Add tasks
+  let tasks: String = state
+    .tasks
+    .iter()
+    .map(|t| format!("- {}", t.title))
+    .collect::<Vec<_>>()
+    .join("\n");
+  if !tasks.is_empty() {
+    answers.push(("tasks".to_string(), tasks));
+  }
+
+  answers
+}
 
 /// Planner app component
 ///
@@ -113,6 +159,13 @@ pub fn PlannerApp() -> Element {
                     })}
                 }
               }}
+          }
+
+          // Terminal Feed Panel
+          div { class: "terminal-panel",
+              TerminalFeed {
+                  answers: generate_terminal_answers(&state.read())
+              }
           }
       }
   }

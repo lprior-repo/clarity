@@ -349,7 +349,8 @@ impl PaginatedBeads {
     let total_pages = if page_size == 0 {
       0
     } else {
-      ((total + page_size as u64 - 1) / page_size as u64) as u32
+      let pages_u64 = total.div_ceil(u64::from(page_size));
+      u32::try_from(pages_u64).unwrap_or(u32::MAX)
     };
 
     Self {
@@ -362,12 +363,12 @@ impl PaginatedBeads {
   }
 
   #[must_use]
-  pub fn has_next(&self) -> bool {
+  pub const fn has_next(&self) -> bool {
     self.page < self.total_pages
   }
 
   #[must_use]
-  pub fn has_previous(&self) -> bool {
+  pub const fn has_previous(&self) -> bool {
     self.page > 1
   }
 }

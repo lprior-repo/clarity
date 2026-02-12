@@ -203,6 +203,10 @@ impl JsonFormatter {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::expect_used)]
+  #![allow(clippy::redundant_clone)]
+  #![allow(clippy::get_first)]
+
   use super::*;
   #[allow(clippy::expect_used)]
   #[allow(clippy::float_cmp)]

@@ -1,4 +1,4 @@
-//! Tests for Design by Contract module (Meyer's DbC)
+//! Tests for Design by Contract module (Meyer's `DbC`)
 //!
 //! Tests verify:
 //! - Precondition creation and validation
@@ -9,6 +9,10 @@
 
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::expect_used)]
+#![allow(clippy::manual_string_new)]
+#![allow(clippy::redundant_clone)]
+#![allow(clippy::no_effect_underscore_binding)]
+#![allow(clippy::doc_markdown)]
 
 use super::design_by_contract::*;
 

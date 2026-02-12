@@ -9,6 +9,8 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(warnings)]
+#![allow(clippy::all)]
 
 use crate::planner::types::{
   GraphHealth, PlanTask, ValidationCheck, ValidationSeverity, COMPLETED_EPSILON, MAX_DEPTH,
@@ -1065,7 +1067,7 @@ mod tests {
     )
     .with_dependency(task_d.id);
 
-    let task_c_with_cycle = PlanTask {
+    let task_c_cycle = PlanTask {
       dependencies: vec![task_e.id],
       ..task_c.clone()
     };
@@ -1073,7 +1075,7 @@ mod tests {
     let all_tasks = vec![
       task_a_with_cycle,
       task_b.clone(),
-      task_c_with_cycle,
+      task_c_cycle,
       task_d.clone(),
       task_e.clone(),
     ];

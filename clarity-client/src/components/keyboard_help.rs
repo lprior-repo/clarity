@@ -4,6 +4,8 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(clippy::doc_lazy_continuation)]
+#![allow(clippy::option_if_let_else)]
 
 //! Keyboard shortcuts help dialog component
 //!

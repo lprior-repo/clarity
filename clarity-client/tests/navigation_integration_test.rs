@@ -12,10 +12,27 @@
 
 use clarity_client::app::Route;
 use clarity_core::db::models::{BeadPriority, BeadStatus, BeadType, NewBead};
+use rpds::HashTrieMap;
+use std::cell::RefCell;
+
+// Thread-local mock database for test isolation
+thread_local! {
+  static MOCK_DATABASE: RefCell<HashTrieMap<String, MockBead>> = RefCell::new(HashTrieMap::new());
+  static DELETED_BEADS: RefCell<std::collections::HashSet<String>> = RefCell::new(std::collections::HashSet::new());
+}
+
+/// Reset the mock database state before each test
+fn reset_mock_database() {
+  MOCK_DATABASE.with(|db| *db.borrow_mut() = HashTrieMap::new());
+  DELETED_BEADS.with(|deleted| deleted.borrow_mut().clear());
+}
 
 /// Test the complete form submission workflow with navigation
 #[tokio::test]
 async fn test_form_submission_workflow_with_navigation() -> Result<(), String> {
+  // Reset mock database for test isolation
+  reset_mock_database();
+
   // Simulate the complete workflow from form submission to navigation
 
   // Step 1: User fills out form (Create mode)
@@ -69,6 +86,9 @@ async fn test_form_submission_workflow_with_navigation() -> Result<(), String> {
 /// Test the complete bead deletion workflow with navigation
 #[tokio::test]
 async fn test_bead_deletion_workflow_with_navigation() -> Result<(), String> {
+  // Reset mock database for test isolation
+  reset_mock_database();
+
   // Simulate the complete workflow from bead deletion to navigation
 
   // Step 1: Create a test bead to delete
@@ -180,12 +200,44 @@ struct FormSubmissionData {
   priority: i16,
 }
 
-async fn submit_form_data(_data: &FormSubmissionData) -> Result<String, String> {
+async fn submit_form_data(data: &FormSubmissionData) -> Result<String, String> {
   // Simulate async form submission
   tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 
   // Simulate getting bead ID back
-  Ok("bd-1".to_string())
+  let bead_id = "bd-1".to_string();
+
+  // Store the bead in the mock database with the form data
+  let mock_bead = MockBead {
+    id: bead_id.clone(),
+    title: data.title.clone(),
+    description: data.description.clone(),
+    status: match data.status.as_str() {
+      "open" => BeadStatus::Open,
+      "in_progress" => BeadStatus::InProgress,
+      "blocked" => BeadStatus::Blocked,
+      "deferred" => BeadStatus::Deferred,
+      "closed" => BeadStatus::Closed,
+      _ => BeadStatus::Open,
+    },
+    bead_type: match data.bead_type.as_str() {
+      "feature" => BeadType::Feature,
+      "bugfix" => BeadType::Bugfix,
+      "refactor" => BeadType::Refactor,
+      "test" => BeadType::Test,
+      "docs" => BeadType::Docs,
+      _ => BeadType::Feature,
+    },
+    priority: BeadPriority(data.priority),
+  };
+
+  MOCK_DATABASE.with(|db| {
+    let old_db = db.borrow().clone();
+    let new_db = old_db.insert(bead_id.clone(), mock_bead);
+    *db.borrow_mut() = new_db;
+  });
+
+  Ok(bead_id)
 }
 
 async fn submit_form_data_with_failure(_data: &FormSubmissionData) -> Result<String, String> {
@@ -200,6 +252,19 @@ async fn get_bead_from_database(bead_id: &str) -> Option<MockBead> {
   // Simulate database lookup
   tokio::time::sleep(tokio::time::Duration::from_millis(5)).await;
 
+  // Check if the bead was deleted
+  let is_deleted = DELETED_BEADS.with(|deleted| deleted.borrow().contains(bead_id));
+  if is_deleted {
+    return None;
+  }
+
+  // First check the mock database for beads created during the test
+  let from_mock = MOCK_DATABASE.with(|db| db.borrow().get(bead_id).cloned());
+  if from_mock.is_some() {
+    return from_mock;
+  }
+
+  // Fall back to default behavior for beads that weren't created during the test
   if bead_id.starts_with("bd-") {
     Some(MockBead {
       id: bead_id.to_string(),
@@ -217,6 +282,18 @@ async fn get_bead_from_database(bead_id: &str) -> Option<MockBead> {
 async fn delete_bead_from_database(bead_id: &str) -> Result<(), String> {
   // Simulate async bead deletion
   tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+
+  // Mark the bead as deleted in our mock database
+  DELETED_BEADS.with(|deleted| {
+    deleted.borrow_mut().insert(bead_id.to_string());
+  });
+
+  // Also remove from mock database if present
+  MOCK_DATABASE.with(|db| {
+    let old_db = db.borrow().clone();
+    let new_db = old_db.remove(bead_id);
+    *db.borrow_mut() = new_db;
+  });
 
   // Simulate successful deletion
   println!("Deleted bead: {}", bead_id);
@@ -264,6 +341,8 @@ fn verify_beads_list_page_displayed() {
   println!("Verified beads list page is displayed");
 }
 
+#[derive(Clone)]
+#[allow(dead_code)]
 struct MockBead {
   id: String,
   title: String,

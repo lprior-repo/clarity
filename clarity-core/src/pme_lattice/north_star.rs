@@ -12,6 +12,11 @@
 #![allow(clippy::cast_precision_loss)]
 #![allow(clippy::return_self_not_must_use)]
 #![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::must_use_candidate)]
+#![allow(clippy::derive_partial_eq_without_eq)]
+#![allow(clippy::uninlined_format_args)]
+#![allow(clippy::needless_collect)]
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

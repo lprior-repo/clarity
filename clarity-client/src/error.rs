@@ -4,6 +4,7 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(clippy::match_same_arms)]
 
 //! Global error handling for Clarity desktop application
 //!

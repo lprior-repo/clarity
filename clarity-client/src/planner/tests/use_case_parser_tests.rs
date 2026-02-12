@@ -13,6 +13,11 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(clippy::needless_raw_string_hashes)]
+
+use crate::planner::{
+  parse_use_case, parse_use_cases, validate_use_case, UseCase, UseCasePriority,
+};
 
 /// Test valid use case parsing
 ///

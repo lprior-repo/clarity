@@ -16,6 +16,7 @@ pub mod keyboard_button;
 pub mod keyboard_help;
 pub mod loading;
 pub mod settings_view;
+pub mod terminal_feed;
 
 pub use error_boundary::{use_error_handler, ErrorBoundary};
 pub use error_display::{
@@ -27,3 +28,4 @@ pub use loading::{
   CardSkeleton, Loading, LoadingInline, LoadingPage, LoadingProps, LoadingSize, LoadingVariant,
 };
 pub use settings_view::SettingsView;
+pub use terminal_feed::TerminalFeed;

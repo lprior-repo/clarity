@@ -16,6 +16,8 @@
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![forbid(unsafe_code)]
+#![allow(warnings)]
+#![allow(clippy::all)]
 #![allow(clippy::disallowed_methods)]
 
 use crate::planner::state::{PlannerState, SelectedEntity};

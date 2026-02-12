@@ -121,7 +121,7 @@ pub trait BeadRepository {
 }
 
 /// Statistics for beads
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BeadStatistics {
   pub total: usize,
   pub status_counts: HashMap<BeadStatus, usize>,
@@ -154,13 +154,15 @@ impl BeadStatistics {
     if self.total == 0 {
       0.0
     } else {
-      (self.count_by_status(status) as f64 / self.total as f64) * 100.0
+      let count_u32 = u32::try_from(self.count_by_status(status)).unwrap_or(u32::MAX);
+      let total_u32 = u32::try_from(self.total).unwrap_or(u32::MAX);
+      f64::from(count_u32) / f64::from(total_u32) * 100.0
     }
   }
 }
 
 /// Search filters for beads
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BeadSearchFilters {
   pub status: Option<BeadStatus>,
   pub priority: Option<BeadPriority>,
@@ -174,6 +176,10 @@ pub struct BeadSearchFilters {
 impl BeadSearchFilters {
   /// Create new empty filters
   #[must_use]
+  #[expect(
+    clippy::missing_const_for_fn,
+    reason = "Builder-style API kept consistent with existing call sites"
+  )]
   pub fn new() -> Self {
     Self {
       status: None,
@@ -188,6 +194,10 @@ impl BeadSearchFilters {
 
   /// Create filters with pagination defaults
   #[must_use]
+  #[expect(
+    clippy::missing_const_for_fn,
+    reason = "Builder-style API kept consistent with existing call sites"
+  )]
   pub fn with_pagination(mut self, page: u32, page_size: u32) -> Self {
     self.page = Some(page);
     self.page_size = Some(page_size);
@@ -220,7 +230,7 @@ impl Default for BeadSearchFilters {
 }
 
 /// Search result for beads
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BeadSearchResult {
   pub beads: Vec<Bead>,
   pub total: u64,
@@ -236,7 +246,8 @@ impl BeadSearchResult {
     let total_pages = if page_size == 0 {
       0
     } else {
-      ((total + page_size as u64 - 1) / page_size as u64) as u32
+      let pages_u64 = total.div_ceil(u64::from(page_size));
+      u32::try_from(pages_u64).unwrap_or(u32::MAX)
     };
 
     Self {
@@ -250,13 +261,13 @@ impl BeadSearchResult {
 
   /// Check if there are more pages
   #[must_use]
-  pub fn has_more_pages(&self) -> bool {
+  pub const fn has_more_pages(&self) -> bool {
     self.page < self.total_pages
   }
 
   /// Check if this is the first page
   #[must_use]
-  pub fn is_first_page(&self) -> bool {
+  pub const fn is_first_page(&self) -> bool {
     self.page == 1
   }
 }

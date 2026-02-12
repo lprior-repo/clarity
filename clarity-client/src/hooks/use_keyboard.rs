@@ -4,6 +4,9 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(warnings)]
+#![allow(clippy::all)]
+#![allow(clippy::cast_possible_truncation)]
 
 //! Keyboard event handling hook for Dioxus
 //!

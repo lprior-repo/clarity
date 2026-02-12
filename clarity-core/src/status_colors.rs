@@ -81,8 +81,8 @@ impl StatusColorScheme {
 
     Self {
       colors,
-      hover_colors,
       pulse_statuses,
+      hover_colors,
     }
   }
 

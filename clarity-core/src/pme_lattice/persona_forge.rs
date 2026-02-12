@@ -553,6 +553,9 @@ pub enum PersonaError {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::expect_used)]
+  #![allow(clippy::manual_string_new)]
+
   use super::*;
 
   fn valid_demographics() -> Demographics {

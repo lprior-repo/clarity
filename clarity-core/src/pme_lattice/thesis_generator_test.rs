@@ -5,6 +5,7 @@
 #![allow(clippy::all)]
 #![allow(clippy::pedantic)]
 #![allow(clippy::nursery)]
+#![allow(clippy::expect_used)]
 #![forbid(unsafe_code)]
 
 use super::thesis_generator::{ThesisAntithesisError, ThesisAntithesisGenerator};

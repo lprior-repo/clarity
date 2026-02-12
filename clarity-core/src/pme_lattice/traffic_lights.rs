@@ -8,6 +8,11 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(clippy::must_use_candidate)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::match_like_matches_macro)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::needless_collect)]
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -127,9 +132,12 @@ pub struct MalfunctioningTrafficLight {
 
 impl MalfunctioningTrafficLight {
   pub fn is_malfunction(&self) -> bool {
-    self.dangerous_affordance.is_dangerous()
-      && self.safe_alternative.is_safe()
-      && self.dangerous_affordance.action_complexity() < self.safe_alternative.action_complexity()
+    let has_dangerous_default = self.dangerous_affordance.is_dangerous();
+    let has_safe_alternative = self.safe_alternative.is_safe();
+    let dangerous_is_easier =
+      self.dangerous_affordance.action_complexity() < self.safe_alternative.action_complexity();
+
+    has_dangerous_default && has_safe_alternative && dangerous_is_easier
   }
 }
 

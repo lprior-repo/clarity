@@ -8,6 +8,10 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::must_use_candidate)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::missing_const_for_fn)]
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;

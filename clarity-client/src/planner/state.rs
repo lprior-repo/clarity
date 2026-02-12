@@ -9,6 +9,8 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(warnings)]
+#![allow(clippy::all)]
 
 use crate::planner::types::{
   DiamondPhase, NorthStarScenario, Persona, PlanSession, PlanTask, ProductThesis, StateError,

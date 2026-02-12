@@ -2,8 +2,6 @@
 #![allow(clippy::pedantic)]
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::expect_used)]
-#![cfg(test)]
-
 use super::metric_triangulation::*;
 
 fn create_valid_kpi() -> KPIMetric {

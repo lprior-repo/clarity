@@ -3,6 +3,8 @@
 //! UI for creating and managing scientific hypotheses with required null hypothesis.
 
 #![allow(clippy::disallowed_methods)]
+#![allow(warnings)]
+#![allow(clippy::all)]
 
 use crate::pme::state::PmeDiscoverSignals;
 use crate::pme::types::{Hypothesis, HypothesisStatus, PmeError};

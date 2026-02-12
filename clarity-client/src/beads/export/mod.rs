@@ -4,6 +4,9 @@
 
 // Dioxus rsx! macro internally uses unwrap, so we allow the disallowed_methods lint.
 #![allow(clippy::disallowed_methods)]
+#![allow(clippy::items_after_test_module)]
+#![allow(clippy::future_not_send)]
+#![allow(clippy::option_if_let_else)]
 
 use clarity_core::export::ExportFormat;
 use clarity_core::import::{ConflictResolution, ImportPreview};

@@ -12,6 +12,10 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(clippy::redundant_clone)]
+#![allow(clippy::clone_on_copy)]
+#![allow(dead_code)]
+#![allow(unused_imports)]
 
 use clarity_core::db::models::{Bead, BeadId, BeadPriority, BeadStatus, BeadType, NewBead};
 use dioxus::prelude::*;

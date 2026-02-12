@@ -3,6 +3,8 @@
 //! This module implements the Diamond design methodology for product planning,
 //! organized into four phases (top, right, bottom, left of the diamond).
 
+#![allow(clippy::similar_names)]
+
 pub mod application;
 pub mod domain;
 pub mod presentation;
@@ -11,11 +13,11 @@ pub mod adversarial_tests;
 pub mod components;
 pub mod hostile_attacks;
 pub mod parser;
-// pub mod prompts;  // Temporarily disabled - used by coach component
+pub mod prompts;
 pub mod state;
 pub mod tests;
 pub mod types;
-// pub mod types_coach;  // Temporarily disabled - used by coach component
+pub mod types_coach;
 pub mod validation;
 
 pub use parser::{parse_use_case, parse_use_case_json, parse_use_cases, validate_use_case};

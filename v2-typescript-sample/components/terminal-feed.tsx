@@ -1,12 +1,16 @@
 "use client"
 
-import { useMemo, useRef, useEffect } from "react"
+import { useMemo, useRef, useEffect, useState, useCallback } from "react"
 import type { Answer } from "@/components/planning-coach"
+import { useOpenCode } from "@/hooks/use-opencode"
+import type { ConnectionStatus } from "@/lib/opencode-client"
 
 interface TerminalLine {
-  type: "cmd" | "output" | "comment" | "separator"
+  type: "cmd" | "output" | "comment" | "separator" | "error"
   text: string
   agent?: string
+  timestamp?: number
+  executed?: boolean
 }
 
 function parseLines(text: string | null) {
@@ -19,10 +23,34 @@ function getVal(answers: Answer[], id: string) {
   return v && v !== "(skipped)" ? v : null
 }
 
+function StatusIndicator({ status, isMockMode }: { status: ConnectionStatus; isMockMode: boolean }) {
+  const statusConfig = {
+    connected: { color: "bg-chart-2", text: "Connected" },
+    connecting: { color: "bg-yellow-500 animate-pulse", text: "Connecting..." },
+    disconnected: { color: "bg-muted-foreground/50", text: "Disconnected" },
+    error: { color: "bg-red-500", text: "Error" },
+  }
+
+  const config = isMockMode
+    ? { color: "bg-yellow-500/70", text: "Demo Mode" }
+    : statusConfig[status]
+
+  return (
+    <div className="flex items-center gap-1.5 px-2 py-1">
+      <span className={`h-2 w-2 rounded-full ${config.color}`} />
+      <span className="text-[10px] font-medium text-muted-foreground">{config.text}</span>
+    </div>
+  )
+}
+
 export function TerminalFeed({ answers }: { answers: Answer[] }) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const [executedCommands, setExecutedCommands] = useState<Set<string>>(new Set())
 
-  const lines = useMemo(() => {
+  const { status, isMockMode, sendCommand, lines: liveLines, isStreaming, reconnect } = useOpenCode()
+
+  // Generate mock command preview from answers
+  const previewLines = useMemo(() => {
     const l: TerminalLine[] = []
 
     l.push({ type: "comment", text: "# Beads Planner - Agent Command Preview" })
@@ -152,55 +180,135 @@ export function TerminalFeed({ answers }: { answers: Answer[] }) {
     return l
   }, [answers])
 
+  // Execute a command
+  const executeCommand = useCallback(
+    async (cmd: string, agent?: string) => {
+      const key = `${cmd}:${agent}`
+      if (executedCommands.has(key)) return
+
+      setExecutedCommands((prev) => new Set(prev).add(key))
+      await sendCommand(cmd, agent)
+    },
+    [executedCommands, sendCommand]
+  )
+
+  // Execute all commands
+  const executeAll = useCallback(async () => {
+    const cmdLines = previewLines.filter((l) => l.type === "cmd")
+    for (const line of cmdLines) {
+      if (!executedCommands.has(`${line.text}:${line.agent}`)) {
+        await executeCommand(line.text, line.agent)
+      }
+    }
+  }, [previewLines, executedCommands, executeCommand])
+
+  // Combine preview lines with live output
+  const displayLines = useMemo(() => {
+    if (liveLines.length > 0) {
+      // When we have live output, show that instead
+      return liveLines.map((l) => ({
+        ...l,
+        executed: true,
+      }))
+    }
+    return previewLines
+  }, [previewLines, liveLines])
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [lines.length])
+  }, [displayLines.length])
 
   return (
-    <div ref={scrollRef} className="h-full overflow-y-auto bg-background p-4 font-mono text-xs leading-relaxed">
-      {lines.map((line, i) => {
-        if (line.type === "separator") {
-          return <div key={i} className="h-2" />
-        }
-        if (line.type === "comment") {
+    <div className="flex h-full flex-col">
+      {/* Header with status */}
+      <div className="flex shrink-0 items-center justify-between border-b border-border/50 px-3 py-1.5">
+        <StatusIndicator status={status} isMockMode={isMockMode} />
+        <div className="flex items-center gap-2">
+          {status === "disconnected" && (
+            <button
+              type="button"
+              onClick={reconnect}
+              className="rounded px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-secondary"
+            >
+              Reconnect
+            </button>
+          )}
+          {!isMockMode && previewLines.some((l) => l.type === "cmd") && (
+            <button
+              type="button"
+              onClick={executeAll}
+              disabled={isStreaming}
+              className="rounded bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/20 disabled:opacity-50"
+            >
+              {isStreaming ? "Running..." : "Run All"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Terminal content */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto bg-background p-4 font-mono text-xs leading-relaxed">
+        {displayLines.map((line, i) => {
+          if (line.type === "separator") {
+            return <div key={i} className="h-2" />
+          }
+          if (line.type === "comment") {
+            return (
+              <div key={i} className="animate-fade-up text-muted-foreground/40" style={{ animationDelay: `${i * 30}ms` }}>
+                {line.text}
+              </div>
+            )
+          }
+          if (line.type === "error") {
+            return (
+              <div key={i} className="animate-fade-up text-red-500" style={{ animationDelay: `${i * 30}ms` }}>
+                {line.text}
+              </div>
+            )
+          }
+          if (line.type === "cmd") {
+            return (
+              <div key={i} className="animate-fade-up flex items-start gap-1.5" style={{ animationDelay: `${i * 30}ms` }}>
+                {line.agent && (
+                  <span
+                    className={`mt-px shrink-0 rounded px-1 py-px text-[10px] font-medium ${
+                      line.agent === "claude-code"
+                        ? "bg-chart-3/15 text-chart-3"
+                        : "bg-primary/15 text-primary"
+                    }`}
+                  >
+                    {line.agent}
+                  </span>
+                )}
+                <span className="text-chart-2">{"$"}</span>
+                <span className="text-foreground">{line.text}</span>
+                {!line.executed && !isMockMode && (
+                  <button
+                    type="button"
+                    onClick={() => executeCommand(line.text, line.agent)}
+                    disabled={isStreaming}
+                    className="ml-auto shrink-0 rounded bg-secondary px-1.5 py-px text-[9px] text-muted-foreground hover:bg-secondary/80 disabled:opacity-50"
+                  >
+                    run
+                  </button>
+                )}
+              </div>
+            )
+          }
+          // output
           return (
-            <div key={i} className="animate-fade-up text-muted-foreground/40" style={{ animationDelay: `${i * 30}ms` }}>
+            <div key={i} className="animate-fade-up pl-4 text-muted-foreground/60" style={{ animationDelay: `${i * 30}ms` }}>
               {line.text}
             </div>
           )
-        }
-        if (line.type === "cmd") {
-          return (
-            <div key={i} className="animate-fade-up flex items-start gap-1.5" style={{ animationDelay: `${i * 30}ms` }}>
-              {line.agent && (
-                <span
-                  className={`mt-px shrink-0 rounded px-1 py-px text-[10px] font-medium ${
-                    line.agent === "claude-code"
-                      ? "bg-chart-3/15 text-chart-3"
-                      : "bg-primary/15 text-primary"
-                  }`}
-                >
-                  {line.agent}
-                </span>
-              )}
-              <span className="text-chart-2">{"$"}</span>
-              <span className="text-foreground">{line.text}</span>
-            </div>
-          )
-        }
-        // output
-        return (
-          <div key={i} className="animate-fade-up pl-4 text-muted-foreground/60" style={{ animationDelay: `${i * 30}ms` }}>
-            {line.text}
-          </div>
-        )
-      })}
-      {/* Blinking cursor */}
-      <div className="mt-1 flex items-center gap-1">
-        <span className="text-chart-2">{"$"}</span>
-        <span className="inline-block h-3.5 w-1.5 bg-foreground/70 animate-terminal-blink" />
+        })}
+        {/* Blinking cursor */}
+        <div className="mt-1 flex items-center gap-1">
+          <span className="text-chart-2">{"$"}</span>
+          <span className={`inline-block h-3.5 w-1.5 bg-foreground/70 ${isStreaming ? "" : "animate-terminal-blink"}`} />
+        </div>
       </div>
     </div>
   )

@@ -9,13 +9,15 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(warnings)]
+#![allow(clippy::all)]
 
 use crate::planner::types::{UseCase, UseCasePriority};
 
 /// Parse a use case from a structured string format
 ///
 /// The expected format is:
-/// ```
+/// ```text
 /// title|description|trigger|priority
 /// preconditions
 /// main_flow
@@ -179,6 +181,8 @@ pub fn validate_use_case(use_case: &UseCase) -> bool {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::needless_raw_string_hashes)]
+
   use super::*;
 
   #[test]

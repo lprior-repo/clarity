@@ -19,7 +19,7 @@ path = "src/bin/br_show_bd_2zk.rs"
 clarity-core = { path = "../clarity-core" }
 dioxus = { version = "0.7.3", features = ["desktop"] }
 dioxus-desktop = "0.7.3"
-dioxus-router = "0.5.0"
+dioxus-router = "0.7.3"
 web-sys = { version = "0.3", features = ["Window", "HtmlTextAreaElement", "Navigator", "Clipboard"] }
 tokio.workspace = true
 tokio-util.workspace = true
@@ -40,3 +40,4 @@ sqlx = { workspace = true, features = ["runtime-tokio", "sqlite"] }
 rfd = "0.15"
 tempfile = "3.12"
 clap = { version = "4.0", features = ["derive"] }
+reqwest = { version = "0.12", features = ["json", "stream", "rustls-tls"], default-features = false }

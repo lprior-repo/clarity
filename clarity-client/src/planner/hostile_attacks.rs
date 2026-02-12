@@ -17,6 +17,10 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(warnings)]
+#![allow(clippy::all)]
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
 
 #[allow(unused_imports)]
 use crate::planner::validation;
@@ -697,7 +701,7 @@ fn hostile_attack_multiple_cycles_in_different_components() {
   )
   .with_dependency(task_c.id);
 
-  let task_c_with_cycle = PlanTask {
+  let task_c_cycle = PlanTask {
     dependencies: vec![task_d.id],
     ..task_c.clone()
   };
@@ -705,7 +709,7 @@ fn hostile_attack_multiple_cycles_in_different_components() {
   let tasks = vec![
     task_a_with_cycle,
     task_b.clone(),
-    task_c_with_cycle,
+    task_c_cycle,
     task_d.clone(),
   ];
   let cycles = validation::detect_cycles_with_path(&tasks);

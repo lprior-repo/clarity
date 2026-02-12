@@ -3,7 +3,7 @@
 //! First Principles frameworks for product-market engineering:
 //! - CDI Logger: Customer Data Insight collection and analysis
 //! - Conflict Detection: Identify contradictions between requirements
-//! - Design by Contract: Meyer's DbC with preconditions, postconditions, invariants
+//! - Design by Contract: Meyer's `DbC` with preconditions, postconditions, invariants
 //! - Digital Twin: Production simulation with scenario tests and load patterns
 //! - Inversion: Avoid stupidity by thinking backward from failure
 //! - Metric Triangulation: Three-pillared approach to prevent vanity metrics

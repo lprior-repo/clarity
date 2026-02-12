@@ -67,6 +67,7 @@ pub fn greet(name: &str) -> String {
 
 /// Example of processing beads with functional pipeline
 #[must_use]
+#[allow(clippy::needless_pass_by_value)]
 pub fn process_high_priority_beads(beads: Vec<domain::Bead>) -> Vec<domain::Bead> {
   use domain::bead_operations::BeadOperations;
 

@@ -8,7 +8,7 @@
 #![allow(clippy::disallowed_methods)]
 
 use crate::components::ErrorBoundary;
-use crate::planner::components::PlannerApp;
+use crate::planner::components::PlannerV2;
 use dioxus::prelude::*;
 use std::str::FromStr;
 
@@ -332,12 +332,7 @@ fn BrShow(id: String) -> Element {
 #[component]
 fn Planner() -> Element {
   rsx! {
-      div { class: "app-container",
-          h1 { "Clarity" }
-          div { class: "content",
-              PlannerApp {}
-          }
-      }
+      PlannerV2 {}
   }
 }
 

@@ -2,8 +2,6 @@
 #![allow(clippy::pedantic)]
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::expect_used)]
-#![cfg(test)]
-
 use super::traffic_lights::*;
 
 fn create_valid_affordance() -> Affordance {

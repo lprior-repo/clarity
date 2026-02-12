@@ -1,5 +1,8 @@
 //! Test sorting functionality
 
+#![allow(warnings)]
+#![allow(clippy::all)]
+
 use itertools::Itertools;
 use std::cmp::Ordering;
 

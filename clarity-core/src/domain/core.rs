@@ -141,7 +141,7 @@ impl DomainState {
       .collect()
   }
 
-  /// Count beads by status (pure function - returns HashMap)
+  /// Count beads by status (pure function - returns `HashMap`).
   #[must_use]
   pub fn count_by_status(&self) -> HashMap<BeadStatus, usize> {
     self.beads.iter().fold(HashMap::new(), |mut counts, bead| {
@@ -152,7 +152,7 @@ impl DomainState {
     })
   }
 
-  /// Get statistics (pure function - returns DomainStats)
+  /// Get statistics (pure function - returns `DomainStats`).
   #[must_use]
   pub fn statistics(&self) -> DomainStats {
     let total = self.beads.len();
@@ -202,7 +202,9 @@ impl DomainStats {
     if self.total_beads == 0 {
       0.0
     } else {
-      self.closed_beads as f64 / self.total_beads as f64 * 100.0
+      let closed_u32 = u32::try_from(self.closed_beads).unwrap_or(u32::MAX);
+      let total_u32 = u32::try_from(self.total_beads).unwrap_or(u32::MAX);
+      f64::from(closed_u32) / f64::from(total_u32) * 100.0
     }
   }
 
@@ -218,7 +220,7 @@ impl DomainStats {
 /// Validate bead status transition (pure function)
 ///
 /// # Errors
-/// Returns a DomainError if the transition is not allowed
+/// Returns a `DomainError` if the transition is not allowed.
 pub const fn validate_status_transition(
   current: BeadStatus,
   target: BeadStatus,
@@ -235,7 +237,7 @@ pub const fn validate_status_transition(
 /// Tag validation function (pure function)
 ///
 /// # Errors
-/// Returns a DomainError if the tag length is invalid
+/// Returns a `DomainError` if the tag length is invalid.
 pub fn validate_tag_length(tag: &str) -> Result<(), DomainError> {
   if tag.is_empty() || tag.len() > 50 {
     return Err(DomainError::InvalidTagLength(tag.to_string()));
@@ -246,7 +248,7 @@ pub fn validate_tag_length(tag: &str) -> Result<(), DomainError> {
 /// Create a new bead with validation (pure function)
 ///
 /// # Errors
-/// Returns a ModelError if bead creation fails
+/// Returns a `ModelError` if bead creation fails.
 pub fn create_bead(
   title: String,
   description: Option<String>,
@@ -267,7 +269,7 @@ pub fn create_bead(
 /// Update bead priority with business rules (pure function)
 ///
 /// # Errors
-/// Returns a DomainError if the priority downgrade is not allowed
+/// Returns a `DomainError` if the priority downgrade is not allowed.
 pub fn update_bead_priority(bead: &Bead, new_priority: BeadPriority) -> Result<Bead, DomainError> {
   // Business rule: Cannot downgrade high priority
   if bead.priority == BeadPriority::HIGH && new_priority.value() > bead.priority.value() {
@@ -295,7 +297,7 @@ pub fn update_bead_priority(bead: &Bead, new_priority: BeadPriority) -> Result<B
 /// Close a bead with validation (pure function)
 ///
 /// # Errors
-/// Returns a DomainError if the bead is blocked or transition is invalid
+/// Returns a `DomainError` if the bead is blocked or transition is invalid.
 pub fn close_bead(bead: &Bead) -> Result<Bead, DomainError> {
   // Business rule: Cannot close blocked beads
   if bead.status == BeadStatus::Blocked {
@@ -321,6 +323,10 @@ pub fn close_bead(bead: &Bead) -> Result<Bead, DomainError> {
 
 /// Add a bead to the domain (pure function)
 #[must_use]
+#[expect(
+  clippy::needless_pass_by_value,
+  reason = "Domain functions intentionally consume immutable state"
+)]
 pub fn add_bead(state: DomainState, bead: Bead) -> DomainState {
   DomainState {
     beads: state.beads.push_back(bead),
@@ -336,7 +342,11 @@ pub fn with_beads(_state: DomainState, beads: Vector<Bead>) -> DomainState {
 /// Update a bead in the domain (pure function)
 ///
 /// # Errors
-/// Returns a DomainError if the bead is not found
+/// Returns a `DomainError` if the bead is not found.
+#[expect(
+  clippy::needless_pass_by_value,
+  reason = "Domain functions intentionally consume immutable state"
+)]
 pub fn update_bead(state: DomainState, updated_bead: Bead) -> Result<DomainState, DomainError> {
   // Ensure bead exists before updating
   if state.get_bead(updated_bead.id).is_none() {
@@ -362,7 +372,7 @@ pub fn update_bead(state: DomainState, updated_bead: Bead) -> Result<DomainState
 /// Change bead status with validation (pure function)
 ///
 /// # Errors
-/// Returns a DomainError if the bead is not found or transition is invalid
+/// Returns a `DomainError` if the bead is not found or transition is invalid.
 pub fn change_bead_status(
   state: DomainState,
   bead_id: BeadId,

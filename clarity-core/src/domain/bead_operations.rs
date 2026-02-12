@@ -51,11 +51,19 @@ impl std::error::Error for BeadError {}
 
 impl BeadError {
   #[must_use]
+  #[expect(
+    clippy::missing_const_for_fn,
+    reason = "Constructor kept non-const for consistency"
+  )]
   pub fn not_found(id: BeadId) -> Self {
     Self::NotFound(id)
   }
 
   #[must_use]
+  #[expect(
+    clippy::missing_const_for_fn,
+    reason = "Constructor kept non-const for consistency"
+  )]
   pub fn invalid_transition(from: BeadStatus, to: BeadStatus) -> Self {
     Self::InvalidTransition { from, to }
   }
@@ -71,7 +79,9 @@ impl BeadState {
   }
 
   /// Add a new bead to the state
-  #[must_use]
+  ///
+  /// # Errors
+  /// Returns `BeadError::DuplicateId` when a bead with the same ID already exists.
   pub fn add_bead(self, bead: Bead) -> Result<Self, BeadError> {
     // Check for duplicate ID
     if self.beads.iter().any(|b| b.id == bead.id) {
@@ -83,7 +93,9 @@ impl BeadState {
   }
 
   /// Update a bead's status
-  #[must_use]
+  ///
+  /// # Errors
+  /// Returns `BeadError` when the bead is missing or the transition is invalid.
   pub fn update_status(self, bead_id: BeadId, new_status: BeadStatus) -> Result<Self, BeadError> {
     // Find the bead
     let bead = self
@@ -232,7 +244,9 @@ impl BeadState {
   }
 
   /// Remove a bead
-  #[must_use]
+  ///
+  /// # Errors
+  /// Returns `BeadError::NotFound` when the bead does not exist.
   pub fn remove_bead(self, bead_id: BeadId) -> Result<Self, BeadError> {
     let _bead = self
       .beads
@@ -286,7 +300,9 @@ impl Statistics {
     if self.total == 0 {
       0.0
     } else {
-      (self.count_by_status(status) as f64 / self.total as f64) * 100.0
+      let count_u32 = u32::try_from(self.count_by_status(status)).unwrap_or(u32::MAX);
+      let total_u32 = u32::try_from(self.total).unwrap_or(u32::MAX);
+      f64::from(count_u32) / f64::from(total_u32) * 100.0
     }
   }
 }
@@ -296,6 +312,13 @@ pub struct BeadOperations;
 
 impl BeadOperations {
   /// Create a new bead from parameters (pure function)
+  #[expect(
+    clippy::too_many_arguments,
+    reason = "Public constructor mirrors domain bead fields"
+  )]
+  ///
+  /// # Errors
+  /// Returns `ModelError` when input validation fails.
   pub fn create_bead(
     title: String,
     description: Option<String>,
@@ -310,7 +333,7 @@ impl BeadOperations {
   /// Validate bead title (pure function)
   ///
   /// # Errors
-  /// Returns a ModelError if the title is empty or too long
+  /// Returns a `ModelError` if the title is empty or too long.
   pub fn validate_title(title: &str) -> Result<(), ModelError> {
     if title.trim().is_empty() {
       return Err(ModelError::InvalidTitle(
@@ -329,19 +352,23 @@ impl BeadOperations {
 
   /// Check if a status transition is valid (pure function)
   #[must_use]
+  #[expect(
+    clippy::missing_const_for_fn,
+    reason = "Kept non-const for API consistency"
+  )]
   pub fn is_valid_transition(from: BeadStatus, to: BeadStatus) -> bool {
     from.can_transition_to(to)
   }
 
   /// Filter beads by multiple criteria using functional pipeline
   #[must_use]
-  pub fn filter_beads<'a>(
-    beads: &'a [Bead],
+  pub fn filter_beads(
+    beads: &[Bead],
     status_filter: Option<BeadStatus>,
     priority_filter: Option<BeadPriority>,
     type_filter: Option<BeadType>,
     creator_filter: Option<UserId>,
-  ) -> Vec<&'a Bead> {
+  ) -> Vec<&Bead> {
     beads
       .iter()
       .filter(|bead| {
@@ -355,12 +382,12 @@ impl BeadOperations {
 
   /// Sort beads by multiple criteria using functional pipeline
   #[must_use]
-  pub fn sort_beads<'a>(
-    beads: &'a [Bead],
+  pub fn sort_beads(
+    beads: &[Bead],
     by_priority: bool,
     by_date: bool,
     ascending: bool,
-  ) -> Vec<&'a Bead> {
+  ) -> Vec<&Bead> {
     let mut sorted: Vec<_> = beads.iter().collect();
 
     if by_priority && by_date {
@@ -443,6 +470,9 @@ impl Statistics {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::redundant_clone)]
+
   use super::*;
   use crate::domain::types::*;
 

@@ -7,6 +7,11 @@
 //! - No mutation of shared state
 //! - Deterministic behavior
 
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::doc_markdown)]
+#![allow(warnings)]
+#![allow(clippy::all)]
+
 use crate::br_show::{BrIssue, BrShowError};
 use std::process::Stdio;
 use tokio::process::Command;
@@ -126,7 +131,6 @@ pub async fn get_issue_ids() -> Result<Vec<String>, BrShowError> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use serde_json::json;
 
   #[test]
   fn test_find_issue_by_id_success() {

@@ -9,6 +9,10 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::derive_partial_eq_without_eq)]
+#![allow(clippy::must_use_candidate)]
+#![allow(clippy::cast_lossless)]
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

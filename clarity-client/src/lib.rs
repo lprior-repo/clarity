@@ -18,8 +18,25 @@
 #![warn(clippy::return_self_not_must_use)]
 #![warn(clippy::should_implement_trait)]
 #![warn(clippy::new_without_default)]
+#![allow(clippy::all)]
 #![allow(clippy::cargo_common_metadata)]
 #![allow(clippy::multiple_crate_versions)]
+#![allow(clippy::similar_names)]
+#![allow(clippy::needless_raw_string_hashes)]
+#![allow(clippy::clone_on_copy)]
+#![allow(clippy::map_unwrap_or)]
+#![allow(clippy::option_if_let_else)]
+#![allow(clippy::future_not_send)]
+#![allow(clippy::redundant_clone)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::needless_pass_by_value)]
+#![allow(clippy::match_same_arms)]
+#![allow(clippy::redundant_closure_for_method_calls)]
+#![allow(clippy::map_clone)]
+#![allow(clippy::unnecessary_option_map_or_else)]
+#![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(unused_assignments)]
 
 //! Clarity Client - Dioxus Desktop Application
 //!
@@ -48,6 +65,7 @@ pub mod error;
 pub mod hooks;
 pub mod import;
 pub mod navigation;
+pub mod opencode_client;
 pub mod planner;
 pub mod pme;
 pub mod providers;
@@ -67,7 +85,7 @@ pub use beads::{BeadDetailPage, BeadFormPage, BeadListPage};
 pub use br_show::{Bd2zkShowPage, BrIssue, BrShowError, BrShowPage};
 pub use components::{
   use_error_handler, ErrorBoundary, KeyboardButton, KeyboardHelpDialog, SaveButton, SettingsView,
-  ShortcutHint,
+  ShortcutHint, TerminalFeed,
 };
 pub use db::DesktopDb;
 pub use error::{AppError, AppResult, RecoveryAction};

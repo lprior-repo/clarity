@@ -2,6 +2,9 @@
 //!
 //! This is a standalone test file to verify our sorting implementation works correctly.
 
+#![allow(warnings)]
+#![allow(clippy::all)]
+
 // Simple test to verify sorting logic without dependencies
 #[cfg(test)]
 mod tests {

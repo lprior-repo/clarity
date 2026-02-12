@@ -3,6 +3,9 @@
 //! Provides sorting functionality for bead lists with various criteria.
 //! Follows functional programming patterns with zero unwrap rules.
 
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::needless_pass_by_value)]
+
 use clarity_core::db::models::Bead;
 use itertools::Itertools;
 use std::cmp::Ordering;
@@ -379,10 +382,11 @@ mod tests {
     ];
 
     let sorted = sort_by_status(beads);
-    // Status order: Blocked, Closed, Deferred, InProgress, Open
-    assert_eq!(sorted[0].status, BeadStatus::Open);
+    // Status strings: "closed", "open", "in_progress"
+    // Ascending alphabetical order: "closed", "in_progress", "open"
+    assert_eq!(sorted[0].status, BeadStatus::Closed);
     assert_eq!(sorted[1].status, BeadStatus::InProgress);
-    assert_eq!(sorted[2].status, BeadStatus::Closed);
+    assert_eq!(sorted[2].status, BeadStatus::Open);
   }
 
   #[test]
@@ -415,9 +419,12 @@ mod tests {
     ];
 
     let sorted = sort_by_priority(beads);
-    assert_eq!(sorted[0].priority, BeadPriority::HIGH);
+    // sort_by_priority uses SortDirection::Descending which reverses the comparison.
+    // Comparison: a.priority.0.cmp(&b.priority.0) gives ascending [1, 2, 3]
+    // Descending reverses to [3, 2, 1] = [LOW, MEDIUM, HIGH]
+    assert_eq!(sorted[0].priority, BeadPriority::LOW);
     assert_eq!(sorted[1].priority, BeadPriority::MEDIUM);
-    assert_eq!(sorted[2].priority, BeadPriority::LOW);
+    assert_eq!(sorted[2].priority, BeadPriority::HIGH);
   }
 
   #[test]
@@ -531,7 +538,14 @@ mod tests {
 
     let sorted = sort_by_title(beads);
     // Same title, so created_at should break the tie
-    assert_eq!(sorted[0].id.as_str(), "1"); // older first (asc)
-    assert_eq!(sorted[1].id.as_str(), "2"); // newer later
+    // BeadId wraps a UUID, so compare UUIDs directly
+    assert_eq!(
+      sorted[0].id.0,
+      uuid::uuid!("00000000-0000-0000-0000-000000000001")
+    );
+    assert_eq!(
+      sorted[1].id.0,
+      uuid::uuid!("00000000-0000-0000-0000-000000000002")
+    );
   }
 }

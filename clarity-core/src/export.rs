@@ -497,7 +497,7 @@ mod tests {
     let escaped_id = if bead.id.contains(',') || bead.id.contains('"') || bead.id.contains('\n') {
       format!("\"{}\"", bead.id.replace('"', "\"\""))
     } else {
-      bead.id.clone()
+      bead.id
     };
     assert!(csv_row.contains(&escaped_id));
   }

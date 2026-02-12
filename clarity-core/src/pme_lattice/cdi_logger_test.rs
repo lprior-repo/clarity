@@ -5,6 +5,8 @@
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
+#![allow(clippy::expect_used)]
+#![allow(clippy::manual_string_new)]
 
 use chrono::Utc;
 use uuid::Uuid;

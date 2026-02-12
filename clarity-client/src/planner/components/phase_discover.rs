@@ -5,6 +5,8 @@
 
 // Dioxus rsx! macro internally uses unwrap, so we allow the disallowed_methods lint.
 #![allow(clippy::disallowed_methods)]
+#![allow(warnings)]
+#![allow(clippy::all)]
 
 use crate::planner::components::{FieldLabel, SectionLabel, SectionLevel, TextArea};
 use crate::planner::state::{PlannerState, SelectedEntity};

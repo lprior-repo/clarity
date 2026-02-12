@@ -5,6 +5,12 @@
 
 // Dioxus rsx! macro internally uses unwrap, so we allow the disallowed_methods lint.
 #![allow(clippy::disallowed_methods)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::clone_on_copy)]
+#![allow(clippy::match_same_arms)]
+#![allow(clippy::redundant_closure_for_method_calls)]
+#![allow(clippy::map_clone)]
+#![allow(clippy::unnecessary_option_map_or_else)]
 
 use crate::beads::sorting::{SortBy, SortConfig, SortDirection};
 use crate::error::AppError;

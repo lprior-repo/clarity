@@ -8,6 +8,9 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::must_use_candidate)]
+#![allow(clippy::missing_const_for_fn)]
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

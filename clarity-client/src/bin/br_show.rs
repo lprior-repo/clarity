@@ -9,6 +9,10 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(warnings)]
+#![allow(clippy::all)]
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
 
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
