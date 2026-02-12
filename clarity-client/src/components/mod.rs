@@ -8,7 +8,7 @@
 //! UI components for the Clarity desktop application
 //!
 //! This module contains reusable UI components including loading indicators,
-//! error displays, and the error boundary system.
+//! error displays, toast notifications, and the error boundary system.
 
 pub mod error_boundary;
 pub mod error_display;
@@ -17,6 +17,7 @@ pub mod keyboard_help;
 pub mod loading;
 pub mod settings_view;
 pub mod terminal_feed;
+pub mod toast;
 
 pub use error_boundary::{use_error_handler, ErrorBoundary};
 pub use error_display::{
@@ -29,3 +30,7 @@ pub use loading::{
 };
 pub use settings_view::SettingsView;
 pub use terminal_feed::TerminalFeed;
+pub use toast::{
+  toast_styles, use_toast, Toast, ToastContainer, ToastController, ToastItem, ToastProvider,
+  ToastSignal, ToastType,
+};
