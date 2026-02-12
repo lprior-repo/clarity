@@ -607,7 +607,7 @@ mod tests {
 
     assert_eq!(desc.action, Action::NewBead);
     assert_eq!(desc.description, "Create a new bead");
-    assert_eq!(desc.shortcut, Shortcut::ctrl(Key::Character('n')));
+    assert_eq!(desc.shortcuts, vec![Shortcut::ctrl(Key::Character('n'))]);
   }
 
   #[test]

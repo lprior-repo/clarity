@@ -7,7 +7,7 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![warn(clippy::n nursery)]
+#![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
 use clarity_client::app::Route;

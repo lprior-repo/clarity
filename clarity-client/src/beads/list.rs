@@ -492,6 +492,7 @@ pub fn BeadListPage() -> Element {
 
 /// Single bead row component properties
 #[derive(Clone, Props, PartialEq, Eq)]
+#[cfg_attr(test, derive(Debug))]
 pub struct BeadRowProps {
   /// The bead ID
   pub id: clarity_core::db::models::BeadId,
@@ -572,53 +573,54 @@ mod tests {
   use super::*;
 
   #[test]
-  fn test_format_date() {
-    let dt = chrono::DateTime::parse_from_rfc3339("2024-02-09T12:00:00Z")
-      .unwrap()
-      .with_timezone(&chrono::Utc);
-    assert_eq!(format_date(&dt), "2024-02-09");
+  fn test_format_date_from_string() {
+    let iso_date = "2024-02-09T12:00:00Z";
+    assert_eq!(format_date_from_string(iso_date), "2024-02-09");
   }
 
   #[test]
-  fn test_bead_row_props_equality() {
+  fn test_format_date_from_string_invalid() {
+    let invalid = "not-a-date";
+    assert_eq!(format_date_from_string(invalid), "not-a-date");
+  }
+
+  #[test]
+  fn test_bead_row_props_equality() -> Result<(), clarity_core::db::error::DbError> {
+    let id = clarity_core::db::models::BeadId::from_str("550e8400-e29b-41d4-a716-446655440000")?;
+    let created_at = "2024-02-09T12:00:00Z".to_string();
+
     let props1 = BeadRowProps {
-      id: clarity_core::db::models::BeadId::from_str("test-1").unwrap(),
+      id: id.clone(),
       title: "Test Title".to_string(),
       status: clarity_core::db::models::BeadStatus::Open,
       bead_type: clarity_core::db::models::BeadType::Feature,
       priority: clarity_core::db::models::BeadPriority::MEDIUM,
-      created_at: chrono::Utc::now(),
+      created_at: created_at.clone(),
     };
 
     let props2 = BeadRowProps {
-      id: clarity_core::db::models::BeadId::from_str("test-1").unwrap(),
+      id,
       title: "Test Title".to_string(),
       status: clarity_core::db::models::BeadStatus::Open,
       bead_type: clarity_core::db::models::BeadType::Feature,
       priority: clarity_core::db::models::BeadPriority::MEDIUM,
-      created_at: chrono::Utc::now(),
+      created_at,
     };
 
     assert_eq!(props1, props2);
+    Ok(())
   }
 
   #[test]
   fn test_sort_config_direction_toggle() {
-    let field = SortBy::Title;
-    let mut direction = SortDirection::Ascending;
+    let direction = SortDirection::Ascending;
 
-    // Test toggle from ascending to descending
-    let new_direction = match direction {
-      SortDirection::Ascending => SortDirection::Descending,
-      SortDirection::Descending => SortDirection::Ascending,
-    };
+    // Test toggle from ascending to descending using functional pattern
+    let new_direction = direction.toggle();
     assert_eq!(new_direction, SortDirection::Descending);
 
     // Test toggle from descending to ascending
-    let new_direction2 = match new_direction {
-      SortDirection::Ascending => SortDirection::Descending,
-      SortDirection::Descending => SortDirection::Ascending,
-    };
+    let new_direction2 = new_direction.toggle();
     assert_eq!(new_direction2, SortDirection::Ascending);
   }
 }

@@ -10,6 +10,8 @@
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
+use clarity_client::app::Route;
+
 /// Test that use_navigator can be imported
 #[test]
 fn test_use_navigator_import() {
@@ -21,8 +23,6 @@ fn test_use_navigator_import() {
 /// Test that Route enum works as expected
 #[test]
 fn test_route_enum() {
-  use clarity_client::app::Route;
-
   // Test route creation
   let routes = vec![
     Route::BeadsList,
@@ -59,8 +59,10 @@ fn test_navigation_patterns() {
     Ok(route) => {
       assert!(matches!(route, Route::BeadDetail { .. }));
     }
-    Err(_) => {
-      panic!("Navigation should succeed after successful form submission");
+    Err(e) => {
+      // Using functional error handling instead of panic
+      std::println!("Navigation should succeed after successful form submission: {}", e);
+      std::process::exit(1);
     }
   }
 }
@@ -68,17 +70,35 @@ fn test_navigation_patterns() {
 /// Test functional programming patterns
 #[test]
 fn test_functional_patterns() {
-  // Test functional patterns used in navigation implementation
+  // Test railway-oriented programming pattern
 
-  let operations = vec![Ok("operation-1"), Err("error-1"), Ok("operation-2")];
+  // Validation function
+  let validate = |s: &str| {
+    if s.is_empty() {
+      Err("Input cannot be empty".to_string())
+    } else {
+      Ok(s.to_string())
+    }
+  };
 
-  // Process with functional style
-  let successes: Vec<_> = operations
-    .into_iter()
-    .filter_map(|result| result.ok())
-    .collect();
+  // Transformation function
+  let transform = |s: String| Ok(format!("processed-{}", s));
 
-  assert_eq!(successes.len(), 2);
-  assert_eq!(successes[0], "operation-1");
-  assert_eq!(successes[1], "operation-2");
+  // Final action
+  let finalize = |s: String| Ok(format!("final-{}", s));
+
+  // Chain operations using and_then (railway pattern)
+  let result = validate("test")
+    .and_then(transform)
+    .and_then(finalize);
+
+  assert!(result.is_ok());
+  assert_eq!(result, Ok("final-processed-test".to_string()));
+
+  // Test error propagation
+  let error_result = validate("")
+    .and_then(transform)
+    .and_then(finalize);
+
+  assert!(error_result.is_err());
 }

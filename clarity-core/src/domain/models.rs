@@ -259,52 +259,57 @@ mod tests {
   use super::*;
 
   #[test]
-  fn test_user_new() {
-    let email = Email::new("test@example.com".to_string()).unwrap();
-    let user = User::new(email, "hash".to_string(), UserRole::User).unwrap();
+  fn test_user_new() -> Result<(), ModelError> {
+    let email = Email::new("test@example.com".to_string())?;
+    let user = User::new(email, "hash".to_string(), UserRole::User)?;
 
     assert_eq!(user.email.as_str(), "test@example.com");
     assert!(user.is_user());
     assert!(!user.is_admin());
+    Ok(())
   }
 
   #[test]
-  fn test_user_new_admin() {
-    let email = Email::new("admin@example.com".to_string()).unwrap();
-    let user = User::new(email, "hash".to_string(), UserRole::Admin).unwrap();
+  fn test_user_new_admin() -> Result<(), ModelError> {
+    let email = Email::new("admin@example.com".to_string())?;
+    let user = User::new(email, "hash".to_string(), UserRole::Admin)?;
 
     assert!(user.is_admin());
+    Ok(())
   }
 
   #[test]
-  fn test_user_empty_password() {
-    let email = Email::new("test@example.com".to_string()).unwrap();
+  fn test_user_empty_password() -> Result<(), ModelError> {
+    let email = Email::new("test@example.com".to_string())?;
     let result = User::new(email, "".to_string(), UserRole::User);
     assert!(result.is_err());
+    Ok(())
   }
 
   #[test]
-  fn test_user_can_modify() {
-    let email = Email::new("test@example.com".to_string()).unwrap();
-    let user = User::new(email, "hash".to_string(), UserRole::User).unwrap();
+  fn test_user_can_modify() -> Result<(), ModelError> {
+    let email = Email::new("test@example.com".to_string())?;
+    let user = User::new(email, "hash".to_string(), UserRole::User)?;
 
     assert!(user.can_modify(&user.id));
 
     let other_id = UserId::new();
     assert!(!user.can_modify(&other_id));
+    Ok(())
   }
 
   #[test]
-  fn test_user_admin_can_modify_any() {
-    let email = Email::new("admin@example.com".to_string()).unwrap();
-    let admin = User::new(email, "hash".to_string(), UserRole::Admin).unwrap();
+  fn test_user_admin_can_modify_any() -> Result<(), ModelError> {
+    let email = Email::new("admin@example.com".to_string())?;
+    let admin = User::new(email, "hash".to_string(), UserRole::Admin)?;
 
     let other_id = UserId::new();
     assert!(admin.can_modify(&other_id));
+    Ok(())
   }
 
   #[test]
-  fn test_bead_new() {
+  fn test_bead_new() -> Result<(), ModelError> {
     let bead = Bead::new(
       "Test Bead".to_string(),
       Some("Description".to_string()),
@@ -312,11 +317,11 @@ mod tests {
       BeadPriority::HIGH,
       BeadType::Feature,
       None,
-    )
-    .unwrap();
+    )?;
 
     assert_eq!(bead.title, "Test Bead");
     assert!(bead.is_open());
+    Ok(())
   }
 
   #[test]
@@ -333,42 +338,43 @@ mod tests {
   }
 
   #[test]
-  fn test_bead_transition_status() {
-    let mut bead = Bead::new(
+  fn test_bead_transition_status() -> Result<(), ModelError> {
+    let bead = Bead::new(
       "Test".to_string(),
       None,
       BeadStatus::Open,
       BeadPriority::MEDIUM,
       BeadType::Feature,
       None,
-    )
-    .unwrap();
+    )?;
 
-    bead.transition_to(BeadStatus::InProgress).unwrap();
+    // transition_to consumes self and returns a new Self - functional pattern
+    let bead = bead.transition_to(BeadStatus::InProgress)?;
     assert!(bead.is_in_progress());
 
-    bead.transition_to(BeadStatus::Closed).unwrap();
+    let bead = bead.transition_to(BeadStatus::Closed)?;
     assert!(bead.is_closed());
+    Ok(())
   }
 
   #[test]
-  fn test_bead_invalid_transition() {
-    let mut bead = Bead::new(
+  fn test_bead_invalid_transition() -> Result<(), ModelError> {
+    let bead = Bead::new(
       "Test".to_string(),
       None,
       BeadStatus::Closed,
       BeadPriority::MEDIUM,
       BeadType::Feature,
       None,
-    )
-    .unwrap();
+    )?;
 
     let result = bead.transition_to(BeadStatus::InProgress);
     assert!(result.is_err());
+    Ok(())
   }
 
   #[test]
-  fn test_bead_can_modify() {
+  fn test_bead_can_modify() -> Result<(), ModelError> {
     let creator_id = UserId::new();
     let bead = Bead::new(
       "Test".to_string(),
@@ -377,13 +383,13 @@ mod tests {
       BeadPriority::MEDIUM,
       BeadType::Feature,
       Some(creator_id),
-    )
-    .unwrap();
+    )?;
 
     assert!(bead.can_modify(&creator_id, false));
 
     let other_id = UserId::new();
     assert!(!bead.can_modify(&other_id, false));
     assert!(bead.can_modify(&other_id, true)); // Admin can modify
+    Ok(())
   }
 }

@@ -264,7 +264,7 @@ mod tests {
     };
 
     // Capture stdout to verify output
-    let mut output = Vec::new();
+    let _output: Vec<u8> = Vec::new();
     let _ = std::io::stdout().lock();
     // In a real test, we would capture stdout to verify the output
     display_bead(&bead, "summary");

@@ -902,12 +902,13 @@ mod tests {
   }
 
   #[test]
-  fn hypothesis_confidence_updates_status() {
-    let h = Hypothesis::new("t".to_string(), "n".to_string()).update_confidence(0.9);
+  fn hypothesis_confidence_updates_status() -> Result<(), PmeError> {
+    let h = Hypothesis::new("t".to_string(), "n".to_string())?.update_confidence(0.9);
     assert_eq!(h.status, HypothesisStatus::Validated);
 
-    let h = Hypothesis::new("t".to_string(), "n".to_string()).update_confidence(0.1);
+    let h = Hypothesis::new("t".to_string(), "n".to_string())?.update_confidence(0.1);
     assert_eq!(h.status, HypothesisStatus::Refuted);
+    Ok(())
   }
 
   #[test]
@@ -977,11 +978,12 @@ mod tests {
   }
 
   #[test]
-  fn pme_discover_state_health_score() {
-    let state = PmeDiscoverState::new()
-      .with_hypothesis(Hypothesis::new("t".to_string(), "n".to_string()).update_confidence(0.9));
+  fn pme_discover_state_health_score() -> Result<(), PmeError> {
+    let hypothesis = Hypothesis::new("t".to_string(), "n".to_string())?.update_confidence(0.9);
+    let state = PmeDiscoverState::new().with_hypothesis(hypothesis);
 
     assert!(state.health_score() > MIN_CONFIDENCE);
     assert_eq!(state.validated_hypotheses().len(), 1);
+    Ok(())
   }
 }

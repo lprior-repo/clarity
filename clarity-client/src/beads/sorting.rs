@@ -34,6 +34,15 @@ impl SortDirection {
       Self::Descending => "↓",
     }
   }
+
+  /// Toggle to the opposite direction
+  #[must_use]
+  pub const fn toggle(&self) -> Self {
+    match self {
+      Self::Ascending => Self::Descending,
+      Self::Descending => Self::Ascending,
+    }
+  }
 }
 
 /// Sorting configuration
@@ -250,6 +259,7 @@ mod tests {
     bead_type: BeadType,
     created_at: DateTime<Utc>,
   ) -> Bead {
+    let created_at_str = created_at.to_rfc3339();
     Bead {
       id: clarity_core::db::models::BeadId::from_str(id).unwrap(),
       title: title.to_string(),
@@ -258,8 +268,8 @@ mod tests {
       priority,
       bead_type,
       created_by: None,
-      created_at,
-      updated_at: created_at,
+      created_at: created_at_str.clone(),
+      updated_at: created_at_str,
     }
   }
 
@@ -473,9 +483,9 @@ mod tests {
     ];
 
     let sorted = sort_by_created_at(beads);
-    assert_eq!(sorted[0].created_at, future);
-    assert_eq!(sorted[1].created_at, now);
-    assert_eq!(sorted[2].created_at, past);
+    assert_eq!(sorted[0].created_at, future.to_rfc3339());
+    assert_eq!(sorted[1].created_at, now.to_rfc3339());
+    assert_eq!(sorted[2].created_at, past.to_rfc3339());
   }
 
   #[test]

@@ -442,7 +442,7 @@ mod tests {
   fn test_format_datetime() {
     let dt = chrono::DateTime::parse_from_rfc3339("2024-02-11T10:30:00Z")
       .map_err(|e| BrShowError::ParseError(format!("Invalid date format: {e}")))
-      .unwrap_or_else(|_| chrono::Utc::now())
+      .unwrap_or_else(|_| chrono::Utc::now().fixed_offset())
       .with_timezone(&chrono::Utc);
     let formatted = format_datetime(&dt);
     assert!(formatted.contains("2024-02-11"));

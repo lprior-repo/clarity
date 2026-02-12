@@ -563,6 +563,7 @@ mod tests {
       created_by: None,
     };
 
+    let now_str = chrono::Utc::now().to_rfc3339();
     let existing = vec![clarity_core::db::models::Bead {
       id: BeadId::new(),
       title: "Existing Bead".to_string(),
@@ -571,8 +572,8 @@ mod tests {
       priority: BeadPriority::MEDIUM,
       bead_type: BeadType::Feature,
       created_by: None,
-      created_at: chrono::Utc::now(),
-      updated_at: chrono::Utc::now(),
+      created_at: now_str.clone(),
+      updated_at: now_str,
     }];
 
     let is_new = check_duplicate(&bead, &existing);
@@ -590,6 +591,7 @@ mod tests {
       created_by: None,
     };
 
+    let now_str = chrono::Utc::now().to_rfc3339();
     let existing = vec![clarity_core::db::models::Bead {
       id: BeadId::new(),
       title: "Different Bead".to_string(),
@@ -598,8 +600,8 @@ mod tests {
       priority: BeadPriority::MEDIUM,
       bead_type: BeadType::Feature,
       created_by: None,
-      created_at: chrono::Utc::now(),
-      updated_at: chrono::Utc::now(),
+      created_at: now_str.clone(),
+      updated_at: now_str,
     }];
 
     let is_new = check_duplicate(&bead, &existing);

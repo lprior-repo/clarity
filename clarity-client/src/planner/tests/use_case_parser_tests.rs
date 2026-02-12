@@ -313,6 +313,19 @@ Post"#;
 
   assert_eq!(results[0].title, "Valid Use Case");
   assert_eq!(results[1].title, "Another Valid");
-  assert_ne!(results[0].priority, UseCasePriority::Invalid);
-  assert_ne!(results[1].priority, UseCasePriority::Invalid);
+  // Verify priorities are valid enum values (no Invalid variant exists)
+  assert!(matches!(
+    results[0].priority,
+    UseCasePriority::Critical
+      | UseCasePriority::High
+      | UseCasePriority::Medium
+      | UseCasePriority::Low
+  ));
+  assert!(matches!(
+    results[1].priority,
+    UseCasePriority::Critical
+      | UseCasePriority::High
+      | UseCasePriority::Medium
+      | UseCasePriority::Low
+  ));
 }

@@ -43,6 +43,7 @@ pub mod import;
 pub mod interview;
 pub mod json_formatter;
 pub mod path_utils;
+pub mod pme_lattice;
 pub mod progress;
 pub mod status_colors;
 // pub mod schema_registry;

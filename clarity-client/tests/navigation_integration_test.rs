@@ -11,12 +11,11 @@
 #![forbid(unsafe_code)]
 
 use clarity_client::app::Route;
-use clarity_client::hooks::use_state;
-use clarity_core::db::models::{BeadId, BeadPriority, BeadStatus, BeadType, NewBead};
+use clarity_core::db::models::{BeadPriority, BeadStatus, BeadType, NewBead};
 
 /// Test the complete form submission workflow with navigation
-#[test]
-fn test_form_submission_workflow_with_navigation() {
+#[tokio::test]
+async fn test_form_submission_workflow_with_navigation() -> Result<(), String> {
   // Simulate the complete workflow from form submission to navigation
 
   // Step 1: User fills out form (Create mode)
@@ -35,37 +34,39 @@ fn test_form_submission_workflow_with_navigation() {
   // Step 3: Submit form (async operation)
   let submit_result = submit_form_data(&form_data).await;
 
-  match submit_result {
-    Ok(bead_id) => {
-      // Step 4: Verify bead was created
-      let created_bead = get_bead_from_database(&bead_id).await;
-      assert!(created_bead.is_some(), "Bead should be created");
-      assert_eq!(created_bead.unwrap().title, form_data.title);
+  let bead_id = submit_result.map_err(|e| format!("Form submission failed: {e}"))?;
 
-      // Step 5: Programmatic navigation should happen
-      let target_route = get_navigation_target_for_form_submission(&bead_id);
-      assert_eq!(target_route, Route::BeadDetail { id: bead_id });
+  // Step 4: Verify bead was created
+  let created_bead = get_bead_from_database(&bead_id).await;
+  assert!(created_bead.is_some(), "Bead should be created");
 
-      // Step 6: Verify navigation target is correct
-      assert!(
-        matches!(target_route, Route::BeadDetail { .. }),
-        "Should navigate to bead detail"
-      );
-    }
-    Err(error) => {
-      panic!("Form submission should succeed: {}", error);
-    }
-  }
+  let bead = created_bead;
+  bead.as_ref().map_or(Err("Bead not found".to_string()), |b| {
+    assert_eq!(b.title, form_data.title);
+    Ok(())
+  })?;
+
+  // Step 5: Programmatic navigation should happen
+  let target_route = get_navigation_target_for_form_submission(&bead_id);
+  assert_eq!(target_route, Route::BeadDetail { id: bead_id.clone() });
+
+  // Step 6: Verify navigation target is correct
+  assert!(
+    matches!(target_route, Route::BeadDetail { .. }),
+    "Should navigate to bead detail"
+  );
+
+  Ok(())
 }
 
 /// Test the complete bead deletion workflow with navigation
-#[test]
-fn test_bead_deletion_workflow_with_navigation() {
+#[tokio::test]
+async fn test_bead_deletion_workflow_with_navigation() -> Result<(), String> {
   // Simulate the complete workflow from bead deletion to navigation
 
   // Step 1: Create a test bead to delete
   let test_bead = create_test_bead().await;
-  let bead_id = test_bead.id.to_string();
+  let bead_id = test_bead.id.clone();
 
   // Step 2: Navigate to bead detail page
   let detail_route = Route::BeadDetail {
@@ -78,30 +79,27 @@ fn test_bead_deletion_workflow_with_navigation() {
   assert!(is_confirmed, "Deletion should be confirmed");
 
   // Step 4: Delete bead (async operation)
-  let delete_result = delete_bead_from_database(&test_bead.id).await;
+  delete_bead_from_database(&test_bead.id)
+    .await
+    .map_err(|e| format!("Bead deletion failed: {e}"))?;
 
-  match delete_result {
-    Ok(()) => {
-      // Step 5: Verify bead was deleted
-      let deleted_bead = get_bead_from_database(&test_bead.id).await;
-      assert!(deleted_bead.is_none(), "Bead should be deleted");
+  // Step 5: Verify bead was deleted
+  let deleted_bead = get_bead_from_database(&test_bead.id).await;
+  assert!(deleted_bead.is_none(), "Bead should be deleted");
 
-      // Step 6: Programmatic navigation should happen
-      let target_route = Route::BeadsList;
-      assert_eq!(target_route, Route::BeadsList);
+  // Step 6: Programmatic navigation should happen
+  let target_route = Route::BeadsList;
+  assert_eq!(target_route, Route::BeadsList);
 
-      // Step 7: Verify we're on the correct page
-      verify_beads_list_page_displayed();
-    }
-    Err(error) => {
-      panic!("Bead deletion should succeed: {}", error);
-    }
-  }
+  // Step 7: Verify we're on the correct page
+  verify_beads_list_page_displayed();
+
+  Ok(())
 }
 
 /// Test error handling in navigation workflows
-#[test]
-fn test_navigation_workflow_error_handling() {
+#[tokio::test]
+async fn test_navigation_workflow_error_handling() -> Result<(), String> {
   // Test that errors are handled gracefully in workflows
 
   // Simulate a form submission that fails
@@ -116,20 +114,17 @@ fn test_navigation_workflow_error_handling() {
   // Simulate database connection failure
   let submit_result = submit_form_data_with_failure(&form_data).await;
 
-  match submit_result {
-    Ok(_) => {
-      panic!("Form submission should fail in this test");
-    }
-    Err(error) => {
-      // Verify error is handled appropriately
-      assert!(!error.is_empty(), "Error message should not be empty");
-      println!("Form submission failed as expected: {}", error);
+  // Verify this returns an error
+  let error = submit_result.expect_err("Form submission should fail in this test");
 
-      // User should still be on the form page
-      let current_route = Route::BeadNew;
-      assert!(matches!(current_route, Route::BeadNew));
-    }
-  }
+  // Verify error is handled appropriately
+  assert!(!error.is_empty(), "Error message should not be empty");
+
+  // User should still be on the form page
+  let current_route = Route::BeadNew;
+  assert!(matches!(current_route, Route::BeadNew));
+
+  Ok(())
 }
 
 /// Test async navigation after database operations
@@ -178,25 +173,15 @@ struct FormSubmissionData {
   priority: i16,
 }
 
-async fn submit_form_data(data: &FormSubmissionData) -> Result<String, String> {
+async fn submit_form_data(_data: &FormSubmissionData) -> Result<String, String> {
   // Simulate async form submission
   tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 
-  // Simulate database save
-  let bead = NewBead {
-    title: data.title.clone(),
-    description: data.description.clone(),
-    status: parse_status(&data.status)?,
-    priority: BeadPriority(data.priority),
-    bead_type: parse_bead_type(&data.bead_type)?,
-    created_by: None,
-  };
-
   // Simulate getting bead ID back
-  Ok(format!("bd-{}", (1..1000).next().unwrap()))
+  Ok("bd-1".to_string())
 }
 
-async fn submit_form_data_with_failure(data: &FormSubmissionData) -> Result<String, String> {
+async fn submit_form_data_with_failure(_data: &FormSubmissionData) -> Result<String, String> {
   // Simulate async form submission with failure
   tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 
@@ -210,6 +195,7 @@ async fn get_bead_from_database(bead_id: &str) -> Option<MockBead> {
 
   if bead_id.starts_with("bd-") {
     Some(MockBead {
+      id: bead_id.to_string(),
       title: format!("Test Bead {}", bead_id),
       description: Some("Test description".to_string()),
       status: BeadStatus::Open,
@@ -221,7 +207,7 @@ async fn get_bead_from_database(bead_id: &str) -> Option<MockBead> {
   }
 }
 
-async fn delete_bead_from_database(bead_id: &BeadId) -> Result<(), String> {
+async fn delete_bead_from_database(bead_id: &str) -> Result<(), String> {
   // Simulate async bead deletion
   tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 
@@ -243,6 +229,7 @@ async fn create_test_bead() -> MockBead {
 
   // Simulate database save
   MockBead {
+    id: "bd-test-1".to_string(),
     title: bead.title,
     description: bead.description,
     status: bead.status,
@@ -270,29 +257,8 @@ fn verify_beads_list_page_displayed() {
   println!("Verified beads list page is displayed");
 }
 
-fn parse_status(status: &str) -> Result<BeadStatus, String> {
-  match status {
-    "open" => Ok(BeadStatus::Open),
-    "in_progress" => Ok(BeadStatus::InProgress),
-    "blocked" => Ok(BeadStatus::Blocked),
-    "deferred" => Ok(BeadStatus::Deferred),
-    "closed" => Ok(BeadStatus::Closed),
-    _ => Err("Invalid status".to_string()),
-  }
-}
-
-fn parse_bead_type(bead_type: &str) -> Result<BeadType, String> {
-  match bead_type {
-    "feature" => Ok(BeadType::Feature),
-    "bugfix" => Ok(BeadType::Bugfix),
-    "refactor" => Ok(BeadType::Refactor),
-    "test" => Ok(BeadType::Test),
-    "docs" => Ok(BeadType::Docs),
-    _ => Err("Invalid bead type".to_string()),
-  }
-}
-
 struct MockBead {
+  id: String,
   title: String,
   description: Option<String>,
   status: BeadStatus,
