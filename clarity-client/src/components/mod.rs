@@ -17,6 +17,7 @@ pub mod keyboard_help;
 pub mod loading;
 pub mod settings_view;
 pub mod terminal_feed;
+pub mod theme;
 pub mod toast;
 
 pub use error_boundary::{use_error_handler, ErrorBoundary};
@@ -30,6 +31,10 @@ pub use loading::{
 };
 pub use settings_view::SettingsView;
 pub use terminal_feed::TerminalFeed;
+pub use theme::{
+  theme_styles, use_theme, Theme, ThemeController, ThemeProvider, ThemeSelector, ThemeState,
+  ThemeToggle,
+};
 pub use toast::{
   toast_styles, use_toast, Toast, ToastContainer, ToastController, ToastItem, ToastProvider,
   ToastSignal, ToastType,

@@ -39,93 +39,93 @@ const TOAST_AUTO_DISMISS_DURATION: Duration = Duration::from_secs(5);
 /// Toast type variants
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum ToastType {
-    /// Success toast (green)
-    Success,
-    /// Error toast (red)
-    Error,
-    /// Warning toast (yellow/amber)
-    Warning,
-    /// Info toast (blue)
-    #[default]
-    Info,
+  /// Success toast (green)
+  Success,
+  /// Error toast (red)
+  Error,
+  /// Warning toast (yellow/amber)
+  Warning,
+  /// Info toast (blue)
+  #[default]
+  Info,
 }
 
 impl ToastType {
-    /// Returns the CSS class for this toast type
-    #[must_use]
-    pub const fn as_class(&self) -> &'static str {
-        match self {
-            Self::Success => "toast-success",
-            Self::Error => "toast-error",
-            Self::Warning => "toast-warning",
-            Self::Info => "toast-info",
-        }
+  /// Returns the CSS class for this toast type
+  #[must_use]
+  pub const fn as_class(&self) -> &'static str {
+    match self {
+      Self::Success => "toast-success",
+      Self::Error => "toast-error",
+      Self::Warning => "toast-warning",
+      Self::Info => "toast-info",
     }
+  }
 
-    /// Returns the icon SVG path for this toast type
-    #[must_use]
-    pub const fn icon_path(&self) -> &'static str {
-        match self {
+  /// Returns the icon SVG path for this toast type
+  #[must_use]
+  pub const fn icon_path(&self) -> &'static str {
+    match self {
             Self::Success => "M5 13l4 4L19 7",
             Self::Error => "M6 18L18 6M6 6l12 12",
             Self::Warning => "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z",
             Self::Info => "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
         }
-    }
+  }
 }
 
 /// A single toast notification
 #[derive(Clone, Debug, PartialEq)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 pub struct Toast {
-    /// Unique identifier for this toast
-    pub id: Uuid,
-    /// Type of toast (determines styling)
-    pub toast_type: ToastType,
-    /// Toast title
-    pub title: String,
-    /// Toast message body
-    pub message: String,
-    /// When this toast was created
-    pub created_at: DateTime<Utc>,
+  /// Unique identifier for this toast
+  pub id: Uuid,
+  /// Type of toast (determines styling)
+  pub toast_type: ToastType,
+  /// Toast title
+  pub title: String,
+  /// Toast message body
+  pub message: String,
+  /// When this toast was created
+  pub created_at: DateTime<Utc>,
 }
 
 impl Toast {
-    /// Creates a new toast with the given type, title, and message
-    #[must_use]
-    pub fn new(toast_type: ToastType, title: impl Into<String>, message: impl Into<String>) -> Self {
-        Self {
-            id: Uuid::new_v4(),
-            toast_type,
-            title: title.into(),
-            message: message.into(),
-            created_at: Utc::now(),
-        }
+  /// Creates a new toast with the given type, title, and message
+  #[must_use]
+  pub fn new(toast_type: ToastType, title: impl Into<String>, message: impl Into<String>) -> Self {
+    Self {
+      id: Uuid::new_v4(),
+      toast_type,
+      title: title.into(),
+      message: message.into(),
+      created_at: Utc::now(),
     }
+  }
 
-    /// Creates a success toast
-    #[must_use]
-    pub fn success(title: impl Into<String>, message: impl Into<String>) -> Self {
-        Self::new(ToastType::Success, title, message)
-    }
+  /// Creates a success toast
+  #[must_use]
+  pub fn success(title: impl Into<String>, message: impl Into<String>) -> Self {
+    Self::new(ToastType::Success, title, message)
+  }
 
-    /// Creates an error toast
-    #[must_use]
-    pub fn error(title: impl Into<String>, message: impl Into<String>) -> Self {
-        Self::new(ToastType::Error, title, message)
-    }
+  /// Creates an error toast
+  #[must_use]
+  pub fn error(title: impl Into<String>, message: impl Into<String>) -> Self {
+    Self::new(ToastType::Error, title, message)
+  }
 
-    /// Creates a warning toast
-    #[must_use]
-    pub fn warning(title: impl Into<String>, message: impl Into<String>) -> Self {
-        Self::new(ToastType::Warning, title, message)
-    }
+  /// Creates a warning toast
+  #[must_use]
+  pub fn warning(title: impl Into<String>, message: impl Into<String>) -> Self {
+    Self::new(ToastType::Warning, title, message)
+  }
 
-    /// Creates an info toast
-    #[must_use]
-    pub fn info(title: impl Into<String>, message: impl Into<String>) -> Self {
-        Self::new(ToastType::Info, title, message)
-    }
+  /// Creates an info toast
+  #[must_use]
+  pub fn info(title: impl Into<String>, message: impl Into<String>) -> Self {
+    Self::new(ToastType::Info, title, message)
+  }
 }
 
 /// Global toast state signal type
@@ -138,78 +138,78 @@ pub type ToastSignal = Signal<Vec<Toast>>;
 /// uses interior mutability, so methods take `&self`.
 #[derive(Clone, Copy, Debug)]
 pub struct ToastController {
-    toasts: ToastSignal,
+  toasts: ToastSignal,
 }
 
 impl ToastController {
-    /// Creates a new `ToastController` with the given signal
-    #[must_use]
-    pub const fn new(toasts: ToastSignal) -> Self {
-        Self { toasts }
-    }
+  /// Creates a new `ToastController` with the given signal
+  #[must_use]
+  pub const fn new(toasts: ToastSignal) -> Self {
+    Self { toasts }
+  }
 
-    /// Show a custom toast
-    pub fn show(&self, toast_type: ToastType, title: impl Into<String>, message: impl Into<String>) {
-        let toast = Toast::new(toast_type, title, message);
-        self.add_toast(toast);
-    }
+  /// Show a custom toast
+  pub fn show(&self, toast_type: ToastType, title: impl Into<String>, message: impl Into<String>) {
+    let toast = Toast::new(toast_type, title, message);
+    self.add_toast(toast);
+  }
 
-    /// Show a success toast
-    pub fn success(&self, title: impl Into<String>, message: impl Into<String>) {
-        let toast = Toast::success(title, message);
-        self.add_toast(toast);
-    }
+  /// Show a success toast
+  pub fn success(&self, title: impl Into<String>, message: impl Into<String>) {
+    let toast = Toast::success(title, message);
+    self.add_toast(toast);
+  }
 
-    /// Show an error toast
-    pub fn error(&self, title: impl Into<String>, message: impl Into<String>) {
-        let toast = Toast::error(title, message);
-        self.add_toast(toast);
-    }
+  /// Show an error toast
+  pub fn error(&self, title: impl Into<String>, message: impl Into<String>) {
+    let toast = Toast::error(title, message);
+    self.add_toast(toast);
+  }
 
-    /// Show a warning toast
-    pub fn warning(&self, title: impl Into<String>, message: impl Into<String>) {
-        let toast = Toast::warning(title, message);
-        self.add_toast(toast);
-    }
+  /// Show a warning toast
+  pub fn warning(&self, title: impl Into<String>, message: impl Into<String>) {
+    let toast = Toast::warning(title, message);
+    self.add_toast(toast);
+  }
 
-    /// Show an info toast
-    pub fn info(&self, title: impl Into<String>, message: impl Into<String>) {
-        let toast = Toast::info(title, message);
-        self.add_toast(toast);
-    }
+  /// Show an info toast
+  pub fn info(&self, title: impl Into<String>, message: impl Into<String>) {
+    let toast = Toast::info(title, message);
+    self.add_toast(toast);
+  }
 
-    /// Dismiss a specific toast by ID
-    pub fn dismiss(&self, id: Uuid) {
-        // Signal is Copy, so we can copy it and modify
-        let mut signal = self.toasts;
-        signal.write().retain(|t| t.id != id);
-    }
+  /// Dismiss a specific toast by ID
+  pub fn dismiss(&self, id: Uuid) {
+    // Signal is Copy, so we can copy it and modify
+    let mut signal = self.toasts;
+    signal.write().retain(|t| t.id != id);
+  }
 
-    /// Dismiss all toasts
-    pub fn dismiss_all(&self) {
-        // Signal is Copy, so we can copy it and modify
-        let mut signal = self.toasts;
-        signal.write().clear();
-    }
+  /// Dismiss all toasts
+  pub fn dismiss_all(&self) {
+    // Signal is Copy, so we can copy it and modify
+    let mut signal = self.toasts;
+    signal.write().clear();
+  }
 
-    /// Add a toast to the stack
-    fn add_toast(&self, toast: Toast) {
-        // Signal is Copy, so we can copy it and modify
-        let mut signal = self.toasts;
-        signal.write().push(toast);
-    }
+  /// Add a toast to the stack
+  fn add_toast(&self, toast: Toast) {
+    // Signal is Copy, so we can copy it and modify
+    let mut signal = self.toasts;
+    signal.write().push(toast);
+  }
 
-    /// Get the current number of toasts
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.toasts.read().len()
-    }
+  /// Get the current number of toasts
+  #[must_use]
+  pub fn len(&self) -> usize {
+    self.toasts.read().len()
+  }
 
-    /// Check if there are no toasts
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.toasts.read().is_empty()
-    }
+  /// Check if there are no toasts
+  #[must_use]
+  pub fn is_empty(&self) -> bool {
+    self.toasts.read().is_empty()
+  }
 }
 
 /// Hook to access the toast controller
@@ -221,14 +221,14 @@ impl ToastController {
 /// This hook will panic if used outside of a `ToastProvider` context.
 #[must_use]
 pub fn use_toast() -> ToastController {
-    use_context::<ToastController>()
+  use_context::<ToastController>()
 }
 
 /// Props for `ToastProvider` component
 #[derive(Clone, Debug, PartialEq, Props)]
 pub struct ToastProviderProps {
-    /// Child components
-    children: Element,
+  /// Child components
+  children: Element,
 }
 
 /// Provider component that wraps the app and provides toast state
@@ -246,28 +246,28 @@ pub struct ToastProviderProps {
 /// ```
 #[component]
 pub fn ToastProvider(props: ToastProviderProps) -> Element {
-    // Initialize global toast state
-    let toasts = use_signal(Vec::new);
-    let controller = use_hook(|| ToastController::new(toasts));
+  // Initialize global toast state
+  let toasts = use_signal(Vec::new);
+  let controller = use_hook(|| ToastController::new(toasts));
 
-    // Provide the controller to all child components
-    use_context_provider(|| controller);
+  // Provide the controller to all child components
+  use_context_provider(|| controller);
 
-    rsx! {
-        {props.children}
+  rsx! {
+      {props.children}
 
-        // Render the toast container
-        ToastContainer {
-            toasts: toasts
-        }
-    }
+      // Render the toast container
+      ToastContainer {
+          toasts: toasts
+      }
+  }
 }
 
 /// Props for `ToastContainer` component
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Props)]
 pub struct ToastContainerProps {
-    /// The toast signal to render
-    toasts: ToastSignal,
+  /// The toast signal to render
+  toasts: ToastSignal,
 }
 
 /// Container component that renders all active toasts
@@ -276,28 +276,28 @@ pub struct ToastContainerProps {
 /// It positions toasts in the top-right corner of the screen.
 #[component]
 pub fn ToastContainer(props: ToastContainerProps) -> Element {
-    let toasts = props.toasts.read();
+  let toasts = props.toasts.read();
 
-    rsx! {
-        div { class: "toast-container",
-            for toast in toasts.iter() {
-                ToastItem {
-                    key: "{toast.id}",
-                    toast: toast.clone(),
-                    toasts: props.toasts
-                }
-            }
-        }
-    }
+  rsx! {
+      div { class: "toast-container",
+          for toast in toasts.iter() {
+              ToastItem {
+                  key: "{toast.id}",
+                  toast: toast.clone(),
+                  toasts: props.toasts
+              }
+          }
+      }
+  }
 }
 
 /// Props for `ToastItem` component
 #[derive(Clone, Debug, PartialEq, Props)]
 pub struct ToastItemProps {
-    /// The toast to display
-    toast: Toast,
-    /// Reference to the toast signal for dismissal
-    toasts: ToastSignal,
+  /// The toast to display
+  toast: Toast,
+  /// Reference to the toast signal for dismissal
+  toasts: ToastSignal,
 }
 
 /// Individual toast item component
@@ -309,62 +309,62 @@ pub struct ToastItemProps {
 /// - Auto-dismiss after 5 seconds
 #[component]
 pub fn ToastItem(props: ToastItemProps) -> Element {
-    let toast_id = props.toast.id;
-    let toast_type = props.toast.toast_type;
-    let title = props.toast.title.clone();
-    let message = props.toast.message.clone();
-    let icon_path = toast_type.icon_path();
-    let class = toast_type.as_class();
+  let toast_id = props.toast.id;
+  let toast_type = props.toast.toast_type;
+  let title = props.toast.title.clone();
+  let message = props.toast.message.clone();
+  let icon_path = toast_type.icon_path();
+  let class = toast_type.as_class();
 
-    // Set up auto-dismiss - use shadowing with mut for the signal
-    let mut toasts_for_spawn = props.toasts;
-    use_effect(move || {
-        spawn(async move {
-            tokio::time::sleep(TOAST_AUTO_DISMISS_DURATION).await;
-            toasts_for_spawn.write().retain(|t| t.id != toast_id);
-        });
+  // Set up auto-dismiss - use shadowing with mut for the signal
+  let mut toasts_for_spawn = props.toasts;
+  use_effect(move || {
+    spawn(async move {
+      tokio::time::sleep(TOAST_AUTO_DISMISS_DURATION).await;
+      toasts_for_spawn.write().retain(|t| t.id != toast_id);
     });
+  });
 
-    // Dismiss handler - use shadowing with mut for the signal
-    let mut toasts_for_dismiss = props.toasts;
-    let handle_dismiss = move |_| {
-        toasts_for_dismiss.write().retain(|t| t.id != toast_id);
-    };
+  // Dismiss handler - use shadowing with mut for the signal
+  let mut toasts_for_dismiss = props.toasts;
+  let handle_dismiss = move |_| {
+    toasts_for_dismiss.write().retain(|t| t.id != toast_id);
+  };
 
-    rsx! {
-        div { class: "toast-item {class}",
-            div { class: "toast-icon",
-                svg {
-                    xmlns: "http://www.w3.org/2000/svg",
-                    fill: "none",
-                    view_box: "0 0 24 24",
-                    stroke: "currentColor",
-                    stroke_width: 2,
-                    path {
-                        d: "{icon_path}"
-                    }
-                }
-            }
-            div { class: "toast-content",
-                div { class: "toast-title", "{title}" }
-                div { class: "toast-message", "{message}" }
-            }
-            button {
-                class: "toast-dismiss",
-                onclick: handle_dismiss,
-                svg {
-                    xmlns: "http://www.w3.org/2000/svg",
-                    fill: "none",
-                    view_box: "0 0 24 24",
-                    stroke: "currentColor",
-                    stroke_width: 2,
-                    path {
-                        d: "M6 18L18 6M6 6l12 12"
-                    }
-                }
-            }
-        }
-    }
+  rsx! {
+      div { class: "toast-item {class}",
+          div { class: "toast-icon",
+              svg {
+                  xmlns: "http://www.w3.org/2000/svg",
+                  fill: "none",
+                  view_box: "0 0 24 24",
+                  stroke: "currentColor",
+                  stroke_width: 2,
+                  path {
+                      d: "{icon_path}"
+                  }
+              }
+          }
+          div { class: "toast-content",
+              div { class: "toast-title", "{title}" }
+              div { class: "toast-message", "{message}" }
+          }
+          button {
+              class: "toast-dismiss",
+              onclick: handle_dismiss,
+              svg {
+                  xmlns: "http://www.w3.org/2000/svg",
+                  fill: "none",
+                  view_box: "0 0 24 24",
+                  stroke: "currentColor",
+                  stroke_width: 2,
+                  path {
+                      d: "M6 18L18 6M6 6l12 12"
+                  }
+              }
+          }
+      }
+  }
 }
 
 /// CSS styles for the toast notification system
@@ -373,7 +373,7 @@ pub fn ToastItem(props: ToastItemProps) -> Element {
 /// to get a CSS string that can be injected.
 #[must_use]
 pub const fn toast_styles() -> &'static str {
-    "
+  "
 /* Toast Container - positioned top-right */
 .toast-container {
     position: fixed;
@@ -488,106 +488,106 @@ pub const fn toast_styles() -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    #[test]
-    fn test_toast_type_as_class() {
-        assert_eq!(ToastType::Success.as_class(), "toast-success");
-        assert_eq!(ToastType::Error.as_class(), "toast-error");
-        assert_eq!(ToastType::Warning.as_class(), "toast-warning");
-        assert_eq!(ToastType::Info.as_class(), "toast-info");
-    }
+  #[test]
+  fn test_toast_type_as_class() {
+    assert_eq!(ToastType::Success.as_class(), "toast-success");
+    assert_eq!(ToastType::Error.as_class(), "toast-error");
+    assert_eq!(ToastType::Warning.as_class(), "toast-warning");
+    assert_eq!(ToastType::Info.as_class(), "toast-info");
+  }
 
-    #[test]
-    fn test_toast_type_default() {
-        assert_eq!(ToastType::default(), ToastType::Info);
-    }
+  #[test]
+  fn test_toast_type_default() {
+    assert_eq!(ToastType::default(), ToastType::Info);
+  }
 
-    #[test]
-    fn test_toast_new() {
-        let toast = Toast::new(ToastType::Success, "Test Title", "Test Message");
+  #[test]
+  fn test_toast_new() {
+    let toast = Toast::new(ToastType::Success, "Test Title", "Test Message");
 
-        assert!(!toast.id.is_nil());
-        assert_eq!(toast.toast_type, ToastType::Success);
-        assert_eq!(toast.title, "Test Title");
-        assert_eq!(toast.message, "Test Message");
-    }
+    assert!(!toast.id.is_nil());
+    assert_eq!(toast.toast_type, ToastType::Success);
+    assert_eq!(toast.title, "Test Title");
+    assert_eq!(toast.message, "Test Message");
+  }
 
-    #[test]
-    fn test_toast_success() {
-        let toast = Toast::success("Success!", "Operation completed.");
+  #[test]
+  fn test_toast_success() {
+    let toast = Toast::success("Success!", "Operation completed.");
 
-        assert_eq!(toast.toast_type, ToastType::Success);
-        assert_eq!(toast.title, "Success!");
-        assert_eq!(toast.message, "Operation completed.");
-    }
+    assert_eq!(toast.toast_type, ToastType::Success);
+    assert_eq!(toast.title, "Success!");
+    assert_eq!(toast.message, "Operation completed.");
+  }
 
-    #[test]
-    fn test_toast_error() {
-        let toast = Toast::error("Error!", "Something went wrong.");
+  #[test]
+  fn test_toast_error() {
+    let toast = Toast::error("Error!", "Something went wrong.");
 
-        assert_eq!(toast.toast_type, ToastType::Error);
-        assert_eq!(toast.title, "Error!");
-        assert_eq!(toast.message, "Something went wrong.");
-    }
+    assert_eq!(toast.toast_type, ToastType::Error);
+    assert_eq!(toast.title, "Error!");
+    assert_eq!(toast.message, "Something went wrong.");
+  }
 
-    #[test]
-    fn test_toast_warning() {
-        let toast = Toast::warning("Warning!", "Please check your input.");
+  #[test]
+  fn test_toast_warning() {
+    let toast = Toast::warning("Warning!", "Please check your input.");
 
-        assert_eq!(toast.toast_type, ToastType::Warning);
-        assert_eq!(toast.title, "Warning!");
-        assert_eq!(toast.message, "Please check your input.");
-    }
+    assert_eq!(toast.toast_type, ToastType::Warning);
+    assert_eq!(toast.title, "Warning!");
+    assert_eq!(toast.message, "Please check your input.");
+  }
 
-    #[test]
-    fn test_toast_info() {
-        let toast = Toast::info("Info", "Here is some information.");
+  #[test]
+  fn test_toast_info() {
+    let toast = Toast::info("Info", "Here is some information.");
 
-        assert_eq!(toast.toast_type, ToastType::Info);
-        assert_eq!(toast.title, "Info");
-        assert_eq!(toast.message, "Here is some information.");
-    }
+    assert_eq!(toast.toast_type, ToastType::Info);
+    assert_eq!(toast.title, "Info");
+    assert_eq!(toast.message, "Here is some information.");
+  }
 
-    #[test]
-    fn test_toast_unique_ids() {
-        let toast1 = Toast::info("A", "B");
-        let toast2 = Toast::info("C", "D");
+  #[test]
+  fn test_toast_unique_ids() {
+    let toast1 = Toast::info("A", "B");
+    let toast2 = Toast::info("C", "D");
 
-        // Each toast should have a unique ID
-        assert_ne!(toast1.id, toast2.id);
-    }
+    // Each toast should have a unique ID
+    assert_ne!(toast1.id, toast2.id);
+  }
 
-    #[test]
-    fn test_toast_styles_returns_string() {
-        let styles = toast_styles();
+  #[test]
+  fn test_toast_styles_returns_string() {
+    let styles = toast_styles();
 
-        assert!(styles.contains(".toast-container"));
-        assert!(styles.contains(".toast-item"));
-        assert!(styles.contains(".toast-success"));
-        assert!(styles.contains(".toast-error"));
-        assert!(styles.contains(".toast-warning"));
-        assert!(styles.contains(".toast-info"));
-    }
+    assert!(styles.contains(".toast-container"));
+    assert!(styles.contains(".toast-item"));
+    assert!(styles.contains(".toast-success"));
+    assert!(styles.contains(".toast-error"));
+    assert!(styles.contains(".toast-warning"));
+    assert!(styles.contains(".toast-info"));
+  }
 
-    #[test]
-    fn test_toast_controller_type_check() {
-        // This test just ensures the ToastController compiles with the correct types
-        // Actual testing would require a Dioxus runtime
-        let _ = || {
-            fn component() -> Element {
-                let toast = use_toast();
-                toast.success("Title", "Message");
-                toast.error("Title", "Message");
-                toast.warning("Title", "Message");
-                toast.info("Title", "Message");
-                toast.dismiss(Uuid::nil());
-                toast.dismiss_all();
-                let _len = toast.len();
-                let _empty = toast.is_empty();
-                rsx! { div {} }
-            }
-            let _ = component;
-        };
-    }
+  #[test]
+  fn test_toast_controller_type_check() {
+    // This test just ensures the ToastController compiles with the correct types
+    // Actual testing would require a Dioxus runtime
+    let _ = || {
+      fn component() -> Element {
+        let toast = use_toast();
+        toast.success("Title", "Message");
+        toast.error("Title", "Message");
+        toast.warning("Title", "Message");
+        toast.info("Title", "Message");
+        toast.dismiss(Uuid::nil());
+        toast.dismiss_all();
+        let _len = toast.len();
+        let _empty = toast.is_empty();
+        rsx! { div {} }
+      }
+      let _ = component;
+    };
+  }
 }

@@ -3,6 +3,17 @@
 
 /* ===== CSS Custom Properties ===== */
 :root {
+  /* Theme Colors (HSL format for easy manipulation) */
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --primary: 221.2 83.2% 53.3%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --muted: 210 40% 96.1%;
+  --border: 214.3 31.8% 91.4%;
+
   /* Colors - Light Mode */
   --color-background: #ffffff;
   --color-surface: #f5f5f5;
@@ -120,6 +131,17 @@
 
 /* Manual dark mode toggle support */
 .dark {
+  /* Theme Colors - Dark Mode */
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --primary: 217.2 91.2% 59.8%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 217.2 32.6% 17.5%;
+  --muted: 217.2 32.6% 17.5%;
+  --border: 217.2 32.6% 17.5%;
+
   --color-background: var(--color-background-dark);
   --color-surface: var(--color-surface-dark);
   --color-surface-variant: var(--color-surface-variant-dark);
@@ -127,6 +149,19 @@
   --color-text-secondary: var(--color-text-secondary-dark);
   --color-border: var(--color-border-dark);
   --color-divider: var(--color-divider-dark);
+}
+
+/* Light mode class for explicit light mode */
+.light {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --primary: 221.2 83.2% 53.3%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --muted: 210 40% 96.1%;
+  --border: 214.3 31.8% 91.4%;
 }
 
 /* ===== Reduced Motion Support (Accessibility) ===== */
@@ -1358,5 +1393,136 @@ input[type="submit"],
 
   .error p {
     color: var(--color-text-secondary-dark);
+  }
+}
+
+/* ===== Theme System Styles ===== */
+
+/* Apply theme colors to root element */
+html.light {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+html.dark {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+/* Theme Toggle Button */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: transparent;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  color: hsl(var(--foreground));
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.theme-toggle:hover {
+  background-color: hsl(var(--muted));
+  border-color: hsl(var(--primary));
+}
+
+.theme-toggle:focus {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+.theme-toggle-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.theme-toggle-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Theme Selector Container */
+.theme-selector {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background-color: hsl(var(--muted));
+  border-radius: var(--radius-lg);
+}
+
+/* Theme Option Button */
+.theme-option-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  color: hsl(var(--foreground));
+  min-width: 80px;
+  min-height: 44px;
+}
+
+.theme-option-button:hover {
+  background-color: hsl(var(--background) / 0.5);
+}
+
+.theme-option-button.selected {
+  background-color: hsl(var(--background));
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 1px hsl(var(--primary));
+}
+
+.theme-option-button:focus {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+.theme-option-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.theme-option-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Dark mode adjustments for theme components */
+.dark .theme-toggle {
+  border-color: hsl(var(--border));
+}
+
+.dark .theme-selector {
+  background-color: hsl(var(--muted));
+}
+
+.dark .theme-option-button.selected {
+  background-color: hsl(var(--card));
+}
+
+/* Responsive theme toggle */
+@media (max-width: 768px) {
+  .theme-selector {
+    flex-direction: column;
+  }
+
+  .theme-option-button {
+    flex-direction: row;
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .theme-toggle-label {
+    display: none;
   }
 }
