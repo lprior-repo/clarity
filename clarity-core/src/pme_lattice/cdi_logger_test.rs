@@ -2,7 +2,6 @@
 //!
 //! Tests follow TDD approach for bead bd-16qs.4
 
-#![cfg(test)]
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]

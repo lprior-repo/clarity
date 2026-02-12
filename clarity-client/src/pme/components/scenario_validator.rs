@@ -4,7 +4,6 @@
 
 use crate::planner::types::NorthStarScenario;
 use crate::pme::state::PmeDiscoverSignals;
-use crate::pme::types::PlotHoleSeverity;
 use dioxus::prelude::*;
 
 /// Scenario Validator Component

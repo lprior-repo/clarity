@@ -14,9 +14,6 @@
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
-use crate::planner::parser::{parse_use_case, parse_use_cases, validate_use_case};
-use crate::planner::types::{UseCase, UseCasePriority};
-
 /// Test valid use case parsing
 ///
 /// This test verifies that a properly formatted use case string

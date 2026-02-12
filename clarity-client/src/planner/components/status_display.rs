@@ -20,7 +20,7 @@ use dioxus::prelude::*;
 #[component]
 pub fn StatusBadge(status: ProgressStatus, size: StatusBadgeSize, show_pulse: bool) -> Element {
   let css_classes = status_colors::get_status_css_classes(status, show_pulse);
-  let hover_css_classes = status_colors::get_status_hover_css_classes(status);
+  let _hover_css_classes = status_colors::get_status_hover_css_classes(status);
   let border_css_classes = status_colors::get_status_border_css_classes(status);
 
   let size_classes = match size {
@@ -131,7 +131,7 @@ pub fn StatusCard(
   description: Option<String>,
   count: Option<usize>,
 ) -> Element {
-  let css_classes = status_colors::get_status_css_classes(status, false);
+  let _css_classes = status_colors::get_status_css_classes(status, false);
   let border_css_classes = status_colors::get_status_border_css_classes(status);
 
   rsx! {
@@ -183,7 +183,7 @@ pub fn StatusSummary(
   on_status_click: Option<Callback<ProgressStatus>>,
 ) -> Element {
   let state_read = state.read();
-  let statuses = state_read.get_all_task_statuses();
+  let _statuses = state_read.get_all_task_statuses();
   let metrics = state_read.calculate_status_metrics();
 
   rsx! {

@@ -1062,7 +1062,7 @@ mod state_corruption_tests {
 
 #[cfg(test)]
 mod race_condition_tests {
-  use crate::planner::{DiamondPhase, Persona, PlanTask, PlannerState, TaskType};
+  use crate::planner::{DiamondPhase, PlannerState};
 
   /// RACE TEST 1: Concurrent State Branching
   /// Given: Cloned states
@@ -1178,7 +1178,7 @@ mod race_condition_tests {
     let mut state = PlannerState::new();
 
     let persona1 = Persona::new("User1".to_string(), "Dev".to_string(), "Desc".to_string());
-    let persona2 = Persona::new("User2".to_string(), "Dev".to_string(), "Desc".to_string());
+    let _persona2 = Persona::new("User2".to_string(), "Dev".to_string(), "Desc".to_string());
 
     state = state.add_persona(persona1).unwrap();
 
@@ -1228,7 +1228,7 @@ mod race_condition_tests {
 #[cfg(test)]
 mod comprehensive_integration_tests {
   use crate::planner::validation;
-  use crate::planner::{DiamondPhase, Persona, PlanTask, PlannerState, TaskType};
+  use crate::planner::{DiamondPhase, PlanTask, PlannerState};
 
   /// INTEGRATION TEST 1: Full Workflow with All Validation Checks
   /// Given: Complete workflow from creation to validation

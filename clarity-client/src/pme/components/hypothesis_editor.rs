@@ -7,7 +7,6 @@
 use crate::pme::state::PmeDiscoverSignals;
 use crate::pme::types::{Hypothesis, HypothesisStatus, PmeError};
 use dioxus::prelude::*;
-use uuid::Uuid;
 
 /// Hypothesis Editor Component
 #[component]

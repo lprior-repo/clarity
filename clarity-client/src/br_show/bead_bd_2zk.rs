@@ -175,8 +175,8 @@ fn Bd2zkShow(props: Bd2zkShowProps) -> Element {
     created_by,
     updated_at,
     source_repo,
-    compaction_level,
-    original_size,
+    compaction_level: _,
+    original_size: _,
   } = props;
 
   // Clone values that will be used multiple times

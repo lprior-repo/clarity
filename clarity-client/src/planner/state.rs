@@ -1792,7 +1792,7 @@ mod tests {
       .unwrap();
 
     // Add use case with empty description
-    let mut incomplete_use_case = UseCase::new(
+    let incomplete_use_case = UseCase::new(
       "Title".to_string(),
       "".to_string(), // Empty description
       "Trigger".to_string(),
@@ -1842,7 +1842,7 @@ mod tests {
       .unwrap();
 
     // Add task with empty description
-    let mut incomplete_task = PlanTask::new(
+    let incomplete_task = PlanTask::new(
       "Title".to_string(),
       "".to_string(), // Empty description
       TaskType::Development,

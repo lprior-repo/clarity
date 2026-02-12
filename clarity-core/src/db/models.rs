@@ -73,6 +73,18 @@ macro_rules! uuid_id {
         Self(uuid)
       }
     }
+
+    impl PartialOrd for $name {
+      fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+      }
+    }
+
+    impl Ord for $name {
+      fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.0.cmp(&other.0)
+      }
+    }
   };
 }
 

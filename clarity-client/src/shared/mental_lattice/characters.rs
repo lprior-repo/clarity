@@ -49,7 +49,7 @@ use uuid::Uuid;
 
 pub const MIN_RCA_DEPTH: usize = 2;
 pub const MAX_RCA_DEPTH: usize = 5;
-pub const STRAW_MAN_CONFIDENCE_THRESHOLD: f32 = 0.3;
+pub const STRAW_MAN_CONFIDENCE_THRESHOLD: f32 = 0.15;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

@@ -16,8 +16,8 @@ pub mod state;
 pub mod types;
 
 pub use components::{
-  HypothesisEditor, HypothesisSummary, InterviewLogger, InterviewSummary, PersonaForge,
-  PersonaSummary, ScenarioSummary, ScenarioValidator,
+  HypothesisEditor, HypothesisSummary, InterviewLogger, InterviewSummary, LatticeAuditSummaryCard,
+  PersonaForge, PersonaSummary, ScenarioSummary, ScenarioValidator,
 };
 pub use discover_panel::{DiscoverTab, PmeDiscoverPanel, PmeDiscoverPanelProps};
 pub use state::{PmeDiscoverProvider, PmeDiscoverSignals};

@@ -11,7 +11,6 @@
 #![forbid(unsafe_code)]
 
 use chrono::{DateTime, Utc};
-use clarity_core::progress::ProgressStatus;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use thiserror::Error;
@@ -55,7 +54,10 @@ impl DiamondPhase {
   #[must_use]
   pub fn is_active(&self, current_phase: DiamondPhase) -> bool {
     use DiamondPhase::*;
-    matches!((self, current_phase), (Top, Top) | (Right, Right) | (Bottom, Bottom) | (Left, Left))
+    matches!(
+      (self, current_phase),
+      (Top, Top) | (Right, Right) | (Bottom, Bottom) | (Left, Left)
+    )
   }
 
   /// Check if phase is complete (all phases before current are complete)

@@ -5,8 +5,7 @@
 // Dioxus rsx! macro internally uses unwrap, so we allow the disallowed_methods lint.
 #![allow(clippy::disallowed_methods)]
 
-use crate::app::Route;
-use crate::br_show::{fetch_br_issue, BrIssue, BrShowError};
+use crate::br_show::{fetch_br_issue, BrIssue};
 use dioxus::prelude::*;
 use std::rc::Rc;
 

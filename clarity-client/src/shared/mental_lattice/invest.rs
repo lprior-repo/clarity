@@ -510,7 +510,7 @@ mod tests {
         CriterionScore::new(InvestCriterion::Independent, 0.8, "test".to_string()).unwrap(),
       );
 
-    assert!(!incomplete.is_ready());
+    assert!(!incomplete.is_ready);
 
     let complete_but_blocked = BehaviorSpec::new("Title".to_string(), "Description".to_string())
       .unwrap()
@@ -533,7 +533,7 @@ mod tests {
         CriterionScore::new(InvestCriterion::Testable, 0.8, "test".to_string()).unwrap(),
       );
 
-    assert!(!complete_but_blocked.is_ready());
+    assert!(!complete_but_blocked.is_ready);
 
     let ready = BehaviorSpec::new("Title".to_string(), "Description".to_string())
       .unwrap()
@@ -556,7 +556,7 @@ mod tests {
         CriterionScore::new(InvestCriterion::Testable, 0.8, "test".to_string()).unwrap(),
       );
 
-    assert!(ready.is_ready());
+    assert!(ready.is_ready);
   }
 
   #[test]

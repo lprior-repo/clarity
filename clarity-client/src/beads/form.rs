@@ -67,10 +67,10 @@ fn BeadForm(mode: FormMode) -> Element {
   let mut priority = use_signal(|| 2_i16);
 
   // Async states
-  let mut is_loading = use_signal(|| false);
-  let mut load_error = use_signal(|| Option::<String>::None);
+  let is_loading = use_signal(|| false);
+  let load_error = use_signal(|| Option::<String>::None);
   let mut is_submitting = use_signal(|| false);
-  let mut submit_trigger = use_signal(|| false);
+  let submit_trigger = use_signal(|| false);
 
   // Validation state
   let (validation_state, field_errors, touch_field, validate, is_valid) = use_form_validation();
@@ -162,9 +162,9 @@ fn BeadForm(mode: FormMode) -> Element {
   {
     let mut submit_trigger_clone = submit_trigger.clone();
     let mut is_submitting_clone = is_submitting.clone();
-    let validate_clone = validate.clone();
-    let navigator_for_keyboard = navigator.clone();
-    let mode_for_navigation = mode.clone();
+    let _validate_clone = validate.clone();
+    let _navigator_for_keyboard = navigator.clone();
+    let _mode_for_navigation = mode.clone();
 
     use_effect(move || {
       if *submit_trigger_clone.read() {

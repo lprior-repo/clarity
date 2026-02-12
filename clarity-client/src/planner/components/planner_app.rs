@@ -298,7 +298,7 @@ mod lazy_rendering_tests {
 
   #[test]
   fn test_discovery_phase_only_rendered() {
-    let state = PlannerState::new().set_phase(DiamondPhase::Top);
+    let _state = PlannerState::new().set_phase(DiamondPhase::Top);
 
     // When in Discovery phase, only Discovery should be rendered
     let rendered = DiamondPhase::get_rendered_phases(DiamondPhase::Top);
@@ -312,7 +312,7 @@ mod lazy_rendering_tests {
 
   #[test]
   fn test_discovery_and_design_rendered() {
-    let state = PlannerState::new().set_phase(DiamondPhase::Right);
+    let _state = PlannerState::new().set_phase(DiamondPhase::Right);
 
     // When in Design phase, Discovery and Design should be rendered
     let rendered = DiamondPhase::get_rendered_phases(DiamondPhase::Right);
@@ -326,7 +326,7 @@ mod lazy_rendering_tests {
 
   #[test]
   fn test_three_phases_rendered() {
-    let state = PlannerState::new().set_phase(DiamondPhase::Bottom);
+    let _state = PlannerState::new().set_phase(DiamondPhase::Bottom);
 
     // When in Development phase, Discovery, Design, and Development should be rendered
     let rendered = DiamondPhase::get_rendered_phases(DiamondPhase::Bottom);
@@ -343,7 +343,7 @@ mod lazy_rendering_tests {
 
   #[test]
   fn test_all_phases_rendered() {
-    let state = PlannerState::new().set_phase(DiamondPhase::Left);
+    let _state = PlannerState::new().set_phase(DiamondPhase::Left);
 
     // When in Delivery phase, all phases should be rendered
     let rendered = DiamondPhase::get_rendered_phases(DiamondPhase::Left);

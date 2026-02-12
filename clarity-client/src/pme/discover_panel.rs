@@ -14,8 +14,8 @@
 
 use crate::planner::types::{NorthStarScenario, Persona};
 use crate::pme::components::{
-  HypothesisEditor, HypothesisSummary, InterviewLogger, InterviewSummary, PersonaForge,
-  PersonaSummary, ScenarioSummary, ScenarioValidator,
+  HypothesisEditor, HypothesisSummary, InterviewLogger, InterviewSummary, LatticeAuditSummaryCard,
+  PersonaForge, PersonaSummary, ScenarioSummary, ScenarioValidator,
 };
 use crate::pme::state::PmeDiscoverSignals;
 use dioxus::prelude::*;
@@ -221,6 +221,11 @@ fn PmeDiscoverDashboard(
         div { class: "summary-card",
           h4 { "Scenarios" }
           ScenarioSummary { signals: pme_signals }
+        }
+
+        div { class: "summary-card",
+          h4 { "Lattice Audit" }
+          LatticeAuditSummaryCard { signals: pme_signals }
         }
       }
 

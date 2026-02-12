@@ -487,6 +487,8 @@ mod tests {
 
   #[test]
   fn simulation_has_error_handling() {
+    // "User retries the action" contains "retry" which is in ERROR_HANDLING_KEYWORDS
+    // This test verifies that has_error_handling_language() returns true
     let with_error = Simulation::new().with_step(ScenarioStep::new(
       "x".to_string(),
       "y".to_string(),

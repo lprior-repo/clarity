@@ -10,7 +10,7 @@ use crate::beads::sorting::{SortBy, SortConfig, SortDirection};
 use crate::error::AppError;
 use crate::hooks::{use_keyboard_with_handler, use_loading_manager, use_loading_operations};
 use crate::shortcuts::Action;
-use clarity_core::db::models::{BeadFilters, PaginatedBeads};
+use clarity_core::db::models::BeadFilters;
 use dioxus::prelude::*;
 use std::rc::Rc;
 
@@ -50,7 +50,7 @@ pub fn BeadListPage() -> Element {
   // Pagination signals
   let (initial_page, initial_page_size) = parse_url_params();
   let mut current_page = use_signal(|| initial_page);
-  let mut page_size = use_signal(|| initial_page_size);
+  let page_size = use_signal(|| initial_page_size);
   let mut total_pages = use_signal(|| 1u32);
   let mut total_beads = use_signal(|| 0u64);
 

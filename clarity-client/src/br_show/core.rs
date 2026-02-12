@@ -8,7 +8,6 @@
 //! - Deterministic behavior
 
 use crate::br_show::{BrIssue, BrShowError};
-use futures_util::TryFutureExt;
 use std::process::Stdio;
 use tokio::process::Command;
 
@@ -127,7 +126,6 @@ pub async fn get_issue_ids() -> Result<Vec<String>, BrShowError> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use chrono::DateTime;
   use serde_json::json;
 
   #[test]

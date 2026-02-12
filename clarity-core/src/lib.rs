@@ -26,9 +26,9 @@
 //! ## Domain Structure
 //!
 //! The `domain` module contains the core business logic organized as:
-//! - **Aggregates**: Consistency boundaries (BeadAggregate, PlanSessionAggregate)
-//! - **Entities**: Objects with identity (Bead)
-//! - **Value Objects**: Immutable objects defined by their values (BeadId, UserId, etc.)
+//! - **Aggregates**: Consistency boundaries (`BeadAggregate`, `PlanSessionAggregate`)
+//! - **Entities**: Objects with identity (`Bead`)
+//! - **Value Objects**: Immutable objects defined by their values (`BeadId`, `UserId`, etc.)
 //! - **Domain Events**: Messages capturing domain occurrences
 //! - **Repositories**: Persistence abstractions
 //! - **Domain Services**: Stateless business logic

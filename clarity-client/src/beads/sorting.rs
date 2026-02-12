@@ -3,8 +3,7 @@
 //! Provides sorting functionality for bead lists with various criteria.
 //! Follows functional programming patterns with zero unwrap rules.
 
-use chrono::{DateTime, Utc};
-use clarity_core::db::models::{Bead, BeadPriority, BeadStatus, BeadType};
+use clarity_core::db::models::Bead;
 use itertools::Itertools;
 use std::cmp::Ordering;
 
@@ -100,7 +99,8 @@ impl SortConfig {
         // Higher priority numbers come first (1 = High, 2 = Medium, 3 = Low)
         let comparison = a.priority.0.cmp(&b.priority.0);
         if comparison == Ordering::Equal {
-          a.created_at.cmp(&b.created_at)
+          // Tie-breaker: use ID for deterministic ordering
+          a.id.cmp(&b.id)
         } else {
           comparison
         }
