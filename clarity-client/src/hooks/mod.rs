@@ -16,10 +16,11 @@
 //! Custom hooks for Dioxus components
 //!
 //! Reusable stateful logic for form validation, state management,
-//! loading states, and other UI patterns.
+//! loading states, responsive design, and other UI patterns.
 
 pub mod use_keyboard;
 pub mod use_loading;
+pub mod use_responsive;
 pub mod use_settings;
 pub mod use_state;
 pub mod use_undo;
@@ -30,6 +31,11 @@ pub use use_loading::{
   use_is_loading, use_is_loading_key, use_loading_batch, use_loading_manager, use_loading_message,
   use_loading_messages, use_loading_operation, use_loading_operations, use_loading_state,
   LoadingManager, LoadingOperations, LoadingState,
+};
+pub use use_responsive::{
+  use_breakpoint, use_is_desktop, use_is_mobile, use_is_tablet, use_responsive,
+  use_responsive_classes, use_responsive_from_signal, use_responsive_value,
+  use_responsive_with_dimensions, ResponsiveBreakpoint, ResponsiveState,
 };
 pub use use_settings::{
   use_beads_per_page_validator, use_data_location_validator, use_settings, SettingsActions,

@@ -5,6 +5,11 @@
 //! - Left: Chat-style PlanningCoach
 //! - Right: Tabbed panel (Plan/Graph/State)
 //!
+//! ## Responsive Design
+//! - Mobile (< 768px): Single column, tabs for switching views
+//! - Tablet (768px - 1023px): Split layout with narrower sidebar
+//! - Desktop (>= 1024px): Full split layout with wider sidebar
+//!
 //! ## Micro-Interactions Implemented
 //! - Focus states with ring styling for accessibility
 //! - Hover/active states for buttons and cards
@@ -22,6 +27,7 @@
 #![forbid(unsafe_code)]
 #![allow(clippy::manual_map)]
 
+use crate::hooks::{use_responsive, ResponsiveState};
 use crate::opencode_client::{ConnectionStatus, OpenCodeClient, TerminalLine, TerminalLineType};
 use crate::planner::prompts::{get_steps_for_phase_string, phase_done, total_done, total_required};
 use crate::planner::types_coach::{CoachAnswer, CoachStep};
@@ -37,7 +43,7 @@ const PHASES: &[(&str, &str)] = &[
 
 const TABS: &[(&str, &str)] = &[("plan", "Plan"), ("graph", "Graph"), ("state", "State")];
 
-/// V2-style planner page
+/// V2-style planner page with responsive layout
 #[component]
 pub fn PlannerV2() -> Element {
   let mut active_phase = use_signal(|| "discover".to_string());
@@ -47,6 +53,14 @@ pub fn PlannerV2() -> Element {
   let mut connection_status = use_signal(|| ConnectionStatus::Disconnected);
   let mut terminal_lines = use_signal(Vec::<TerminalLine>::new);
   let mut executed_commands = use_signal(HashSet::<String>::new);
+
+  // Responsive state
+  let responsive = use_responsive();
+  let is_mobile = responsive.is_mobile();
+  let is_tablet = responsive.is_tablet();
+
+  // Mobile view toggle (0 = coach, 1 = panel)
+  let mut mobile_view = use_signal(|| 0u8);
 
   // Check connection on mount
   use_effect({
@@ -81,17 +95,40 @@ pub fn PlannerV2() -> Element {
   let total_req = total_required();
   let total_complete = total_done(&answers.read());
 
+  // Compute sidebar width based on responsive state
+  let sidebar_width = responsive.sidebar_width();
+  let sidebar_width_class = if is_mobile {
+    "w-full".to_string()
+  } else {
+    format!("w-[{sidebar_width}px]")
+  };
+
+  // Layout classes based on responsive state
+  let main_layout_class = if is_mobile {
+    "flex flex-col"
+  } else {
+    "flex flex-row"
+  };
+
   rsx! {
     div { class: "flex h-screen flex-col overflow-hidden bg-[hsl(0,0%,4%)] text-white font-sans",
-      // Top header
-      header { class: "flex shrink-0 items-center justify-between border-b border-white/10 px-5 py-2",
-        div { class: "flex items-center gap-6",
-          // Logo
+      // Top header - responsive padding
+      header { class: if is_mobile {
+        "flex shrink-0 items-center justify-between border-b border-white/10 px-3 py-2"
+      } else {
+        "flex shrink-0 items-center justify-between border-b border-white/10 px-5 py-2"
+      },
+        div { class: "flex items-center gap-4 md:gap-6",
+          // Logo - smaller on mobile
           div { class: "flex items-center gap-2",
-            div { class: "flex h-6 w-6 items-center justify-center rounded-md bg-blue-500",
+            div { class: if is_mobile {
+              "flex h-5 w-5 items-center justify-center rounded-md bg-blue-500"
+            } else {
+              "flex h-6 w-6 items-center justify-center rounded-md bg-blue-500"
+            },
               svg {
-                width: "14",
-                height: "14",
+                width: if is_mobile { "12" } else { "14" },
+                height: if is_mobile { "12" } else { "14" },
                 view_box: "0 0 14 14",
                 fill: "none",
                 class: "text-white",
@@ -106,11 +143,15 @@ pub fn PlannerV2() -> Element {
                 }
               }
             }
-            span { class: "text-sm font-bold tracking-tight", "Beads Planner" }
+            span { class: if is_mobile {
+              "text-xs font-bold tracking-tight"
+            } else {
+              "text-sm font-bold tracking-tight"
+            }, "Beads Planner" }
           }
 
-          // Phase tabs
-          nav { class: "flex items-center",
+          // Phase tabs - scrollable on mobile
+          nav { class: "flex items-center overflow-x-auto scrollbar-hide",
             for (phase_key, label) in PHASES.iter() {
               PhaseTab {
                 key: "{phase_key}",
@@ -118,6 +159,7 @@ pub fn PlannerV2() -> Element {
                 label: *label,
                 active: *active_phase.read() == *phase_key,
                 done: phase_done(*phase_key, &answers.read()),
+                is_mobile: is_mobile,
                 on_click: {
                   let mut active_phase = active_phase;
                   let phase_key = phase_key.to_string();
@@ -128,61 +170,99 @@ pub fn PlannerV2() -> Element {
           }
         }
 
-        // Progress counter
-        span { class: "font-mono text-xs text-white/50", "{total_complete}/{total_req}" }
+        // Progress counter - hidden on very small screens
+        if !is_mobile {
+          span { class: "font-mono text-xs text-white/50", "{total_complete}/{total_req}" }
+        }
       }
 
-      // Main content
-      div { class: "flex flex-1 overflow-hidden",
-        // Left: Planning Coach
-        main { class: "flex-1 overflow-hidden border-r border-white/10",
-          PlanningCoach {
-            active_phase: active_phase.read().clone(),
-            answers: answers.read().clone(),
-            on_answer: handle_answer,
-            on_phase_change: {
-              let mut active_phase = active_phase;
-              move |phase| active_phase.set(phase)
-            },
+      // Main content - responsive layout
+      div { class: "{main_layout_class} flex-1 overflow-hidden",
+        // Mobile view switcher tabs
+        if is_mobile {
+          div { class: "flex shrink-0 border-b border-white/10",
+            button {
+              class: if *mobile_view.read() == 0 {
+                "flex-1 px-4 py-2 text-sm font-medium text-white border-b-2 border-blue-500"
+              } else {
+                "flex-1 px-4 py-2 text-sm font-medium text-white/60 hover:text-white/80"
+              },
+              onclick: move |_| mobile_view.set(0),
+              "Coach"
+            }
+            button {
+              class: if *mobile_view.read() == 1 {
+                "flex-1 px-4 py-2 text-sm font-medium text-white border-b-2 border-blue-500"
+              } else {
+                "flex-1 px-4 py-2 text-sm font-medium text-white/60 hover:text-white/80"
+              },
+              onclick: move |_| mobile_view.set(1),
+              "Plan"
+            }
           }
         }
 
-        // Right: Tabbed panel
-        div { class: "flex w-[440px] shrink-0 flex-col",
-          // Tabs
-          div { class: "flex shrink-0 items-center border-b border-white/10",
-            for (tab_key, label) in TABS.iter() {
-              TabButton {
-                key: "{tab_key}",
-                tab_key: *tab_key,
-                label: *label,
-                active: *right_tab.read() == *tab_key,
-                on_click: {
-                  let mut right_tab = right_tab;
-                  let tab_key = tab_key.to_string();
-                  move |_| right_tab.set(tab_key.clone())
-                },
-              }
+        // Left: Planning Coach (hidden on mobile when viewing panel)
+        if !is_mobile || *mobile_view.read() == 0 {
+          main { class: if is_mobile {
+            "flex-1 overflow-hidden"
+          } else {
+            "flex-1 overflow-hidden border-r border-white/10"
+          },
+            PlanningCoach {
+              active_phase: active_phase.read().clone(),
+              answers: answers.read().clone(),
+              is_mobile: is_mobile,
+              on_answer: handle_answer,
+              on_phase_change: {
+                let mut active_phase = active_phase;
+                move |phase| active_phase.set(phase)
+              },
             }
           }
+        }
 
-          // Panel content
-          div { class: "flex-1 overflow-hidden",
-            if *right_tab.read() == "plan" {
-              ArtifactPanel {
-                answers: answers.read().clone(),
-                active_phase: active_phase.read().clone(),
-                terminal_lines: terminal_lines.read().clone(),
-                connection_status: *connection_status.read(),
+        // Right: Tabbed panel (hidden on mobile when viewing coach)
+        if !is_mobile || *mobile_view.read() == 1 {
+          div { class: "flex {sidebar_width_class} shrink-0 flex-col",
+            // Tabs - hidden on mobile (using view switcher instead)
+            if !is_mobile {
+              div { class: "flex shrink-0 items-center border-b border-white/10",
+                for (tab_key, label) in TABS.iter() {
+                  TabButton {
+                    key: "{tab_key}",
+                    tab_key: *tab_key,
+                    label: *label,
+                    active: *right_tab.read() == *tab_key,
+                    on_click: {
+                      let mut right_tab = right_tab;
+                      let tab_key = tab_key.to_string();
+                      move |_| right_tab.set(tab_key.clone())
+                    },
+                  }
+                }
               }
-            } else if *right_tab.read() == "graph" {
-              GraphPanel {
-                answers: answers.read().clone(),
-              }
-            } else {
-              StatePanel {
-                answers: answers.read().clone(),
-                active_phase: active_phase.read().clone(),
+            }
+
+            // Panel content
+            div { class: "flex-1 overflow-hidden",
+              if *right_tab.read() == "plan" || is_mobile {
+                ArtifactPanel {
+                  answers: answers.read().clone(),
+                  active_phase: active_phase.read().clone(),
+                  terminal_lines: terminal_lines.read().clone(),
+                  connection_status: *connection_status.read(),
+                  is_mobile: is_mobile,
+                }
+              } else if *right_tab.read() == "graph" {
+                GraphPanel {
+                  answers: answers.read().clone(),
+                }
+              } else {
+                StatePanel {
+                  answers: answers.read().clone(),
+                  active_phase: active_phase.read().clone(),
+                }
               }
             }
           }
@@ -207,6 +287,7 @@ fn PhaseTab(
   label: &'static str,
   active: bool,
   done: bool,
+  is_mobile: bool,
   on_click: EventHandler<()>,
 ) -> Element {
   let index_str = phase_index_str(&phase_key);
@@ -214,19 +295,36 @@ fn PhaseTab(
   let focus_class = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(0,0%,4%)]";
   // Active state for press feedback
   let active_press_class = if active { "" } else { "active:scale-[0.98]" };
+
+  // Responsive sizing
+  let padding_class = if is_mobile {
+    "px-2 py-1.5"
+  } else {
+    "px-3 py-2"
+  };
+  let text_class = if is_mobile { "text-xs" } else { "text-sm" };
+  let badge_class = if is_mobile {
+    "h-3.5 w-3.5 text-[10px]"
+  } else {
+    "h-4 w-4 text-xs"
+  };
+
   rsx! {
     button {
       class: if active {
-        format!("relative flex items-center gap-1.5 px-3 py-2 text-sm text-white rounded-sm {focus_class}")
+        format!("relative flex items-center gap-1 {padding_class} {text_class} text-white rounded-sm whitespace-nowrap {focus_class}")
       } else {
-        format!("relative flex items-center gap-1.5 px-3 py-2 text-sm text-white/60 hover:text-white/80 transition-all duration-150 rounded-sm {focus_class} {active_press_class}")
+        format!("relative flex items-center gap-1 {padding_class} {text_class} text-white/60 hover:text-white/80 transition-all duration-150 rounded-sm whitespace-nowrap {focus_class} {active_press_class}")
       },
       onclick: move |_| on_click.call(()),
       if done {
-        span { class: "text-green-400", "✓" }
+        span { class: if is_mobile { "text-green-400 text-xs" } else { "text-green-400" }, "✓" }
       } else {
-        span { class: if active { "flex h-4 w-4 items-center justify-center rounded-full bg-blue-500/20 text-blue-400 text-xs" }
-                     else { "flex h-4 w-4 items-center justify-center rounded-full bg-white/10 text-white/50 text-xs" },
+        span { class: if active {
+          format!("flex {badge_class} items-center justify-center rounded-full bg-blue-500/20 text-blue-400")
+        } else {
+          format!("flex {badge_class} items-center justify-center rounded-full bg-white/10 text-white/50")
+        },
           "{index_str}"
         }
       }
@@ -421,6 +519,7 @@ fn build_thread(steps: &[CoachStep], answers: &[CoachAnswer]) -> Vec<ThreadEntry
 fn PlanningCoach(
   active_phase: String,
   answers: Vec<CoachAnswer>,
+  is_mobile: bool,
   on_answer: EventHandler<(String, String)>,
   on_phase_change: EventHandler<String>,
 ) -> Element {
@@ -478,6 +577,11 @@ fn PlanningCoach(
   // Focus-visible styling shared across buttons
   let focus_visible_class = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(0,0%,4%)]";
 
+  // Responsive classes
+  let padding_class = if is_mobile { "px-4 py-4" } else { "px-6 py-6" };
+  let max_width_class = if is_mobile { "max-w-full" } else { "max-w-xl" };
+  let button_min_height = if is_mobile { "min-h-[44px]" } else { "" };
+
   rsx! {
     div { class: "flex h-full flex-col relative",
       // Top scroll shadow indicator (shows when scrolled down)
@@ -487,7 +591,7 @@ fn PlanningCoach(
 
       // Conversation thread with scroll shadow
       div {
-        class: "flex-1 overflow-y-auto px-6 py-6 scroll-smooth",
+        class: format!("flex-1 overflow-y-auto {padding_class} scroll-smooth"),
         onscroll: {
           let mut show_top_shadow = show_top_shadow;
           move |e| {
@@ -495,7 +599,7 @@ fn PlanningCoach(
             show_top_shadow.set(e.scroll_top() > 20.0);
           }
         },
-        div { class: "mx-auto max-w-xl space-y-4",
+        div { class: "mx-auto {max_width_class} space-y-4",
           // Render thread entries
           for (i, entry) in thread.iter().enumerate() {
             match entry {
@@ -504,18 +608,21 @@ fn PlanningCoach(
                   key: "coach-{i}",
                   step_title: step_title.clone(),
                   content: content.clone(),
+                  is_mobile: is_mobile,
                 }
               },
               ThreadEntry::User { content } => rsx! {
                 UserBubble {
                   key: "user-{i}",
                   content: content.clone(),
+                  is_mobile: is_mobile,
                 }
               },
               ThreadEntry::Terminal { commands } => rsx! {
                 InlineTerminal {
                   key: "terminal-{i}",
                   commands: commands.clone(),
+                  is_mobile: is_mobile,
                 }
               },
             }
@@ -530,11 +637,15 @@ fn PlanningCoach(
                 rsx! {
                   // Tooltip-style hint with hover effect
                   div {
-                    class: "ml-10 group relative rounded-md border border-dashed border-white/20 px-3 py-2 text-xs leading-relaxed text-white/50 animate-fade-up transition-colors hover:border-white/30 hover:text-white/60",
+                    class: if is_mobile {
+                      "ml-2 group relative rounded-md border border-dashed border-white/20 px-2 py-1.5 text-xs leading-relaxed text-white/50 animate-fade-up transition-colors hover:border-white/30 hover:text-white/60"
+                    } else {
+                      "ml-10 group relative rounded-md border border-dashed border-white/20 px-3 py-2 text-xs leading-relaxed text-white/50 animate-fade-up transition-colors hover:border-white/30 hover:text-white/60"
+                    },
                     // Info icon indicator
                     span { class: "absolute -left-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-white/10 text-[8px] text-white/40 group-hover:bg-white/20 group-hover:text-white/60 transition-colors",
                       "?"
-                    }
+                    },
                     "{hint_text}"
                   }
                 }
@@ -547,14 +658,15 @@ fn PlanningCoach(
             CoachBubble {
               step_title: None,
               content: completion_message,
+              is_mobile: is_mobile,
             }
             if let Some(next) = &next_phase {
               {
                 let label = capitalize_first(next);
                 rsx! {
-                  div { class: "ml-10",
+                  div { class: if is_mobile { "ml-2" } else { "ml-10" },
                     button {
-                      class: format!("rounded-md bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 active:bg-blue-700 active:scale-[0.98] transition-all duration-150 {focus_visible_class}"),
+                      class: format!("rounded-md bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 active:bg-blue-700 active:scale-[0.98] transition-all duration-150 {focus_visible_class} {button_min_height}"),
                       onclick: {
                         let on_phase_change = on_phase_change;
                         let next = next.clone();
@@ -575,15 +687,23 @@ fn PlanningCoach(
         {
           let placeholder_text = current_step.as_ref().map_or("Type your answer...", |s| s.title.as_str());
           rsx! {
-            div { class: "shrink-0 border-t border-white/10 px-6 py-4 bg-[hsl(0,0%,4%)]",
-              div { class: "mx-auto max-w-xl",
+            div { class: if is_mobile {
+              "shrink-0 border-t border-white/10 px-4 py-3 bg-[hsl(0,0%,4%)]"
+            } else {
+              "shrink-0 border-t border-white/10 px-6 py-4 bg-[hsl(0,0%,4%)]"
+            },
+              div { class: "mx-auto {max_width_class}",
                 // Enhanced focus-within styling with ring effect
                 div { class: "overflow-hidden rounded-lg border border-white/20 bg-white/5 transition-all duration-200 focus-within:border-blue-500/50 focus-within:ring-2 focus-within:ring-blue-500/20",
                   textarea {
                     // Auto-focus when step changes (via autofocus attribute)
-                    class: "w-full resize-none bg-transparent px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none",
+                    class: if is_mobile {
+                      "w-full resize-none bg-transparent px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none"
+                    } else {
+                      "w-full resize-none bg-transparent px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none"
+                    },
                     placeholder: placeholder_text,
-                    rows: 3,
+                    rows: if is_mobile { 2 } else { 3 },
                     value: "{draft}",
                     autofocus: true,
                     oninput: {
@@ -607,10 +727,14 @@ fn PlanningCoach(
                       }
                     },
                   }
-                  div { class: "flex items-center justify-between px-4 py-2",
+                  div { class: if is_mobile {
+                    "flex items-center justify-between px-3 py-2"
+                  } else {
+                    "flex items-center justify-between px-4 py-2"
+                  },
                     // Skip button with hover/focus states
                     button {
-                      class: format!("text-xs text-white/50 hover:text-white/80 active:text-white transition-colors rounded-sm px-2 py-1 -ml-2 {focus_visible_class}"),
+                      class: format!("text-xs text-white/50 hover:text-white/80 active:text-white transition-colors rounded-sm px-2 py-1 -ml-2 {focus_visible_class} {button_min_height}"),
                       onclick: {
                         let on_answer = on_answer;
                         let step_id = step_id_for_handlers.clone();
@@ -624,13 +748,19 @@ fn PlanningCoach(
                     }
                     // Right side: keyboard hint and send button
                     div { class: "flex items-center gap-2",
-                      // Keyboard shortcut hint with tooltip styling
-                      kbd { class: "hidden rounded bg-white/10 px-1.5 py-0.5 font-mono text-[10px] text-white/50 border border-white/10 sm:inline",
-                        "\u{2318}\u{21B5}"
+                      // Keyboard shortcut hint - hidden on mobile
+                      if !is_mobile {
+                        kbd { class: "hidden rounded bg-white/10 px-1.5 py-0.5 font-mono text-[10px] text-white/50 border border-white/10 sm:inline",
+                          "\u{2318}\u{21B5}"
+                        }
                       }
-                      // Send button with enhanced states
+                      // Send button with enhanced states - larger on mobile
                       button {
-                        class: format!("rounded-md bg-blue-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-600 active:bg-blue-700 active:scale-[0.98] transition-all duration-150 disabled:opacity-30 disabled:pointer-events-none {focus_visible_class}"),
+                        class: if is_mobile {
+                          format!("rounded-md bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 active:bg-blue-700 active:scale-[0.98] transition-all duration-150 disabled:opacity-30 disabled:pointer-events-none {focus_visible_class} min-h-[44px]")
+                        } else {
+                          format!("rounded-md bg-blue-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-600 active:bg-blue-700 active:scale-[0.98] transition-all duration-150 disabled:opacity-30 disabled:pointer-events-none {focus_visible_class}")
+                        },
                         disabled: draft_empty,
                         onclick: {
                           let on_answer = on_answer;
@@ -668,10 +798,21 @@ fn capitalize_first(s: &str) -> String {
 
 /// Coach bubble
 #[component]
-fn CoachBubble(step_title: Option<String>, content: String) -> Element {
+fn CoachBubble(step_title: Option<String>, content: String, is_mobile: bool) -> Element {
+  let avatar_class = if is_mobile {
+    "h-6 w-6 text-[10px]"
+  } else {
+    "h-7 w-7 text-xs"
+  };
+  let content_padding = if is_mobile {
+    "px-3 py-2"
+  } else {
+    "px-4 py-2.5"
+  };
+
   rsx! {
-    div { class: "flex gap-3 animate-fade-up",
-      div { class: "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-xs font-bold text-blue-400",
+    div { class: "flex gap-2 md:gap-3 animate-fade-up",
+      div { class: "flex {avatar_class} shrink-0 items-center justify-center rounded-full bg-blue-500/20 font-bold text-blue-400",
         "B"
       }
       div { class: "max-w-lg",
@@ -680,7 +821,7 @@ fn CoachBubble(step_title: Option<String>, content: String) -> Element {
             "{title}"
           }
         }
-        p { class: "text-sm leading-relaxed text-white/90", "{content}" }
+        p { class: "text-sm leading-relaxed text-white/90 {content_padding}", "{content}" }
       }
     }
   }
@@ -688,10 +829,16 @@ fn CoachBubble(step_title: Option<String>, content: String) -> Element {
 
 /// User bubble
 #[component]
-fn UserBubble(content: String) -> Element {
+fn UserBubble(content: String, is_mobile: bool) -> Element {
+  let padding_class = if is_mobile {
+    "px-3 py-2"
+  } else {
+    "px-4 py-2.5"
+  };
+
   rsx! {
     div { class: "flex justify-end animate-fade-up",
-      div { class: "max-w-lg rounded-lg bg-blue-500/10 px-4 py-2.5 text-sm leading-relaxed text-white",
+      div { class: "max-w-lg rounded-lg bg-blue-500/10 {padding_class} text-sm leading-relaxed text-white",
         "{content}"
       }
     }
@@ -851,7 +998,7 @@ fn commands_to_lines(commands: &[(String, String, String)]) -> Vec<V2TerminalLin
 /// - Auto-scroll behavior
 /// - Better line styling with agent labels
 #[component]
-fn InlineTerminal(commands: Vec<(String, String, String)>) -> Element {
+fn InlineTerminal(commands: Vec<(String, String, String)>, is_mobile: bool) -> Element {
   // Convert to V2 line format
   let lines = commands_to_lines(&commands);
 
@@ -889,23 +1036,34 @@ fn InlineTerminal(commands: Vec<(String, String, String)>) -> Element {
   let is_running = *is_streaming.read() || *visible_count.read() < total_items;
   let current_visible = *visible_count.read();
 
+  // Responsive classes
+  let margin_class = if is_mobile {
+    "mx-1 my-1"
+  } else {
+    "mx-2 my-1.5"
+  };
+  let padding_class = if is_mobile { "p-2" } else { "p-3" };
+  let font_size = if is_mobile { "text-[10px]" } else { "text-xs" };
+
   rsx! {
-    div { class: "mx-2 my-1.5 flex flex-col overflow-hidden rounded-lg border border-white/10 bg-[hsl(0,0%,3%)]",
+    div { class: "{margin_class} flex flex-col overflow-hidden rounded-lg border border-white/10 bg-[hsl(0,0%,3%)]",
       // Header bar with status indicator
-      div { class: "flex shrink-0 items-center justify-between border-b border-white/5 px-3 py-1.5",
-        div { class: "flex items-center gap-2",
-          // Traffic lights (macOS style)
-          div { class: "flex gap-1",
-            span { class: "h-2 w-2 rounded-full bg-red-500/60" }
-            span { class: "h-2 w-2 rounded-full bg-yellow-500/60" }
-            span { class: "h-2 w-2 rounded-full bg-green-500/60" }
+      div { class: "flex shrink-0 items-center justify-between border-b border-white/5 px-2 md:px-3 py-1",
+        div { class: "flex items-center gap-1.5 md:gap-2",
+          // Traffic lights (macOS style) - smaller on mobile
+          div { class: "flex gap-0.5 md:gap-1",
+            span { class: if is_mobile { "h-1.5 w-1.5 rounded-full bg-red-500/60" } else { "h-2 w-2 rounded-full bg-red-500/60" } }
+            span { class: if is_mobile { "h-1.5 w-1.5 rounded-full bg-yellow-500/60" } else { "h-2 w-2 rounded-full bg-yellow-500/60" } }
+            span { class: if is_mobile { "h-1.5 w-1.5 rounded-full bg-green-500/60" } else { "h-2 w-2 rounded-full bg-green-500/60" } }
           }
           span { class: "font-mono text-[10px] text-white/30", "beads-cli" }
         }
-        // Status indicator (Demo Mode for preview)
-        StatusIndicator {
-          status: ConnectionStatus::Connected,
-          is_demo_mode: true,
+        // Status indicator (Demo Mode for preview) - hidden on very small screens
+        if !is_mobile {
+          StatusIndicator {
+            status: ConnectionStatus::Connected,
+            is_demo_mode: true,
+          }
         }
         // Running indicator
         if is_running {
@@ -918,7 +1076,7 @@ fn InlineTerminal(commands: Vec<(String, String, String)>) -> Element {
 
       // Terminal content with auto-scroll
       div {
-        class: "flex-1 overflow-y-auto bg-[hsl(0,0%,3%)] p-3 font-mono text-xs leading-relaxed scroll-smooth",
+        class: format!("flex-1 overflow-y-auto bg-[hsl(0,0%,3%)] {padding_class} font-mono {font_size} leading-relaxed scroll-smooth"),
 
         // Render lines based on type
         for (i, line) in lines.iter().enumerate() {
@@ -954,7 +1112,7 @@ fn InlineTerminal(commands: Vec<(String, String, String)>) -> Element {
                 V2TerminalLineType::Cmd => rsx! {
                   div {
                     key: "cmd-{i}",
-                    class: "animate-fade-up flex items-start gap-1.5",
+                    class: "animate-fade-up flex items-start gap-1",
                     style: "{animation_delay}",
                     // Agent label
                     if let Some(ref agent) = line.agent {
@@ -975,7 +1133,7 @@ fn InlineTerminal(commands: Vec<(String, String, String)>) -> Element {
                 V2TerminalLineType::Output => rsx! {
                   div {
                     key: "output-{i}",
-                    class: "animate-fade-up pl-4 text-white/40",
+                    class: "animate-fade-up pl-3 md:pl-4 text-white/40",
                     style: "{animation_delay}",
                     "{line.text}"
                   }
@@ -1026,9 +1184,15 @@ fn parse_lines(text: Option<&str>) -> Vec<String> {
 
 /// Section header with label and optional count badge
 #[component]
-fn SectionHeader(label: String, count: Option<usize>) -> Element {
+fn SectionHeader(label: String, count: Option<usize>, is_mobile: bool) -> Element {
+  let padding_class = if is_mobile {
+    "pb-1.5 pt-4"
+  } else {
+    "pb-2 pt-5"
+  };
+
   rsx! {
-    div { class: "flex items-center gap-2 pb-2 pt-5 first:pt-0",
+    div { class: "flex items-center gap-2 {padding_class} first:pt-0",
       h4 { class: "text-xs font-semibold uppercase tracking-widest text-white/50",
         "{label}"
       }
@@ -1043,13 +1207,19 @@ fn SectionHeader(label: String, count: Option<usize>) -> Element {
 
 /// Thesis card for Problem/Antithesis/Solution
 #[component]
-fn ThesisCard(label: String, value: String, accent: Option<String>) -> Element {
+fn ThesisCard(label: String, value: String, accent: Option<String>, is_mobile: bool) -> Element {
   if value.is_empty() {
     return rsx! {};
   }
   let accent_classes = accent.map_or_else(|| "border-white/10 bg-white/5".to_string(), |a| a);
+  let padding_class = if is_mobile {
+    "px-2.5 py-2"
+  } else {
+    "px-3 py-2.5"
+  };
+
   rsx! {
-    div { class: "animate-fade-up rounded-lg border px-3 py-2.5 {accent_classes}",
+    div { class: "animate-fade-up rounded-lg border {padding_class} {accent_classes}",
       span { class: "mb-1 block text-xs font-medium uppercase tracking-wider text-white/50",
         "{label}"
       }
@@ -1082,13 +1252,24 @@ fn parse_use_case(text: &str) -> Option<(String, String, String)> {
 }
 
 /// Use case row with parsed "can/so that" format highlighting
-/// Enhanced with hover effects
+/// Enhanced with hover effects and responsive design
 #[component]
-fn UseCaseRow(text: String, index: usize) -> Element {
+fn UseCaseRow(text: String, index: usize, is_mobile: bool) -> Element {
   let parsed = parse_use_case(&text);
+  let padding_class = if is_mobile {
+    "px-1.5 py-1.5"
+  } else {
+    "px-2 py-2"
+  };
+  let badge_size = if is_mobile {
+    "h-4 w-4 text-[10px]"
+  } else {
+    "h-5 w-5 text-xs"
+  };
+
   rsx! {
-    div { class: "animate-fade-up flex items-start gap-2.5 rounded-md px-2 py-2 transition-all duration-150 hover:bg-white/5 group",
-      span { class: "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded bg-white/10 font-mono text-xs text-white/50 group-hover:bg-white/15 transition-colors",
+    div { class: "animate-fade-up flex items-start gap-2 md:gap-2.5 rounded-md {padding_class} transition-all duration-150 hover:bg-white/5 group",
+      span { class: "mt-0.5 flex {badge_size} shrink-0 items-center justify-center rounded bg-white/10 font-mono text-white/50 group-hover:bg-white/15 transition-colors",
         "{index}"
       }
       if let Some((actor, action, benefit)) = parsed {
@@ -1122,7 +1303,13 @@ fn parse_task(text: &str) -> (Option<String>, String) {
 /// Task row with module label, selection state, and right arrow
 /// Enhanced with focus-visible states and active press feedback
 #[component]
-fn TaskRow(text: String, index: usize, selected: bool, on_select: EventHandler<()>) -> Element {
+fn TaskRow(
+  text: String,
+  index: usize,
+  selected: bool,
+  is_mobile: bool,
+  on_select: EventHandler<()>,
+) -> Element {
   let (module, title) = parse_task(&text);
   let bg_class = if selected {
     "bg-blue-500/10 ring-1 ring-blue-500/30".to_string()
@@ -1135,11 +1322,26 @@ fn TaskRow(text: String, index: usize, selected: bool, on_select: EventHandler<(
     "bg-white/10 text-white/50 group-hover:bg-white/15".to_string()
   };
   let focus_class = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(0,0%,4%)]";
+
+  // Responsive sizing
+  let padding_class = if is_mobile {
+    "px-1.5 py-1.5"
+  } else {
+    "px-2 py-2"
+  };
+  let gap_class = if is_mobile { "gap-2" } else { "gap-2.5" };
+  let badge_size = if is_mobile {
+    "h-4 w-4 text-[10px]"
+  } else {
+    "h-5 w-5 text-xs"
+  };
+  let min_height = if is_mobile { "min-h-[44px]" } else { "" };
+
   rsx! {
     button {
-      class: format!("animate-fade-up flex w-full items-start gap-2.5 rounded-md px-2 py-2 text-left transition-all duration-150 {bg_class} group {focus_class}"),
+      class: format!("animate-fade-up flex w-full items-start {gap_class} rounded-md {padding_class} text-left transition-all duration-150 {bg_class} group {focus_class} {min_height}"),
       onclick: move |_| on_select.call(()),
-      span { class: "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded font-mono text-xs transition-colors {badge_class}",
+      span { class: "mt-0.5 flex {badge_size} shrink-0 items-center justify-center rounded font-mono transition-colors {badge_class}",
         "{index}"
       }
       div { class: "min-w-0 flex-1",
@@ -1152,19 +1354,21 @@ fn TaskRow(text: String, index: usize, selected: bool, on_select: EventHandler<(
         }
         p { class: "mt-0.5 text-sm text-white/90 group-hover:text-white transition-colors", "{title}" }
       }
-      // Right arrow SVG with hover effect
-      svg {
-        width: "14",
-        height: "14",
-        view_box: "0 0 14 14",
-        fill: "none",
-        class: "mt-1 shrink-0 text-white/40 group-hover:text-white/60 transition-colors",
-        path {
-          d: "M5 3L9 7L5 11",
-          stroke: "currentColor",
-          stroke_width: "1.5",
-          stroke_linecap: "round",
-          stroke_linejoin: "round",
+      // Right arrow SVG with hover effect - hidden on very small screens
+      if !is_mobile {
+        svg {
+          width: "14",
+          height: "14",
+          view_box: "0 0 14 14",
+          fill: "none",
+          class: "mt-1 shrink-0 text-white/40 group-hover:text-white/60 transition-colors",
+          path {
+            d: "M5 3L9 7L5 11",
+            stroke: "currentColor",
+            stroke_width: "1.5",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+          }
         }
       }
     }
@@ -1172,17 +1376,40 @@ fn TaskRow(text: String, index: usize, selected: bool, on_select: EventHandler<(
 }
 
 /// Expandable task detail panel with Acceptance Criteria and Edge Cases
-/// Enhanced with focus-visible states for close button
+/// Enhanced with focus-visible states for close button and responsive design
 #[component]
-fn TaskDetail(task: String, index: usize, on_close: EventHandler<()>) -> Element {
+fn TaskDetail(task: String, index: usize, is_mobile: bool, on_close: EventHandler<()>) -> Element {
   let (module, title) = parse_task(&task);
   let focus_class = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(0,0%,4%)]";
+
+  // Responsive sizing
+  let padding_class = if is_mobile {
+    "px-2.5 py-1.5"
+  } else {
+    "px-3 py-2"
+  };
+  let content_padding = if is_mobile {
+    "px-2.5 py-2.5"
+  } else {
+    "px-3 py-3"
+  };
+  let badge_size = if is_mobile {
+    "h-4 w-4 text-[10px]"
+  } else {
+    "h-5 w-5 text-xs"
+  };
+  let close_button_size = if is_mobile {
+    "min-w-[44px] min-h-[44px]"
+  } else {
+    ""
+  };
+
   rsx! {
     div { class: "animate-fade-up rounded-lg border border-blue-500/20 bg-blue-500/5",
       // Header
-      div { class: "flex items-center justify-between border-b border-blue-500/10 px-3 py-2",
+      div { class: "flex items-center justify-between border-b border-blue-500/10 {padding_class}",
         div { class: "flex items-center gap-2",
-          span { class: "flex h-5 w-5 items-center justify-center rounded bg-blue-500 font-mono text-xs text-white",
+          span { class: "flex {badge_size} items-center justify-center rounded bg-blue-500 font-mono text-white",
             "{index}"
           }
           if let Some(ref mod_name) = module {
@@ -1193,7 +1420,7 @@ fn TaskDetail(task: String, index: usize, on_close: EventHandler<()>) -> Element
           span { class: "text-sm font-medium text-white/90", "{title}" }
         }
         button {
-          class: format!("rounded p-0.5 text-white/50 hover:text-white hover:bg-white/10 active:bg-white/20 transition-all duration-150 {focus_class}"),
+          class: format!("rounded p-1.5 text-white/50 hover:text-white hover:bg-white/10 active:bg-white/20 transition-all duration-150 {focus_class} {close_button_size}"),
           onclick: move |_| on_close.call(()),
           // X icon SVG
           svg {
@@ -1211,7 +1438,7 @@ fn TaskDetail(task: String, index: usize, on_close: EventHandler<()>) -> Element
         }
       }
       // Content
-      div { class: "space-y-3 px-3 py-3",
+      div { class: "space-y-3 {content_padding}",
         // Acceptance Criteria
         div {
           span { class: "mb-1 block text-xs font-medium uppercase tracking-wider text-white/50",
@@ -1236,13 +1463,14 @@ fn TaskDetail(task: String, index: usize, on_close: EventHandler<()>) -> Element
 }
 
 /// Artifact panel (Plan tab) - displays thesis, use cases, and tasks
-/// Enhanced with scroll shadow indicators
+/// Enhanced with scroll shadow indicators and responsive design
 #[component]
 fn ArtifactPanel(
   answers: Vec<CoachAnswer>,
   active_phase: String,
   terminal_lines: Vec<TerminalLine>,
   connection_status: ConnectionStatus,
+  is_mobile: bool,
 ) -> Element {
   let selected_task = use_signal(|| None::<usize>);
   // Track scroll position for scroll shadow indicator
@@ -1278,10 +1506,18 @@ fn ArtifactPanel(
     "Your plan will build up here as you answer."
   };
 
+  // Responsive classes
+  let padding_class = if is_mobile {
+    "px-3 pt-2 pb-1"
+  } else {
+    "px-4 pt-3 pb-1"
+  };
+  let content_padding = if is_mobile { "px-3 py-2" } else { "px-4 py-2" };
+
   rsx! {
     div { class: "flex h-full flex-col relative",
       // Progress bar at top (fixed)
-      div { class: "shrink-0 px-4 pt-3 pb-1 bg-[hsl(0,0%,4%)] z-10",
+      div { class: "shrink-0 {padding_class} bg-[hsl(0,0%,4%)] z-10",
         div { class: "flex items-center gap-2",
           div { class: "h-1 flex-1 rounded-full bg-white/10",
             div {
@@ -1295,12 +1531,12 @@ fn ArtifactPanel(
 
       // Top scroll shadow indicator (shows when scrolled down)
       if *show_top_shadow.read() {
-        div { class: "absolute top-[44px] left-0 right-0 h-4 bg-gradient-to-b from-[hsl(0,0%,4%)] to-transparent pointer-events-none z-10" }
+        div { class: "absolute top-[36px] md:top-[44px] left-0 right-0 h-4 bg-gradient-to-b from-[hsl(0,0%,4%)] to-transparent pointer-events-none z-10" }
       }
 
       // Content area with scroll shadow tracking
       div {
-        class: "flex-1 overflow-y-auto px-4 py-2 scroll-smooth",
+        class: format!("flex-1 overflow-y-auto {content_padding} scroll-smooth"),
         onscroll: {
           let mut show_top_shadow = show_top_shadow;
           move |e| {
@@ -1320,13 +1556,14 @@ fn ArtifactPanel(
           div { class: "space-y-1 pb-4",
             // Thesis section (Problem, Antithesis, Solution)
             if problem.is_some() || antithesis.is_some() || solution.is_some() {
-              SectionHeader { label: "Thesis".to_string() }
+              SectionHeader { label: "Thesis".to_string(), is_mobile: is_mobile }
               div { class: "space-y-2",
                 if let Some(ref p) = problem {
                   ThesisCard {
                     label: "Problem".to_string(),
                     value: p.clone(),
                     accent: None,
+                    is_mobile: is_mobile,
                   }
                 }
                 if let Some(ref a) = antithesis {
@@ -1334,6 +1571,7 @@ fn ArtifactPanel(
                     label: "Antithesis".to_string(),
                     value: a.clone(),
                     accent: Some("border-purple-500/20 bg-purple-500/5".to_string()),
+                    is_mobile: is_mobile,
                   }
                 }
                 if let Some(ref s) = solution {
@@ -1341,6 +1579,7 @@ fn ArtifactPanel(
                     label: "Solution".to_string(),
                     value: s.clone(),
                     accent: None,
+                    is_mobile: is_mobile,
                   }
                 }
               }
@@ -1348,7 +1587,7 @@ fn ArtifactPanel(
 
             // User/Persona section
             if let Some(ref p) = persona {
-              SectionHeader { label: "User".to_string() }
+              SectionHeader { label: "User".to_string(), is_mobile: is_mobile }
               div { class: "animate-fade-up rounded-lg border border-orange-500/20 bg-orange-500/5 px-3 py-2.5",
                 p { class: "text-sm leading-relaxed text-white/90", "{p}" }
               }
@@ -1356,7 +1595,7 @@ fn ArtifactPanel(
 
             // North Star/Scenario section
             if let Some(ref s) = scenario {
-              SectionHeader { label: "North Star".to_string() }
+              SectionHeader { label: "North Star".to_string(), is_mobile: is_mobile }
               div { class: "animate-fade-up rounded-lg border border-green-500/20 bg-green-500/5 px-3 py-2.5",
                 p { class: "text-sm leading-relaxed text-white/80", "{s}" }
               }
@@ -1367,6 +1606,7 @@ fn ArtifactPanel(
               SectionHeader {
                 label: "Use Cases".to_string(),
                 count: Some(use_cases.len()),
+                is_mobile: is_mobile,
               }
               div { class: "space-y-0.5",
                 for (i, uc) in use_cases.iter().enumerate() {
@@ -1374,6 +1614,7 @@ fn ArtifactPanel(
                     key: "{i}",
                     text: uc.clone(),
                     index: i + 1,
+                    is_mobile: is_mobile,
                   }
                 }
               }
@@ -1381,7 +1622,7 @@ fn ArtifactPanel(
 
             // Stack/Constraints section
             if let Some(ref c) = constraints {
-              SectionHeader { label: "Stack".to_string() }
+              SectionHeader { label: "Stack".to_string(), is_mobile: is_mobile }
               div { class: "animate-fade-up rounded-lg border border-white/10 bg-white/5 px-3 py-2.5",
                 p { class: "font-mono text-xs leading-relaxed text-white/80", "{c}" }
               }
@@ -1392,6 +1633,7 @@ fn ArtifactPanel(
               SectionHeader {
                 label: "Tasks".to_string(),
                 count: Some(tasks.len()),
+                is_mobile: is_mobile,
               }
               // Task detail panel (shown when a task is selected)
               if let Some(idx) = *selected_task.read() {
@@ -1400,6 +1642,7 @@ fn ArtifactPanel(
                     TaskDetail {
                       task: task.clone(),
                       index: idx + 1,
+                      is_mobile: is_mobile,
                       on_close: {
                         let mut selected_task = selected_task;
                         move |_| selected_task.set(None)
@@ -1416,6 +1659,7 @@ fn ArtifactPanel(
                     text: t.clone(),
                     index: i + 1,
                     selected: *selected_task.read() == Some(i),
+                    is_mobile: is_mobile,
                     on_select: {
                       let mut selected_task = selected_task;
                       let i = i;
