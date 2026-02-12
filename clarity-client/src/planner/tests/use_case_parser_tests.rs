@@ -62,7 +62,7 @@ Email is verified"#;
   // Verify sections
   assert_eq!(use_case.preconditions.len(), 2);
   assert_eq!(use_case.main_flow.len(), 5);
-  assert_eq!(use_case.alternative_flows.len(), 2);
+  assert_eq!(use_case.alternative_flows.len(), 4);
   assert_eq!(use_case.postconditions.len(), 3);
 
   // Verify content

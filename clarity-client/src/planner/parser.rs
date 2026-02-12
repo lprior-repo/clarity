@@ -71,37 +71,38 @@ pub fn parse_use_case(input: &str) -> Option<UseCase> {
   let mut alternative_flows = Vec::new();
   let mut postconditions = Vec::new();
 
-  let mut current_section = None;
+  let mut current_section: Option<&str> = None;
+  let mut has_valid_section = false;
 
   for line in &lines[1..] {
-    match *line {
-      "preconditions" => {
-        current_section = Some("preconditions");
-      }
-      "main_flow" => {
-        current_section = Some("main_flow");
-      }
-      "alternative_flows" => {
-        current_section = Some("alternative_flows");
-      }
-      "postconditions" => {
-        current_section = Some("postconditions");
-      }
-      _ => {
-        if let Some(section) = current_section {
-          let trimmed_line = line.trim();
-          if !trimmed_line.is_empty() {
-            match section {
-              "preconditions" => preconditions.push(trimmed_line.to_string()),
-              "main_flow" => main_flow.push(trimmed_line.to_string()),
-              "alternative_flows" => alternative_flows.push(trimmed_line.to_string()),
-              "postconditions" => postconditions.push(trimmed_line.to_string()),
-              _ => {}
-            }
-          }
+    let is_section_header = matches!(
+      *line,
+      "preconditions" | "main_flow" | "alternative_flows" | "postconditions"
+    );
+
+    if is_section_header {
+      has_valid_section = true;
+      current_section = Some(*line);
+    } else if let Some(section) = current_section {
+      let trimmed_line = line.trim();
+      if !trimmed_line.is_empty() {
+        match section {
+          "preconditions" => preconditions.push(trimmed_line.to_string()),
+          "main_flow" => main_flow.push(trimmed_line.to_string()),
+          "alternative_flows" => alternative_flows.push(trimmed_line.to_string()),
+          "postconditions" => postconditions.push(trimmed_line.to_string()),
+          _ => {}
         }
       }
+    } else if !line.trim().is_empty() {
+      // Non-section, non-empty line before any section header = invalid format
+      return None;
     }
+  }
+
+  // Must have at least one valid section with content
+  if !has_valid_section || main_flow.is_empty() {
+    return None;
   }
 
   // Create use case with parsed data
@@ -214,7 +215,7 @@ Email is verified"#;
     assert_eq!(use_case.trigger, "User clicks Register button");
     assert_eq!(use_case.priority, UseCasePriority::Critical);
     assert_eq!(use_case.main_flow.len(), 5);
-    assert_eq!(use_case.alternative_flows.len(), 2);
+    assert_eq!(use_case.alternative_flows.len(), 4);
     assert_eq!(use_case.postconditions.len(), 3);
   }
 

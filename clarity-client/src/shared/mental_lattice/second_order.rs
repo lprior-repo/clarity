@@ -823,6 +823,7 @@ mod tests {
     )
     .unwrap()
     .with_parent(child_id);
+    let grandchild_id = grandchild.id;
 
     let chain = ConsequenceChain::new("test".to_string())
       .unwrap()
@@ -830,7 +831,7 @@ mod tests {
       .with_consequence(child)
       .with_consequence(grandchild);
 
-    let traced = chain.chain_for_consequence(grandchild.id);
+    let traced = chain.chain_for_consequence(grandchild_id);
     assert_eq!(traced.len(), 3);
     assert_eq!(traced[0].order, 1);
     assert_eq!(traced[1].order, 2);
