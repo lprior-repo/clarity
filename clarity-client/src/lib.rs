@@ -52,6 +52,7 @@ pub mod planner;
 pub mod pme;
 pub mod providers;
 pub mod settings;
+pub mod shared;
 pub mod shortcuts;
 pub mod state;
 pub mod undo;

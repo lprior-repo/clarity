@@ -159,7 +159,9 @@ impl Hypothesis {
       HypothesisStatus::Validated
     } else if self.confidence_score <= REFUTED_THRESHOLD {
       HypothesisStatus::Refuted
-    } else if self.confidence_score > REFUTED_THRESHOLD && self.confidence_score < VALIDATED_THRESHOLD {
+    } else if self.confidence_score > REFUTED_THRESHOLD
+      && self.confidence_score < VALIDATED_THRESHOLD
+    {
       HypothesisStatus::Inconclusive
     } else {
       self.status
@@ -169,7 +171,10 @@ impl Hypothesis {
   /// Check if hypothesis is ready for decision
   #[must_use]
   pub const fn is_decided(&self) -> bool {
-    matches!(self.status, HypothesisStatus::Validated | HypothesisStatus::Refuted)
+    matches!(
+      self.status,
+      HypothesisStatus::Validated | HypothesisStatus::Refuted
+    )
   }
 }
 
@@ -417,7 +422,11 @@ impl CustomerDiscoveryInterview {
   /// Get signal count by type
   #[must_use]
   pub fn signal_count_by_type(&self, signal_type: SignalType) -> usize {
-    self.signals.iter().filter(|s| s.signal_type == signal_type).count()
+    self
+      .signals
+      .iter()
+      .filter(|s| s.signal_type == signal_type)
+      .count()
   }
 
   /// Check if interview has sufficient signal strength
@@ -564,14 +573,14 @@ impl PersonaEvidence {
     // Boost for multiple interviews
     let interview_boost = (self.interviews_referenced.len() as f32 / 5.0).min(0.2);
 
-    self.confidence_level = (base_confidence + interview_boost).clamp(MIN_CONFIDENCE, MAX_CONFIDENCE);
+    self.confidence_level =
+      (base_confidence + interview_boost).clamp(MIN_CONFIDENCE, MAX_CONFIDENCE);
   }
 
   /// Check if persona is validated (all checks passing)
   #[must_use]
   pub fn is_validated(&self) -> bool {
-    !self.validation_checks.is_empty()
-      && self.validation_checks.iter().all(|c| c.passed)
+    !self.validation_checks.is_empty() && self.validation_checks.iter().all(|c| c.passed)
   }
 
   /// Check if persona is a potential "straw man" (low evidence)
@@ -583,7 +592,11 @@ impl PersonaEvidence {
   /// Get failing checks
   #[must_use]
   pub fn failing_checks(&self) -> Vec<&PersonaValidationCheck> {
-    self.validation_checks.iter().filter(|c| !c.passed).collect()
+    self
+      .validation_checks
+      .iter()
+      .filter(|c| !c.passed)
+      .collect()
   }
 }
 
@@ -696,7 +709,10 @@ impl ScenarioPlotHole {
   /// Check if plot hole is blocking (major or fatal)
   #[must_use]
   pub const fn is_blocking(&self) -> bool {
-    matches!(self.severity, PlotHoleSeverity::Major | PlotHoleSeverity::Fatal)
+    matches!(
+      self.severity,
+      PlotHoleSeverity::Major | PlotHoleSeverity::Fatal
+    )
   }
 }
 
@@ -717,10 +733,7 @@ pub enum PmeError {
 
   /// Not enough evidence
   #[error("not enough evidence: need at least {required} but have {actual}")]
-  InsufficientEvidence {
-    required: usize,
-    actual: usize,
-  },
+  InsufficientEvidence { required: usize, actual: usize },
 
   /// Validation failed
   #[error("validation failed: {0}")]
@@ -798,13 +811,21 @@ impl PmeDiscoverState {
   /// Get validated hypotheses
   #[must_use]
   pub fn validated_hypotheses(&self) -> Vec<&Hypothesis> {
-    self.hypotheses.iter().filter(|h| h.status == HypothesisStatus::Validated).collect()
+    self
+      .hypotheses
+      .iter()
+      .filter(|h| h.status == HypothesisStatus::Validated)
+      .collect()
   }
 
   /// Get refuted hypotheses
   #[must_use]
   pub fn refuted_hypotheses(&self) -> Vec<&Hypothesis> {
-    self.hypotheses.iter().filter(|h| h.status == HypothesisStatus::Refuted).collect()
+    self
+      .hypotheses
+      .iter()
+      .filter(|h| h.status == HypothesisStatus::Refuted)
+      .collect()
   }
 
   /// Get blocking plot holes
@@ -816,7 +837,11 @@ impl PmeDiscoverState {
   /// Get straw man personas (low evidence)
   #[must_use]
   pub fn straw_man_personas(&self) -> Vec<&PersonaEvidence> {
-    self.persona_evidence.iter().filter(|p| p.is_straw_man()).collect()
+    self
+      .persona_evidence
+      .iter()
+      .filter(|p| p.is_straw_man())
+      .collect()
   }
 
   /// Calculate overall discovery health score
@@ -865,7 +890,10 @@ mod tests {
 
   #[test]
   fn hypothesis_new_succeeds_with_valid_input() {
-    let result = Hypothesis::new("Users want X".to_string(), "Users do not want X".to_string());
+    let result = Hypothesis::new(
+      "Users want X".to_string(),
+      "Users do not want X".to_string(),
+    );
     assert!(result.is_ok());
     let h = result.unwrap();
     assert_eq!(h.thesis_statement, "Users want X");
@@ -875,12 +903,10 @@ mod tests {
 
   #[test]
   fn hypothesis_confidence_updates_status() {
-    let h = Hypothesis::new("t".to_string(), "n".to_string())
-      .update_confidence(0.9);
+    let h = Hypothesis::new("t".to_string(), "n".to_string()).update_confidence(0.9);
     assert_eq!(h.status, HypothesisStatus::Validated);
 
-    let h = Hypothesis::new("t".to_string(), "n".to_string())
-      .update_confidence(0.1);
+    let h = Hypothesis::new("t".to_string(), "n".to_string()).update_confidence(0.1);
     assert_eq!(h.status, HypothesisStatus::Refuted);
   }
 
@@ -953,10 +979,7 @@ mod tests {
   #[test]
   fn pme_discover_state_health_score() {
     let state = PmeDiscoverState::new()
-      .with_hypothesis(
-        Hypothesis::new("t".to_string(), "n".to_string())
-          .update_confidence(0.9),
-      );
+      .with_hypothesis(Hypothesis::new("t".to_string(), "n".to_string()).update_confidence(0.9));
 
     assert!(state.health_score() > MIN_CONFIDENCE);
     assert_eq!(state.validated_hypotheses().len(), 1);

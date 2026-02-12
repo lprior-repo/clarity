@@ -10,6 +10,15 @@
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
+pub mod components;
+pub mod discover_panel;
+pub mod state;
 pub mod types;
 
+pub use components::{
+  HypothesisEditor, HypothesisSummary, InterviewLogger, InterviewSummary, PersonaForge,
+  PersonaSummary, ScenarioSummary, ScenarioValidator,
+};
+pub use discover_panel::{DiscoverTab, PmeDiscoverPanel, PmeDiscoverPanelProps};
+pub use state::{PmeDiscoverProvider, PmeDiscoverSignals};
 pub use types::*;
