@@ -131,10 +131,7 @@ pub fn HypothesisEditor(signals: Signal<PmeDiscoverSignals>) -> Element {
 
 /// Individual hypothesis card
 #[component]
-fn HypothesisCard(
-  hypothesis: Hypothesis,
-  signals: Signal<PmeDiscoverSignals>,
-) -> Element {
+fn HypothesisCard(hypothesis: Hypothesis, signals: Signal<PmeDiscoverSignals>) -> Element {
   let id = hypothesis.id;
   let confidence = use_signal(|| hypothesis.confidence_score);
 

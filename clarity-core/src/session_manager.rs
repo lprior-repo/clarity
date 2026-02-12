@@ -8,7 +8,6 @@
 //! Session management for Clarity
 //!
 //! Provides a complete session management system with:
-//! - User authentication and session creation
 //! - Session token management with expiration
 //! - Session validation and cleanup
 //! - Persistent session storage
@@ -17,10 +16,6 @@
 //! - Core: Pure functions for business logic
 //! - Shell: I/O operations and persistence
 
-use crate::{
-  auth::{self},
-  domain::{models::User, types::UserId},
-};
 use chrono::{DateTime, Utc};
 use moka::future::Cache;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -28,14 +23,11 @@ use thiserror::Error;
 
 /// Session duration (30 minutes of inactivity)
 const SESSION_DURATION: Duration = Duration::from_secs(30 * 60);
-/// Max concurrent sessions per user
-const MAX_SESSIONS_PER_USER: usize = 5;
 
 /// Session information
 #[derive(Debug, Clone, PartialEq)]
 pub struct Session {
   pub id: SessionId,
-  pub user_id: UserId,
   pub token: String,
   pub created_at: SystemTime,
   pub last_activity: SystemTime,
@@ -45,11 +37,10 @@ pub struct Session {
 impl Session {
   /// Create a new session
   #[must_use]
-  pub fn new(user_id: UserId, token: String) -> Self {
+  pub fn new(token: String) -> Self {
     let now = SystemTime::now();
     Self {
       id: SessionId::new(),
-      user_id,
       token,
       created_at: now,
       last_activity: now,
@@ -76,7 +67,6 @@ impl Session {
   pub fn renew(&self, now: SystemTime) -> Self {
     Self {
       id: self.id.clone(),
-      user_id: self.user_id,
       token: self.token.clone(),
       created_at: self.created_at,
       last_activity: now,
@@ -131,10 +121,6 @@ pub enum SessionError {
   #[error("invalid session ID: {0}")]
   InvalidSessionId(String),
 
-  /// Authentication failed
-  #[error("authentication failed")]
-  AuthenticationFailed,
-
   /// Session not found
   #[error("session not found")]
   SessionNotFound,
@@ -150,14 +136,6 @@ pub enum SessionError {
   /// Too many concurrent sessions
   #[error("too many concurrent sessions (max {0})")]
   TooManySessions(usize),
-
-  /// User not found
-  #[error("user not found")]
-  UserNotFound,
-
-  /// Invalid password
-  #[error("invalid password")]
-  InvalidPassword,
 
   /// System time error
   #[error("system time error")]
@@ -178,36 +156,14 @@ impl SessionCore {
     }
   }
 
-  /// Authenticate user and create session
-  ///
-  /// # Errors
-  /// Returns SessionError if authentication fails or session creation fails
-  pub async fn authenticate_and_create_session(
-    &self,
-    user: &User,
-    password: &str,
-  ) -> Result<Session, SessionError> {
-    // Verify password (pure function call)
-    auth::verify_password(&user.password_hash, password)
-      .map_err(|_| SessionError::AuthenticationFailed)?;
-
-    // Check existing sessions for this user
-    let current_sessions = self.get_active_sessions_for_user(user.id).await;
-    if current_sessions.len() >= MAX_SESSIONS_PER_USER {
-      return Err(SessionError::TooManySessions(MAX_SESSIONS_PER_USER));
-    }
-
-    // Create new session
-    let token = auth::generate_session_token();
-    let session = Session::new(user.id, token);
-
-    // Store session
+  /// Create a new session and store it
+  pub async fn create_session(&self, token: String) -> Session {
+    let session = Session::new(token);
     self
       .active_sessions
       .insert(session.token.clone(), session.clone())
       .await;
-
-    Ok(session)
+    session
   }
 
   /// Validate session token
@@ -252,27 +208,9 @@ impl SessionCore {
     }
   }
 
-  /// Get user ID from valid session
-  ///
-  /// # Errors
-  /// Returns SessionError if session is invalid or expired
-  pub async fn get_user_id_from_session(&self, token: &str) -> Result<UserId, SessionError> {
-    let session = self.validate_session(token).await?;
-    Ok(session.user_id)
-  }
-
   /// Terminate session
   pub async fn terminate_session(&self, token: &str) -> Result<(), SessionError> {
     self.active_sessions.invalidate(token).await;
-    Ok(())
-  }
-
-  /// Terminate all sessions for a user
-  pub async fn terminate_user_sessions(&self, user_id: UserId) -> Result<(), SessionError> {
-    let sessions = self.get_active_sessions_for_user(user_id).await;
-    for session in sessions {
-      self.active_sessions.invalidate(&session.token).await;
-    }
     Ok(())
   }
 
@@ -294,20 +232,10 @@ impl SessionCore {
     Ok(expired_count)
   }
 
-  /// Get number of active sessions for a user
+  /// Get number of active sessions
   #[must_use]
-  pub async fn get_session_count_for_user(&self, user_id: UserId) -> usize {
-    self.get_active_sessions_for_user(user_id).await.len()
-  }
-
-  /// Get all active sessions for a user
-  async fn get_active_sessions_for_user(&self, user_id: UserId) -> Vec<Session> {
-    self
-      .active_sessions
-      .iter()
-      .filter(|(_, session)| session.user_id == user_id)
-      .map(|(_, session)| session.clone())
-      .collect()
+  pub async fn get_session_count(&self) -> usize {
+    self.active_sessions.entry_count() as usize
   }
 }
 
@@ -336,34 +264,9 @@ impl SessionManager {
     }
   }
 
-  /// Authenticate user and create session
-  ///
-  /// This is the shell layer that handles user lookup and delegates to the core
-  ///
-  /// # Errors
-  /// Returns SessionError if user lookup fails or authentication fails
-  pub async fn authenticate(
-    &self,
-    user_id: UserId,
-    password: &str,
-  ) -> Result<Session, SessionError> {
-    // Load user from database if available
-    let user = match &self.db {
-      Some(db) => {
-        let user = db
-          .get_user(user_id)
-          .await
-          .map_err(|_| SessionError::UserNotFound)?;
-        user.ok_or(SessionError::UserNotFound)?
-      }
-      None => return Err(SessionError::UserNotFound),
-    };
-
-    // Delegate to core for session creation
-    self
-      .core
-      .authenticate_and_create_session(&user, password)
-      .await
+  /// Create a new session
+  pub async fn create_session(&self, token: String) -> Session {
+    self.core.create_session(token).await
   }
 
   /// Validate session token
@@ -374,22 +277,9 @@ impl SessionManager {
     self.core.validate_session(token).await
   }
 
-  /// Get user ID from valid session
-  ///
-  /// # Errors
-  /// Returns SessionError if session is invalid or expired
-  pub async fn get_user_id_from_session(&self, token: &str) -> Result<UserId, SessionError> {
-    self.core.get_user_id_from_session(token).await
-  }
-
   /// Terminate session
   pub async fn terminate_session(&self, token: &str) -> Result<(), SessionError> {
     self.core.terminate_session(token).await
-  }
-
-  /// Terminate all sessions for a user
-  pub async fn terminate_user_sessions(&self, user_id: UserId) -> Result<(), SessionError> {
-    self.core.terminate_user_sessions(user_id).await
   }
 
   /// Clean up expired sessions and persist if database is available
@@ -404,10 +294,10 @@ impl SessionManager {
     Ok(cleaned)
   }
 
-  /// Get number of active sessions for a user
+  /// Get number of active sessions
   #[must_use]
-  pub async fn get_session_count_for_user(&self, user_id: UserId) -> usize {
-    self.core.get_session_count_for_user(user_id).await
+  pub async fn get_session_count(&self) -> usize {
+    self.core.get_session_count().await
   }
 }
 
@@ -422,14 +312,6 @@ impl SessionDatabase {
   #[must_use]
   pub fn new() -> Self {
     Self {}
-  }
-
-  /// Get user by ID (would be implemented with actual DB queries)
-  #[allow(clippy::unused_async)]
-  pub async fn get_user(&self, _user_id: UserId) -> Result<Option<User>, SessionError> {
-    // Implementation would use sqlx or similar
-    // For now, placeholder
-    Err(SessionError::UserNotFound)
   }
 
   /// Save session to database
@@ -487,40 +369,22 @@ impl SessionUtils {
     session
       .expires_at
       .duration_since(now)
-      .unwrap_or(Duration::from_secs(0))
+      .map_or(Duration::from_secs(0), |d| d)
   }
 }
 
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::domain::types::Email;
 
-  // Test helper to create a test user
-  fn create_test_user() -> User {
-    let email = Email::new("test@example.com".to_string()).unwrap();
-    User::new(
-      email,
-      "hashed_password".to_string(),
-      crate::domain::types::UserRole::User,
-    )
-    .unwrap()
-  }
-
-  // Test SessionCore::authenticate_and_create_session
+  // Test SessionCore::create_session
   #[tokio::test]
   async fn test_session_creation() {
     let core = SessionCore::new();
-    let user = create_test_user();
-    let password = "valid_password";
+    let token = "test_token".to_string();
+    let session = core.create_session(token.clone()).await;
 
-    // This would fail because we need to hash the password first
-    // For now, we'll test the session creation without authentication
-    let token = auth::generate_session_token();
-    let session = Session::new(user.id, token);
-
-    assert_eq!(session.user_id, user.id);
-    assert!(!session.token.is_empty());
+    assert_eq!(session.token, token);
     assert!(!session.is_expired(SystemTime::now()));
   }
 
@@ -528,7 +392,7 @@ mod tests {
   #[test]
   fn test_session_expiration() {
     let now = SystemTime::now();
-    let session = Session::new(UserId::new(), "token".to_string());
+    let session = Session::new("token".to_string());
 
     // Fresh session should not be expired
     assert!(!session.is_expired(now));
@@ -545,24 +409,27 @@ mod tests {
   #[test]
   fn test_session_renewal() {
     let now = SystemTime::now();
-    let mut session = Session::new(UserId::new(), "token".to_string());
+    let session = Session::new("token".to_string());
 
-    // Change some properties to verify renewal
-    session.expires_at = now - Duration::from_secs(1);
-    session.last_activity = now - Duration::from_secs(10);
+    // Create a stale session for testing
+    let stale_session = Session {
+      expires_at: now - Duration::from_secs(1),
+      last_activity: now - Duration::from_secs(10),
+      ..session
+    };
 
-    let renewed = session.renew(now);
+    let renewed = stale_session.renew(now);
 
     // ID and token should remain the same
-    assert_eq!(renewed.id, session.id);
-    assert_eq!(renewed.token, session.token);
+    assert_eq!(renewed.id, stale_session.id);
+    assert_eq!(renewed.token, stale_session.token);
 
     // Expiration and activity should be updated
     assert_eq!(renewed.last_activity, now);
     assert_eq!(renewed.expires_at, now + SESSION_DURATION);
 
     // Original session should remain unchanged
-    assert_ne!(session.last_activity, now);
+    assert_ne!(stale_session.last_activity, now);
   }
 
   // Test SessionId
@@ -586,7 +453,7 @@ mod tests {
   #[test]
   fn test_session_utils() {
     let now = SystemTime::now();
-    let session = Session::new(UserId::new(), "token".to_string());
+    let session = Session::new("token".to_string());
 
     // Test lifetime calculation
     let lifetime = SessionUtils::session_lifetime(&session, now);
@@ -598,18 +465,22 @@ mod tests {
   #[tokio::test]
   async fn test_session_manager_in_memory() {
     let manager = SessionManager::new();
-    let token = "test_token";
+    let token = "test_token".to_string();
 
-    // Should fail because there's no database
-    let result = manager.authenticate(UserId::new(), "password").await;
-    assert!(matches!(result, Err(SessionError::UserNotFound)));
+    // Create a session
+    let session = manager.create_session(token.clone()).await;
+    assert_eq!(session.token, token);
 
-    // Validation should fail for non-existent session
-    let result = manager.validate_session(token).await;
-    assert!(matches!(result, Err(SessionError::SessionNotFound)));
-
-    // Termination should not fail for non-existent session
-    let result = manager.terminate_session(token).await;
+    // Validation should succeed for existing session
+    let result = manager.validate_session(&token).await;
     assert!(result.is_ok());
+
+    // Termination should succeed
+    let result = manager.terminate_session(&token).await;
+    assert!(result.is_ok());
+
+    // After termination, validation should fail
+    let result = manager.validate_session(&token).await;
+    assert!(matches!(result, Err(SessionError::SessionNotFound)));
   }
 }

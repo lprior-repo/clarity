@@ -14,8 +14,7 @@
 //! - Connection pooling with WAL mode
 
 use anyhow::Result;
-use clarity_core::auth;
-use clarity_core::db::models::{Bead, BeadFilters, BeadId, Email, NewBead, User, UserId, UserRole};
+use clarity_core::db::models::{Bead, BeadFilters, BeadId, NewBead};
 use clarity_core::db::{sqlite_pool, DbError, DbResult, SqliteDbConfig};
 use sqlx::{Row, SqlitePool};
 use std::path::{Path, PathBuf};
@@ -752,8 +751,9 @@ impl DesktopDb {
     let priority = clarity_core::db::models::BeadPriority::new(priority_val)?;
 
     let created_by = created_by_str
-      .map(|s| clarity_core::db::models::UserId::from_str(&s))
-      .transpose()?;
+      .map(|s| uuid::Uuid::parse_str(&s))
+      .transpose()
+      .map_err(|e| DbError::InvalidUuid(e.to_string()))?;
 
     Ok(Bead {
       id,
@@ -765,211 +765,6 @@ impl DesktopDb {
       created_by,
       created_at: created_at_str,
       updated_at: updated_at_str,
-    })
-  }
-
-  // ===== User Authentication Methods =====
-
-  /// Create a new user with a hashed password
-  ///
-  /// # Errors
-  /// - Returns `DbError::Connection` if query execution fails
-  /// - Returns `DbError::Validation` if email is invalid
-  pub async fn create_user(&self, email: Email, password: &str, role: UserRole) -> DbResult<User> {
-    // Hash the password using Argon2id
-    let password_hash = auth::hash_password(password)
-      .map_err(|e| DbError::Validation(format!("Password hashing failed: {e}")))?;
-
-    let id = UserId::new();
-    let now = chrono::Utc::now();
-
-    sqlx::query(
-      r"
-            INSERT INTO users (id, email, password_hash, role, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ",
-    )
-    .bind(id.to_string())
-    .bind(email.as_str())
-    .bind(&password_hash)
-    .bind(role.to_string())
-    .bind(now.to_rfc3339())
-    .bind(now.to_rfc3339())
-    .execute(&self.pool)
-    .await
-    .map_err(|e| {
-      // Check for unique constraint violation
-      if e.to_string().contains("UNIQUE constraint failed") {
-        DbError::Validation(format!("Email {email} already exists"))
-      } else {
-        DbError::Connection(e)
-      }
-    })?;
-
-    self.get_user(id).await
-  }
-
-  /// Get a user by ID
-  ///
-  /// # Errors
-  /// - Returns `DbError::NotFound` if user does not exist
-  /// - Returns `DbError::Connection` if query execution fails
-  pub async fn get_user(&self, id: UserId) -> DbResult<User> {
-    let row = sqlx::query(
-      r"
-            SELECT id, email, password_hash, role, created_at, updated_at
-            FROM users
-            WHERE id = ?
-            ",
-    )
-    .bind(id.to_string())
-    .fetch_optional(&self.pool)
-    .await?
-    .ok_or_else(|| DbError::not_found("User", id.to_string()))?;
-
-    Self::row_to_user(row)
-  }
-
-  /// Get a user by email
-  ///
-  /// # Errors
-  /// - Returns `DbError::NotFound` if user does not exist
-  /// - Returns `DbError::Connection` if query execution fails
-  pub async fn get_user_by_email(&self, email: &Email) -> DbResult<User> {
-    let row = sqlx::query(
-      r"
-            SELECT id, email, password_hash, role, created_at, updated_at
-            FROM users
-            WHERE email = ?
-            ",
-    )
-    .bind(email.as_str())
-    .fetch_optional(&self.pool)
-    .await?
-    .ok_or_else(|| DbError::not_found("User", email.to_string()))?;
-
-    Self::row_to_user(row)
-  }
-
-  /// Verify user credentials (email + password)
-  ///
-  /// Returns the user if credentials are valid.
-  ///
-  /// # Errors
-  /// - Returns `DbError::NotFound` if user doesn't exist
-  /// - Returns `DbError::Validation` if password is incorrect
-  pub async fn verify_user(&self, email: &Email, password: &str) -> DbResult<User> {
-    // Get the user by email
-    let user = self.get_user_by_email(email).await?;
-
-    // Verify the password
-    let is_valid = auth::verify_password(&user.password_hash, password)
-      .map_err(|e| DbError::Validation(format!("Password verification failed: {e}")))?;
-
-    if is_valid {
-      Ok(user)
-    } else {
-      Err(DbError::Validation("Invalid password".to_string()))
-    }
-  }
-
-  /// List all users
-  ///
-  /// # Errors
-  /// - Returns `DbError::Connection` if query execution fails
-  pub async fn list_users(&self) -> DbResult<Vec<User>> {
-    let rows = sqlx::query(
-      r"
-            SELECT id, email, password_hash, role, created_at, updated_at
-            FROM users
-            ORDER BY created_at DESC
-            ",
-    )
-    .fetch_all(&self.pool)
-    .await?;
-
-    rows.into_iter().map(Self::row_to_user).collect()
-  }
-
-  /// Update user password
-  ///
-  /// # Errors
-  /// - Returns `DbError::NotFound` if user doesn't exist
-  /// - Returns `DbError::Connection` if query execution fails
-  pub async fn update_user_password(&self, id: UserId, new_password: &str) -> DbResult<()> {
-    let password_hash = auth::hash_password(new_password)
-      .map_err(|e| DbError::Validation(format!("Password hashing failed: {e}")))?;
-
-    let now = chrono::Utc::now();
-
-    let result = sqlx::query(
-      r"
-            UPDATE users
-            SET password_hash = ?, updated_at = ?
-            WHERE id = ?
-            ",
-    )
-    .bind(&password_hash)
-    .bind(now.to_rfc3339())
-    .bind(id.to_string())
-    .execute(&self.pool)
-    .await?;
-
-    if result.rows_affected() == 0 {
-      return Err(DbError::not_found("User", id.to_string()));
-    }
-
-    Ok(())
-  }
-
-  /// Delete a user
-  ///
-  /// # Errors
-  /// - Returns `DbError::NotFound` if user doesn't exist
-  /// - Returns `DbError::Connection` if query execution fails
-  pub async fn delete_user(&self, id: UserId) -> DbResult<()> {
-    let result = sqlx::query("DELETE FROM users WHERE id = ?")
-      .bind(id.to_string())
-      .execute(&self.pool)
-      .await?;
-
-    if result.rows_affected() == 0 {
-      return Err(DbError::not_found("User", id.to_string()));
-    }
-
-    Ok(())
-  }
-
-  /// Helper: Convert a query row to User
-  ///
-  /// # Errors
-  /// - Returns `DbError::InvalidUuid` if ID parsing fails
-  /// - Returns `DbError::Validation` if email or role parsing fails
-  fn row_to_user(row: sqlx::sqlite::SqliteRow) -> DbResult<User> {
-    let id_str: String = row.try_get("id").map_err(DbError::Connection)?;
-    let email_str: String = row.try_get("email").map_err(DbError::Connection)?;
-    let password_hash: String = row.try_get("password_hash").map_err(DbError::Connection)?;
-    let role_str: String = row.try_get("role").map_err(DbError::Connection)?;
-    let created_at_str: String = row.try_get("created_at").map_err(DbError::Connection)?;
-    let updated_at_str: String = row.try_get("updated_at").map_err(DbError::Connection)?;
-
-    let id = UserId::from_str(&id_str)?;
-    let email = Email::new(email_str)?;
-    let role = role_str.parse()?;
-
-    // Try parsing as RFC3339 first, then fall back to SQLite datetime format
-    let created_at = Self::parse_sqlite_datetime(&created_at_str)
-      .map_err(|e| DbError::Validation(format!("Invalid created_at format: {e}")))?;
-    let updated_at = Self::parse_sqlite_datetime(&updated_at_str)
-      .map_err(|e| DbError::Validation(format!("Invalid updated_at format: {e}")))?;
-
-    Ok(User {
-      id,
-      email,
-      password_hash,
-      role,
-      created_at,
-      updated_at,
     })
   }
 }

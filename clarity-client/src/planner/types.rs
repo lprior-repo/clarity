@@ -51,10 +51,11 @@ pub enum DiamondPhase {
 }
 
 impl DiamondPhase {
-  /// Check if phase is active (current phase)
+  /// Check if phase is active (is the current phase)
   #[must_use]
-  pub const fn is_active(&self) -> bool {
-    matches!(self, Self::Top | Self::Right | Self::Bottom | Self::Left)
+  pub fn is_active(&self, current_phase: DiamondPhase) -> bool {
+    use DiamondPhase::*;
+    matches!((self, current_phase), (Top, Top) | (Right, Right) | (Bottom, Bottom) | (Left, Left))
   }
 
   /// Check if phase is complete (all phases before current are complete)
@@ -76,7 +77,7 @@ impl DiamondPhase {
   /// Check if phase should be rendered (is active OR is complete)
   #[must_use]
   pub fn should_render(&self, current_phase: DiamondPhase) -> bool {
-    self.is_active() || self.is_complete(current_phase)
+    self.is_active(current_phase) || self.is_complete(current_phase)
   }
 
   /// Get phase order for validation
@@ -1888,10 +1889,15 @@ mod phase_rendering_tests {
 
   #[test]
   fn test_phase_is_active() {
-    assert!(DiamondPhase::Top.is_active());
-    assert!(DiamondPhase::Right.is_active());
-    assert!(DiamondPhase::Bottom.is_active());
-    assert!(DiamondPhase::Left.is_active());
+    // Phase is active only when it matches current phase
+    assert!(DiamondPhase::Top.is_active(DiamondPhase::Top));
+    assert!(DiamondPhase::Right.is_active(DiamondPhase::Right));
+    assert!(DiamondPhase::Bottom.is_active(DiamondPhase::Bottom));
+    assert!(DiamondPhase::Left.is_active(DiamondPhase::Left));
+
+    // Phase is not active when it doesn't match current phase
+    assert!(!DiamondPhase::Top.is_active(DiamondPhase::Right));
+    assert!(!DiamondPhase::Right.is_active(DiamondPhase::Bottom));
   }
 
   #[test]

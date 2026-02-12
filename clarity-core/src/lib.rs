@@ -26,9 +26,9 @@
 //! ## Domain Structure
 //!
 //! The `domain` module contains the core business logic organized as:
-//! - **Aggregates**: Consistency boundaries (UserAggregate, BeadAggregate, PlanSessionAggregate)
-//! - **Entities**: Objects with identity (User, Bead)
-//! - **Value Objects**: Immutable objects defined by their values (Email, BeadId, UserId, etc.)
+//! - **Aggregates**: Consistency boundaries (BeadAggregate, PlanSessionAggregate)
+//! - **Entities**: Objects with identity (Bead)
+//! - **Value Objects**: Immutable objects defined by their values (BeadId, UserId, etc.)
 //! - **Domain Events**: Messages capturing domain occurrences
 //! - **Repositories**: Persistence abstractions
 //! - **Domain Services**: Stateless business logic
@@ -63,31 +63,6 @@ pub use types::{HttpMethod, HttpMethodError, SpecName, SpecNameError, Url, UrlEr
 #[must_use]
 pub fn greet(name: &str) -> String {
   format!("Hello, {name}!")
-}
-
-/// Example of functional core usage
-#[must_use]
-pub fn create_example_users() -> Vec<domain::User> {
-  use domain::{Email, User, UserRole};
-
-  // Create a user with proper error handling - returns Option
-  fn create_user_with_email(email_str: &str, role: UserRole) -> Option<User> {
-    Email::new(email_str.to_string())
-      .ok()
-      .and_then(|email| User::new(email, "hash".to_string(), role).ok())
-  }
-
-  // Collection of user configurations
-  let user_configs = vec![
-    ("alice@example.com", UserRole::Admin),
-    ("bob@example.com", UserRole::User),
-  ];
-
-  // Create users using functional pipeline, filtering out any failures
-  user_configs
-    .into_iter()
-    .filter_map(|(email_str, role)| create_user_with_email(email_str, role))
-    .collect()
 }
 
 /// Example of processing beads with functional pipeline

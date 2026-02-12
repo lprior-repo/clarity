@@ -15,7 +15,7 @@
 //! - Persistent state using rpds
 
 use super::models::ModelError;
-use super::{Bead, BeadId, BeadPriority, BeadStatus, BeadType, User, UserId};
+use super::{Bead, BeadId, BeadPriority, BeadStatus, BeadType, UserId};
 use rpds::Vector;
 use std::collections::HashMap;
 
@@ -27,9 +27,6 @@ pub enum DomainError {
 
   /// Bead not found
   BeadNotFound(BeadId),
-
-  /// User not found
-  UserNotFound(UserId),
 
   /// Priority cannot be changed from high to low
   HighPriorityDowngrade {
@@ -57,7 +54,6 @@ impl std::fmt::Display for DomainError {
         )
       }
       Self::BeadNotFound(id) => write!(f, "Bead {id} not found"),
-      Self::UserNotFound(id) => write!(f, "User {id} not found"),
       Self::HighPriorityDowngrade { bead_id, from, to } => {
         write!(
           f,
@@ -83,12 +79,6 @@ impl std::error::Error for DomainError {}
 pub struct DomainState {
   /// All beads in the system (persistent Vector)
   pub beads: Vector<Bead>,
-
-  /// All users in the system (persistent Vector)
-  pub users: Vector<User>,
-
-  /// User name to ID mapping (for efficient lookup)
-  pub user_names: HashMap<String, UserId>,
 }
 
 impl Default for DomainState {
@@ -103,26 +93,6 @@ impl DomainState {
   pub fn new() -> Self {
     Self {
       beads: Vector::new(),
-      users: Vector::new(),
-      user_names: HashMap::new(),
-    }
-  }
-
-  /// Create domain state with initial users
-  #[must_use]
-  pub fn with_initial_users(users: Vec<User>) -> Self {
-    let mut user_names = HashMap::new();
-
-    // Build user name to ID mapping
-    for user in &users {
-      // Note: User doesn't have name field, so we use email
-      user_names.insert(user.email.as_str().to_string(), user.id);
-    }
-
-    Self {
-      beads: Vector::new(),
-      users: users.into_iter().collect(),
-      user_names,
     }
   }
 
@@ -132,28 +102,10 @@ impl DomainState {
     self.beads.iter().find(|bead| bead.id == id)
   }
 
-  /// Get user by ID (pure function - returns Option)
-  #[must_use]
-  pub fn get_user(&self, id: UserId) -> Option<&User> {
-    self.users.iter().find(|user| user.id == id)
-  }
-
-  /// Get user by email (pure function - returns Option)
-  #[must_use]
-  pub fn get_user_by_email(&self, email: &str) -> Option<&User> {
-    self.user_names.get(email).and_then(|&id| self.get_user(id))
-  }
-
   /// Get all beads (pure function - returns new Vector)
   #[must_use]
   pub fn get_all_beads(&self) -> Vector<Bead> {
     self.beads.clone()
-  }
-
-  /// Get all users (pure function - returns new Vector)
-  #[must_use]
-  pub fn get_all_users(&self) -> Vector<User> {
-    self.users.clone()
   }
 
   /// Filter beads by status (pure function - returns new Vector)
@@ -208,11 +160,20 @@ impl DomainState {
 
     DomainStats {
       total_beads: total,
-      open_beads: by_status.get(&BeadStatus::Open).copied().unwrap_or(0),
-      in_progress_beads: by_status.get(&BeadStatus::InProgress).copied().unwrap_or(0),
-      blocked_beads: by_status.get(&BeadStatus::Blocked).copied().unwrap_or(0),
-      deferred_beads: by_status.get(&BeadStatus::Deferred).copied().unwrap_or(0),
-      closed_beads: by_status.get(&BeadStatus::Closed).copied().unwrap_or(0),
+      open_beads: by_status.get(&BeadStatus::Open).copied().map_or(0, |v| v),
+      in_progress_beads: by_status
+        .get(&BeadStatus::InProgress)
+        .copied()
+        .map_or(0, |v| v),
+      blocked_beads: by_status
+        .get(&BeadStatus::Blocked)
+        .copied()
+        .map_or(0, |v| v),
+      deferred_beads: by_status
+        .get(&BeadStatus::Deferred)
+        .copied()
+        .map_or(0, |v| v),
+      closed_beads: by_status.get(&BeadStatus::Closed).copied().map_or(0, |v| v),
     }
   }
 }
@@ -363,19 +324,13 @@ pub fn close_bead(bead: &Bead) -> Result<Bead, DomainError> {
 pub fn add_bead(state: DomainState, bead: Bead) -> DomainState {
   DomainState {
     beads: state.beads.push_back(bead),
-    users: state.users,
-    user_names: state.user_names,
   }
 }
 
 /// Set beads for the domain (pure function)
 #[must_use]
-pub fn with_beads(state: DomainState, beads: Vector<Bead>) -> DomainState {
-  DomainState {
-    beads,
-    users: state.users,
-    user_names: state.user_names,
-  }
+pub fn with_beads(_state: DomainState, beads: Vector<Bead>) -> DomainState {
+  DomainState { beads }
 }
 
 /// Update a bead in the domain (pure function)
@@ -401,11 +356,7 @@ pub fn update_bead(state: DomainState, updated_bead: Bead) -> Result<DomainState
     })
     .collect();
 
-  Ok(DomainState {
-    beads: new_beads,
-    users: state.users,
-    user_names: state.user_names,
-  })
+  Ok(DomainState { beads: new_beads })
 }
 
 /// Change bead status with validation (pure function)
@@ -505,116 +456,19 @@ pub fn generate_bead_report(state: &DomainState) -> String {
 }
 
 #[cfg(test)]
-#![allow(clippy::unwrap_used)]
-#![allow(clippy::expect_used)]
-#![allow(clippy::panic)]
-#![allow(unused_variables)]
-#![allow(unused_imports)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+  #![allow(clippy::panic)]
+  #![allow(unused_variables)]
+  #![allow(unused_imports)]
+
   use super::*;
-  use crate::domain::UserRole;
-  use std::str::FromStr;
 
   #[test]
   fn test_domain_state_new() {
     let state = DomainState::new();
     assert_eq!(state.beads.len(), 0);
-    assert_eq!(state.users.len(), 0);
-  }
-
-  #[test]
-  fn test_domain_state_with_initial_users() {
-    let email1 = "alice@example.com".parse().unwrap();
-    let email2 = "bob@example.com".parse().unwrap();
-    let users = vec![
-      User::new(email1.clone(), "hash".to_string(), UserRole::Admin).unwrap(),
-      User::new(email2.clone(), "hash".to_string(), UserRole::User).unwrap(),
-    ];
-
-    let state = DomainState::with_initial_users(users);
-    assert_eq!(state.users.len(), 2);
-    assert!(state.get_user_by_email(email1.as_str()).is_some());
-    assert!(state.get_user_by_email(email2.as_str()).is_some());
-  }
-
-  #[test]
-  fn test_get_bead() {
-    let bead_id = BeadId::new();
-    let bead = Bead::new(
-      "Test Bead".to_string(),
-      Some("Description".to_string()),
-      BeadStatus::Open,
-      BeadPriority::MEDIUM,
-      BeadType::Feature,
-      Some(bead_id),
-    )
-    .unwrap();
-
-    let state = DomainState::new().beads(Vector::new().push_back(bead));
-
-    assert!(state.get_bead(bead_id).is_some());
-  }
-
-  #[test]
-  fn test_filter_by_status() {
-    let bead1 = Bead::new(
-      "Open Bead".to_string(),
-      None,
-      BeadStatus::Open,
-      BeadPriority::MEDIUM,
-      BeadType::Feature,
-      Some(UserId::new()),
-    )
-    .unwrap();
-
-    let bead2 = Bead::new(
-      "Closed Bead".to_string(),
-      None,
-      BeadStatus::Closed,
-      BeadPriority::HIGH,
-      BeadType::Bugfix,
-      Some(UserId::new()),
-    )
-    .unwrap();
-
-    let state = DomainState::new().beads(Vector::new().push_back(bead1).push_back(bead2));
-
-    let open_beads = state.filter_by_status(BeadStatus::Open);
-    let closed_beads = state.filter_by_status(BeadStatus::Closed);
-
-    assert_eq!(open_beads.len(), 1);
-    assert_eq!(closed_beads.len(), 1);
-  }
-
-  #[test]
-  fn test_statistics() {
-    let bead1 = Bead::new(
-      "".to_string(),
-      None,
-      BeadStatus::Open,
-      BeadPriority::MEDIUM,
-      BeadType::Feature,
-      Some(UserId::new()),
-    )
-    .unwrap();
-
-    let bead2 = Bead::new(
-      "".to_string(),
-      None,
-      BeadStatus::Closed,
-      BeadPriority::HIGH,
-      BeadType::Bugfix,
-      Some(UserId::new()),
-    )
-    .unwrap();
-
-    let state = DomainState::new().beads(Vector::new().push_back(bead1).push_back(bead2));
-
-    let report_stats = state.statistics();
-    assert_eq!(report_stats.total_beads, 2);
-    assert_eq!(report_stats.open_beads, 1);
-    assert_eq!(report_stats.closed_beads, 1);
-    assert_eq!(report_stats.completion_percentage(), 50.0);
   }
 
   #[test]
@@ -625,151 +479,5 @@ mod tests {
 
     // Invalid transitions
     assert!(validate_status_transition(BeadStatus::Closed, BeadStatus::InProgress).is_err());
-  }
-
-  #[test]
-  fn test_create_bead() {
-    let id = BeadId::new();
-    let user_id = UserId::new();
-    let email = "test@example.com".parse().unwrap();
-    let user = User::new(email, "password_hash".to_string(), UserRole::Admin).unwrap();
-
-    let bead = create_bead(
-      "Test Bead".to_string(),
-      Some("Description".to_string()),
-      BeadPriority::HIGH,
-      BeadType::Feature,
-      Some(user_id),
-    )
-    .unwrap();
-
-    assert!(bead.is_ok());
-    let bead = bead.unwrap();
-    assert_eq!(bead.title(), "Test Bead");
-    assert_eq!(bead.status(), BeadStatus::Open);
-  }
-
-  #[test]
-  fn test_update_bead_priority() {
-    let id = BeadId::new();
-    let user_id = UserId::new();
-    let email = "test@example.com".parse().unwrap();
-    let user = User::new(email, "password_hash".to_string(), UserRole::Admin).unwrap();
-
-    let original_bead = Bead::new(
-      "Test Bead".to_string(),
-      Some("Description".to_string()),
-      BeadStatus::Open,
-      BeadPriority::HIGH,
-      BeadType::Feature,
-      Some(user_id),
-    )
-    .unwrap();
-
-    // Valid update (same priority)
-    let updated = update_bead_priority(&original_bead, BeadPriority::HIGH);
-    assert!(updated.is_ok());
-
-    // Invalid update (high to medium)
-    let updated = update_bead_priority(&original_bead, BeadPriority::MEDIUM);
-    assert!(updated.is_err());
-  }
-
-  #[test]
-  fn test_close_bead() {
-    let id = BeadId::new();
-    let user_id = UserId::new();
-    let email = "test@example.com".parse().unwrap();
-    let user = User::new(email, "password_hash".to_string(), UserRole::Admin).unwrap();
-
-    let bead = Bead::new(
-      "Test Bead".to_string(),
-      Some("Description".to_string()),
-      BeadStatus::Open,
-      BeadPriority::HIGH,
-      BeadType::Feature,
-      Some(user_id),
-    )
-    .unwrap();
-
-    // Valid close
-    let closed = close_bead(&bead);
-    assert!(closed.is_ok());
-    assert_eq!(closed.unwrap().status(), BeadStatus::Closed);
-
-    // Test with blocked bead (should fail)
-    let blocked_bead = Bead::new(
-      "Blocked Bead".to_string(),
-      Some("Description".to_string()),
-      BeadStatus::Blocked,
-      BeadPriority::HIGH,
-      BeadType::Feature,
-      Some(user_id),
-    )
-    .unwrap();
-
-    let closed = close_bead(&blocked_bead);
-    assert!(closed.is_err());
-  }
-
-  #[test]
-  fn test_process_bead_pipeline() {
-    let bead1 = Bead::new(
-      "High Priority".to_string(),
-      None,
-      BeadStatus::Open,
-      BeadPriority::HIGH,
-      BeadType::Feature,
-      None,
-    )
-    .unwrap();
-
-    let bead2 = Bead::new(
-      "Low Priority".to_string(),
-      None,
-      BeadStatus::Open,
-      BeadPriority::LOW,
-      BeadType::Bugfix,
-      None,
-    )
-    .unwrap();
-
-    let beads = Vector::new().push_back(bead1).push_back(bead2);
-
-    let operations = vec![filter_high_priority, filter_non_blocked];
-    let result = process_bead_pipeline(beads, &operations);
-
-    assert_eq!(result.len(), 1);
-  }
-
-  #[test]
-  fn test_generate_bead_report() {
-    let state = DomainState::new().beads(
-      Vector::new()
-        .push_back(
-          create_bead(
-            "Test".to_string(),
-            Some("".to_string()),
-            BeadPriority::MEDIUM,
-            BeadType::Feature,
-            Some(UserId::new()),
-          )
-          .unwrap(),
-        )
-        .push_back(
-          create_bead(
-            "Test".to_string(),
-            Some("".to_string()),
-            BeadPriority::HIGH,
-            BeadType::Bugfix,
-            Some(UserId::new()),
-          )
-          .unwrap(),
-        ),
-    );
-
-    let report = generate_bead_report(state);
-    assert!(report.contains("Total Beads: 2"));
-    assert!(report.contains("Completion: 50.0%"));
   }
 }

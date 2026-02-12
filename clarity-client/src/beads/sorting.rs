@@ -260,8 +260,14 @@ mod tests {
     created_at: DateTime<Utc>,
   ) -> Bead {
     let created_at_str = created_at.to_rfc3339();
+    let uuid = match id {
+      "1" => uuid::uuid!("00000000-0000-0000-0000-000000000001"),
+      "2" => uuid::uuid!("00000000-0000-0000-0000-000000000002"),
+      "3" => uuid::uuid!("00000000-0000-0000-0000-000000000003"),
+      _ => uuid::Uuid::new_v4(),
+    };
     Bead {
-      id: clarity_core::db::models::BeadId::from_str(id).unwrap(),
+      id: clarity_core::db::models::BeadId(uuid),
       title: title.to_string(),
       description: None,
       status,

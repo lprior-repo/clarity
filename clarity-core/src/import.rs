@@ -10,12 +10,13 @@
 //! Pure functions for importing beads from JSON and CSV formats.
 //! All validation and transformation is done without side effects.
 
-use crate::db::models::{Bead, BeadPriority, BeadStatus, BeadType, NewBead};
+use crate::db::models::{Bead, BeadId, BeadPriority, BeadStatus, BeadType, NewBead};
 use crate::export::{BeadExport, ExportError, ExportedBead};
 use rpds::Vector;
 use std::collections::HashSet;
 use std::str::FromStr;
 use thiserror::Error;
+use uuid::Uuid;
 
 /// Import conflict resolution strategy
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -397,8 +398,7 @@ fn exported_to_domain_bead(exported: &ExportedBead) -> ImportResult<Bead> {
     .with_timezone(&chrono::Utc);
 
   Ok(Bead {
-    id: crate::db::models::BeadId::from_str(&exported.id)
-      .map_err(|_| ImportError::InvalidId(exported.id.clone()))?,
+    id: BeadId::from_str(&exported.id).map_err(|_| ImportError::InvalidId(exported.id.clone()))?,
     title: exported.title.clone(),
     description: exported.description.clone(),
     status: BeadStatus::from_str(&exported.status)
@@ -408,10 +408,9 @@ fn exported_to_domain_bead(exported: &ExportedBead) -> ImportResult<Bead> {
     bead_type: BeadType::from_str(&exported.bead_type)
       .map_err(|_| ImportError::InvalidType(exported.bead_type.clone()))?,
     created_by: match &exported.created_by {
-      Some(user_id) => Some(
-        crate::db::models::UserId::from_str(user_id)
-          .map_err(|_| ImportError::InvalidUserId(user_id.clone()))?,
-      ),
+      Some(user_id) => {
+        Some(Uuid::parse_str(user_id).map_err(|_| ImportError::InvalidUserId(user_id.clone()))?)
+      }
       None => None,
     },
     created_at: created_at.to_string(),
@@ -440,10 +439,9 @@ pub fn imported_to_new_beads(beads: &Vector<ExportedBead>) -> ImportResult<Vecto
         bead_type: BeadType::from_str(&exported.bead_type)
           .map_err(|_| ImportError::InvalidType(exported.bead_type.clone()))?,
         created_by: match &exported.created_by {
-          Some(user_id) => Some(
-            crate::db::models::UserId::from_str(user_id)
-              .map_err(|_| ImportError::InvalidUserId(user_id.clone()))?,
-          ),
+          Some(user_id) => {
+            Some(Uuid::parse_str(user_id).map_err(|_| ImportError::InvalidUserId(user_id.clone()))?)
+          }
           None => None,
         },
       })

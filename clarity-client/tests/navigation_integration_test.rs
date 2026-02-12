@@ -41,14 +41,21 @@ async fn test_form_submission_workflow_with_navigation() -> Result<(), String> {
   assert!(created_bead.is_some(), "Bead should be created");
 
   let bead = created_bead;
-  bead.as_ref().map_or(Err("Bead not found".to_string()), |b| {
-    assert_eq!(b.title, form_data.title);
-    Ok(())
-  })?;
+  bead
+    .as_ref()
+    .map_or(Err("Bead not found".to_string()), |b| {
+      assert_eq!(b.title, form_data.title);
+      Ok(())
+    })?;
 
   // Step 5: Programmatic navigation should happen
   let target_route = get_navigation_target_for_form_submission(&bead_id);
-  assert_eq!(target_route, Route::BeadDetail { id: bead_id.clone() });
+  assert_eq!(
+    target_route,
+    Route::BeadDetail {
+      id: bead_id.clone()
+    }
+  );
 
   // Step 6: Verify navigation target is correct
   assert!(

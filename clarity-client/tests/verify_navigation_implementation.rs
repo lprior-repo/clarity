@@ -61,7 +61,10 @@ fn test_navigation_patterns() {
     }
     Err(e) => {
       // Using functional error handling instead of panic
-      std::println!("Navigation should succeed after successful form submission: {}", e);
+      std::println!(
+        "Navigation should succeed after successful form submission: {}",
+        e
+      );
       std::process::exit(1);
     }
   }
@@ -88,17 +91,13 @@ fn test_functional_patterns() {
   let finalize = |s: String| Ok(format!("final-{}", s));
 
   // Chain operations using and_then (railway pattern)
-  let result = validate("test")
-    .and_then(transform)
-    .and_then(finalize);
+  let result = validate("test").and_then(transform).and_then(finalize);
 
   assert!(result.is_ok());
   assert_eq!(result, Ok("final-processed-test".to_string()));
 
   // Test error propagation
-  let error_result = validate("")
-    .and_then(transform)
-    .and_then(finalize);
+  let error_result = validate("").and_then(transform).and_then(finalize);
 
   assert!(error_result.is_err());
 }

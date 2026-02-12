@@ -3,7 +3,9 @@
 #![allow(clippy::disallowed_methods)]
 
 use crate::pme::state::PmeDiscoverSignals;
-use crate::pme::types::{CustomerDiscoveryInterview, SignalIntensity, SignalObservation, SignalType};
+use crate::pme::types::{
+  CustomerDiscoveryInterview, SignalIntensity, SignalObservation, SignalType,
+};
 use dioxus::prelude::*;
 use uuid::Uuid;
 

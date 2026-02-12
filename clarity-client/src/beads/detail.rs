@@ -158,7 +158,7 @@ pub struct BeadDetailProps {
   /// The bead priority
   pub priority: clarity_core::db::models::BeadPriority,
   /// Who created the bead
-  pub created_by: Option<clarity_core::db::models::UserId>,
+  pub created_by: Option<uuid::Uuid>,
   /// When the bead was created
   pub created_at: chrono::DateTime<chrono::Utc>,
   /// When the bead was last updated

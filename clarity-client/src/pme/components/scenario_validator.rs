@@ -48,10 +48,7 @@ pub fn ScenarioValidator(
 
 /// Scenario card
 #[component]
-fn ScenarioCard(
-  scenario: NorthStarScenario,
-  signals: Signal<PmeDiscoverSignals>,
-) -> Element {
+fn ScenarioCard(scenario: NorthStarScenario, signals: Signal<PmeDiscoverSignals>) -> Element {
   let holes = signals.read().plot_holes_for_scenario(scenario.id);
   let blocking = holes.iter().filter(|p| p.is_blocking()).count();
   let total = holes.len();

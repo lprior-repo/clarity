@@ -26,7 +26,7 @@ pub enum DbError {
   #[error("Invalid UUID: {0}")]
   InvalidUuid(String),
 
-  #[error("Invalid email format: {0}")]
+  #[error("Invalid email: {0}")]
   InvalidEmail(String),
 
   #[error("Bundled database extraction error: {0}")]

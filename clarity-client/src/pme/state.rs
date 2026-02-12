@@ -39,7 +39,8 @@ impl PmeDiscoverSignals {
 
   /// Get validated hypothesis count
   pub fn validated_hypothesis_count(&self) -> usize {
-    self.hypotheses
+    self
+      .hypotheses
       .read()
       .iter()
       .filter(|h| h.status == HypothesisStatus::Validated)
@@ -58,7 +59,12 @@ impl PmeDiscoverSignals {
 
   /// Get strong interview count
   pub fn strong_interview_count(&self) -> usize {
-    self.interviews.read().iter().filter(|i| i.has_strong_signals()).count()
+    self
+      .interviews
+      .read()
+      .iter()
+      .filter(|i| i.has_strong_signals())
+      .count()
   }
 
   /// Get plot hole counts
@@ -75,7 +81,12 @@ impl PmeDiscoverSignals {
 
   /// Get blocking plot hole count
   pub fn blocking_plot_hole_count(&self) -> usize {
-    self.plot_holes.read().iter().filter(|p| p.is_blocking()).count()
+    self
+      .plot_holes
+      .read()
+      .iter()
+      .filter(|p| p.is_blocking())
+      .count()
   }
 
   /// Get plot holes for a scenario (cloned)
@@ -119,7 +130,8 @@ impl PmeDiscoverSignals {
 
   /// Get refuted hypothesis count
   pub fn refuted_hypothesis_count(&self) -> usize {
-    self.hypotheses
+    self
+      .hypotheses
       .read()
       .iter()
       .filter(|h| h.status == HypothesisStatus::Refuted)
@@ -128,7 +140,8 @@ impl PmeDiscoverSignals {
 
   /// Get testing hypothesis count
   pub fn testing_hypothesis_count(&self) -> usize {
-    self.hypotheses
+    self
+      .hypotheses
       .read()
       .iter()
       .filter(|h| h.status == HypothesisStatus::Testing)
@@ -136,7 +149,10 @@ impl PmeDiscoverSignals {
   }
 
   /// Get persona evidence stats
-  pub fn persona_stats(&self, personas: &[crate::planner::types::Persona]) -> (usize, usize, usize) {
+  pub fn persona_stats(
+    &self,
+    personas: &[crate::planner::types::Persona],
+  ) -> (usize, usize, usize) {
     let evidence = self.persona_evidence.read();
     let total = personas.len();
     let validated = evidence.values().filter(|e| e.is_validated()).count();

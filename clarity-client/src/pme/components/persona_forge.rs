@@ -47,10 +47,7 @@ pub fn PersonaForge(
 
 /// Persona evidence card
 #[component]
-fn PersonaEvidenceCard(
-  persona: Persona,
-  signals: Signal<PmeDiscoverSignals>,
-) -> Element {
+fn PersonaEvidenceCard(persona: Persona, signals: Signal<PmeDiscoverSignals>) -> Element {
   let (confidence, is_validated, is_straw_man) = signals.read().persona_evidence_stats(persona.id);
 
   let status_class = if is_validated {

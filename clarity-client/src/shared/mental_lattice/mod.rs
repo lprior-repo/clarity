@@ -8,8 +8,10 @@ pub mod characters;
 pub mod inversion;
 pub mod scenario_builder;
 pub mod scenarios;
+pub mod second_order;
 
 pub use characters::*;
 pub use inversion::*;
 pub use scenario_builder::*;
 pub use scenarios::*;
+pub use second_order::*;

@@ -10,11 +10,12 @@
 //! Pure functions for exporting beads to JSON and CSV formats.
 //! All functions are deterministic and side-effect free.
 
-use crate::db::models::{Bead, BeadId, BeadPriority, BeadStatus, BeadType, UserId};
+use crate::db::models::{Bead, BeadId, BeadPriority, BeadStatus, BeadType};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use thiserror::Error;
+use uuid::Uuid;
 
 /// Export format type
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -301,7 +302,7 @@ pub fn exported_to_domain(beads: &[ExportedBead]) -> ExportResult<Vec<Bead>> {
         })?,
         created_by: match exported.created_by {
           Some(ref user_id) => Some(
-            UserId::from_str(user_id)
+            Uuid::parse_str(user_id)
               .map_err(|_| ExportError::CsvSerialization(format!("Invalid user ID: {user_id}")))?,
           ),
           None => None,

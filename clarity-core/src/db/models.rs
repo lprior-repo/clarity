@@ -6,7 +6,6 @@
 #![forbid(unsafe_code)]
 
 use crate::db::error::{DbError, DbResult};
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -14,7 +13,10 @@ use uuid::Uuid;
 
 /// Macro to generate UUID-based ID types with consistent behavior
 macro_rules! uuid_id {
-  ($(#[$meta:meta])* $name:ident) => {
+  (
+    $(#[$meta:meta])*
+    $name:ident
+  ) => {
     $(#[$meta])*
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
     pub struct $name(pub Uuid);
@@ -76,107 +78,11 @@ macro_rules! uuid_id {
 
 // Apply the macro to generate ID types
 uuid_id!(
-  /// User identifier
-  UserId
-);
-
-uuid_id!(
   /// Bead identifier
   BeadId
 );
 
-/// Email address with validation
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct Email(pub String);
-
-impl Email {
-  /// Create a new Email with validation
-  ///
-  /// # Errors
-  /// - Returns `DbError::InvalidEmail` if the email is empty, malformed, or invalid
-  pub fn new(email: String) -> DbResult<Self> {
-    // Basic email validation:
-    // - Must contain exactly one '@'
-    // - Must have at least one character before '@'
-    // - Must have at least one '.' after '@'
-    // - Must have at least one character between '@' and '.'
-    // - Must have at least one character after '.'
-    let parts: Vec<&str> = email.split('@').collect();
-    if parts.len() != 2 {
-      return Err(DbError::InvalidEmail(email));
-    }
-
-    let local = parts[0];
-    let domain = parts[1];
-
-    if local.is_empty() || domain.is_empty() {
-      return Err(DbError::InvalidEmail(email));
-    }
-
-    if !domain.contains('.') || domain.ends_with('.') || domain.starts_with('.') {
-      return Err(DbError::InvalidEmail(email));
-    }
-
-    Ok(Self(email))
-  }
-
-  /// Get the email as a string
-  #[must_use]
-  pub fn as_str(&self) -> &str {
-    &self.0
-  }
-}
-
-impl From<String> for Email {
-  fn from(s: String) -> Self {
-    Self(s)
-  }
-}
-
-impl std::fmt::Display for Email {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    write!(f, "{}", self.0)
-  }
-}
-
 // ===== Enums =====
-
-/// User role
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "user_role", rename_all = "lowercase")]
-pub enum UserRole {
-  Admin,
-  User,
-}
-
-impl UserRole {
-  /// Get the role as a lowercase string
-  #[must_use]
-  pub const fn as_str(&self) -> &'static str {
-    match self {
-      Self::Admin => "admin",
-      Self::User => "user",
-    }
-  }
-}
-
-impl std::fmt::Display for UserRole {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    write!(f, "{}", self.as_str())
-  }
-}
-
-impl std::str::FromStr for UserRole {
-  type Err = DbError;
-
-  fn from_str(s: &str) -> Result<Self, Self::Err> {
-    match s.to_lowercase().as_str() {
-      "admin" => Ok(Self::Admin),
-      "user" => Ok(Self::User),
-      _ => Err(DbError::InvalidUuid(s.to_string())),
-    }
-  }
-}
 
 /// Bead status
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
@@ -304,25 +210,6 @@ impl BeadPriority {
 
 // ===== Domain Models =====
 
-/// User entity
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct User {
-  pub id: UserId,
-  pub email: Email,
-  pub password_hash: String,
-  pub role: UserRole,
-  pub created_at: DateTime<Utc>,
-  pub updated_at: DateTime<Utc>,
-}
-
-/// New user (without id and timestamps)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NewUser {
-  pub email: Email,
-  pub password_hash: String,
-  pub role: UserRole,
-}
-
 /// Bead entity
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Bead {
@@ -332,7 +219,7 @@ pub struct Bead {
   pub status: BeadStatus,
   pub priority: BeadPriority,
   pub bead_type: BeadType,
-  pub created_by: Option<UserId>,
+  pub created_by: Option<Uuid>,
   pub created_at: String,
   pub updated_at: String,
 }
@@ -345,7 +232,7 @@ pub struct NewBead {
   pub status: BeadStatus,
   pub priority: BeadPriority,
   pub bead_type: BeadType,
-  pub created_by: Option<UserId>,
+  pub created_by: Option<Uuid>,
 }
 
 /// Interview entity
@@ -354,8 +241,8 @@ pub struct Interview {
   pub id: Uuid,
   pub spec_name: String,
   pub questions: serde_json::Value,
-  pub created_at: DateTime<Utc>,
-  pub updated_at: DateTime<Utc>,
+  pub created_at: chrono::DateTime<chrono::Utc>,
+  pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Spec entity
@@ -365,8 +252,8 @@ pub struct Spec {
   pub name: String,
   pub description: Option<String>,
   pub schema: serde_json::Value,
-  pub created_at: DateTime<Utc>,
-  pub updated_at: DateTime<Utc>,
+  pub created_at: chrono::DateTime<chrono::Utc>,
+  pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Bead filters for server-side filtering
@@ -412,13 +299,13 @@ impl BeadFilters {
   /// Get the page number (default: 1)
   #[must_use]
   pub fn page(&self) -> u32 {
-    self.page.unwrap_or(1)
+    self.page.map_or(1, |p| p)
   }
 
   /// Get the page size (default: 25)
   #[must_use]
   pub fn page_size(&self) -> u32 {
-    self.page_size.unwrap_or(25)
+    self.page_size.map_or(25, |p| p)
   }
 
   /// Calculate the offset for pagination

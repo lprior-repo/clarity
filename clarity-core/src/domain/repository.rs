@@ -12,8 +12,8 @@
 //! following the Repository Pattern to abstract persistence concerns.
 
 use crate::domain::models::NewBead;
-use crate::domain::models::{Bead, ModelError, User};
-use crate::domain::types::{BeadId, BeadPriority, BeadStatus, BeadType, UserId, UserRole};
+use crate::domain::models::{Bead, ModelError};
+use crate::domain::types::{BeadId, BeadPriority, BeadStatus, BeadType, UserId};
 use std::collections::HashMap;
 
 /// Repository interface for bead operations
@@ -118,72 +118,6 @@ pub trait BeadRepository {
   /// Returns `ModelError` if:
   /// - Database operation fails
   async fn search_beads(&self, filters: BeadSearchFilters) -> Result<BeadSearchResult, ModelError>;
-}
-
-/// Repository interface for user operations
-pub trait UserRepository {
-  /// Create a new user
-  ///
-  /// # Errors
-  /// Returns `ModelError` if:
-  /// - Validation fails
-  /// - Business rules are violated
-  async fn create_user(&self, user: User) -> Result<User, ModelError>;
-
-  /// Get a user by ID
-  ///
-  /// # Errors
-  /// Returns `ModelError` if:
-  /// - User is not found
-  async fn get_user_by_id(&self, user_id: UserId) -> Result<Option<User>, ModelError>;
-
-  /// Get a user by email
-  ///
-  /// # Errors
-  /// Returns `ModelError` if:
-  /// - User is not found
-  async fn get_user_by_email(&self, email: String) -> Result<Option<User>, ModelError>;
-
-  /// Update user email
-  ///
-  /// # Errors
-  /// Returns `ModelError` if:
-  /// - User is not found
-  /// - Validation fails
-  async fn update_user_email(&self, user_id: UserId, email: String) -> Result<User, ModelError>;
-
-  /// Update user role
-  ///
-  /// # Errors
-  /// Returns `ModelError` if:
-  /// - User is not found
-  async fn update_user_role(&self, user_id: UserId, role: UserRole) -> Result<User, ModelError>;
-
-  /// Update user password
-  ///
-  /// # Errors
-  /// Returns `ModelError` if:
-  /// - User is not found
-  /// - Validation fails
-  async fn update_user_password(
-    &self,
-    user_id: UserId,
-    password_hash: String,
-  ) -> Result<(), ModelError>;
-
-  /// Delete a user
-  ///
-  /// # Errors
-  /// Returns `ModelError` if:
-  /// - User is not found
-  async fn delete_user(&self, user_id: UserId) -> Result<(), ModelError>;
-
-  /// Get all users
-  ///
-  /// # Errors
-  /// Returns `ModelError` if:
-  /// - Database operation fails
-  async fn get_all_users(&self) -> Result<Vec<User>, ModelError>;
 }
 
 /// Statistics for beads

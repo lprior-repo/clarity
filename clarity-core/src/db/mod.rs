@@ -30,4 +30,4 @@ pub use models::*;
 pub use sqlite_pool::*;
 
 // Re-export commonly used types
-pub use models::{BeadPriority, BeadStatus, BeadType, Email, UserRole};
+pub use models::{BeadPriority, BeadStatus, BeadType};

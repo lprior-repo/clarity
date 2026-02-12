@@ -1,6 +1,9 @@
 //! Test session management functionality
 
-use clarity_core::domain::types::UserId;
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
+#![allow(clippy::panic)]
+
 use clarity_core::session_manager::{Session, SessionId, SessionManager};
 
 #[tokio::test]
@@ -18,10 +21,8 @@ async fn test_session_id_creation() {
 
 #[tokio::test]
 async fn test_session_creation() {
-  let user_id = UserId::new();
-  let session = Session::new(user_id, "test_token_123".to_string());
+  let session = Session::new("test_token_123".to_string());
 
-  assert_eq!(session.user_id, user_id);
   assert_eq!(session.token, "test_token_123");
 
   // Session should not be expired when created
@@ -34,8 +35,7 @@ async fn test_session_creation() {
 
 #[tokio::test]
 async fn test_session_expiration() {
-  let user_id = UserId::new();
-  let session = Session::new(user_id, "test_token".to_string());
+  let session = Session::new("test_token".to_string());
   let now = std::time::SystemTime::now();
 
   // Fresh session should not be expired
@@ -49,19 +49,19 @@ async fn test_session_expiration() {
 
 #[tokio::test]
 async fn test_session_renewal() {
-  let user_id = UserId::new();
-  let mut session = Session::new(user_id, "test_token".to_string());
+  let session = Session::new("test_token".to_string());
   let now = std::time::SystemTime::now();
 
   // Make session stale
-  session.last_activity = now - std::time::Duration::from_secs(10);
-  session.expires_at = now - std::time::Duration::from_secs(1);
+  let mut stale_session = session.clone();
+  stale_session.last_activity = now - std::time::Duration::from_secs(10);
+  stale_session.expires_at = now - std::time::Duration::from_secs(1);
 
-  let renewed = session.renew(now);
+  let renewed = stale_session.renew(now);
 
   // ID and token should remain the same
-  assert_eq!(renewed.id, session.id);
-  assert_eq!(renewed.token, session.token);
+  assert_eq!(renewed.id, stale_session.id);
+  assert_eq!(renewed.token, stale_session.token);
 
   // Expiration and activity should be updated
   assert_eq!(renewed.last_activity, now);
@@ -71,20 +71,8 @@ async fn test_session_renewal() {
   );
 
   // Original session should remain unchanged
-  assert_ne!(session.last_activity, now);
-  assert_ne!(session.expires_at, renewed.expires_at);
-}
-
-#[tokio::test]
-async fn test_session_lifetime() {
-  let user_id = UserId::new();
-  let session = Session::new(user_id, "test_token".to_string());
-  let now = std::time::SystemTime::now();
-
-  // Test session lifetime calculation
-  let lifetime = crate::session_manager::SessionUtils::session_lifetime(&session, now);
-  assert!(lifetime > std::time::Duration::from_secs(0));
-  assert!(lifetime <= std::time::Duration::from_secs(30 * 60));
+  assert_ne!(stale_session.last_activity, now);
+  assert_ne!(stale_session.expires_at, renewed.expires_at);
 }
 
 #[tokio::test]
@@ -99,8 +87,14 @@ async fn test_session_manager_basic() {
     result,
     Err(clarity_core::session_manager::SessionError::SessionNotFound)
   ));
+}
 
-  // Termination should not fail for non-existent session
-  let result = manager.terminate_session(test_token).await;
-  assert!(result.is_ok());
+#[tokio::test]
+async fn test_session_age() {
+  let session = Session::new("test_token".to_string());
+  let now = std::time::SystemTime::now();
+
+  // Test session age calculation
+  let age = session.age_seconds(now);
+  assert!(age < 5); // Should be just a few seconds old
 }

@@ -10,91 +10,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::types::{BeadId, BeadPriority, BeadStatus, BeadType, Email, UserId, UserRole};
-
-/// User account
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct User {
-  pub id: UserId,
-  pub email: Email,
-  pub password_hash: String,
-  pub role: UserRole,
-  pub created_at: DateTime<Utc>,
-  pub updated_at: DateTime<Utc>,
-}
-
-impl User {
-  pub const MAX_EMAIL_LENGTH: usize = 255;
-
-  pub fn new(email: Email, password_hash: String, role: UserRole) -> Result<Self, ModelError> {
-    if password_hash.is_empty() {
-      return Err(ModelError::InvalidPassword(
-        "Password cannot be empty".to_string(),
-      ));
-    }
-
-    if email.as_str().len() > Self::MAX_EMAIL_LENGTH {
-      return Err(ModelError::InvalidEmail(format!(
-        "Email too long: {} characters (max: {})",
-        email.as_str().len(),
-        Self::MAX_EMAIL_LENGTH
-      )));
-    }
-
-    let now = Utc::now();
-    Ok(Self {
-      id: UserId::new(),
-      email,
-      password_hash,
-      role,
-      created_at: now,
-      updated_at: now,
-    })
-  }
-
-  pub fn with_email(mut self, email: Email) -> Result<Self, ModelError> {
-    if email.as_str().len() > Self::MAX_EMAIL_LENGTH {
-      return Err(ModelError::InvalidEmail(format!(
-        "Email too long: {} characters (max: {})",
-        email.as_str().len(),
-        Self::MAX_EMAIL_LENGTH
-      )));
-    }
-    self.email = email;
-    self.updated_at = Utc::now();
-    Ok(self)
-  }
-
-  pub fn with_role(mut self, role: UserRole) -> Self {
-    self.role = role;
-    self.updated_at = Utc::now();
-    self
-  }
-
-  pub fn update_password(self, new_hash: String) -> Result<Self, ModelError> {
-    if new_hash.is_empty() {
-      return Err(ModelError::InvalidPassword(
-        "Password cannot be empty".to_string(),
-      ));
-    }
-    let mut updated = self;
-    updated.password_hash = new_hash;
-    updated.updated_at = Utc::now();
-    Ok(updated)
-  }
-
-  pub const fn is_admin(&self) -> bool {
-    matches!(self.role, UserRole::Admin)
-  }
-
-  pub const fn is_user(&self) -> bool {
-    matches!(self.role, UserRole::User)
-  }
-
-  pub fn can_modify(&self, target_user_id: &UserId) -> bool {
-    self.is_admin() || self.id == *target_user_id
-  }
-}
+use super::types::{BeadId, BeadPriority, BeadStatus, BeadType, UserId};
 
 /// New bead (without id and timestamps)
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -232,8 +148,6 @@ impl Bead {
 /// Model errors
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModelError {
-  InvalidEmail(String),
-  InvalidPassword(String),
   InvalidTitle(String),
   InvalidTransition { from: BeadStatus, to: BeadStatus },
 }
@@ -241,8 +155,6 @@ pub enum ModelError {
 impl std::fmt::Display for ModelError {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
-      Self::InvalidEmail(msg) => write!(f, "Invalid email: {}", msg),
-      Self::InvalidPassword(msg) => write!(f, "Invalid password: {}", msg),
       Self::InvalidTitle(msg) => write!(f, "Invalid title: {}", msg),
       Self::InvalidTransition { from, to } => {
         write!(f, "Cannot transition from {} to {}", from, to)
@@ -253,65 +165,21 @@ impl std::fmt::Display for ModelError {
 
 impl std::error::Error for ModelError {}
 
+impl From<super::types::ValidationError> for ModelError {
+  fn from(err: super::types::ValidationError) -> Self {
+    Self::InvalidTitle(err.to_string())
+  }
+}
+
 #[cfg(test)]
-#![allow(clippy::unwrap_used)]
-#![allow(clippy::expect_used)]
-#![allow(clippy::panic)]
-#![allow(unused_variables)]
-#![allow(unused_imports)]
+#[allow(clippy::unwrap_used)]
+#[allow(clippy::expect_used)]
+#[allow(clippy::panic)]
+#[allow(unused_variables)]
+#[allow(unused_imports)]
 mod tests {
 
   use super::*;
-
-  #[test]
-  fn test_user_new() -> Result<(), ModelError> {
-    let email = Email::new("test@example.com".to_string())?;
-    let user = User::new(email, "hash".to_string(), UserRole::User)?;
-
-    assert_eq!(user.email.as_str(), "test@example.com");
-    assert!(user.is_user());
-    assert!(!user.is_admin());
-    Ok(())
-  }
-
-  #[test]
-  fn test_user_new_admin() -> Result<(), ModelError> {
-    let email = Email::new("admin@example.com".to_string())?;
-    let user = User::new(email, "hash".to_string(), UserRole::Admin)?;
-
-    assert!(user.is_admin());
-    Ok(())
-  }
-
-  #[test]
-  fn test_user_empty_password() -> Result<(), ModelError> {
-    let email = Email::new("test@example.com".to_string())?;
-    let result = User::new(email, "".to_string(), UserRole::User);
-    assert!(result.is_err());
-    Ok(())
-  }
-
-  #[test]
-  fn test_user_can_modify() -> Result<(), ModelError> {
-    let email = Email::new("test@example.com".to_string())?;
-    let user = User::new(email, "hash".to_string(), UserRole::User)?;
-
-    assert!(user.can_modify(&user.id));
-
-    let other_id = UserId::new();
-    assert!(!user.can_modify(&other_id));
-    Ok(())
-  }
-
-  #[test]
-  fn test_user_admin_can_modify_any() -> Result<(), ModelError> {
-    let email = Email::new("admin@example.com".to_string())?;
-    let admin = User::new(email, "hash".to_string(), UserRole::Admin)?;
-
-    let other_id = UserId::new();
-    assert!(admin.can_modify(&other_id));
-    Ok(())
-  }
 
   #[test]
   fn test_bead_new() -> Result<(), ModelError> {

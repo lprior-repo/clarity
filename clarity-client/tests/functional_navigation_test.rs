@@ -80,12 +80,7 @@ fn test_deletion_navigation_pattern() {
 }
 
 /// Validate form data using functional composition
-fn validate_form_data(
-  title: &str,
-  _description: &str,
-  status: &str,
-  bead_type: &str,
-) -> bool {
+fn validate_form_data(title: &str, _description: &str, status: &str, bead_type: &str) -> bool {
   let validations = [
     !title.is_empty(),
     !status.is_empty(),
@@ -94,7 +89,10 @@ fn validate_form_data(
       status,
       "open" | "in_progress" | "blocked" | "deferred" | "closed"
     ),
-    matches!(bead_type, "feature" | "bugfix" | "refactor" | "test" | "docs"),
+    matches!(
+      bead_type,
+      "feature" | "bugfix" | "refactor" | "test" | "docs"
+    ),
   ];
 
   validations.iter().all(|&v| v)
@@ -198,15 +196,27 @@ fn test_functional_error_handling_patterns() {
     .collect();
 
   // Count successes and errors using functional patterns
-  let successes: Vec<String> = results.iter().filter_map(|r| r.as_ref().ok().cloned()).collect();
-  let errors: Vec<String> = results.iter().filter_map(|r| r.as_ref().err().cloned()).collect();
+  let successes: Vec<String> = results
+    .iter()
+    .filter_map(|r| r.as_ref().ok().map(|s| s.to_string()))
+    .collect();
+  let errors: Vec<String> = results
+    .iter()
+    .filter_map(|r| r.as_ref().err().cloned())
+    .collect();
 
   assert_eq!(successes.len(), 2);
   assert_eq!(errors.len(), 2);
-  assert_eq!(successes, vec!["success-1".to_string(), "success-2".to_string()]);
+  assert_eq!(
+    successes,
+    vec!["success-1".to_string(), "success-2".to_string()]
+  );
   assert_eq!(
     errors,
-    vec!["Operation failed: error-1".to_string(), "Operation failed: error-2".to_string()]
+    vec![
+      "Operation failed: error-1".to_string(),
+      "Operation failed: error-2".to_string()
+    ]
   );
 }
 
