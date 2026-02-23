@@ -10,6 +10,8 @@ pub mod domain;
 pub mod presentation;
 
 pub mod adversarial_tests;
+pub mod bead_serializer;
+pub mod coach_validation;
 pub mod components;
 pub mod hostile_attacks;
 pub mod parser;

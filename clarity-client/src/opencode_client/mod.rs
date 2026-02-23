@@ -1,16 +1,23 @@
 //! OpenCode Server API Client
 //!
-//! Fast, real HTTP client for OpenCode server with SSE streaming.
+//! Correct HTTP client for OpenCode server.
+//!
+//! ## Architecture
+//!
+//! `POST /session/{id}/message` is a **synchronous** endpoint — it blocks until the
+//! model finishes and returns the completed `AssistantMessage` JSON.  We parse
+//! the `parts` array out of that response to build `TerminalLine`s.
+//!
+//! There is no need to parse an SSE stream from this endpoint.  Real streaming
+//! via `GET /event` is not used here — the sync approach is simpler and correct
+//! for this prototype.
 
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![forbid(unsafe_code)]
-#![allow(warnings)]
-#![allow(clippy::all)]
 
 use chrono::{DateTime, Utc};
-use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::sync::Arc;
@@ -20,7 +27,10 @@ use tokio::sync::RwLock;
 /// Default OpenCode server URL
 pub const DEFAULT_URL: &str = "http://localhost:4096";
 
-/// Connection status
+// ─────────────────────────────────────────────────────────────────────────────
+// Connection status
+// ─────────────────────────────────────────────────────────────────────────────
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ConnectionStatus {
   Connected,
@@ -40,7 +50,10 @@ impl fmt::Display for ConnectionStatus {
   }
 }
 
-/// Terminal line type
+// ─────────────────────────────────────────────────────────────────────────────
+// Terminal line
+// ─────────────────────────────────────────────────────────────────────────────
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TerminalLineType {
   Cmd,
@@ -50,7 +63,6 @@ pub enum TerminalLineType {
   Error,
 }
 
-/// A line in the terminal feed
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TerminalLine {
   pub line_type: TerminalLineType,
@@ -129,7 +141,11 @@ impl TerminalLine {
   }
 }
 
-/// OpenCode session
+// ─────────────────────────────────────────────────────────────────────────────
+// API types
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// OpenCode session (mirrors the server's `Session` type)
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Session {
   pub id: String,
@@ -140,11 +156,65 @@ pub struct Session {
   pub updated_at: DateTime<Utc>,
 }
 
-/// OpenCode configuration
+/// Model identifier
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ModelId {
+  #[serde(rename = "providerID")]
+  pub provider_id: String,
+  #[serde(rename = "modelID")]
+  pub model_id: String,
+}
+
+impl ModelId {
+  /// GLM 4.7 via zai-coding-plan — confirmed working via live test
+  #[must_use]
+  pub fn glm_4_7() -> Self {
+    Self {
+      provider_id: "zai-coding-plan".to_string(),
+      model_id: "glm-4.7".to_string(),
+    }
+  }
+}
+
+impl Default for ModelId {
+  fn default() -> Self {
+    Self::glm_4_7()
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Response types for POST /session/{id}/message
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// A single part inside an AssistantMessage
+#[derive(Debug, Deserialize)]
+struct MessagePart {
+  #[serde(rename = "type")]
+  part_type: String,
+  // present on text / reasoning parts
+  text: Option<String>,
+  // present on tool parts
+  tool: Option<String>,
+}
+
+/// Top-level response from POST /session/{id}/message
+#[derive(Debug, Deserialize)]
+struct AssistantMessage {
+  #[serde(default)]
+  parts: Vec<MessagePart>,
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Configuration
+// ─────────────────────────────────────────────────────────────────────────────
+
 #[derive(Clone, Debug)]
 pub struct OpenCodeConfig {
   pub url: String,
   pub password: Option<String>,
+  pub model: ModelId,
+  /// Timeout for the blocking `/session/{id}/message` call (default: 5 min)
+  pub message_timeout_secs: u64,
 }
 
 impl Default for OpenCodeConfig {
@@ -152,11 +222,16 @@ impl Default for OpenCodeConfig {
     Self {
       url: DEFAULT_URL.to_string(),
       password: None,
+      model: ModelId::default(),
+      message_timeout_secs: 300,
     }
   }
 }
 
-/// Fast HTTP client for OpenCode server
+// ─────────────────────────────────────────────────────────────────────────────
+// Client
+// ─────────────────────────────────────────────────────────────────────────────
+
 #[derive(Clone, Debug)]
 pub struct OpenCodeClient {
   config: OpenCodeConfig,
@@ -166,15 +241,15 @@ pub struct OpenCodeClient {
 }
 
 impl OpenCodeClient {
-  /// Create a new OpenCode client
   #[must_use]
   pub fn new(config: OpenCodeConfig) -> Self {
+    // The message call can take minutes — use a generous timeout.
     let http = reqwest::Client::builder()
-      .timeout(Duration::from_secs(60))
-      .connect_timeout(Duration::from_secs(3))
+      .timeout(Duration::from_secs(config.message_timeout_secs + 10))
+      .connect_timeout(Duration::from_secs(5))
       .tcp_nodelay(true)
       .build()
-      .unwrap_or_else(|_| reqwest::Client::new());
+      .unwrap_or_default();
 
     Self {
       config,
@@ -184,154 +259,164 @@ impl OpenCodeClient {
     }
   }
 
-  /// Create with default config
   #[must_use]
   pub fn default_client() -> Self {
     Self::new(OpenCodeConfig::default())
   }
 
-  /// Get current connection status
+  // ── Accessors ────────────────────────────────────────────────────────────
+
   pub async fn status(&self) -> ConnectionStatus {
     *self.status.read().await
   }
 
-  /// Get current session
   pub async fn session(&self) -> Option<Session> {
     self.session.read().await.clone()
   }
 
-  /// Check server health - ACTUAL HTTP CALL
+  #[must_use]
+  pub fn url(&self) -> &str {
+    &self.config.url
+  }
+
+  #[must_use]
+  pub fn model(&self) -> &ModelId {
+    &self.config.model
+  }
+
+  // ── Health ───────────────────────────────────────────────────────────────
+
+  /// `GET /global/health` — returns true when the server is reachable.
   pub async fn check_health(&self) -> bool {
     {
-      let mut status = self.status.write().await;
-      *status = ConnectionStatus::Connecting;
+      let mut s = self.status.write().await;
+      *s = ConnectionStatus::Connecting;
     }
-
     let url = format!("{}/global/health", self.config.url);
-
     match self.http.get(&url).send().await {
-      Ok(response) => {
-        let connected = response.status().is_success();
-        let mut status = self.status.write().await;
-        *status = if connected {
-          ConnectionStatus::Connected
-        } else {
-          ConnectionStatus::Error
-        };
-        connected
+      Ok(r) if r.status().is_success() => {
+        *self.status.write().await = ConnectionStatus::Connected;
+        true
       }
-      Err(_) => {
-        let mut status = self.status.write().await;
-        *status = ConnectionStatus::Disconnected;
+      _ => {
+        *self.status.write().await = ConnectionStatus::Disconnected;
         false
       }
     }
   }
 
-  /// Create a new session - ACTUAL HTTP CALL
+  // ── Session ──────────────────────────────────────────────────────────────
+
+  /// `POST /session` — create a new session and store it.
   pub async fn create_session(&self, title: &str) -> Option<Session> {
     let url = format!("{}/session", self.config.url);
     let body = serde_json::json!({ "title": title });
-
-    let response = self.http.post(&url).json(&body).send().await.ok()?;
-
-    if !response.status().is_success() {
+    let resp = self.http.post(&url).json(&body).send().await.ok()?;
+    if !resp.status().is_success() {
       return None;
     }
-
-    let session: Session = response.json().await.ok()?;
-    let mut current = self.session.write().await;
-    *current = Some(session.clone());
-
+    let session: Session = resp.json().await.ok()?;
+    *self.session.write().await = Some(session.clone());
     Some(session)
   }
 
-  /// Send a command and stream responses - ACTUAL HTTP WITH SSE
+  // ── Message ──────────────────────────────────────────────────────────────
+
+  /// `POST /session/{id}/message` (synchronous) — send `prompt` and collect
+  /// the model's full response as a list of [`TerminalLine`]s.
+  ///
+  /// The endpoint blocks until the model finishes and returns the complete
+  /// `AssistantMessage` JSON.  We parse `parts` out of it.
+  ///
+  /// Returns `Ok(lines)` on success, `Err(description)` on any failure.
+  pub async fn send_message(&self, prompt: &str) -> Result<Vec<TerminalLine>, String> {
+    let session = self
+      .session
+      .read()
+      .await
+      .clone()
+      .ok_or_else(|| "no active session".to_string())?;
+
+    let url = format!("{}/session/{}/message", self.config.url, session.id);
+    let body = serde_json::json!({
+        "model": {
+            "providerID": self.config.model.provider_id,
+            "modelID":    self.config.model.model_id
+        },
+        "agent": "build",
+        "parts": [{ "type": "text", "text": prompt }]
+    });
+
+    let resp = self
+      .http
+      .post(&url)
+      .json(&body)
+      .send()
+      .await
+      .map_err(|e| format!("HTTP send error: {e}"))?;
+
+    if !resp.status().is_success() {
+      let status = resp.status();
+      let body_text = resp.text().await.unwrap_or_default();
+      return Err(format!("server {status}: {body_text}"));
+    }
+
+    // The response is the full AssistantMessage JSON (not SSE).
+    let msg: AssistantMessage = resp
+      .json()
+      .await
+      .map_err(|e| format!("JSON parse error: {e}"))?;
+
+    Ok(Self::parts_to_lines(&msg.parts))
+  }
+
+  /// Convert `MessagePart`s into display lines.
+  fn parts_to_lines(parts: &[MessagePart]) -> Vec<TerminalLine> {
+    parts
+      .iter()
+      .filter_map(|p| match p.part_type.as_str() {
+        "text" => p
+          .text
+          .as_deref()
+          .filter(|t| !t.is_empty())
+          .map(|t| TerminalLine::output(t.to_string())),
+        "reasoning" => p
+          .text
+          .as_deref()
+          .filter(|t| !t.is_empty())
+          .map(|t| TerminalLine::comment(format!("[thinking] {t}"))),
+        "tool" => p
+          .tool
+          .as_deref()
+          .map(|name| TerminalLine::comment(format!("[{name}]"))),
+        _ => None,
+      })
+      .collect()
+  }
+
+  // ── Legacy compat ────────────────────────────────────────────────────────
+
+  /// Convenience wrapper — sends a command and calls `on_line` for each line.
+  ///
+  /// Emits the prompt as a `Cmd` line first, then streams the response lines.
+  /// Returns `true` on success, `false` on error (errors are emitted too).
   pub async fn send_command_streaming<F>(&self, command: &str, mut on_line: F) -> bool
   where
     F: FnMut(TerminalLine) + Send,
   {
-    let session = match self.session.read().await.clone() {
-      Some(s) => s,
-      None => return false,
-    };
-
-    let url = format!("{}/session/{}/message", self.config.url, session.id);
-    let body = serde_json::json!({
-      "parts": [{"type": "text", "text": command}]
-    });
-
-    // Emit command immediately
     on_line(TerminalLine::cmd(command.to_string()));
-
-    let response = match self.http.post(&url).json(&body).send().await {
-      Ok(r) => r,
+    match self.send_message(command).await {
+      Ok(lines) => {
+        for line in lines {
+          on_line(line);
+        }
+        true
+      }
       Err(e) => {
-        on_line(TerminalLine::error(format!("HTTP error: {e}")));
-        return false;
-      }
-    };
-
-    if !response.status().is_success() {
-      on_line(TerminalLine::error(format!(
-        "Server: {}",
-        response.status()
-      )));
-      return false;
-    }
-
-    // Stream SSE
-    let mut stream = response.bytes_stream();
-    let mut buffer = String::new();
-
-    while let Some(chunk_result) = stream.next().await {
-      match chunk_result {
-        Ok(chunk) => {
-          if let Ok(text) = std::str::from_utf8(&chunk) {
-            buffer.push_str(text);
-            while let Some(event_end) = buffer.find("\n\n") {
-              let event = buffer[..event_end].to_string();
-              buffer = buffer[event_end + 2..].to_string();
-              self.process_sse(&event, &mut on_line);
-            }
-          }
-        }
-        Err(e) => {
-          on_line(TerminalLine::error(format!("Stream: {e}")));
-          return false;
-        }
+        on_line(TerminalLine::error(e));
+        false
       }
     }
-    true
-  }
-
-  fn process_sse<F>(&self, event: &str, on_line: &mut F)
-  where
-    F: FnMut(TerminalLine),
-  {
-    for line in event.lines() {
-      if let Some(data) = line.strip_prefix("data: ") {
-        if let Ok(json) = serde_json::from_str::<serde_json::Value>(data) {
-          if let Some(t) = json.get("text").and_then(|v| v.as_str()) {
-            on_line(TerminalLine::output(t.to_string()));
-          } else if let Some(c) = json.get("content").and_then(|v| v.as_str()) {
-            on_line(TerminalLine::output(c.to_string()));
-          } else if let Some(tool) = json.get("tool").and_then(|v| v.as_str()) {
-            on_line(TerminalLine::output(format!("[{tool}]")));
-          } else if let Some(err) = json.get("error").and_then(|v| v.as_str()) {
-            on_line(TerminalLine::error(err.to_string()));
-          }
-        } else {
-          on_line(TerminalLine::output(data.to_string()));
-        }
-      }
-    }
-  }
-
-  /// Get the server URL
-  #[must_use]
-  pub fn url(&self) -> &str {
-    &self.config.url
   }
 }
 
@@ -341,6 +426,10 @@ impl Default for OpenCodeClient {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Tests
+// ─────────────────────────────────────────────────────────────────────────────
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -349,16 +438,96 @@ mod tests {
   fn test_terminal_line_cmd() {
     let line = TerminalLine::cmd("br list".to_string());
     assert_eq!(line.line_type, TerminalLineType::Cmd);
+    assert_eq!(line.text, "br list");
   }
 
   #[test]
   fn test_connection_status_display() {
     assert_eq!(ConnectionStatus::Connected.to_string(), "Connected");
+    assert_eq!(ConnectionStatus::Connecting.to_string(), "Connecting...");
+    assert_eq!(ConnectionStatus::Disconnected.to_string(), "Disconnected");
+    assert_eq!(ConnectionStatus::Error.to_string(), "Error");
   }
 
   #[test]
-  fn test_client_default() {
+  fn test_client_default_url() {
     let client = OpenCodeClient::default();
     assert_eq!(client.url(), DEFAULT_URL);
+  }
+
+  #[test]
+  fn test_default_model_is_glm_4_7() {
+    let client = OpenCodeClient::default();
+    assert_eq!(client.model().provider_id, "zai-coding-plan");
+    assert_eq!(client.model().model_id, "glm-4.7");
+  }
+
+  #[test]
+  fn test_model_id_serializes_correctly() {
+    let m = ModelId::glm_4_7();
+    let json = serde_json::to_value(&m).expect("serialise");
+    assert_eq!(json["providerID"], "zai-coding-plan");
+    assert_eq!(json["modelID"], "glm-4.7");
+  }
+
+  #[test]
+  fn test_parts_to_lines_text() {
+    let parts = vec![MessagePart {
+      part_type: "text".to_string(),
+      text: Some("hello world".to_string()),
+      tool: None,
+    }];
+    let lines = OpenCodeClient::parts_to_lines(&parts);
+    assert_eq!(lines.len(), 1);
+    assert_eq!(lines[0].line_type, TerminalLineType::Output);
+    assert_eq!(lines[0].text, "hello world");
+  }
+
+  #[test]
+  fn test_parts_to_lines_reasoning() {
+    let parts = vec![MessagePart {
+      part_type: "reasoning".to_string(),
+      text: Some("thinking...".to_string()),
+      tool: None,
+    }];
+    let lines = OpenCodeClient::parts_to_lines(&parts);
+    assert_eq!(lines.len(), 1);
+    assert_eq!(lines[0].line_type, TerminalLineType::Comment);
+    assert!(lines[0].text.contains("thinking..."));
+  }
+
+  #[test]
+  fn test_parts_to_lines_skips_empty_text() {
+    let parts = vec![MessagePart {
+      part_type: "text".to_string(),
+      text: Some(String::new()),
+      tool: None,
+    }];
+    let lines = OpenCodeClient::parts_to_lines(&parts);
+    assert!(lines.is_empty());
+  }
+
+  #[test]
+  fn test_parts_to_lines_tool() {
+    let parts = vec![MessagePart {
+      part_type: "tool".to_string(),
+      text: None,
+      tool: Some("bash".to_string()),
+    }];
+    let lines = OpenCodeClient::parts_to_lines(&parts);
+    assert_eq!(lines.len(), 1);
+    assert_eq!(lines[0].line_type, TerminalLineType::Comment);
+    assert!(lines[0].text.contains("bash"));
+  }
+
+  #[test]
+  fn test_parts_to_lines_unknown_type_ignored() {
+    let parts = vec![MessagePart {
+      part_type: "step-start".to_string(),
+      text: None,
+      tool: None,
+    }];
+    let lines = OpenCodeClient::parts_to_lines(&parts);
+    assert!(lines.is_empty());
   }
 }

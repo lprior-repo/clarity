@@ -46,9 +46,11 @@ fn init_tracing() {
 fn Root() -> Element {
   // Inject CSS for the desktop app
   let css = include_str!("../public/style.css");
+  let responsive_css = include_str!("../assets/responsive.css");
 
   rsx! {
       style { "{css}" }
+      style { "{responsive_css}" }
       clarity_client::providers::AppProviders {
           clarity_client::app::App {}
       }

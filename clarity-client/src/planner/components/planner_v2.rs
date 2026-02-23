@@ -29,6 +29,8 @@
 
 use crate::hooks::{use_responsive, ResponsiveState};
 use crate::opencode_client::{ConnectionStatus, OpenCodeClient, TerminalLine, TerminalLineType};
+use crate::planner::bead_serializer::append_to_beads;
+use crate::planner::coach_validation::{validate_step, CoachWarning};
 use crate::planner::prompts::{get_steps_for_phase_string, phase_done, total_done, total_required};
 use crate::planner::types_coach::{CoachAnswer, CoachStep};
 use dioxus::prelude::*;
@@ -43,16 +45,39 @@ const PHASES: &[(&str, &str)] = &[
 
 const TABS: &[(&str, &str)] = &[("plan", "Plan"), ("graph", "Graph"), ("state", "State")];
 
+/// Build the coaching prompt sent to GLM for a given step answer.
+///
+/// The prompt asks the model to validate/enrich the answer and surface any
+/// gaps, keeping the response concise so it fits inline in the terminal.
+fn build_coaching_prompt(step_id: &str, step_question: &str, value: &str) -> String {
+  format!(
+    "You are a rigorous product planning coach. \
+A user just answered a planning question. \
+Respond in 2-4 sentences: \
+(1) confirm what's strong about their answer, \
+(2) flag the most important gap or ambiguity, \
+(3) give one concrete suggestion to strengthen it. \
+Be direct and concise. \
+\n\nQuestion: {step_question}\nAnswer: {value}\nStep: {step_id}"
+  )
+}
+
 /// V2-style planner page with responsive layout
 #[component]
 pub fn PlannerV2() -> Element {
   let mut active_phase = use_signal(|| "discover".to_string());
   let mut answers = use_signal(Vec::<CoachAnswer>::new);
   let mut right_tab = use_signal(|| "plan".to_string());
-  let mut client = use_signal(OpenCodeClient::default);
+  let client = use_signal(OpenCodeClient::default);
   let mut connection_status = use_signal(|| ConnectionStatus::Disconnected);
   let mut terminal_lines = use_signal(Vec::<TerminalLine>::new);
-  let mut executed_commands = use_signal(HashSet::<String>::new);
+  let mut is_thinking = use_signal(|| false);
+  /// Maps step_id → AI coaching response text
+  let mut ai_feedback: Signal<Vec<(String, String)>> = use_signal(Vec::new);
+  /// step_id currently being processed by AI (None = idle)
+  let mut thinking_step_id: Signal<Option<String>> = use_signal(|| None);
+  /// Maps step_id → PME validation warnings (set synchronously on submit)
+  let mut validation_warnings: Signal<Vec<(String, Vec<CoachWarning>)>> = use_signal(Vec::new);
 
   // Responsive state
   let responsive = use_responsive();
@@ -62,52 +87,123 @@ pub fn PlannerV2() -> Element {
   // Mobile view toggle (0 = coach, 1 = panel)
   let mut mobile_view = use_signal(|| 0u8);
 
-  // Check connection on mount
+  // On mount: check health and create a planning session
   use_effect({
+    let client = client;
     let mut connection_status = connection_status;
     move || {
       spawn(async move {
-        // For now, just set to demo mode since check_health needs async
-        connection_status.set(ConnectionStatus::Disconnected);
+        let c = client.read().clone();
+        if c.check_health().await {
+          connection_status.set(ConnectionStatus::Connected);
+          // Create a new session for this planning run (ignore errors — we'll
+          // fall back gracefully if it fails)
+          let _ = c.create_session("Beads Planning Session").await;
+        } else {
+          connection_status.set(ConnectionStatus::Disconnected);
+        }
       });
     }
   });
 
+  // Step lookup helper — fetches the question text for a given step_id
+  let get_step_question = |step_id: &str| -> String {
+    use crate::planner::prompts::get_steps_for_phase_string;
+    for phase in &["discover", "define", "develop", "deliver"] {
+      for step in get_steps_for_phase_string(phase) {
+        if step.id == step_id {
+          return step.question.clone();
+        }
+      }
+    }
+    step_id.to_string()
+  };
+
   let handle_answer = move |(step_id, value): (String, String)| {
+    // 1. Store the answer immediately so the UI advances
     let mut current = answers.write().clone();
     current.retain(|a| a.step_id != step_id);
     current.push(CoachAnswer {
       step_id: step_id.clone(),
       value: value.clone(),
     });
-    answers.set(current);
+    answers.set(current.clone());
 
-    // Generate terminal commands for this answer
-    let cmds = get_commands_for_step(&step_id, &value);
-    let mut lines = terminal_lines.write().clone();
-    for (agent, cmd, output) in cmds {
-      lines.push(TerminalLine::cmd(cmd).with_agent(agent));
-      lines.push(TerminalLine::output(output));
+    // 2. Run PME validation synchronously using prior answers for cross-step checks
+    {
+      let priors: Vec<(String, String)> = current
+        .iter()
+        .filter(|a| a.step_id != step_id)
+        .map(|a| (a.step_id.clone(), a.value.clone()))
+        .collect();
+      let warnings = validate_step(&step_id, &value, &priors);
+      let mut wv = validation_warnings.write().clone();
+      wv.retain(|(id, _)| id != &step_id);
+      wv.push((step_id.clone(), warnings));
+      validation_warnings.set(wv);
     }
-    terminal_lines.set(lines);
+
+    // 3. Show a "thinking" entry in the terminal while we wait for the AI
+    {
+      let mut lines = terminal_lines.write().clone();
+      lines.push(TerminalLine::comment(format!(
+        "# coach reviewing: {step_id}"
+      )));
+      terminal_lines.set(lines);
+    }
+    is_thinking.set(true);
+    thinking_step_id.set(Some(step_id.clone()));
+
+    // 4. Spawn async AI call
+    let step_question = get_step_question(&step_id);
+    let prompt = build_coaching_prompt(&step_id, &step_question, &value);
+    let c = client.read().clone();
+    let sid = step_id.clone();
+    spawn(async move {
+      match c.send_message(&prompt).await {
+        Ok(ai_lines) => {
+          // Collect text parts into a single feedback string
+          let text = ai_lines
+            .into_iter()
+            .filter(|l| l.line_type == crate::opencode_client::TerminalLineType::Output)
+            .map(|l| l.text)
+            .collect::<Vec<_>>()
+            .join("\n");
+          // Store AI feedback keyed by step_id
+          let mut fb = ai_feedback.write().clone();
+          fb.retain(|(id, _)| id != &sid);
+          fb.push((sid.clone(), text));
+          ai_feedback.set(fb);
+        }
+        Err(e) => {
+          // Degrade gracefully — show the error as the feedback text
+          let mut fb = ai_feedback.write().clone();
+          fb.retain(|(id, _)| id != &sid);
+          fb.push((sid.clone(), format!("[AI offline: {e}]")));
+          ai_feedback.set(fb);
+        }
+      }
+      is_thinking.set(false);
+      thinking_step_id.set(None);
+    });
   };
 
   let total_req = total_required();
   let total_complete = total_done(&answers.read());
 
-  // Compute sidebar width based on responsive state
-  let sidebar_width = responsive.sidebar_width();
-  let sidebar_width_class = if is_mobile {
-    "w-full".to_string()
-  } else {
-    format!("w-[{sidebar_width}px]")
-  };
-
-  // Layout classes based on responsive state
+  // Layout classes based on responsive state - use static Tailwind classes
   let main_layout_class = if is_mobile {
     "flex flex-col"
   } else {
     "flex flex-row"
+  };
+
+  // Right panel width - use static Tailwind classes that JIT can detect
+  let right_panel_class = if is_mobile {
+    "w-full"
+  } else {
+    // Match v2 TypeScript: w-[440px] lg:w-[500px]
+    "w-[440px] lg:w-[500px]"
   };
 
   rsx! {
@@ -177,7 +273,7 @@ pub fn PlannerV2() -> Element {
       }
 
       // Main content - responsive layout
-      div { class: "{main_layout_class} flex-1 overflow-hidden",
+      div { class: "{main_layout_class} flex-1 overflow-hidden min-w-0",
         // Mobile view switcher tabs
         if is_mobile {
           div { class: "flex shrink-0 border-b border-white/10",
@@ -212,6 +308,9 @@ pub fn PlannerV2() -> Element {
             PlanningCoach {
               active_phase: active_phase.read().clone(),
               answers: answers.read().clone(),
+              validation_warnings: validation_warnings.read().clone(),
+              ai_feedback: ai_feedback.read().clone(),
+              thinking_step_id: thinking_step_id.read().clone(),
               is_mobile: is_mobile,
               on_answer: handle_answer,
               on_phase_change: {
@@ -224,7 +323,7 @@ pub fn PlannerV2() -> Element {
 
         // Right: Tabbed panel (hidden on mobile when viewing coach)
         if !is_mobile || *mobile_view.read() == 1 {
-          div { class: "flex {sidebar_width_class} shrink-0 flex-col",
+          div { class: "flex {right_panel_class} shrink-0 flex-col",
             // Tabs - hidden on mobile (using view switcher instead)
             if !is_mobile {
               div { class: "flex shrink-0 items-center border-b border-white/10",
@@ -252,6 +351,7 @@ pub fn PlannerV2() -> Element {
                   active_phase: active_phase.read().clone(),
                   terminal_lines: terminal_lines.read().clone(),
                   connection_status: *connection_status.read(),
+                  is_thinking: *is_thinking.read(),
                   is_mobile: is_mobile,
                 }
               } else if *right_tab.read() == "graph" {
@@ -468,34 +568,63 @@ enum ThreadEntry {
   User {
     content: String,
   },
-  Terminal {
-    commands: Vec<(String, String, String)>,
+  /// PME lattice validation warnings — shown synchronously before AI feedback
+  Validation {
+    warnings: Vec<CoachWarning>,
+  },
+  /// AI coaching feedback (GLM response) shown inline after the user's answer
+  AiFeedback {
+    text: String,
+    thinking: bool,
   },
 }
 
-/// Build the conversation thread from steps and answers
-fn build_thread(steps: &[CoachStep], answers: &[CoachAnswer]) -> Vec<ThreadEntry> {
+/// Build the conversation thread from steps, answers, validation warnings, and AI feedback.
+///
+/// - `validation_warnings` maps step_id → warnings (shown synchronously after user answer)
+/// - `ai_feedback` maps step_id → AI response text (empty = still thinking)
+fn build_thread(
+  steps: &[CoachStep],
+  answers: &[CoachAnswer],
+  validation_warnings: &[(String, Vec<CoachWarning>)],
+  ai_feedback: &[(String, String)],
+  is_thinking_for: Option<&str>,
+) -> Vec<ThreadEntry> {
   let mut thread = Vec::new();
 
   for step in steps {
     let answer_opt = answers.iter().find(|a| a.step_id == step.id);
 
-    // Always add the coach question
     thread.push(ThreadEntry::Coach {
       content: step.question.clone(),
       step_title: Some(step.title.clone()),
     });
 
     if let Some(answer) = answer_opt {
-      // Add user answer
       thread.push(ThreadEntry::User {
         content: answer.value.clone(),
       });
 
-      // Add inline terminal showing commands
-      let cmds = get_commands_for_step(&step.id, &answer.value);
-      if !cmds.is_empty() {
-        thread.push(ThreadEntry::Terminal { commands: cmds });
+      // Show PME validation warnings synchronously (if any)
+      if let Some((_, warnings)) = validation_warnings.iter().find(|(id, _)| id == &step.id) {
+        if !warnings.is_empty() {
+          thread.push(ThreadEntry::Validation {
+            warnings: warnings.clone(),
+          });
+        }
+      }
+
+      // Show AI feedback if available, or a spinner if still thinking
+      if let Some(fb) = ai_feedback.iter().find(|(id, _)| id == &step.id) {
+        thread.push(ThreadEntry::AiFeedback {
+          text: fb.1.clone(),
+          thinking: false,
+        });
+      } else if is_thinking_for == Some(step.id.as_str()) {
+        thread.push(ThreadEntry::AiFeedback {
+          text: String::new(),
+          thinking: true,
+        });
       }
 
       // Add follow-up if present
@@ -506,7 +635,6 @@ fn build_thread(steps: &[CoachStep], answers: &[CoachAnswer]) -> Vec<ThreadEntry
         });
       }
     } else {
-      // Stop at first unanswered step
       break;
     }
   }
@@ -519,6 +647,9 @@ fn build_thread(steps: &[CoachStep], answers: &[CoachAnswer]) -> Vec<ThreadEntry
 fn PlanningCoach(
   active_phase: String,
   answers: Vec<CoachAnswer>,
+  validation_warnings: Vec<(String, Vec<CoachWarning>)>,
+  ai_feedback: Vec<(String, String)>,
+  thinking_step_id: Option<String>,
   is_mobile: bool,
   on_answer: EventHandler<(String, String)>,
   on_phase_change: EventHandler<String>,
@@ -536,7 +667,13 @@ fn PlanningCoach(
     .cloned();
 
   // Build the conversation thread
-  let thread = build_thread(&steps, &answers);
+  let thread = build_thread(
+    &steps,
+    &answers,
+    &validation_warnings,
+    &ai_feedback,
+    thinking_step_id.as_deref(),
+  );
   let thread_len = thread.len();
 
   // Auto-scroll effect when thread changes
@@ -618,10 +755,18 @@ fn PlanningCoach(
                   is_mobile: is_mobile,
                 }
               },
-              ThreadEntry::Terminal { commands } => rsx! {
-                InlineTerminal {
-                  key: "terminal-{i}",
-                  commands: commands.clone(),
+              ThreadEntry::AiFeedback { text, thinking } => rsx! {
+                AiFeedbackBubble {
+                  key: "ai-{i}",
+                  text: text.clone(),
+                  thinking: *thinking,
+                  is_mobile: is_mobile,
+                }
+              },
+              ThreadEntry::Validation { warnings } => rsx! {
+                ValidationBubble {
+                  key: "val-{i}",
+                  warnings: warnings.clone(),
                   is_mobile: is_mobile,
                 }
               },
@@ -845,314 +990,90 @@ fn UserBubble(content: String, is_mobile: bool) -> Element {
   }
 }
 
-// ============================================================================
-// V2-Enhanced Inline Terminal Component
-// ============================================================================
-
-/// Connection status configuration for StatusIndicator
-#[derive(Clone, Debug, PartialEq)]
-struct StatusConfig {
-  color: &'static str,
-  text: &'static str,
-}
-
-/// Get status configuration based on connection status and demo mode
-fn get_status_config(status: ConnectionStatus, is_demo_mode: bool) -> StatusConfig {
-  if is_demo_mode {
-    return StatusConfig {
-      color: "bg-yellow-500/70",
-      text: "Demo Mode",
-    };
-  }
-  match status {
-    ConnectionStatus::Connected => StatusConfig {
-      color: "bg-chart-2",
-      text: "Connected",
-    },
-    ConnectionStatus::Connecting => StatusConfig {
-      color: "bg-yellow-500 animate-pulse",
-      text: "Connecting...",
-    },
-    ConnectionStatus::Disconnected => StatusConfig {
-      color: "bg-muted-foreground/50",
-      text: "Disconnected",
-    },
-    ConnectionStatus::Error => StatusConfig {
-      color: "bg-red-500",
-      text: "Error",
-    },
-  }
-}
-
-/// Status indicator component showing connection status with colored dot
-#[component]
-fn StatusIndicator(status: ConnectionStatus, is_demo_mode: bool) -> Element {
-  let config = get_status_config(status, is_demo_mode);
-  rsx! {
-    div { class: "flex items-center gap-1.5 px-2 py-1",
-      span { class: "h-2 w-2 rounded-full {config.color}" }
-      span { class: "text-[10px] font-medium text-white/50", "{config.text}" }
-    }
-  }
-}
-
-/// Terminal line type for the enhanced terminal
-#[derive(Clone, Debug, PartialEq)]
-enum V2TerminalLineType {
-  Cmd,
-  Output,
-  Comment,
-  Separator,
-  Error,
-}
-
-/// A line in the enhanced terminal feed
-#[derive(Clone, Debug)]
-struct V2TerminalLine {
-  line_type: V2TerminalLineType,
-  text: String,
-  agent: Option<String>,
-  executed: bool,
-}
-
-impl V2TerminalLine {
-  fn cmd(text: String) -> Self {
-    Self {
-      line_type: V2TerminalLineType::Cmd,
-      text,
-      agent: None,
-      executed: false,
-    }
-  }
-
-  fn output(text: String) -> Self {
-    Self {
-      line_type: V2TerminalLineType::Output,
-      text,
-      agent: None,
-      executed: false,
-    }
-  }
-
-  fn comment(text: String) -> Self {
-    Self {
-      line_type: V2TerminalLineType::Comment,
-      text,
-      agent: None,
-      executed: false,
-    }
-  }
-
-  fn separator() -> Self {
-    Self {
-      line_type: V2TerminalLineType::Separator,
-      text: String::new(),
-      agent: None,
-      executed: false,
-    }
-  }
-
-  fn error(text: String) -> Self {
-    Self {
-      line_type: V2TerminalLineType::Error,
-      text,
-      agent: None,
-      executed: false,
-    }
-  }
-
-  fn with_agent(self, agent: String) -> Self {
-    Self {
-      agent: Some(agent),
-      ..self
-    }
-  }
-
-  fn executed(self) -> Self {
-    Self {
-      executed: true,
-      ..self
-    }
-  }
-}
-
-/// Convert the tuple format to V2TerminalLine format using functional iterator chain
-fn commands_to_lines(commands: &[(String, String, String)]) -> Vec<V2TerminalLine> {
-  commands
-    .iter()
-    .flat_map(|(agent, cmd, output)| {
-      [
-        V2TerminalLine::cmd(cmd.clone()).with_agent(agent.clone()),
-        V2TerminalLine::output(output.clone()),
-      ]
-    })
-    .collect()
-}
-
-/// Inline terminal block with animated staggered reveal (V2 Enhanced)
+/// AI coaching feedback bubble — shown after the user's answer.
 ///
-/// Features:
-/// - StatusIndicator showing connection status
-/// - TerminalLine types: cmd, output, comment, separator, error
-/// - Live streaming simulation with staggered timing
-/// - Auto-scroll behavior
-/// - Better line styling with agent labels
+/// When `thinking` is true renders a pulsing "…" indicator.
+/// When `thinking` is false renders the AI text as a dimmer coach-style bubble.
 #[component]
-fn InlineTerminal(commands: Vec<(String, String, String)>, is_mobile: bool) -> Element {
-  // Convert to V2 line format
-  let lines = commands_to_lines(&commands);
-
-  // Track visible count for staggered animation
-  let visible_count = use_signal(|| 0usize);
-  let total_items = lines.len();
-
-  // Track if streaming is in progress
-  let is_streaming = use_signal(|| true);
-
-  // Animation effect: increment visible count over time (staggered reveal)
-  use_effect({
-    let mut visible_count = visible_count;
-    let mut is_streaming = is_streaming;
-    let total_items = total_items;
-    move || {
-      let current = *visible_count.read();
-      if current < total_items {
-        // Staggered timing: 30ms per line (matching TypeScript v2)
-        let delay = 30u64;
-        spawn(async move {
-          tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
-          let next = visible_count.read().saturating_add(1);
-          if next <= total_items {
-            visible_count.set(next);
-          }
-          if next >= total_items {
-            is_streaming.set(false);
-          }
-        });
-      }
-    }
-  });
-
-  let is_running = *is_streaming.read() || *visible_count.read() < total_items;
-  let current_visible = *visible_count.read();
-
-  // Responsive classes
-  let margin_class = if is_mobile {
-    "mx-1 my-1"
+fn AiFeedbackBubble(text: String, thinking: bool, is_mobile: bool) -> Element {
+  let avatar_class = if is_mobile {
+    "h-6 w-6 text-[10px]"
   } else {
-    "mx-2 my-1.5"
+    "h-7 w-7 text-xs"
   };
-  let padding_class = if is_mobile { "p-2" } else { "p-3" };
-  let font_size = if is_mobile { "text-[10px]" } else { "text-xs" };
+  let content_padding = if is_mobile {
+    "px-3 py-2"
+  } else {
+    "px-4 py-2.5"
+  };
 
   rsx! {
-    div { class: "{margin_class} flex flex-col overflow-hidden rounded-lg border border-white/10 bg-[hsl(0,0%,3%)]",
-      // Header bar with status indicator
-      div { class: "flex shrink-0 items-center justify-between border-b border-white/5 px-2 md:px-3 py-1",
-        div { class: "flex items-center gap-1.5 md:gap-2",
-          // Traffic lights (macOS style) - smaller on mobile
-          div { class: "flex gap-0.5 md:gap-1",
-            span { class: if is_mobile { "h-1.5 w-1.5 rounded-full bg-red-500/60" } else { "h-2 w-2 rounded-full bg-red-500/60" } }
-            span { class: if is_mobile { "h-1.5 w-1.5 rounded-full bg-yellow-500/60" } else { "h-2 w-2 rounded-full bg-yellow-500/60" } }
-            span { class: if is_mobile { "h-1.5 w-1.5 rounded-full bg-green-500/60" } else { "h-2 w-2 rounded-full bg-green-500/60" } }
-          }
-          span { class: "font-mono text-[10px] text-white/30", "beads-cli" }
-        }
-        // Status indicator (Demo Mode for preview) - hidden on very small screens
-        if !is_mobile {
-          StatusIndicator {
-            status: ConnectionStatus::Connected,
-            is_demo_mode: true,
-          }
-        }
-        // Running indicator
-        if is_running {
-          span { class: "flex items-center gap-1",
-            span { class: "h-1.5 w-1.5 animate-pulse rounded-full bg-green-400" }
-            span { class: "font-mono text-[10px] text-green-400/70", "running" }
-          }
-        }
+    div { class: "flex gap-2 md:gap-3 animate-fade-up",
+      // Distinct avatar for AI feedback — slightly different shade
+      div { class: "flex {avatar_class} shrink-0 items-center justify-center rounded-full bg-purple-500/20 font-bold text-purple-400",
+        "AI"
       }
-
-      // Terminal content with auto-scroll
-      div {
-        class: format!("flex-1 overflow-y-auto bg-[hsl(0,0%,3%)] {padding_class} font-mono {font_size} leading-relaxed scroll-smooth"),
-
-        // Render lines based on type
-        for (i, line) in lines.iter().enumerate() {
-          {
-            let line_visible = i < current_visible;
-            let animation_delay = format!("animation-delay: {}ms", i * 30);
-
-            // Only render if visible
-            if line_visible {
-              match line.line_type {
-                V2TerminalLineType::Separator => rsx! {
-                  div {
-                    key: "sep-{i}",
-                    class: "h-2",
-                  }
-                },
-                V2TerminalLineType::Comment => rsx! {
-                  div {
-                    key: "comment-{i}",
-                    class: "animate-fade-up text-white/30 italic",
-                    style: "{animation_delay}",
-                    "{line.text}"
-                  }
-                },
-                V2TerminalLineType::Error => rsx! {
-                  div {
-                    key: "error-{i}",
-                    class: "animate-fade-up text-red-500",
-                    style: "{animation_delay}",
-                    "{line.text}"
-                  }
-                },
-                V2TerminalLineType::Cmd => rsx! {
-                  div {
-                    key: "cmd-{i}",
-                    class: "animate-fade-up flex items-start gap-1",
-                    style: "{animation_delay}",
-                    // Agent label
-                    if let Some(ref agent) = line.agent {
-                      span {
-                        class: if agent == "claude-code" {
-                          "mt-px shrink-0 rounded px-1 py-px text-[10px] font-medium bg-purple-500/15 text-purple-400"
-                        } else {
-                          "mt-px shrink-0 rounded px-1 py-px text-[10px] font-medium bg-blue-500/15 text-blue-400"
-                        },
-                        "{agent}"
-                      }
-                    }
-                    // Command with green $ prefix
-                    span { class: "text-chart-2", "$" }
-                    span { class: "text-white/90", "{line.text}" }
-                  }
-                },
-                V2TerminalLineType::Output => rsx! {
-                  div {
-                    key: "output-{i}",
-                    class: "animate-fade-up pl-3 md:pl-4 text-white/40",
-                    style: "{animation_delay}",
-                    "{line.text}"
-                  }
-                },
-              }
-            } else {
-              rsx! { div { key: "hidden-{i}" } }
+      div { class: "max-w-lg",
+        span { class: "ml-0 mb-1 block text-[10px] font-medium uppercase tracking-widest text-white/30",
+          "Coach Analysis"
+        }
+        if thinking {
+          // Thinking indicator — three animated dots
+          div { class: "{content_padding} flex items-center gap-1",
+            span { class: "h-1.5 w-1.5 rounded-full bg-white/40 animate-bounce",
+              style: "animation-delay: 0ms"
+            }
+            span { class: "h-1.5 w-1.5 rounded-full bg-white/40 animate-bounce",
+              style: "animation-delay: 150ms"
+            }
+            span { class: "h-1.5 w-1.5 rounded-full bg-white/40 animate-bounce",
+              style: "animation-delay: 300ms"
             }
           }
+        } else {
+          p { class: "text-sm leading-relaxed text-white/70 {content_padding}", "{text}" }
         }
+      }
+    }
+  }
+}
 
-        // Blinking cursor at end
-        div { class: "mt-1 flex items-center gap-1",
-          span { class: "text-chart-2", "$" }
-          span {
-            class: if is_running {
-              "inline-block h-3.5 w-1.5 bg-white/70"
-            } else {
-              "inline-block h-3.5 w-1.5 bg-white/70 animate-terminal-blink"
+/// PME lattice validation warnings bubble — shown synchronously after the user's answer.
+///
+/// Uses amber/yellow styling to distinguish from AI coach feedback (purple).
+/// Only rendered when there are actual warnings to show.
+#[component]
+fn ValidationBubble(warnings: Vec<CoachWarning>, is_mobile: bool) -> Element {
+  if warnings.is_empty() {
+    return rsx! {};
+  }
+
+  let avatar_class = if is_mobile {
+    "h-6 w-6 text-[10px]"
+  } else {
+    "h-7 w-7 text-xs"
+  };
+  let content_padding = if is_mobile {
+    "px-3 py-2"
+  } else {
+    "px-4 py-2.5"
+  };
+
+  rsx! {
+    div { class: "flex gap-2 md:gap-3 animate-fade-up",
+      // Amber avatar to signal PME/structural concern
+      div { class: "flex {avatar_class} shrink-0 items-center justify-center rounded-full bg-amber-500/20 font-bold text-amber-400",
+        "!"
+      }
+      div { class: "max-w-lg",
+        span { class: "ml-0 mb-1 block text-[10px] font-medium uppercase tracking-widest text-amber-400/60",
+          "Structure Check"
+        }
+        div { class: "space-y-1.5 {content_padding}",
+          for warning in &warnings {
+            div { class: "rounded-md border border-amber-500/20 bg-amber-500/5 px-3 py-2",
+              p { class: "text-xs font-semibold text-amber-400 mb-0.5", "{warning.label}" }
+              p { class: "text-xs leading-relaxed text-white/70", "{warning.message}" }
             }
           }
         }
@@ -1470,11 +1391,14 @@ fn ArtifactPanel(
   active_phase: String,
   terminal_lines: Vec<TerminalLine>,
   connection_status: ConnectionStatus,
+  is_thinking: bool,
   is_mobile: bool,
 ) -> Element {
   let selected_task = use_signal(|| None::<usize>);
   // Track scroll position for scroll shadow indicator
   let show_top_shadow = use_signal(|| false);
+  // Export state: None = idle, Some(msg) = success/error message
+  let mut export_status: Signal<Option<String>> = use_signal(|| None);
 
   // Extract values from answers
   let problem = get_val(&answers, "problem");
@@ -1669,6 +1593,36 @@ fn ArtifactPanel(
                       }
                     },
                   }
+                }
+              }
+            }
+
+            // Export bead button — only shown when plan is 100% complete
+            if progress >= 100 {
+              div { class: "pt-4",
+                // Status message (success or error)
+                if let Some(ref msg) = *export_status.read() {
+                  div {
+                    class: if msg.starts_with("Saved") {
+                      "mb-2 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-xs text-green-400"
+                    } else {
+                      "mb-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-400"
+                    },
+                    "{msg}"
+                  }
+                }
+                button {
+                  class: "w-full rounded-lg border border-blue-500/40 bg-blue-500/10 px-4 py-2.5 text-sm font-medium text-blue-300 transition-colors hover:bg-blue-500/20 hover:text-blue-200 active:scale-[0.98]",
+                  onclick: {
+                    let answers = answers.clone();
+                    move |_| {
+                      match append_to_beads(&answers, ".beads/issues.jsonl") {
+                        Ok(id) => export_status.set(Some(format!("Saved bead {id} to .beads/issues.jsonl"))),
+                        Err(e) => export_status.set(Some(format!("Export failed: {e}"))),
+                      }
+                    }
+                  },
+                  "Export Bead"
                 }
               }
             }
@@ -2396,85 +2350,6 @@ fn StatePanel(answers: Vec<CoachAnswer>, active_phase: String) -> Element {
         }
       }
     }
-  }
-}
-
-/// Get terminal commands for a step
-fn get_commands_for_step(step_id: &str, value: &str) -> Vec<(String, String, String)> {
-  let v = value.chars().take(50).collect::<String>();
-  match step_id {
-    "problem" => vec![
-      (
-        "planner".into(),
-        "br init --project beads-plan".into(),
-        "Initialized .beads/ in current directory".into(),
-      ),
-      (
-        "planner".into(),
-        format!("br create --type epic --title \"Problem: {v}...\""),
-        format!("Created bd-a1f0  Problem: {v}"),
-      ),
-    ],
-    "antithesis" => vec![(
-      "planner".into(),
-      format!("br update bd-a1f0 --label antithesis --note \"{v}...\""),
-      "Updated bd-a1f0  +label:antithesis".into(),
-    )],
-    "solution" => vec![
-      (
-        "planner".into(),
-        format!("br create --type epic --title \"Solution: {v}...\""),
-        "Created bd-b2e1  Solution".into(),
-      ),
-      (
-        "planner".into(),
-        "br dep add bd-b2e1 --blocks bd-a1f0 --type discovered-from".into(),
-        "Linked bd-b2e1 -> bd-a1f0 (discovered-from)".into(),
-      ),
-    ],
-    "persona" => vec![(
-      "planner".into(),
-      format!("br create --type task --parent bd-b2e1 --title \"Persona: {v}...\""),
-      "Created bd-b2e1.1  Persona".into(),
-    )],
-    "use-cases" => value
-      .lines()
-      .filter(|l| !l.trim().is_empty())
-      .enumerate()
-      .map(|(i, uc)| {
-        (
-          "planner".into(),
-          format!(
-            "br create --type feature --title \"{}...\"",
-            uc.chars().take(50).collect::<String>()
-          ),
-          format!("Created bd-c{i}  {uc}"),
-        )
-      })
-      .collect(),
-    "tasks" => {
-      let mut cmds = Vec::new();
-      for (i, t) in value.lines().filter(|l| !l.trim().is_empty()).enumerate() {
-        let parts: Vec<_> = t.splitn(2, ':').collect();
-        let (mod_name, title) = if parts.len() > 1 {
-          (parts[0].trim(), parts[1].trim())
-        } else {
-          ("core", t.trim())
-        };
-        cmds.push((
-          "claude-code".into(),
-          format!("br create --type task --title \"{title}\" --label \"{mod_name}\""),
-          format!("Created bd-d{i}  [{mod_name}] {title}"),
-        ));
-      }
-      cmds.push((
-        "claude-code".into(),
-        "br ready --json".into(),
-        format!("[{} task(s) ready]", cmds.len()),
-      ));
-      cmds
-    }
-    _ => vec![],
   }
 }
 

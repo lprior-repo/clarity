@@ -87,3 +87,11 @@ REMAINING_*.md
 !AGENTS.md
 !CLAUDE.md
 !docs/**/*.md
+
+# Codanna index (binary build artifacts - never commit)
+.codanna/index/
+.codanna/.project-id
+.codannaignore
+
+# fastembed model cache
+.fastembed_cache
