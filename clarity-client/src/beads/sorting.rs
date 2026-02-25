@@ -100,7 +100,7 @@ impl SortConfig {
       }
       SortBy::Priority => {
         // Higher priority numbers come first (1 = High, 2 = Medium, 3 = Low)
-        let comparison = a.priority.0.cmp(&b.priority.0);
+        let comparison = a.priority.sort_value().cmp(&b.priority.sort_value());
         if comparison == Ordering::Equal {
           // Tie-breaker: use ID for deterministic ordering
           a.id.cmp(&b.id)

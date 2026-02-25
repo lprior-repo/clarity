@@ -71,7 +71,7 @@ pub fn greet(name: &str) -> String {
 pub fn process_high_priority_beads(beads: Vec<domain::Bead>) -> Vec<domain::Bead> {
   use domain::bead_operations::BeadOperations;
 
-  BeadOperations::filter_beads(&beads, None, Some(domain::BeadPriority::HIGH), None, None)
+  BeadOperations::filter_beads(&beads, None, Some(domain::BeadPriority::High), None, None)
     .into_iter()
     .cloned()
     .collect()

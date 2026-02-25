@@ -492,7 +492,7 @@ impl DesktopDb {
   /// - Returns `DbError::Connection` if query execution fails
   /// - Returns `DbError::InvalidUuid` if ID parsing fails
   /// - Returns `DbError::Validation` if status/type parsing fails
-  #[instrument(skip(self, bead), fields(bead_title = %bead.title, status = %bead.status, priority = bead.priority.0))]
+  #[instrument(skip(self, bead), fields(bead_title = %bead.title, status = %bead.status, priority = %bead.priority))]
   pub async fn create_bead(&self, bead: NewBead) -> DbResult<Bead> {
     let id = uuid::Uuid::new_v4();
     let now = chrono::Utc::now();
@@ -509,7 +509,7 @@ impl DesktopDb {
         .bind(&bead.title)
         .bind(&bead.description)
         .bind(bead.status.as_str())
-        .bind(bead.priority.0)
+        .bind(bead.priority.sort_value())
         .bind(bead.bead_type.as_str())
         .bind(bead.created_by.map(|u| u.to_string()))
         .bind(now.to_rfc3339())
@@ -549,7 +549,7 @@ impl DesktopDb {
         .bind(&bead.title)
         .bind(&bead.description)
         .bind(bead.status.as_str())
-        .bind(bead.priority.0)
+        .bind(bead.priority.sort_value())
         .bind(bead.bead_type.as_str())
         .bind(bead.created_by.map(|u| u.to_string()))
         .bind(now.to_rfc3339())
@@ -754,7 +754,8 @@ impl DesktopDb {
     let id = BeadId::from_str(&id_str)?;
     let status = status_str.parse()?;
     let bead_type = type_str.parse()?;
-    let priority = clarity_core::db::models::BeadPriority::new(priority_val)?;
+    let priority = clarity_core::domain::types::BeadPriority::from_value(priority_val)
+        .map_err(|e| DbError::Validation(e.to_string()))?;
 
     let created_by = created_by_str
       .map(|s| uuid::Uuid::parse_str(&s))

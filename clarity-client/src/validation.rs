@@ -225,12 +225,13 @@ pub fn validate_status(status: &str) -> ValidationResult<BeadStatus> {
 /// - Must be between 1 and 3
 #[must_use]
 pub fn validate_priority(priority: i16) -> ValidationResult<BeadPriority> {
-  if (1..=3).contains(&priority) {
-    ValidationResult::Valid(BeadPriority(priority))
-  } else {
-    ValidationResult::Invalid(vec![ValidationError::Priority(
-      "Priority must be between 1 and 3".to_string(),
-    )])
+  match BeadPriority::from_value(priority) {
+    Ok(p) => ValidationResult::Valid(p),
+    Err(_) => {
+      ValidationResult::Invalid(vec![ValidationError::Priority(
+        "Priority must be between 1 and 3".to_string(),
+      )])
+    }
   }
 }
 

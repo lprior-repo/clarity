@@ -202,54 +202,72 @@ impl std::str::FromStr for BeadType {
   }
 }
 
-/// Bead priority
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct BeadPriority(pub i16);
+/// Bead priority - semantic enum per Scott Wlaschin DDD principles
+///
+/// Makes illegal states unrepresentable by using an enum instead of primitive integers.
+/// Higher priority items should be addressed first.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "bead_priority", rename_all = "lowercase")]
+pub enum BeadPriority {
+  /// High priority - urgent issues that need immediate attention
+  High,
+  /// Medium priority - standard priority (default)
+  #[default]
+  Medium,
+  /// Low priority - nice to have, can be deferred
+  Low,
+}
 
 impl BeadPriority {
-  pub const HIGH: Self = Self(1);
-  pub const MEDIUM: Self = Self(2);
-  pub const LOW: Self = Self(3);
-
-  /// Create a new priority value
-  ///
-  /// # Errors
-  /// Returns a `ValidationError` if the priority is not 1, 2, or 3.
-  pub const fn new(priority: i16) -> Result<Self, ValidationError> {
-    match priority {
-      1..=3 => Ok(Self(priority)),
-      _ => Err(ValidationError::InvalidPriority(priority)),
-    }
-  }
-
-  #[must_use]
-  pub const fn value(&self) -> i16 {
-    self.0
-  }
-
-  #[must_use]
-  pub const fn is_high(&self) -> bool {
-    self.0 == 1
-  }
-
-  #[must_use]
-  pub const fn is_medium(&self) -> bool {
-    self.0 == 2
-  }
-
-  #[must_use]
-  pub const fn is_low(&self) -> bool {
-    self.0 == 3
-  }
-
+  /// Get the priority as a lowercase string
   #[must_use]
   pub const fn as_str(&self) -> &'static str {
-    match self.0 {
-      1 => "high",
-      2 => "medium",
-      3 => "low",
-      _ => "unknown",
+    match self {
+      Self::High => "high",
+      Self::Medium => "medium",
+      Self::Low => "low",
     }
+  }
+
+  /// Get numeric value for sorting (1=high, 2=medium, 3=low)
+  #[must_use]
+  pub const fn sort_value(&self) -> i16 {
+    match self {
+      Self::High => 1,
+      Self::Medium => 2,
+      Self::Low => 3,
+    }
+  }
+
+  /// Create priority from numeric value (for backward compatibility)
+  ///
+  /// # Errors
+  /// Returns `ValidationError` if value is not 1, 2, or 3
+  pub const fn from_value(value: i16) -> Result<Self, ValidationError> {
+    match value {
+      1 => Ok(Self::High),
+      2 => Ok(Self::Medium),
+      3 => Ok(Self::Low),
+      _ => Err(ValidationError::InvalidPriority(value)),
+    }
+  }
+
+  /// Check if this is high priority
+  #[must_use]
+  pub const fn is_high(&self) -> bool {
+    matches!(self, Self::High)
+  }
+
+  /// Check if this is medium priority
+  #[must_use]
+  pub const fn is_medium(&self) -> bool {
+    matches!(self, Self::Medium)
+  }
+
+  /// Check if this is low priority
+  #[must_use]
+  pub const fn is_low(&self) -> bool {
+    matches!(self, Self::Low)
   }
 }
 
@@ -259,9 +277,16 @@ impl fmt::Display for BeadPriority {
   }
 }
 
-impl Default for BeadPriority {
-  fn default() -> Self {
-    Self::MEDIUM
+impl std::str::FromStr for BeadPriority {
+  type Err = ValidationError;
+
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    match s.to_lowercase().as_str() {
+      "high" => Ok(Self::High),
+      "medium" => Ok(Self::Medium),
+      "low" => Ok(Self::Low),
+      _ => Err(ValidationError::InvalidPriorityString(s.to_string())),
+    }
   }
 }
 
@@ -269,8 +294,23 @@ impl TryFrom<i16> for BeadPriority {
   type Error = ValidationError;
 
   fn try_from(value: i16) -> Result<Self, Self::Error> {
-    Self::new(value)
+    Self::from_value(value)
   }
+}
+
+// Legacy support constants (deprecated)
+impl BeadPriority {
+  /// Legacy constant - use BeadPriority::High instead
+  #[deprecated(since = "0.1.0", note = "Use BeadPriority::High instead")]
+  pub const HIGH: Self = Self::High;
+
+  /// Legacy constant - use BeadPriority::Medium instead
+  #[deprecated(since = "0.1.0", note = "Use BeadPriority::Medium instead")]
+  pub const MEDIUM: Self = Self::Medium;
+
+  /// Legacy constant - use BeadPriority::Low instead
+  #[deprecated(since = "0.1.0", note = "Use BeadPriority::Low instead")]
+  pub const LOW: Self = Self::Low;
 }
 
 /// Validation errors
@@ -280,6 +320,7 @@ pub enum ValidationError {
   InvalidStatus(String),
   InvalidType(String),
   InvalidPriority(i16),
+  InvalidPriorityString(String),
 }
 
 impl fmt::Display for ValidationError {
@@ -291,6 +332,10 @@ impl fmt::Display for ValidationError {
       Self::InvalidPriority(p) => write!(
         f,
         "Invalid priority: {p}. Must be 1 (high), 2 (medium), or 3 (low)"
+      ),
+      Self::InvalidPriorityString(s) => write!(
+        f,
+        "Invalid priority: {s}. Must be 'high', 'medium', or 'low'"
       ),
     }
   }
@@ -328,16 +373,31 @@ mod tests {
   }
 
   #[test]
-  fn test_bead_priority_valid() {
-    assert!(BeadPriority::new(1).is_ok());
-    assert!(BeadPriority::new(2).is_ok());
-    assert!(BeadPriority::new(3).is_ok());
+  fn test_bead_priority_from_value_valid() {
+    assert_eq!(BeadPriority::from_value(1), Ok(BeadPriority::High));
+    assert_eq!(BeadPriority::from_value(2), Ok(BeadPriority::Medium));
+    assert_eq!(BeadPriority::from_value(3), Ok(BeadPriority::Low));
   }
 
   #[test]
-  fn test_bead_priority_invalid() {
-    assert!(BeadPriority::new(0).is_err());
-    assert!(BeadPriority::new(4).is_err());
+  fn test_bead_priority_from_value_invalid() {
+    assert!(BeadPriority::from_value(0).is_err());
+    assert!(BeadPriority::from_value(4).is_err());
+  }
+
+  #[test]
+  fn test_bead_priority_from_str() {
+    assert_eq!(BeadPriority::from_str("high"), Ok(BeadPriority::High));
+    assert_eq!(BeadPriority::from_str("medium"), Ok(BeadPriority::Medium));
+    assert_eq!(BeadPriority::from_str("low"), Ok(BeadPriority::Low));
+    assert!(BeadPriority::from_str("invalid").is_err());
+  }
+
+  #[test]
+  fn test_bead_priority_sort_value() {
+    assert_eq!(BeadPriority::High.sort_value(), 1);
+    assert_eq!(BeadPriority::Medium.sort_value(), 2);
+    assert_eq!(BeadPriority::Low.sort_value(), 3);
   }
 
   #[test]

@@ -97,7 +97,7 @@ impl From<&Bead> for ExportedBead {
       title: bead.title.clone(),
       description: bead.description.clone(),
       status: bead.status.as_str().to_string(),
-      priority: bead.priority.0,
+      priority: bead.priority.sort_value(),
       bead_type: bead.bead_type.as_str().to_string(),
       created_by: bead.created_by.map(|id| id.to_string()),
       created_at: bead.created_at.clone(),
@@ -295,7 +295,7 @@ pub fn exported_to_domain(beads: &[ExportedBead]) -> ExportResult<Vec<Bead>> {
         status: BeadStatus::from_str(&exported.status).map_err(|_| {
           ExportError::CsvSerialization(format!("Invalid status: {}", exported.status))
         })?,
-        priority: BeadPriority::new(exported.priority)
+        priority: BeadPriority::from_value(exported.priority)
           .map_err(|_| ExportError::CsvSerialization("Invalid priority value".to_string()))?,
         bead_type: BeadType::from_str(&exported.bead_type).map_err(|_| {
           ExportError::CsvSerialization(format!("Invalid bead type: {}", exported.bead_type))

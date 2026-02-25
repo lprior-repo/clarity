@@ -5,52 +5,66 @@
 // Dioxus rsx! macro internally uses unwrap, so we allow the disallowed_methods lint.
 #![allow(clippy::disallowed_methods)]
 
+use crate::beads::list::LoadingState;
 use crate::br_show::{fetch_br_issue, BrIssue};
 use dioxus::prelude::*;
 use std::rc::Rc;
+
+// ===== Loading State for br_show =====
+
+/// Type alias for br show loading state
+type BrShowLoadingState = LoadingState<Rc<BrIssue>>;
 
 /// Br show page component
 ///
 /// Shows details from the `br show` command for a specific bead ID.
 /// Loads data from the br command using async execution.
+/// Uses explicit LoadingState enum per Scott Wlaschin DDD principles.
 #[component]
 pub fn BrShowPage(id: String) -> Element {
-  // Load br data using async loading
-  let br_issue = use_signal(|| Option::<Rc<BrIssue>>::None);
-  let error_state = use_signal(|| Option::<String>::None);
-  let mut has_loaded = use_signal(|| false);
+  // Explicit loading state (replaces Option-as-state anti-pattern)
+  let loading_state = use_signal(|| LoadingState::idle());
 
   // Load br data on mount
-  use_effect(move || {
-    if *has_loaded.read() {
-      return;
-    }
-    has_loaded.set(true);
-
-    let id = id.clone();
-    let mut br_issue = br_issue;
-    let mut error_state = error_state;
-
-    spawn(async move {
-      match fetch_br_issue(&id).await {
-        Ok(issue) => {
-          br_issue.set(Some(Rc::new(issue)));
-        }
-        Err(e) => {
-          error_state.set(Some(format!("Failed to load br issue: {e}")));
-        }
+  use_effect({
+    let mut loading_state = loading_state;
+    move || {
+      // Only load once
+      if !loading_state.read().is_idle() {
+        return;
       }
-    });
+
+      // Set loading state
+      loading_state.set(LoadingState::loading());
+
+      let id = id.clone();
+      let mut loading_state = loading_state.clone();
+
+      spawn(async move {
+        match fetch_br_issue(&id).await {
+          Ok(issue) => {
+            loading_state.set(LoadingState::loaded(Rc::new(issue)));
+          }
+          Err(e) => {
+            loading_state.set(LoadingState::failed(format!("Failed to load br issue: {e}")));
+          }
+        }
+      });
+    }
   });
 
   rsx! {
       div { class: "br-show-page",
-          // Show error state
-          {error_state.read().as_ref().map(|error| {
+          // Show error state using explicit LoadingState enum
+          {if loading_state.read().is_failed() {
+              let error_msg = loading_state.read()
+                  .error()
+                  .cloned()
+                  .unwrap_or_else(|| "Unknown error".to_string());
               rsx! {
                   div { class: "error",
                       h2 { "Error Loading Issue" }
-                      p { "{error}" }
+                      p { "{error_msg}" }
                       crate::app::NavLink {
                           to: crate::app::Route::BeadsList,
                           class: "back-link",
@@ -58,10 +72,12 @@ pub fn BrShowPage(id: String) -> Element {
                       }
                   }
               }
-          })}
+          } else {
+              rsx! {}
+          }}
 
-          // Show loading state
-          {if br_issue.read().is_none() && error_state.read().is_none() {
+          // Show loading state using explicit LoadingState enum
+          {if loading_state.read().is_loading() {
               rsx! {
                   div { class: "loading",
                       p { "Loading issue..." }
@@ -71,8 +87,9 @@ pub fn BrShowPage(id: String) -> Element {
               rsx! {}
           }}
 
-          // Show br issue data
-          {br_issue.read().as_ref().map(|issue_data| {
+          // Show br issue data using explicit LoadingState enum
+          {if loading_state.read().is_loaded() {
+              let issue_data = loading_state.read().data().unwrap().clone();
               rsx! {
                   BrShow {
                       id: issue_data.id.clone(),
@@ -86,7 +103,9 @@ pub fn BrShowPage(id: String) -> Element {
                       source_repo: issue_data.source_repo.clone(),
                   }
               }
-          })}
+          } else {
+              rsx! {}
+          }}
       }
   }
 }

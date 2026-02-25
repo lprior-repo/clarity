@@ -305,7 +305,7 @@ fn validate_exported_bead(bead: ExportedBead) -> ImportResult<ExportedBead> {
   }
 
   // Validate priority
-  if BeadPriority::new(bead.priority).is_err() {
+  if BeadPriority::from_value(bead.priority).is_err() {
     return Err(ImportError::InvalidPriority(bead.priority.to_string()));
   }
 
@@ -403,7 +403,7 @@ fn exported_to_domain_bead(exported: &ExportedBead) -> ImportResult<Bead> {
     description: exported.description.clone(),
     status: BeadStatus::from_str(&exported.status)
       .map_err(|_| ImportError::InvalidStatus(exported.status.clone()))?,
-    priority: BeadPriority::new(exported.priority)
+    priority: BeadPriority::from_value(exported.priority)
       .map_err(|_| ImportError::InvalidPriority(exported.priority.to_string()))?,
     bead_type: BeadType::from_str(&exported.bead_type)
       .map_err(|_| ImportError::InvalidType(exported.bead_type.clone()))?,
@@ -433,7 +433,7 @@ pub fn imported_to_new_beads(beads: &Vector<ExportedBead>) -> ImportResult<Vecto
           .map_err(|_| ImportError::InvalidStatus(exported.status.clone()))?,
         priority: {
           let priority_value = exported.priority;
-          BeadPriority::new(priority_value)
+          BeadPriority::from_value(priority_value)
             .map_err(|_| ImportError::InvalidPriority(exported.priority.to_string()))?
         },
         bead_type: BeadType::from_str(&exported.bead_type)

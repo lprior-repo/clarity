@@ -272,7 +272,7 @@ pub fn create_bead(
 /// Returns a `DomainError` if the priority downgrade is not allowed.
 pub fn update_bead_priority(bead: &Bead, new_priority: BeadPriority) -> Result<Bead, DomainError> {
   // Business rule: Cannot downgrade high priority
-  if bead.priority == BeadPriority::HIGH && new_priority.value() > bead.priority.value() {
+  if bead.priority == BeadPriority::High && new_priority.sort_value() > bead.priority.sort_value() {
     return Err(DomainError::HighPriorityDowngrade {
       bead_id: bead.id,
       from: bead.priority,

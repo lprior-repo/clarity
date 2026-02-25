@@ -128,7 +128,7 @@ fn BeadForm(mode: FormMode) -> Element {
       description.set(bead.description.clone().unwrap_or_default());
       status.set(bead.status.as_str().to_string());
       bead_type.set(bead.bead_type.as_str().to_string());
-      priority.set(bead.priority.0);
+      priority.set(bead.priority.sort_value());
     }
   }
 
@@ -722,7 +722,7 @@ fn SubmitHandler(props: SubmitHandlerProps) -> Element {
             Some(props.description.clone())
           },
           status,
-          priority: BeadPriority(props.priority),
+          priority: BeadPriority::from_value(props.priority).unwrap_or_else(|_| BeadPriority::Medium),
           bead_type,
           created_by: None,
         };

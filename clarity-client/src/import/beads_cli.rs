@@ -333,9 +333,9 @@ fn map_issue_to_bead(issue: BeadsCliIssue, line_num: usize) -> BeadsCliImportRes
   // Map beads_rust priority (1=high, 2=medium, 3=low) to bead priority
   // Both systems use the same scale
   let bead_priority = match issue.priority {
-    1 => BeadPriority::HIGH,
-    2 => BeadPriority::MEDIUM,
-    3 => BeadPriority::LOW,
+    1 => BeadPriority::High,
+    2 => BeadPriority::Medium,
+    3 => BeadPriority::Low,
     p => {
       return Err(BeadsCliImportError::InvalidData {
         line: line_num,

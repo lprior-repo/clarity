@@ -264,25 +264,25 @@ fn PrioritySelector(priority: BeadPriority, on_change: Callback<BeadPriority>) -
               class: "setting-select",
               onchange: move |e: Event<FormData>| {
                   match e.value().as_str() {
-                      "1" => on_change.call(BeadPriority::HIGH),
-                      "2" => on_change.call(BeadPriority::MEDIUM),
-                      "3" => on_change.call(BeadPriority::LOW),
+                      "1" => on_change.call(BeadPriority::High),
+                      "2" => on_change.call(BeadPriority::Medium),
+                      "3" => on_change.call(BeadPriority::Low),
                       _ => {}
                   }
               },
               option {
                   value: "1",
-                  selected: priority == BeadPriority::HIGH,
+                  selected: priority == BeadPriority::High,
                   "High"
               }
               option {
                   value: "2",
-                  selected: priority == BeadPriority::MEDIUM,
+                  selected: priority == BeadPriority::Medium,
                   "Medium"
               }
               option {
                   value: "3",
-                  selected: priority == BeadPriority::LOW,
+                  selected: priority == BeadPriority::Low,
                   "Low"
               }
           }

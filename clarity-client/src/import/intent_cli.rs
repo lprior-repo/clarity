@@ -361,10 +361,10 @@ fn map_issue_to_bead(issue: IntentIssue) -> Result<NewBead, ImportError> {
   // intent-cli: 0=critical, 1=high, 2=medium, 3=low, 4=none
   // clarity: 1=high, 2=medium, 3=low
   let bead_priority = match issue.priority {
-    0 | 1 => BeadPriority::HIGH,
-    2 => BeadPriority::MEDIUM,
-    3 => BeadPriority::LOW,
-    _ => BeadPriority::MEDIUM,
+    0 | 1 => BeadPriority::High,
+    2 => BeadPriority::Medium,
+    3 => BeadPriority::Low,
+    _ => BeadPriority::Medium,
   };
 
   // Map issue_type to bead_type

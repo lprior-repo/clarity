@@ -139,7 +139,7 @@ impl Settings {
 
     Self {
       theme: Theme::System,
-      default_priority: BeadPriority::MEDIUM,
+      default_priority: BeadPriority::Medium,
       default_type: BeadType::Feature,
       beads_per_page: 20,
       auto_backup: true,

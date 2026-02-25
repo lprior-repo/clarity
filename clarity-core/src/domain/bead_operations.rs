@@ -187,7 +187,7 @@ impl BeadState {
       .beads
       .iter()
       .cloned()
-      .sorted_by_key(|a| a.priority.value())
+      .sorted_by_key(|a| a.priority.sort_value())
       .rev()
       .collect()
   }
@@ -393,18 +393,18 @@ impl BeadOperations {
     if by_priority && by_date {
       if ascending {
         sorted.sort_by(|a, b| {
-          (a.priority.value(), a.created_at).cmp(&(b.priority.value(), b.created_at))
+          (a.priority.sort_value(), a.created_at).cmp(&(b.priority.sort_value(), b.created_at))
         });
       } else {
         sorted.sort_by(|a, b| {
-          (b.priority.value(), b.created_at).cmp(&(a.priority.value(), a.created_at))
+          (b.priority.sort_value(), b.created_at).cmp(&(a.priority.sort_value(), a.created_at))
         });
       }
     } else if by_priority {
       if ascending {
-        sorted.sort_by(|a, b| a.priority.value().cmp(&b.priority.value()));
+        sorted.sort_by(|a, b| a.priority.sort_value().cmp(&b.priority.sort_value()));
       } else {
-        sorted.sort_by(|a, b| b.priority.value().cmp(&a.priority.value()));
+        sorted.sort_by(|a, b| b.priority.sort_value().cmp(&a.priority.sort_value()));
       }
     } else if by_date {
       if ascending {

@@ -16,22 +16,216 @@ use crate::beads::sorting::{SortBy, SortConfig, SortDirection};
 use crate::error::AppError;
 use crate::hooks::{use_keyboard_with_handler, use_loading_manager, use_loading_operations};
 use crate::shortcuts::Action;
-use clarity_core::db::models::BeadFilters;
+use clarity_core::db::models::{BeadFilters, BeadStatus, BeadType};
+use clarity_core::domain::types::BeadPriority;
 use dioxus::prelude::*;
 use std::rc::Rc;
 
-/// Parse URL query parameters for pagination
-/// For desktop app, we'll use a simple approach without web APIs
-fn parse_url_params() -> (u32, u32) {
-  (1, 25) // Default values for desktop app
+// ===== Filter State Store =====
+
+/// Bead list filter state using Dioxus 0.7 Store pattern
+///
+/// Consolidates all filter-related UI state into a single reactive structure.
+/// This replaces multiple independent signals with a coherent state machine.
+#[derive(Clone, PartialEq, Eq, Store, Debug)]
+pub struct BeadListFilters {
+  /// Status filter (None = all statuses)
+  pub status: Option<BeadStatus>,
+  /// Type filter (None = all types)
+  pub bead_type: Option<BeadType>,
+  /// Priority filter (None = all priorities)
+  pub priority: Option<BeadPriority>,
+  /// Search query text (None = no search)
+  pub search_query: Option<String>,
+  /// Current page number
+  pub page: u32,
+  /// Page size
+  pub_size: u32,
 }
 
-/// Update URL with current pagination state
-/// For desktop app, we don't have URL APIs, so this is a no-op
-fn update_url_params(_page: u32, _page_size: u32) {
-  // Desktop app doesn't have URL APIs, so this is a no-op
-  // In a web app, this would update the URL query parameters
+impl BeadListFilters {
+  /// Create default filters (no filters applied, page 1, size 25)
+  #[must_use]
+  pub const fn new() -> Self {
+    Self {
+      status: None,
+      bead_type: None,
+      priority: None,
+      search_query: None,
+      page: 1,
+      pub_size: 25,
+    }
+  }
+
+  /// Check if any non-pagination filters are active
+  #[must_use]
+  pub const fn has_filters(&self) -> bool {
+    self.status.is_some()
+      || self.bead_type.is_some()
+      || self.priority.is_some()
+      || self.search_query.is_some()
+  }
+
+  /// Create with status filter
+  #[must_use]
+  pub const fn with_status(mut self, status: Option<BeadStatus>) -> Self {
+    self.status = status;
+    self
+  }
+
+  /// Create with type filter
+  #[must_use]
+  pub const fn with_type(mut self, bead_type: Option<BeadType>) -> Self {
+    self.bead_type = bead_type;
+    self
+  }
+
+  /// Create with priority filter
+  #[must_use]
+  pub const fn with_priority(mut self, priority: Option<BeadPriority>) -> Self {
+    self.priority = priority;
+    self
+  }
+
+  /// Create with search query
+  #[must_use]
+  pub fn with_search(mut self, search: &str) -> Self {
+    self.search_query = if search.is_empty() {
+      None
+    } else {
+      Some(search.to_string())
+    };
+    self
+  }
+
+  /// Create with page
+  #[must_use]
+  pub const fn with_page(mut self, page: u32) -> Self {
+    self.page = page;
+    self
+  }
+
+  /// Reset all filters (keep pagination)
+  #[must_use]
+  pub fn reset_filters(mut self) -> Self {
+    self.status = None;
+    self.bead_type = None;
+    self.priority = None;
+    self.search_query = None;
+    self
+  }
 }
+
+impl Default for BeadListFilters {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
+// ===== LoadingState Constructors =====
+
+impl<T> LoadingState<T> {
+  /// Create an idle state (no load attempted yet)
+  #[must_use]
+  pub const fn idle() -> Self {
+    Self::Idle
+  }
+
+  /// Create a loading state
+  #[must_use]
+  pub const fn loading() -> Self {
+    Self::Loading
+  }
+
+  /// Create a loaded state with data
+  #[must_use]
+  pub const fn loaded(data: T) -> Self {
+    Self::Loaded(data)
+  }
+
+  /// Create a failed state with error message
+  #[must_use]
+  pub fn failed(msg: String) -> Self {
+    Self::Failed(msg)
+  }
+}
+
+// ===== Loading State Enum =====
+
+/// Explicit loading state per Scott Wlaschin DDD principles
+///
+/// Replaces Option-as-state pattern with explicit state machine.
+/// Makes illegal states unrepresentable.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum LoadingState<T> {
+  /// Initial state, no data loaded yet
+  Idle,
+  /// Currently loading data
+  Loading,
+  /// Successfully loaded data
+  Loaded(T),
+  /// Failed to load data
+  Failed(String),
+}
+
+impl<T> LoadingState<T> {
+  /// Check if currently loading
+  #[must_use]
+  pub const fn is_loading(&self) -> bool {
+    matches!(self, Self::Loading)
+  }
+
+  /// Check if is idle (no load attempted)
+  #[must_use]
+  pub const fn is_idle(&self) -> bool {
+    matches!(self, Self::Idle)
+  }
+
+  /// Check if has successfully loaded
+  #[must_use]
+  pub const fn is_loaded(&self) -> bool {
+    matches!(self, Self::Loaded(_))
+  }
+
+  /// Check if failed
+  #[must_use]
+  pub const fn is_failed(&self) -> bool {
+    matches!(self, Self::Failed(_))
+  }
+
+  /// Get reference to loaded data if available
+  #[must_use]
+  pub fn data(&self) -> Option<&T> {
+    match self {
+      Self::Loaded(data) => Some(data),
+      _ => None,
+    }
+  }
+
+  /// Map over the loaded data
+  #[must_use]
+  pub fn map<U, F>(self, f: F) -> LoadingState<U>
+  where
+    F: FnOnce(T) -> U,
+  {
+    match self {
+      Self::Idle => LoadingState::idle(),
+      Self::Loading => LoadingState::loading(),
+      Self::Loaded(data) => LoadingState::loaded(f(data)),
+      Self::Failed(err) => LoadingState::failed(err),
+    }
+  }
+
+  /// Get the error message if failed
+  #[must_use]
+  pub fn error(&self) -> Option<&String> {
+    match self {
+      Self::Failed(msg) => Some(msg),
+      _ => None,
+    }
+  }
+}
+
 
 /// Bead list page component
 ///
@@ -47,32 +241,29 @@ pub fn BeadListPage() -> Element {
   // Access global state - use AppState directly to get reactive access
   let app_state = use_context::<crate::state::AppState>();
   let bead_actions = crate::hooks::use_bead_actions();
-  let loading_manager = use_loading_manager();
   let loading_ops = use_loading_operations();
 
   // Reactively read beads from the signal - this will trigger re-renders when beads change
   let beads = use_memo(move || app_state.bead_list());
 
-  // Pagination signals
-  let (initial_page, initial_page_size) = parse_url_params();
-  let mut current_page = use_signal(|| initial_page);
-  let page_size = use_signal(|| initial_page_size);
+  // Unified filter state using Dioxus 0.7 Store pattern
+  // Consolidates all filter-related state into a single reactive structure
+  let mut filters = use_signal(BeadListFilters::new);
+
+  // Explicit loading state (replaces Option-as-state anti-pattern)
+  let loading_state = use_signal(|| LoadingState::idle());
+
+  // Sorting signals (kept for future use)
+  let _sort_field = use_signal(|| SortBy::CreatedAt);
+  let _sort_direction = use_signal(|| SortDirection::Descending);
+
+  // Pagination state signals
   let mut total_pages = use_signal(|| 1u32);
   let mut total_beads = use_signal(|| 0u64);
 
   // Sorting signals
   let mut sort_field = use_signal(|| SortBy::CreatedAt);
   let mut sort_direction = use_signal(|| SortDirection::Descending);
-
-  // Local filter signals (these are UI state, not app state)
-  let mut status_filter = use_signal(String::new);
-  let mut type_filter = use_signal(String::new);
-  let mut priority_filter = use_signal(String::new);
-  let mut search_query = use_signal(String::new);
-  let mut error_state = use_signal(|| Option::<AppError>::None);
-
-  // Track if initial load has happened
-  let has_loaded_initial = use_signal(|| false);
 
   // Create sorted beads memo that depends on both beads and sort configuration
   let sorted_beads = use_memo(move || {
@@ -84,72 +275,45 @@ pub fn BeadListPage() -> Element {
     config.sort_beads(beads.iter().map(|b| b.as_ref().clone()).collect())
   });
 
-  // Create filters signal that depends on all filter signals
-  let filters = use_memo(move || {
-    let status = status_filter.read().clone();
-    let bead_type = type_filter.read().clone();
-    let priority = priority_filter.read().clone();
-    let search = search_query.read().clone();
-    let page = current_page.read();
-    let page_size_val = page_size.read();
-
-    BeadFilters {
-      status: if status.is_empty() {
-        None
-      } else {
-        Some(status)
-      },
-      bead_type: if bead_type.is_empty() {
-        None
-      } else {
-        Some(bead_type)
-      },
-      priority: priority.parse::<i16>().ok(),
-      created_by: None,
-      search: if search.is_empty() {
-        None
-      } else {
-        Some(search)
-      },
-      page: Some(*page),
-      page_size: Some(*page_size_val),
-    }
-  });
 
   // Load filtered beads when filters change or on initial mount
   use_effect({
     let bead_actions = bead_actions.clone();
     let loading_ops = loading_ops;
-    let mut has_loaded = has_loaded_initial;
+    let mut loading_state = loading_state;
     move || {
-      let filters = filters.read().clone();
       let bead_actions = bead_actions.clone();
       let loading_ops = loading_ops.clone();
 
-      // Check if we should load beads
-      let should_load = !*has_loaded.read()
-        || filters.status.is_some()
-        || filters.bead_type.is_some()
-        || filters.priority.is_some()
-        || filters.search.is_some()
-        || filters.page.is_some()
-        || filters.page_size.is_some();
+      // Check if we should load beads (first load or filters changed)
+      let should_load = matches!(*loading_state.read(), LoadingState::Idle)
+        || filters.read().has_filters();
 
       eprintln!(
-        "[BeadList] Effect triggered - should_load: {}, has_loaded: {}, filters: {:?}",
+        "[BeadList] Effect triggered - should_load: {}, state: {:?}, filters: {:?}",
         should_load,
-        *has_loaded.read(),
-        filters
+        loading_state.read(),
+        filters.read()
       );
 
       if should_load {
-        // Mark as loaded
-        has_loaded.set(true);
-
         // Set loading state
+        loading_state.set(LoadingState::loading());
         (loading_ops.start)(("bead-list".to_string(), "Loading beads...".to_string()));
 
-        eprintln!("[BeadList] Loading beads with filters: {filters:?}");
+        // Convert Store filters to DB filters
+        let f = filters.read();
+        let db_filters = BeadFilters {
+          status: f.status.map(|s| s.to_string()),
+          bead_type: f.bead_type.map(|t| t.to_string()),
+          priority: f.priority.map(|p| p.sort_value()),
+          created_by: None,
+          search: f.search_query.clone(),
+          page: Some(f.page),
+          page_size: Some(f.pub_size),
+        };
+
+        eprintln!("[BeadList] Loading beads with filters: {db_filters:?}");
 
         // Spawn async task
         spawn(async move {
@@ -157,7 +321,7 @@ pub fn BeadListPage() -> Element {
           match crate::db::DesktopDb::new_async().await {
             Ok(db) => {
               eprintln!("[BeadList] Database initialized, querying beads");
-              match db.list_beads_paginated(&filters).await {
+              match db.list_beads_paginated(&db_filters).await {
                 Ok(paginated) => {
                   eprintln!(
                     "[BeadList] Successfully loaded {} beads (page {} of {})",
@@ -169,13 +333,13 @@ pub fn BeadListPage() -> Element {
                   total_pages.set(paginated.total_pages);
                   total_beads.set(paginated.total);
                   (loading_ops.stop)("bead-list".to_string());
-                  error_state.set(None);
+                  loading_state.set(LoadingState::loaded(()));
                 }
                 Err(e) => {
                   eprintln!("[BeadList] Error loading beads: {e:?}");
                   (loading_ops.stop)("bead-list".to_string());
                   let app_err = AppError::from(e);
-                  error_state.set(Some(app_err));
+                  loading_state.set(LoadingState::failed(app_err.to_string()));
                 }
               }
             }
@@ -183,7 +347,7 @@ pub fn BeadListPage() -> Element {
               eprintln!("[BeadList] Error initializing database: {e:?}");
               (loading_ops.stop)("bead-list".to_string());
               let app_err = AppError::from(e);
-              error_state.set(Some(app_err));
+              loading_state.set(LoadingState::failed(app_err.to_string()));
             }
           }
         });
@@ -191,11 +355,12 @@ pub fn BeadListPage() -> Element {
     }
   });
 
-  // Update URL when pagination changes
+  // Update URL when pagination changes (no-op for desktop)
   use_effect(move || {
-    let page = *current_page.read();
-    let page_size_val = *page_size.read();
-    update_url_params(page, page_size_val);
+    let page = filters.read().page;
+    let page_size_val = filters.read().pub_size;
+    // Desktop app doesn't have URL APIs
+    let _ = (page, page_size_val);
   });
 
   // Function to handle sort field and direction changes
@@ -243,8 +408,8 @@ pub fn BeadListPage() -> Element {
   });
 
   // Calculate pagination info (pure functional calculation)
-  let page = *current_page.read();
-  let size = *page_size.read();
+  let page = filters.read().page;
+  let size = filters.read().pub_size;
   let total = *total_beads.read();
   let beads_len = sorted_beads.read().len();
 
@@ -290,8 +455,8 @@ pub fn BeadListPage() -> Element {
               }
           }
 
-          // Show loading state
-          {if loading_manager.read().is_loading_key("bead-list") {
+          // Show loading state using explicit LoadingState enum
+          {if loading_state.read().is_loading() {
               rsx! {
                   div { class: "loading",
                       p { "Loading beads..." }
@@ -301,22 +466,33 @@ pub fn BeadListPage() -> Element {
               rsx! {}
           }}
 
-          // Show error state
-          {error_state.read().as_ref().map(|error| {
-              let error_message = error.to_string();
+          // Show error state using explicit LoadingState enum
+          {if loading_state.read().is_failed() {
+              let error_msg = loading_state.read()
+                  .error()
+                  .cloned()
+                  .unwrap_or_else(|| "Unknown error".to_string());
               rsx! {
                   div { class: "error",
-                      p { "{error_message}" }
+                      p { "{error_msg}" }
                   }
               }
-          })}
+          } else {
+              rsx! {}
+          }}
 
-          // Filter controls
+          // Filter controls using Store-based state
           div { class: "filters",
               select {
-                  value: "{status_filter}",
+                  value: "{filters.read().status.map_or(String::new(), |s| s.to_string())}",
                   onchange: move |evt: Event<FormData>| {
-                      status_filter.set(evt.value());
+                      let value = evt.value();
+                      let new_status = if value.is_empty() {
+                          None
+                      } else {
+                          value.parse().ok()
+                      };
+                      filters.write().status = new_status;
                   },
                   option { value: "", "All Statuses" },
                   option { value: "open", "Open" },
@@ -327,9 +503,15 @@ pub fn BeadListPage() -> Element {
               }
 
               select {
-                  value: "{type_filter}",
+                  value: "{filters.read().bead_type.map_or(String::new(), |t| t.to_string())}",
                   onchange: move |evt: Event<FormData>| {
-                      type_filter.set(evt.value());
+                      let value = evt.value();
+                      let new_type = if value.is_empty() {
+                          None
+                      } else {
+                          value.parse().ok()
+                      };
+                      filters.write().bead_type = new_type;
                   },
                   option { value: "", "All Types" },
                   option { value: "feature", "Feature" },
@@ -340,9 +522,15 @@ pub fn BeadListPage() -> Element {
               }
 
               select {
-                  value: "{priority_filter}",
+                  value: "{filters.read().priority.map_or(String::new(), |p| p.sort_value().to_string())}",
                   onchange: move |evt: Event<FormData>| {
-                      priority_filter.set(evt.value());
+                      let value = evt.value();
+                      let new_priority = if value.is_empty() {
+                          None
+                      } else {
+                          value.parse::<i16>().ok().and_then(|v| BeadPriority::from_value(v).ok())
+                      };
+                      filters.write().priority = new_priority;
                   },
                   option { value: "", "All Priorities" },
                   option { value: "1", "High" },
@@ -354,9 +542,15 @@ pub fn BeadListPage() -> Element {
                   r#type: "text",
                   id: "bead-search",
                   placeholder: "Search beads...",
-                  value: "{search_query}",
+                  value: "{filters.read().search_query.clone().unwrap_or_default()}",
                   oninput: move |evt: Event<FormData>| {
-                      search_query.set(evt.value());
+                      let value = evt.value();
+                      let new_search = if value.is_empty() {
+                          None
+                      } else {
+                          Some(value)
+                      };
+                      filters.write().search_query = new_search;
                   }
               }
               span { class: "shortcut-hint-inline", "Ctrl+F" }
@@ -464,28 +658,28 @@ pub fn BeadListPage() -> Element {
                       div { class: "pagination-controls",
                           // Previous button
                           button {
-                              class: if *current_page.read() <= 1 { "pagination-btn disabled" } else { "pagination-btn" },
+                              class: if filters.read().page <= 1 { "pagination-btn disabled" } else { "pagination-btn" },
                               onclick: move |_| {
-                                  let current = *current_page.read();
+                                  let current = filters.read().page;
                                   if current > 1 {
-                                      current_page.set(current - 1);
+                                      filters.write().page = current - 1;
                                   }
                               },
-                              disabled: *current_page.read() <= 1,
+                              disabled: filters.read().page <= 1,
                               "Previous"
                           }
 
                           // Next button
                           button {
-                              class: if *current_page.read() >= *total_pages.read() { "pagination-btn disabled" } else { "pagination-btn" },
+                              class: if filters.read().page >= *total_pages.read() { "pagination-btn disabled" } else { "pagination-btn" },
                               onclick: move |_| {
-                                  let current = *current_page.read();
+                                  let current = filters.read().page;
                                   let total = *total_pages.read();
                                   if current < total {
-                                      current_page.set(current + 1);
+                                      filters.write().page = current + 1;
                                   }
                               },
-                              disabled: *current_page.read() >= *total_pages.read(),
+                              disabled: filters.read().page >= *total_pages.read(),
                               "Next"
                           }
                       }
@@ -531,10 +725,10 @@ fn BeadRow(props: BeadRowProps) -> Element {
   let type_class = format!("type-{}", bead_type.as_str());
 
   // Format priority as human-readable label
-  let priority_label = match priority.0 {
-    1 => "High",
-    2 => "Medium",
-    _ => "Low",
+  let priority_label = match priority {
+    BeadPriority::High => "High",
+    BeadPriority::Medium => "Medium",
+    BeadPriority::Low => "Low",
   };
 
   // Format date for display (parse ISO 8601 string to date)

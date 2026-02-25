@@ -111,6 +111,28 @@ impl std::fmt::Display for Route {
   }
 }
 
+impl Route {
+  /// Parse bead ID from route if this is a bead route
+  ///
+  /// This implements the "parse at boundary" principle from Scott Wlaschin's DDD.
+  /// Returns None if this is not a bead route, or DbResult if parsing fails.
+  #[must_use]
+  pub fn parse_bead_id(&self) -> Option<clarity_core::db::error::DbResult<clarity_core::db::models::BeadId>> {
+    match self {
+      Route::BeadDetail { id } => Some(clarity_core::db::models::BeadId::from_str(id)),
+      Route::BeadEdit { id } => Some(clarity_core::db::models::BeadId::from_str(id)),
+      Route::BrShow { id } => Some(clarity_core::db::models::BeadId::from_str(id)),
+      _ => None,
+    }
+  }
+
+  /// Check if this route requires a valid bead ID
+  #[must_use]
+  pub const fn requires_bead_id(&self) -> bool {
+    matches!(self, Route::BeadDetail { .. } | Route::BeadEdit { .. } | Route::BrShow { .. })
+  }
+}
+
 /// Main application component with routing
 ///
 /// This component wraps the entire application in an `ErrorBoundary` component

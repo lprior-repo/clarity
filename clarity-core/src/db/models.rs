@@ -198,27 +198,8 @@ impl std::str::FromStr for BeadType {
   }
 }
 
-/// Bead priority (1 = high, 2 = medium, 3 = low)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BeadPriority(pub i16);
-
-impl BeadPriority {
-  pub const HIGH: Self = Self(1);
-  pub const MEDIUM: Self = Self(2);
-  pub const LOW: Self = Self(3);
-
-  /// Create a new `BeadPriority` with validation
-  ///
-  /// # Errors
-  /// - Returns `DbError::ValidationError` if priority is not 1, 2, or 3
-  pub fn new(priority: i16) -> DbResult<Self> {
-    if (1..=3).contains(&priority) {
-      Ok(Self(priority))
-    } else {
-      Err(DbError::validation("Priority must be between 1 and 3"))
-    }
-  }
-}
+// Re-export from domain types
+pub use crate::domain::types::BeadPriority;
 
 // ===== Domain Models =====
 

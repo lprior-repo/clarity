@@ -14,6 +14,7 @@
 #![allow(clippy::disallowed_methods)]
 
 use clarity_core::db::models::{Bead, BeadId};
+use clarity_core::domain::types::BeadPriority;
 use dioxus::prelude::*;
 use std::rc::Rc;
 
@@ -183,10 +184,10 @@ fn BeadDetail(props: BeadDetailProps) -> Element {
   let updated_at = props.updated_at;
   let status_class = format!("status-{}", status.as_str());
   let type_class = format!("type-{}", bead_type.as_str());
-  let priority_label = match priority.0 {
-    1 => "High",
-    2 => "Medium",
-    _ => "Low",
+  let priority_label = match priority {
+    BeadPriority::High => "High",
+    BeadPriority::Medium => "Medium",
+    BeadPriority::Low => "Low",
   };
 
   rsx! {
