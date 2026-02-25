@@ -6,6 +6,8 @@ use dioxus::prelude::*;
 // Import main app component
 mod app;
 mod components;
+#[cfg(feature = "fullstack")]
+mod server;
 mod types;
 mod ui;
 
@@ -15,6 +17,6 @@ fn main() {
     // Init logger
     dioxus_logger::init(dioxus_logger::tracing::Level::INFO).expect("Failed to init logger");
 
-    // Web launch (fullstack requires server-side setup)
+    // Web launch
     dioxus::LaunchBuilder::web().launch(App);
 }
