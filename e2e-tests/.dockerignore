@@ -1,8 +1,0 @@
-# Docker ignore file for E2E tests
-node_modules
-test-results
-playwright-report
-playwright/.cache
-coverage
-.DS_Store
-*.log

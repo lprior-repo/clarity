@@ -1,0 +1,33 @@
+[application]
+# The name of your app as displayed in the web browser/OS
+name = "Clarity Planner"
+
+# The Dioxus platform to build for (web, desktop, fullstack)
+default_platform = "web"
+
+# The binary to build
+binary = "clarity-web"
+
+# The binary output name
+out_dir = "dist"
+
+# The asset directory
+asset_dir = "assets"
+
+[web.app]
+# HTML title tag content
+title = "Clarity Planner"
+
+[web.watcher]
+# Watch the src directory for changes
+watch_path = ["src"]
+
+[web.resource]
+# The CSS style and scripts to include
+style = ["/assets/tailwind.css"]
+script = []
+
+[web.resource.dev]
+# Dev mode uses same CSS (Dioxus rebuilds automatically)
+style = []
+script = []

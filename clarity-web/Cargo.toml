@@ -1,0 +1,27 @@
+[package]
+name = "clarity-web"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+# Dioxus 0.7 for web
+dioxus = { workspace = true, features = ["web"] }
+dioxus-logger = "0.5"
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Utilities
+chrono = { workspace = true }
+
+[features]
+default = []
+
+[[bin]]
+name = "clarity-web"
+path = "src/main.rs"
