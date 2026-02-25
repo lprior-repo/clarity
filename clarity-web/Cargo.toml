@@ -4,8 +4,8 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-# Dioxus 0.7 for web
-dioxus = { workspace = true, features = ["web"] }
+# Dioxus 0.7 - fullstack capable
+dioxus = { workspace = true, features = ["router"] }
 dioxus-logger = "0.5"
 
 # Serialization
@@ -20,7 +20,9 @@ thiserror = { workspace = true }
 chrono = { workspace = true }
 
 [features]
-default = []
+default = ["web"]
+web = ["dioxus/web"]
+desktop = ["dioxus/desktop"]
 
 [[bin]]
 name = "clarity-web"

@@ -15,5 +15,6 @@ fn main() {
     // Init logger
     dioxus_logger::init(dioxus_logger::tracing::Level::INFO).expect("Failed to init logger");
 
-    LaunchBuilder::web().launch(App);
+    // Web launch (fullstack requires server-side setup)
+    dioxus::LaunchBuilder::web().launch(App);
 }

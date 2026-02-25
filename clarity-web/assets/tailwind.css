@@ -695,6 +695,10 @@ body {
   margin-top: 1px;
 }
 
+.ml-1 {
+  margin-left: 0.25rem;
+}
+
 .block {
   display: block;
 }
@@ -785,6 +789,10 @@ body {
 
 .h-screen {
   height: 100vh;
+}
+
+.min-h-\[80px\] {
+  min-height: 80px;
 }
 
 .w-1\.5 {
@@ -1606,6 +1614,10 @@ body {
   color: rgb(255 255 255 / 0.9);
 }
 
+.text-destructive {
+  color: hsl(var(--destructive));
+}
+
 .line-through {
   text-decoration-line: line-through;
 }
@@ -1696,6 +1708,11 @@ body {
 
 .ring-offset-background {
   --tw-ring-offset-color: hsl(var(--background));
+}
+
+.blur {
+  --tw-blur: blur(8px);
+  filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
 }
 
 .filter {
@@ -1920,6 +1937,14 @@ body {
   color: rgb(255 255 255 / 0.2);
 }
 
+.placeholder\:text-muted-foreground\/50::-moz-placeholder {
+  color: hsl(var(--muted-foreground) / 0.5);
+}
+
+.placeholder\:text-muted-foreground\/50::placeholder {
+  color: hsl(var(--muted-foreground) / 0.5);
+}
+
 .first\:pt-0:first-child {
   padding-top: 0px;
 }
@@ -1997,6 +2022,10 @@ body {
   --tw-ring-offset-width: 2px;
 }
 
+.focus\:ring-offset-background:focus {
+  --tw-ring-offset-color: hsl(var(--background));
+}
+
 .focus-visible\:outline-none:focus-visible {
   outline: 2px solid transparent;
   outline-offset: 2px;
@@ -2020,12 +2049,24 @@ body {
   pointer-events: none;
 }
 
+.disabled\:cursor-not-allowed:disabled {
+  cursor: not-allowed;
+}
+
 .disabled\:opacity-25:disabled {
   opacity: 0.25;
 }
 
 .disabled\:opacity-50:disabled {
   opacity: 0.5;
+}
+
+.peer:disabled ~ .peer-disabled\:cursor-not-allowed {
+  cursor: not-allowed;
+}
+
+.peer:disabled ~ .peer-disabled\:opacity-70 {
+  opacity: 0.7;
 }
 
 @media (min-width: 640px) {
