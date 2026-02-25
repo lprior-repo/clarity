@@ -11,6 +11,8 @@ use pages::HomePage;
 #[component]
 pub fn App() -> Element {
     rsx! {
+        // Include Tailwind CSS
+        document::Stylesheet { href: asset!("/assets/tailwind.css") }
         document::Title { "Clarity Planner - Double Diamond Planning IDE" }
         HomePage {}
     }

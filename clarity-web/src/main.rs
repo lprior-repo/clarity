@@ -6,8 +6,6 @@ use dioxus::prelude::*;
 // Import main app component
 mod app;
 mod components;
-#[cfg(feature = "fullstack")]
-mod server;
 mod types;
 mod ui;
 
