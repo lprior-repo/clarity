@@ -11,8 +11,10 @@
 //! the Progressive Discover flow. Each phase is a distinct step in
 //! guiding users from initial idea to locked plan.
 
+pub mod extracting_phase;
 pub mod preview_phase;
 
+pub use extracting_phase::{ExtractingPhase, ExtractingPhaseProps};
 pub use preview_phase::{
     PreviewPhase, PreviewPhaseProps, SummaryField, SummaryFieldProps, TranscriptSummary,
     TranscriptSummaryProps,

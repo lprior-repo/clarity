@@ -35,6 +35,7 @@ use super::extract_fields_button::ExtractFieldsButton;
 use super::extracting_progress::{ExtractionStatus, ExtractingProgress};
 use super::nonpersona_confirm::NonpersonaConfirm;
 use super::persona_confirm::PersonaConfirm;
+use super::phases::ExtractingPhase;
 use super::preview_summary::PreviewSummary;
 use super::problem_confirm::ProblemConfirm;
 use super::prompt_textarea::{CharacterCount, PromptTextarea, MIN_PROMPT_LENGTH};
@@ -505,120 +506,6 @@ pub fn ScaffoldingPromptButton(props: ScaffoldingPromptButtonProps) -> Element {
                 props.onclick.call(e);
             },
             "{props.label}"
-        }
-    }
-}
-
-// ============================================================================
-// Extracting Phase Component
-// ============================================================================
-
-/// Props for ExtractingPhase component
-#[derive(Clone, Props, PartialEq)]
-pub struct ExtractingPhaseProps {
-    /// State signal
-    pub state: Signal<ProgressiveDiscoverState>,
-    /// Actions for state manipulation
-    pub actions: ProgressiveDiscoverActions,
-}
-
-/// Extracting phase component
-///
-/// Shows progress while AI extracts fields from user input.
-#[component]
-pub fn ExtractingPhase(props: ExtractingPhaseProps) -> Element {
-    let progress = use_signal(|| 0u8);
-    let status_messages = [
-        "Parsing problem statement...",
-        "Identifying target users...",
-        "Extracting solution details...",
-        "Analyzing scenario context...",
-        "Validating extraction quality...",
-    ];
-    let current_message = use_signal(|| 0usize);
-
-    // Guard flag to prevent multiple phase transitions (Issue C2)
-    let has_transitioned = use_signal(|| false);
-
-    // Error state for failed extractions (Issue C3)
-    let error = use_signal(|| None::<String>);
-
-    // Simulate extraction progress
-    use_effect({
-        let mut actions = props.actions.clone();
-        let mut progress = progress.clone();
-        let mut current_message = current_message.clone();
-        let mut has_transitioned = has_transitioned.clone();
-        let mut error = error.clone();
-        move || {
-            // Check for existing error - don't continue if failed
-            if error.read().is_some() {
-                return;
-            }
-
-            // For now, auto-advance through the extraction
-            // In a real implementation, this would be driven by the AI provider
-            let current_progress = *progress.read();
-            if current_progress < 100 {
-                let new_progress = (current_progress + 20).min(100);
-                *progress.write() = new_progress;
-                *current_message.write() = (new_progress as usize / 20).min(status_messages.len() - 1);
-
-                // Guard against multiple transitions (Issue C2)
-                if new_progress >= 100 && !*has_transitioned.read() {
-                    *has_transitioned.write() = true;
-                    // Auto-advance to confirming fields after extraction completes
-                    actions.advance_phase();
-                }
-            }
-        }
-    });
-
-    let message_idx = *current_message.read();
-    let message = status_messages.get(message_idx).map_or("Processing...", |s| *s);
-
-    rsx! {
-        div {
-            class: "flex flex-col items-center justify-center py-12 space-y-6",
-
-            // Error display (Issue C3)
-            if let Some(err) = error.read().as_ref() {
-                div {
-                    class: "w-full max-w-md p-4 bg-destructive/10 text-destructive rounded-lg border border-destructive/50",
-                    p {
-                        class: "text-sm font-medium mb-2",
-                        "Extraction failed: {err}"
-                    }
-                    Button {
-                        variant: ButtonVariant::Secondary,
-                        onclick: {
-                            let mut error = error.clone();
-                            let mut progress = progress.clone();
-                            let mut current_message = current_message.clone();
-                            let mut has_transitioned = has_transitioned.clone();
-                            move |_| {
-                                // Reset state for retry
-                                *error.write() = None;
-                                *progress.write() = 0;
-                                *current_message.write() = 0;
-                                *has_transitioned.write() = false;
-                            }
-                        },
-                        "Retry"
-                    }
-                }
-            } else {
-                ExtractingProgress {
-                    status: ExtractionStatus::Extracting,
-                    progress: *progress.read(),
-                    message: Some(message.to_string()),
-                }
-
-                p {
-                    class: "text-sm text-muted-foreground text-center max-w-md",
-                    "Analyzing your input and extracting structured fields. This usually takes a few seconds."
-                }
-            }
         }
     }
 }

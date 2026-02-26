@@ -54,12 +54,14 @@ pub use problem_confirm::{
 };
 pub use progressive_discover::{
     BrutalTruthItem as PdBrutalTruthItem, BrutalTruthItemProps as PdBrutalTruthItemProps,
-    ConfirmPhase, ConfirmPhaseProps, ExtractingPhase, ExtractingPhaseProps, KirkCompilationPhase,
+    ConfirmPhase, ConfirmPhaseProps, KirkCompilationPhase,
     KirkCompilationPhaseProps, LockedPhase as PdLockedPhase, LockedPhaseProps as PdLockedPhaseProps,
     PhaseProgress, PhaseProgressProps, PlaceholderConfirmPhase, PlaceholderConfirmPhaseProps,
     PreviewPhase, PreviewPhaseProps, ProgressiveDiscover, ProgressiveDiscoverProps, PromptPhase,
     PromptPhaseProps, ScaffoldingPromptButton, ScaffoldingPromptButtonProps,
 };
+// Re-export ExtractingPhase from phases module (WP03)
+pub use phases::{ExtractingPhase, ExtractingPhaseProps};
 pub use prompt_textarea::{CharacterCount, CharacterCountProps, MIN_PROMPT_LENGTH, PromptTextarea, PromptTextareaProps, MAX_PROMPT_LENGTH};
 pub use quality_score::{QualityDimension, QualityScore, QualityScoreBar, QualityScoreBarProps};
 pub use scenario_confirm::{
