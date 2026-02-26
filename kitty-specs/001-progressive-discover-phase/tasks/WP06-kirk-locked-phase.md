@@ -1,3 +1,7 @@
+---
+lane: "doing"
+shell_pid: "749044"
+---
 # WP06: Kirk Compilation + Locked Phase
 
 ---
