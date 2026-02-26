@@ -416,15 +416,16 @@ mod tests {
 
     #[test]
     fn test_score_single_point_progression() {
-        let short = AntithesisResponse::score_single_point("Bad");
-        let medium = AntithesisResponse::score_single_point("Users prefer existing tools");
+        // Note: length_bonus groups 0-4 words together (10 points), 5-9 words (30 points)
+        let short = AntithesisResponse::score_single_point("Bad"); // 1 word -> length_bonus=10
+        let medium = AntithesisResponse::score_single_point("Users prefer to use their existing tools"); // 7 words -> length_bonus=30
         let detailed =
             AntithesisResponse::score_single_point("Users prefer their current spreadsheets because they have 5 years of data");
         let with_number =
             AntithesisResponse::score_single_point("Users save only 5 minutes per week");
 
-        assert!(medium > short);
-        assert!(detailed > medium);
-        assert!(with_number > medium);
+        assert!(medium > short, "medium ({}) should be > short ({})", medium, short);
+        assert!(detailed > medium, "detailed ({}) should be > medium ({})", detailed, medium);
+        assert!(with_number > medium, "with_number ({}) should be > medium ({})", with_number, medium);
     }
 }
