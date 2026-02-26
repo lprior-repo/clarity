@@ -28,7 +28,7 @@ use crate::ui::Button;
 // ============================================================================
 
 /// Props for TranscriptSummary component
-#[derive(Clone, Props, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Props)]
 pub struct TranscriptSummaryProps {
     /// The interrogation transcript to display
     pub transcript: InterrogationTranscript,
@@ -147,7 +147,7 @@ pub fn TranscriptSummary(props: TranscriptSummaryProps) -> Element {
 }
 
 /// Props for SummaryField component
-#[derive(Clone, Props, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Props)]
 pub struct SummaryFieldProps {
     /// Field label
     pub label: String,

@@ -13,7 +13,7 @@
 use dioxus::prelude::*;
 
 use super::field_card::{Confidence, FieldCard, FieldData};
-use super::types::{HolePunchingResults as TranscriptHolePunchingResults, HoleType, ScenarioField};
+use super::types::ScenarioField;
 use crate::storage::transcript_store::{
     AntithesisResponse, ExtractedField, InterrogationTranscript, StrawManValidation,
 };
@@ -380,7 +380,7 @@ fn confidence_from_score(score: f64) -> Confidence {
 }
 
 /// Props for HoleStatusBadge component
-#[derive(Clone, Props, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Props)]
 pub struct HoleStatusBadgeProps {
     /// Label for the badge
     pub label: String,
