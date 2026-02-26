@@ -1,6 +1,7 @@
 ---
 lane: "doing"
 shell_pid: "584647"
+agent: "claude"
 ---
 # WP04: Confirm Phase UI
 
@@ -205,3 +206,7 @@ br claim bd-1hkh bd-24dz bd-36lz bd-fskg bd-2smr bd-2jjb
 # Implement components
 br close bd-1hkh bd-24dz bd-36lz bd-fskg bd-2smr bd-2jjb
 ```
+
+## Activity Log
+
+- 2026-02-26T16:31:47Z – claude – shell_pid=584647 – lane=doing – Assigned agent via workflow command
