@@ -33,10 +33,16 @@ use std::sync::Arc;
 
 use super::extract_fields_button::ExtractFieldsButton;
 use super::extracting_progress::{ExtractionStatus, ExtractingProgress};
+use super::nonpersona_confirm::NonpersonaConfirm;
+use super::persona_confirm::PersonaConfirm;
 use super::preview_summary::PreviewSummary;
 use super::problem_confirm::ProblemConfirm;
 use super::prompt_textarea::{CharacterCount, PromptTextarea, MIN_PROMPT_LENGTH};
+use super::scenario_confirm::ScenarioConfirm;
+use super::solution_confirm::{SolutionConfirm, VorpFields};
 use super::state::{ConfirmSubPhase, ProgressiveDiscoverPhase};
+use super::straw_man::StrawManTrap;
+use super::types::HolePunchingResults;
 use crate::components::discover::antithesis::AntithesisResponse;
 use crate::hooks::{
     use_progressive_discover, use_progressive_discover_actions,
@@ -648,6 +654,41 @@ pub fn ConfirmPhase(props: ConfirmPhaseProps) -> Element {
         AntithesisResponse::new(state.transcript.antithesis.points.to_vec())
     });
 
+    // Create signals for persona
+    let persona = use_signal(|| {
+        let state = props.state.read();
+        state.transcript.persona.content.clone()
+    });
+    let persona_traps = use_signal(Vec::<StrawManTrap>::new);
+
+    // Create signals for solution
+    let solution = use_signal(|| {
+        let state = props.state.read();
+        state.transcript.solution.content.clone()
+    });
+    let vorp = use_signal(VorpFields::new);
+
+    // Create signals for nonpersona
+    let nonpersona = use_signal(|| {
+        let state = props.state.read();
+        state.transcript.nonpersona.content.clone()
+    });
+
+    // Create signals for scenario
+    let trigger = use_signal(|| {
+        let state = props.state.read();
+        state.transcript.scenario.trigger.clone()
+    });
+    let value_moment = use_signal(|| {
+        let state = props.state.read();
+        state.transcript.scenario.value_moment.clone()
+    });
+    let feeling = use_signal(|| {
+        let state = props.state.read();
+        state.transcript.scenario.feeling.clone()
+    });
+    let holes = use_signal(HolePunchingResults::new);
+
     let on_next = {
         let mut actions = props.actions.clone();
         move |_: Event<MouseData>| {
@@ -695,49 +736,58 @@ pub fn ConfirmPhase(props: ConfirmPhaseProps) -> Element {
         }
         ConfirmSubPhase::ConfirmPersona => {
             rsx! {
-                PlaceholderConfirmPhase {
-                    title: "Persona",
+                PersonaConfirm {
+                    persona,
+                    detected_traps: persona_traps,
                     step: props.sub_phase.ordinal() as u8,
                     total_steps: ConfirmSubPhase::count() as u8,
-                    description: "Confirm your target user and validate against straw man traps.",
-                    on_next: EventHandler::new(on_next.clone()),
-                    on_back: EventHandler::new(on_back.clone()),
+                    on_next: Some(EventHandler::new(on_next.clone())),
+                    on_back: Some(EventHandler::new(on_back.clone())),
+                    next_disabled: false,
+                    back_disabled: false,
                 }
             }
         }
         ConfirmSubPhase::ConfirmSolution => {
             rsx! {
-                PlaceholderConfirmPhase {
-                    title: "Solution",
+                SolutionConfirm {
+                    solution,
+                    vorp,
                     step: props.sub_phase.ordinal() as u8,
                     total_steps: ConfirmSubPhase::count() as u8,
-                    description: "Confirm solution and justify VORP (Value Over Replacement).",
-                    on_next: EventHandler::new(on_next.clone()),
-                    on_back: EventHandler::new(on_back.clone()),
+                    on_next: Some(EventHandler::new(on_next.clone())),
+                    on_back: Some(EventHandler::new(on_back.clone())),
+                    next_disabled: false,
+                    back_disabled: false,
                 }
             }
         }
         ConfirmSubPhase::ConfirmNonpersona => {
             rsx! {
-                PlaceholderConfirmPhase {
-                    title: "Nonpersona",
+                NonpersonaConfirm {
+                    nonpersona,
                     step: props.sub_phase.ordinal() as u8,
                     total_steps: ConfirmSubPhase::count() as u8,
-                    description: "Define who you are explicitly NOT building for.",
-                    on_next: EventHandler::new(on_next.clone()),
-                    on_back: EventHandler::new(on_back.clone()),
+                    on_next: Some(EventHandler::new(on_next.clone())),
+                    on_back: Some(EventHandler::new(on_back.clone())),
+                    next_disabled: false,
+                    back_disabled: false,
                 }
             }
         }
         ConfirmSubPhase::ConfirmScenario => {
             rsx! {
-                PlaceholderConfirmPhase {
-                    title: "Scenario",
+                ScenarioConfirm {
+                    trigger,
+                    value_moment,
+                    feeling,
+                    holes,
                     step: props.sub_phase.ordinal() as u8,
                     total_steps: ConfirmSubPhase::count() as u8,
-                    description: "Define trigger, value moment, and outcome with hole punching.",
-                    on_next: EventHandler::new(on_next.clone()),
-                    on_back: EventHandler::new(on_back.clone()),
+                    on_next: Some(EventHandler::new(on_next.clone())),
+                    on_back: Some(EventHandler::new(on_back.clone())),
+                    next_disabled: false,
+                    back_disabled: false,
                 }
             }
         }
