@@ -1,7 +1,9 @@
 ---
-lane: "for_review"
+lane: "planned"
 shell_pid: "883789"
 agent: "claude"
+review_status: "has_feedback"
+reviewed_by: "Lewis Prior"
 ---
 # WP08: Cleanup
 
@@ -89,3 +91,4 @@ This work package should only be done after all other work packages are complete
 
 - 2026-02-26T16:52:42Z – claude – shell_pid=883789 – lane=doing – Assigned agent via workflow command
 - 2026-02-26T17:04:34Z – claude – shell_pid=883789 – lane=for_review – Ready for review: Work was already completed (discover_flow.rs deleted, mod.rs cleaned up, all tests pass)
+- 2026-02-26T17:24:10Z – claude – shell_pid=883789 – lane=planned – Moved to planned
