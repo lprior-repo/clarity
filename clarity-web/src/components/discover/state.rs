@@ -475,7 +475,7 @@ mod tests {
             let json = serde_json::to_string(phase).expect("Serialization should succeed");
             let deserialized: ProgressiveDiscoverPhase =
                 serde_json::from_str(&json).expect("Deserialization should succeed");
-            assert_eq!(phase, deserialized);
+            assert_eq!(*phase, deserialized);
         }
     }
 
@@ -717,7 +717,7 @@ mod tests {
             let json = serde_json::to_string(subphase).expect("Serialization should succeed");
             let deserialized: ConfirmSubPhase =
                 serde_json::from_str(&json).expect("Deserialization should succeed");
-            assert_eq!(subphase, deserialized);
+            assert_eq!(*subphase, deserialized);
         }
     }
 

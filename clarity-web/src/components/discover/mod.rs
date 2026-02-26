@@ -7,8 +7,6 @@
 
 pub mod antithesis;
 pub mod brutal_truths;
-// TODO: Delete discover_flow.rs after progressive_discover.rs main container is implemented
-// pub mod discover_flow;
 pub mod extract_fields_button;
 pub mod extracting_progress;
 pub mod field_card;
@@ -29,8 +27,6 @@ pub use brutal_truths::{
     BrutalTruth, BrutalTruthsChecklist, BrutalTruthsChecklistProps, BrutalTruthsState,
     BrutalTruthsSummary, BrutalTruthsSummaryProps, BrutalTruthItem, BrutalTruthItemProps,
 };
-// TODO: Restore after progressive_discover.rs main container is implemented
-// pub use discover_flow::{DiscoverFlow, DiscoverFlowProps};
 pub use extract_fields_button::{
     ExtractFieldsButton, ExtractFieldsButtonProps, ExtractFieldsButtonWithServer,
     ExtractFieldsButtonWithServerProps, ExtractedField, ExtractedFieldsData, MIN_PROMPT_CHARS,
