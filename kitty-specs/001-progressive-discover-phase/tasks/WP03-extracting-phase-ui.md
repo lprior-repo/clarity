@@ -1,5 +1,5 @@
 ---
-lane: "planned"
+lane: "for_review"
 shell_pid: "576257"
 agent: "claude"
 review_status: "has_feedback"
@@ -147,3 +147,4 @@ br close bd-23qy bd-xz68
 - 2026-02-26T16:29:07Z – claude – shell_pid=576257 – lane=doing – Assigned agent via workflow command
 - 2026-02-26T16:39:28Z – claude – shell_pid=576257 – lane=for_review – Ready for review
 - 2026-02-26T17:18:39Z – claude – shell_pid=576257 – lane=planned – Moved to planned
+- 2026-02-26T17:24:25Z – claude – shell_pid=576257 – lane=for_review – Fixed: moved to phases/extracting_phase.rs
