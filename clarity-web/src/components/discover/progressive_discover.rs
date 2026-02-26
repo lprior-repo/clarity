@@ -14,9 +14,11 @@
 use dioxus::prelude::*;
 use std::sync::Arc;
 
+use super::extract_fields_button::ExtractFieldsButton;
 use super::extracting_progress::{ExtractionStatus, ExtractingProgress};
 use super::preview_summary::PreviewSummary;
 use super::problem_confirm::ProblemConfirm;
+use super::prompt_textarea::{CharacterCount, PromptTextarea, MIN_PROMPT_LENGTH};
 use super::state::{ConfirmSubPhase, ProgressiveDiscoverPhase};
 use crate::components::discover::antithesis::AntithesisResponse;
 use crate::hooks::{
@@ -26,7 +28,31 @@ use crate::hooks::{
 use crate::providers::ExtractionProvider;
 use crate::storage::transcript_store::InterrogationTranscript;
 use crate::ui::button::ButtonVariant;
-use crate::ui::{Button, Textarea};
+use crate::ui::Button;
+
+// ============================================================================
+// Scaffolding Prompts
+// ============================================================================
+
+/// Scaffolding prompt templates to help users get started.
+///
+/// Each tuple contains (label, template) where:
+/// - label: A short name for the prompt type
+/// - template: The full template text with placeholders
+const SCAFFOLDING_PROMPTS: &[(&str, &str)] = &[
+    (
+        "Problem-first",
+        "I'm building [product] because [users] struggle with [problem]. The main pain point is...",
+    ),
+    (
+        "User-first",
+        "My target users are [description]. They currently [behavior], but they want [outcome].",
+    ),
+    (
+        "Solution-first",
+        "I want to create [solution] that helps [users] achieve [outcome]. The key insight is...",
+    ),
+];
 
 /// Props for ProgressiveDiscover component
 #[derive(Clone, Props)]
@@ -325,12 +351,18 @@ pub fn PromptPhase(props: PromptPhaseProps) -> Element {
         state.transcript.original_prompt.clone()
     });
 
+    let is_extracting = use_signal(|| false);
+
     let on_submit = {
         let mut actions = props.actions.clone();
         let prompt = prompt.clone();
+        let mut is_extracting = is_extracting.clone();
         move |_| {
             let prompt_value = prompt.read().clone();
-            if !prompt_value.trim().is_empty() {
+            if prompt_value.trim().len() >= MIN_PROMPT_LENGTH {
+                // Set loading state
+                is_extracting.set(true);
+
                 // Update transcript with prompt
                 let transcript = InterrogationTranscript::from_prompt(prompt_value);
                 actions.update_transcript(transcript);
@@ -343,9 +375,12 @@ pub fn PromptPhase(props: PromptPhaseProps) -> Element {
     let on_input = {
         let mut prompt = prompt.clone();
         move |value: String| {
-            *prompt.write() = value;
+            prompt.set(value);
         }
     };
+
+    let char_count = prompt.read().trim().len();
+    let is_ready = char_count >= MIN_PROMPT_LENGTH;
 
     rsx! {
         div {
@@ -364,26 +399,6 @@ pub fn PromptPhase(props: PromptPhaseProps) -> Element {
                 }
             }
 
-            // Input area
-            div {
-                class: "space-y-4",
-                Textarea {
-                    value: prompt.read().clone(),
-                    placeholder: "I want to build...".to_string(),
-                    rows: 8,
-                    oninput: on_input,
-                }
-
-                // Character count
-                div {
-                    class: "flex justify-end",
-                    span {
-                        class: "text-xs text-muted-foreground",
-                        "{prompt.read().len()} characters"
-                    }
-                }
-            }
-
             // Scaffolding prompts
             div {
                 class: "space-y-3",
@@ -393,57 +408,51 @@ pub fn PromptPhase(props: PromptPhaseProps) -> Element {
                 }
                 div {
                     class: "flex flex-wrap gap-2",
-                    ScaffoldingPromptButton {
-                        text: "I want to build a feature that...".to_string(),
-                        onclick: {
-                            let mut prompt = prompt.clone();
-                            move |_| {
-                                *prompt.write() = "I want to build a feature that...".to_string();
-                            }
-                        },
+                    for (label, template) in SCAFFOLDING_PROMPTS {
+                        ScaffoldingPromptButton {
+                            label: (*label).to_string(),
+                            template: (*template).to_string(),
+                            onclick: {
+                                let mut prompt = prompt.clone();
+                                move |_| {
+                                    prompt.set((*template).to_string());
+                                }
+                            },
+                        }
                     }
-                    ScaffoldingPromptButton {
-                        text: "My users need a way to...".to_string(),
-                        onclick: {
-                            let mut prompt = prompt.clone();
-                            move |_| {
-                                *prompt.write() = "My users need a way to...".to_string();
-                            }
-                        },
-                    }
-                    ScaffoldingPromptButton {
-                        text: "The problem I'm solving is...".to_string(),
-                        onclick: {
-                            let mut prompt = prompt.clone();
-                            move |_| {
-                                *prompt.write() = "The problem I'm solving is...".to_string();
-                            }
-                        },
-                    }
+                }
+            }
+
+            // Input area
+            div {
+                class: "space-y-4",
+                PromptTextarea {
+                    value: prompt.read().clone(),
+                    placeholder: "Describe your idea...".to_string(),
+                    on_change: on_input,
+                }
+
+                // Character count with minimum threshold
+                CharacterCount {
+                    current: char_count,
+                    minimum: MIN_PROMPT_LENGTH,
+                    maximum: 2000,
                 }
             }
 
             // Submit button
             div {
                 class: "flex justify-end border-t border-border/50 pt-4",
-                Button {
-                    variant: ButtonVariant::Primary,
-                    disabled: prompt.read().trim().is_empty(),
-                    onclick: on_submit,
-                    "Extract Fields"
-                    svg {
-                        xmlns: "http://www.w3.org/2000/svg",
-                        width: "16",
-                        height: "16",
-                        view_box: "0 0 24 24",
-                        fill: "none",
-                        stroke: "currentColor",
-                        stroke_width: "2",
-                        stroke_linecap: "round",
-                        stroke_linejoin: "round",
-                        class: "ml-2",
-                        path { d: "m9 18 6-6-6-6" }
-                    }
+                ExtractFieldsButton {
+                    prompt: prompt.read().clone(),
+                    is_loading: *is_extracting.read(),
+                    disabled: !is_ready,
+                    on_click: {
+                        let mut on_submit = on_submit.clone();
+                        move |_prompt: String| {
+                            on_submit(());
+                        }
+                    },
                 }
             }
         }
@@ -453,13 +462,17 @@ pub fn PromptPhase(props: PromptPhaseProps) -> Element {
 /// Props for ScaffoldingPromptButton
 #[derive(Clone, Props, PartialEq)]
 pub struct ScaffoldingPromptButtonProps {
-    /// Button text
-    pub text: String,
+    /// Label for the button
+    pub label: String,
+    /// Template text to insert
+    pub template: String,
     /// Click handler
     pub onclick: EventHandler<Event<MouseData>>,
 }
 
 /// Button for scaffolding prompts
+///
+/// Displays a styled button that inserts a template prompt when clicked.
 #[component]
 pub fn ScaffoldingPromptButton(props: ScaffoldingPromptButtonProps) -> Element {
     rsx! {
@@ -468,7 +481,7 @@ pub fn ScaffoldingPromptButton(props: ScaffoldingPromptButtonProps) -> Element {
             onclick: move |e| {
                 props.onclick.call(e);
             },
-            "{props.text}"
+            "{props.label}"
         }
     }
 }

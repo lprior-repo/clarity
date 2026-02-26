@@ -9,6 +9,7 @@ pub mod antithesis;
 pub mod brutal_truths;
 // TODO: Delete discover_flow.rs after progressive_discover.rs main container is implemented
 // pub mod discover_flow;
+pub mod extract_fields_button;
 pub mod extracting_progress;
 pub mod field_card;
 pub mod locked_phase;
@@ -16,6 +17,7 @@ pub mod locked_summary;
 pub mod preview_summary;
 pub mod problem_confirm;
 pub mod progressive_discover;
+pub mod prompt_textarea;
 pub mod quality_score;
 pub mod state;
 pub mod straw_man;
@@ -28,6 +30,10 @@ pub use brutal_truths::{
 };
 // TODO: Restore after progressive_discover.rs main container is implemented
 // pub use discover_flow::{DiscoverFlow, DiscoverFlowProps};
+pub use extract_fields_button::{
+    ExtractFieldsButton, ExtractFieldsButtonProps, ExtractFieldsButtonWithServer,
+    ExtractFieldsButtonWithServerProps, ExtractedField, ExtractedFieldsData, MIN_PROMPT_CHARS,
+};
 pub use extracting_progress::{ExtractionStatus, ExtractingProgress, ExtractingProgressProps};
 pub use field_card::{Confidence, FieldCard, FieldCardProps, FieldData};
 pub use locked_phase::{LockedPhase, LockedPhaseProps};
@@ -45,6 +51,7 @@ pub use progressive_discover::{
     PreviewPhase, PreviewPhaseProps, ProgressiveDiscover, ProgressiveDiscoverProps, PromptPhase,
     PromptPhaseProps, ScaffoldingPromptButton, ScaffoldingPromptButtonProps,
 };
+pub use prompt_textarea::{CharacterCount, CharacterCountProps, MIN_PROMPT_LENGTH, PromptTextarea, PromptTextareaProps, MAX_PROMPT_LENGTH};
 pub use quality_score::{QualityDimension, QualityScore, QualityScoreBar, QualityScoreBarProps};
 pub use state::{ConfirmSubPhase, ProgressiveDiscoverPhase};
 pub use straw_man::{StrawManTrap, StrawManValidation};
