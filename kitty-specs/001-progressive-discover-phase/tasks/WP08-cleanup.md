@@ -1,6 +1,7 @@
 ---
 lane: "doing"
 shell_pid: "883789"
+agent: "claude"
 ---
 # WP08: Cleanup
 
@@ -83,3 +84,7 @@ br close bd-3ctz
 ## Notes
 
 This work package should only be done after all other work packages are complete and the Progressive Discover system is fully functional.
+
+## Activity Log
+
+- 2026-02-26T16:52:42Z – claude – shell_pid=883789 – lane=doing – Assigned agent via workflow command
