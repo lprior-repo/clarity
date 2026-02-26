@@ -609,6 +609,170 @@ impl ProgressiveDiscoverState {
     pub const fn is_locked(&self) -> bool {
         matches!(self.phase, ProgressiveDiscoverPhase::Locked)
     }
+
+    /// Set antithesis points and score.
+    #[must_use]
+    pub fn with_antithesis(self, points: [String; 3], score: f64) -> Self {
+        Self {
+            phase: self.phase,
+            sub_phase: self.sub_phase,
+            transcript: self.transcript,
+            is_loading: self.is_loading,
+            error: self.error,
+            session_id: self.session_id,
+            antithesis_points: points,
+            antithesis_score: Some(score.clamp(0.0, 1.0)),
+            detected_traps: self.detected_traps,
+            acknowledged_traps: self.acknowledged_traps,
+            vorp_validation: self.vorp_validation,
+            hole_punching: self.hole_punching,
+            brutal_truths: self.brutal_truths,
+        }
+    }
+
+    /// Set detected straw man traps.
+    #[must_use]
+    pub fn with_detected_traps(self, traps: Vec<StrawManTrap>) -> Self {
+        Self {
+            phase: self.phase,
+            sub_phase: self.sub_phase,
+            transcript: self.transcript,
+            is_loading: self.is_loading,
+            error: self.error,
+            session_id: self.session_id,
+            antithesis_points: self.antithesis_points,
+            antithesis_score: self.antithesis_score,
+            detected_traps: traps,
+            acknowledged_traps: self.acknowledged_traps,
+            vorp_validation: self.vorp_validation,
+            hole_punching: self.hole_punching,
+            brutal_truths: self.brutal_truths,
+        }
+    }
+
+    /// Acknowledge a straw man trap.
+    #[must_use]
+    pub fn with_acknowledged_trap(self, trap: StrawManTrap) -> Self {
+        let mut acknowledged = self.acknowledged_traps.clone();
+        if !acknowledged.contains(&trap) {
+            acknowledged.push(trap);
+        }
+        Self {
+            phase: self.phase,
+            sub_phase: self.sub_phase,
+            transcript: self.transcript,
+            is_loading: self.is_loading,
+            error: self.error,
+            session_id: self.session_id,
+            antithesis_points: self.antithesis_points,
+            antithesis_score: self.antithesis_score,
+            detected_traps: self.detected_traps,
+            acknowledged_traps: acknowledged,
+            vorp_validation: self.vorp_validation,
+            hole_punching: self.hole_punching,
+            brutal_truths: self.brutal_truths,
+        }
+    }
+
+    /// Set VORP validation result.
+    #[must_use]
+    pub fn with_vorp_validation(self, validation: VorpValidation) -> Self {
+        Self {
+            phase: self.phase,
+            sub_phase: self.sub_phase,
+            transcript: self.transcript,
+            is_loading: self.is_loading,
+            error: self.error,
+            session_id: self.session_id,
+            antithesis_points: self.antithesis_points,
+            antithesis_score: self.antithesis_score,
+            detected_traps: self.detected_traps,
+            acknowledged_traps: self.acknowledged_traps,
+            vorp_validation: Some(validation),
+            hole_punching: self.hole_punching,
+            brutal_truths: self.brutal_truths,
+        }
+    }
+
+    /// Set hole punching results.
+    #[must_use]
+    pub fn with_hole_punching(self, results: HolePunchingResults) -> Self {
+        Self {
+            phase: self.phase,
+            sub_phase: self.sub_phase,
+            transcript: self.transcript,
+            is_loading: self.is_loading,
+            error: self.error,
+            session_id: self.session_id,
+            antithesis_points: self.antithesis_points,
+            antithesis_score: self.antithesis_score,
+            detected_traps: self.detected_traps,
+            acknowledged_traps: self.acknowledged_traps,
+            vorp_validation: self.vorp_validation,
+            hole_punching: results,
+            brutal_truths: self.brutal_truths,
+        }
+    }
+
+    /// Set a brutal truth acknowledgment.
+    #[must_use]
+    pub fn with_brutal_truth(self, index: usize, value: bool) -> Self {
+        let mut truths = self.brutal_truths;
+        if index < 4 {
+            truths[index] = value;
+        }
+        Self {
+            phase: self.phase,
+            sub_phase: self.sub_phase,
+            transcript: self.transcript,
+            is_loading: self.is_loading,
+            error: self.error,
+            session_id: self.session_id,
+            antithesis_points: self.antithesis_points,
+            antithesis_score: self.antithesis_score,
+            detected_traps: self.detected_traps,
+            acknowledged_traps: self.acknowledged_traps,
+            vorp_validation: self.vorp_validation,
+            hole_punching: self.hole_punching,
+            brutal_truths: truths,
+        }
+    }
+
+    /// Check if all brutal truths are acknowledged.
+    #[must_use]
+    pub fn are_all_brutal_truths_acknowledged(&self) -> bool {
+        self.brutal_truths.iter().all(|&t| t)
+    }
+
+    /// Check if can advance from the current sub-phase.
+    ///
+    /// This validates that required fields are complete before allowing advancement.
+    #[must_use]
+    pub fn can_advance_from_subphase(&self) -> bool {
+        match self.sub_phase {
+            ConfirmSubPhase::ConfirmProblem => {
+                // Problem must have content
+                !self.transcript.problem.content.trim().is_empty()
+            }
+            ConfirmSubPhase::ConfirmPersona => {
+                // Persona must have content and no unacknowledged traps
+                !self.transcript.persona.content.trim().is_empty()
+                    && self.detected_traps.iter().all(|t| self.acknowledged_traps.contains(t))
+            }
+            ConfirmSubPhase::ConfirmSolution => {
+                // Solution must have content
+                !self.transcript.solution.content.trim().is_empty()
+            }
+            ConfirmSubPhase::ConfirmNonpersona => {
+                // Nonpersona must have content
+                !self.transcript.nonpersona.content.trim().is_empty()
+            }
+            ConfirmSubPhase::ConfirmScenario => {
+                // Scenario must be complete with hole punching
+                self.transcript.scenario.is_complete()
+            }
+        }
+    }
 }
 
 /// Hook for managing Progressive Discover state.
@@ -751,6 +915,36 @@ impl ProgressiveDiscoverActions {
         if let Some(prev) = current.regress_sub_phase() {
             self.state.set(prev);
         }
+    }
+
+    /// Set antithesis points and score.
+    pub fn set_antithesis(&mut self, points: [String; 3], score: f64) {
+        let current = self.state.read().clone();
+        self.state.set(current.with_antithesis(points, score));
+    }
+
+    /// Acknowledge a straw man trap.
+    pub fn acknowledge_trap(&mut self, trap: StrawManTrap) {
+        let current = self.state.read().clone();
+        self.state.set(current.with_acknowledged_trap(trap));
+    }
+
+    /// Set a brutal truth acknowledgment.
+    pub fn set_brutal_truth(&mut self, index: usize, value: bool) {
+        let current = self.state.read().clone();
+        self.state.set(current.with_brutal_truth(index, value));
+    }
+
+    /// Check if can advance from the current sub-phase.
+    #[must_use]
+    pub fn can_advance_from_subphase(&self) -> bool {
+        self.state.read().can_advance_from_subphase()
+    }
+
+    /// Check if all brutal truths are acknowledged.
+    #[must_use]
+    pub fn are_all_brutal_truths_acknowledged(&self) -> bool {
+        self.state.read().are_all_brutal_truths_acknowledged()
     }
 }
 
