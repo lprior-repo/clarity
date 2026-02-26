@@ -9,6 +9,8 @@
 
 use dioxus::prelude::*;
 
+use crate::lattice::quality::{calculate_quality, DimensionScore, EarsRequirementRef, InversionControl, QualityDimension, QualityIssue, QualityScore};
+use crate::lattice::ears::parse_requirements;
 use crate::types::{get_steps_for_phase, prompt_steps, Answer, PromptStep};
 
 const PHASES: &[&str] = &["discover", "define", "develop", "deliver"];
@@ -341,6 +343,149 @@ fn render_phase_card(data: &PhaseRenderData) -> Element {
     }
 }
 
+/// Build EARS requirements from answers for quality scoring
+fn build_ears_requirements(answers: &[Answer]) -> Vec<EarsRequirementRef> {
+    // Extract requirements from answers
+    let requirement_text: String = answers
+        .iter()
+        .filter(|a| {
+            let lower = a.value.to_lowercase();
+            lower.contains("shall")
+                || lower.contains("when")
+                || lower.contains("during")
+                || lower.contains("if")
+                || lower.contains("where")
+        })
+        .map(|a| a.value.as_str())
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    if requirement_text.is_empty() {
+        return Vec::new();
+    }
+
+    let ears_output = parse_requirements(&requirement_text);
+
+    ears_output
+        .requirements
+        .iter()
+        .enumerate()
+        .map(|(i, req)| {
+            let text = match req {
+                crate::lattice::ears::EarsRequirement::Ubiquitous { actor, action } => {
+                    format!("{} shall {}", actor, action)
+                }
+                crate::lattice::ears::EarsRequirement::StateDriven { actor, trigger, action } => {
+                    format!("When {}, {} shall {}", trigger, actor, action)
+                }
+                crate::lattice::ears::EarsRequirement::EventDriven { actor, trigger, action } => {
+                    format!("During {}, {} shall {}", trigger, actor, action)
+                }
+                crate::lattice::ears::EarsRequirement::Unwanted { actor, condition, action } => {
+                    format!("If {}, {} shall NOT {}", condition, actor, action)
+                }
+                crate::lattice::ears::EarsRequirement::Optional { actor, condition, action } => {
+                    format!("Where {}, {} shall {}", condition, actor, action)
+                }
+            };
+
+            EarsRequirementRef {
+                id: format!("req-{}", i),
+                text,
+                has_acceptance_criteria: false, // Will be detected in real implementation
+            }
+        })
+        .collect()
+}
+
+/// Calculate quality invariants from answers
+fn build_quality_invariants(answers: &[Answer]) -> Option<QualityScore> {
+    if answers.is_empty() {
+        return None;
+    }
+
+    let ears_requirements = build_ears_requirements(answers);
+    let inversion = InversionControl {
+        has_inversion_tests: false,
+        inverted_count: 0,
+    };
+
+    // Convert Answer types to quality module's Answer type
+    let quality_answers: Vec<crate::lattice::quality::Answer> = answers
+        .iter()
+        .map(|a| crate::lattice::quality::Answer {
+            step_id: a.step_id.clone(),
+            value: a.value.clone(),
+            timestamp: a.timestamp.clone(),
+        })
+        .collect();
+
+    calculate_quality(&quality_answers, &ears_requirements, &inversion).ok()
+}
+
+/// KIRK invariant display card
+#[component]
+fn InvariantCard(dimension: QualityDimension, score: Option<DimensionScore>, issues: Vec<QualityIssue>) -> Element {
+    let dimension_label = dimension.label();
+    let dimension_desc = dimension.description();
+
+    let score_value = score.map_or(0, |s| s.score);
+    let score_color = if score_value >= 80 {
+        "text-chart-2"
+    } else if score_value >= 50 {
+        "text-chart-3"
+    } else {
+        "text-chart-4"
+    };
+
+    let relevant_issues: Vec<_> = issues
+        .iter()
+        .filter(|i| i.dimension == dimension)
+        .collect();
+
+    rsx! {
+        div { class: "rounded-lg border border-border bg-card px-3 py-2.5",
+            div { class: "flex items-center justify-between",
+                div { class: "min-w-0 flex-1",
+                    span { class: "block text-xs font-medium uppercase tracking-wider text-muted-foreground/70", "{dimension_label}" }
+                    p { class: "mt-0.5 text-xs text-muted-foreground/60", "{dimension_desc}" }
+                }
+                div { class: "shrink-0 text-right",
+                    span { class: "font-mono text-2xl font-semibold {score_color}", "{score_value}" }
+                    span { class: "text-xs text-muted-foreground", "%" }
+                }
+            }
+            if !relevant_issues.is_empty() {
+                div { class: "mt-2 space-y-1 border-t border-border/50 pt-2",
+                    for issue in relevant_issues.iter() {
+                        div { class: "flex items-start gap-2 text-xs",
+                            svg {
+                                width: "12",
+                                height: "12",
+                                view_box: "0 0 12 12",
+                                fill: "none",
+                                class: format!("shrink-0 mt-0.5 {}",
+                                    if issue.severity == crate::lattice::quality::IssueSeverity::Critical {
+                                        "text-chart-4"
+                                    } else if issue.severity == crate::lattice::quality::IssueSeverity::Error {
+                                        "text-chart-4"
+                                    } else {
+                                        "text-chart-3"
+                                    }),
+                                path {
+                                    d: "M6 1C3.2 1 1 3.2 1 6C1 8.8 3.2 11 6 11C8.8 11 11 8.8 11 6C11 3.2 8.8 1 6 1ZM6 8.5C5.4 8.5 5 8.1 5 7.5C5 6.9 5.4 6.5 6 6.5C6.6 6.5 7 6.9 7 7.5C7 8.1 6.6 8.5 6 8.5ZM6 5.5C5.4 5.5 5 5.1 5 4.5V3C5 2.4 5.4 2 6 2C6.6 2 7 2.4 7 3V4.5C7 5.1 6.6 5.5 6 5.5Z",
+                                    fill: "currentColor"
+                                }
+                            }
+                            span { class: "text-muted-foreground", "{issue.message}" }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 /// StateMachine component - visualizes planning progress as a state machine
 #[component]
 pub fn StateMachine(answers: Signal<Vec<Answer>>, active_phase: Signal<String>) -> Element {
@@ -350,6 +495,7 @@ pub fn StateMachine(answers: Signal<Vec<Answer>>, active_phase: Signal<String>) 
     let phase_states = build_phase_states(&answers_guard, &active_phase_str);
     let (completed_steps, total_steps, progress_steps) = build_progress_steps(&answers_guard);
     let phase_render_data = build_phase_render_data(&phase_states, &answers_guard);
+    let quality_invariants = build_quality_invariants(&answers_guard);
 
     drop(answers_guard);
     drop(active_phase_str);
@@ -364,25 +510,107 @@ pub fn StateMachine(answers: Signal<Vec<Answer>>, active_phase: Signal<String>) 
         .map(render_phase_card)
         .collect();
 
-    rsx! {
-        div { class: "flex h-full flex-col gap-6 p-4",
-            // Overall progress
-            div { class: "space-y-2",
-                div { class: "flex items-center justify-between",
-                    span { class: "text-xs font-medium uppercase tracking-widest text-muted-foreground/70", "Progress" }
-                    span { class: "font-mono text-xs text-muted-foreground", "{completed_steps}/{total_steps}" }
-                }
-                div { class: "flex gap-1",
-                    for step in progress_elements.iter() {
-                        {step.clone()}
+    // Build invariants section
+    let invariants_section = match &quality_invariants {
+        Some(score) => {
+            let overall_score = score.overall;
+            let issues = &score.issues;
+
+            let invariant_cards: Vec<Element> = QualityDimension::all()
+                .iter()
+                .map(|dim| {
+                    let dim_score = score.get_dimension(*dim).cloned();
+                    let dim_issues: Vec<QualityIssue> = issues
+                        .iter()
+                        .filter(|i| i.dimension == *dim)
+                        .cloned()
+                        .collect();
+                    rsx! {
+                        InvariantCard {
+                            dimension: *dim,
+                            score: dim_score,
+                            issues: dim_issues
+                        }
+                    }
+                })
+                .collect();
+
+            Some(rsx! {
+                div { class: "space-y-3",
+                    // Overall quality header
+                    div { class: "flex items-center justify-between border-b border-border pb-2",
+                        div { class: "flex items-center gap-2",
+                            span { class: "text-xs font-medium uppercase tracking-widest text-muted-foreground/70", "KIRK Invariants" }
+                            div {
+                                class: "group relative",
+                                svg {
+                                    width: "14",
+                                    height: "14",
+                                    view_box: "0 0 14 14",
+                                    fill: "none",
+                                    class: "text-muted-foreground/40 cursor-help",
+                                    circle { cx: "7", cy: "7", r: "6", stroke: "currentColor", "stroke-width": "1" }
+                                    path { d: "M7 4V7M7 10H7.01", stroke: "currentColor", "stroke-width": "1.5", "stroke-linecap": "round" }
+                                }
+                                div {
+                                    class: "absolute left-full ml-2 hidden w-48 rounded-md bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md group-hover:block z-50",
+                                    "Keep Invariants Regular and Known - Quality metrics for your requirements"
+                                }
+                            }
+                        }
+                        div { class: "flex items-center gap-2",
+                            span {
+                                class: format!("font-mono text-2xl font-semibold {}",
+                                    if overall_score >= 80 { "text-chart-2" }
+                                    else if overall_score >= 50 { "text-chart-3" }
+                                    else { "text-chart-4" }),
+                                "{overall_score}"
+                            }
+                            span { class: "text-xs text-muted-foreground", "overall" }
+                        }
+                    }
+
+                    // Dimension cards
+                    div { class: "grid grid-cols-1 gap-2",
+                        for card in invariant_cards.iter() {
+                            {card.clone()}
+                        }
                     }
                 }
-            }
+            })
+        }
+        None => None,
+    };
 
-            // Phase state cards
-            div { class: "flex flex-1 flex-col gap-3",
-                for phase in phase_elements.iter() {
-                    {phase.clone()}
+    rsx! {
+        div { class: "flex h-full flex-col overflow-y-auto",
+            div { class: "flex flex-col gap-6 p-4",
+                // Overall progress
+                div { class: "space-y-2",
+                    div { class: "flex items-center justify-between",
+                        span { class: "text-xs font-medium uppercase tracking-widest text-muted-foreground/70", "Progress" }
+                        span { class: "font-mono text-xs text-muted-foreground", "{completed_steps}/{total_steps}" }
+                    }
+                    div { class: "flex gap-1",
+                        for step in progress_elements.iter() {
+                            {step.clone()}
+                        }
+                    }
+                }
+
+                // KIRK Invariants section
+                if let Some(invariants) = invariants_section {
+                    {invariants}
+                }
+
+                // Phase state cards
+                div { class: "space-y-3",
+                    div { class: "text-xs font-medium uppercase tracking-widest text-muted-foreground/70", "Phase States" }
+                    div { class: "flex flex-col gap-3",
+                        for phase in phase_elements.iter() {
+                            {phase.clone()}
+                        }
+                    }
                 }
             }
         }

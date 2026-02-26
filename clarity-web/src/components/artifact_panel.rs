@@ -9,6 +9,7 @@
 
 use dioxus::prelude::*;
 
+use crate::lattice::ears::{EarsOutput, EarsRequirement, parse_requirements};
 use crate::types::{prompt_steps, Answer};
 
 /// Section header component
@@ -199,6 +200,82 @@ struct ArtifactData {
     tasks: Vec<String>,
     progress: usize,
     has_anything: bool,
+    ears_output: EarsOutput,
+}
+
+/// EARS requirement display data
+#[derive(Clone, Debug, PartialEq)]
+struct EarsDisplayData {
+    requirement_type: String,
+    text: String,
+    color_class: String,
+}
+
+/// Build EARS display data from parsed requirements
+fn build_ears_display(output: &EarsOutput) -> Vec<EarsDisplayData> {
+    output
+        .requirements
+        .iter()
+        .map(|req| {
+            let (requirement_type, text, color_class) = match req {
+                EarsRequirement::Ubiquitous { actor, action } => (
+                    "Ubiquitous".to_string(),
+                    format!("{} shall {}", actor, action),
+                    "border-chart-1/20 bg-chart-1/5 text-chart-1".to_string(),
+                ),
+                EarsRequirement::StateDriven { actor, trigger, action } => (
+                    "State-Driven".to_string(),
+                    format!("When {}, {} shall {}", trigger, actor, action),
+                    "border-chart-2/20 bg-chart-2/5 text-chart-2".to_string(),
+                ),
+                EarsRequirement::EventDriven { actor, trigger, action } => (
+                    "Event-Driven".to_string(),
+                    format!("During {}, {} shall {}", trigger, actor, action),
+                    "border-chart-3/20 bg-chart-3/5 text-chart-3".to_string(),
+                ),
+                EarsRequirement::Unwanted { actor, condition, action } => (
+                    "Unwanted".to_string(),
+                    format!("If {}, {} shall NOT {}", condition, actor, action),
+                    "border-chart-4/20 bg-chart-4/5 text-chart-4".to_string(),
+                ),
+                EarsRequirement::Optional { actor, condition, action } => (
+                    "Optional".to_string(),
+                    format!("Where {}, {} shall {}", condition, actor, action),
+                    "border-chart-5/20 bg-chart-5/5 text-chart-5".to_string(),
+                ),
+            };
+            EarsDisplayData {
+                requirement_type,
+                text,
+                color_class,
+            }
+        })
+        .collect()
+}
+
+/// Parse requirements from answers
+fn parse_requirements_from_answers(answers: &[Answer]) -> EarsOutput {
+    // Collect all answer values that might contain requirements
+    let requirement_text: String = answers
+        .iter()
+        .filter(|a| {
+            // Only include answers that look like requirements
+            let lower = a.value.to_lowercase();
+            lower.contains("shall")
+                || lower.contains("when")
+                || lower.contains("during")
+                || lower.contains("if")
+                || lower.contains("where")
+        })
+        .map(|a| a.value.as_str())
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    if requirement_text.is_empty() {
+        EarsOutput::new()
+    } else {
+        parse_requirements(&requirement_text)
+    }
 }
 
 /// Build artifact data from answers
@@ -228,6 +305,8 @@ fn build_artifact_data(answers: &[Answer]) -> ArtifactData {
         0
     };
 
+    let ears_output = parse_requirements_from_answers(answers);
+
     ArtifactData {
         problem,
         antithesis,
@@ -239,6 +318,7 @@ fn build_artifact_data(answers: &[Answer]) -> ArtifactData {
         tasks,
         progress,
         has_anything: !answers.is_empty(),
+        ears_output,
     }
 }
 
@@ -252,6 +332,85 @@ fn render_use_case_rows(use_cases: &[String]) -> Vec<Element> {
             rsx! { UseCaseRow { text: uc, index: i } }
         })
         .collect()
+}
+
+/// EARS requirement card component
+#[component]
+fn EarsRequirementCard(data: EarsDisplayData, index: usize) -> Element {
+    rsx! {
+        div {
+            class: format!("animate-fade-up rounded-lg border px-3 py-2.5 {}", data.color_class),
+            div { class: "flex items-start justify-between gap-2",
+                div { class: "min-w-0 flex-1",
+                    span {
+                        class: "mb-1 block text-xs font-medium uppercase tracking-wider text-muted-foreground/70",
+                        "{data.requirement_type}"
+                    }
+                    p {
+                        class: "text-sm leading-relaxed text-foreground",
+                        "{data.text}"
+                    }
+                }
+                span {
+                    class: "shrink-0 flex h-5 w-5 items-center justify-center rounded bg-secondary/50 font-mono text-xs text-muted-foreground",
+                    "{index + 1}"
+                }
+            }
+        }
+    }
+}
+
+/// Render EARS requirements section
+fn render_ears_section(ears_output: &EarsOutput) -> Option<Element> {
+    if ears_output.requirements.is_empty() {
+        return None;
+    }
+
+    let display_data = build_ears_display(ears_output);
+    let elements: Vec<Element> = display_data
+        .iter()
+        .enumerate()
+        .map(|(i, data)| rsx! { EarsRequirementCard { data: data.clone(), index: i } })
+        .collect();
+
+    let error_count = ears_output.errors.len();
+    let error_element = if error_count > 0 {
+        Some(rsx! {
+            div {
+                class: "mt-2 rounded-md border border-chart-4/30 bg-chart-4/5 px-3 py-2",
+                div { class: "flex items-center gap-2",
+                    svg {
+                        width: "14",
+                        height: "14",
+                        view_box: "0 0 14 14",
+                        fill: "none",
+                        class: "text-chart-4 shrink-0",
+                        path {
+                            d: "M7 1C3.7 1 1 3.7 1 7C1 10.3 3.7 13 7 13C10.3 13 13 10.3 13 7C13 3.7 10.3 1 7 1ZM7 10C6.4 10 6 9.6 6 9C6 8.4 6.4 8 7 8C7.6 8 8 8.4 8 9C8 9.6 7.6 10 7 10ZM7 6.5C6.4 6.5 6 6.1 6 5.5V4C6 3.4 6.4 3 7 3C7.6 3 8 3.4 8 4V5.5C8 6.1 7.6 6.5 7 6.5Z",
+                            fill: "currentColor"
+                        }
+                    }
+                    span { class: "text-xs text-chart-4", "{error_count} requirement(s) could not be parsed" }
+                }
+            }
+        })
+    } else {
+        None
+    };
+
+    Some(rsx! {
+        div {
+            SectionHeader { label: "Requirements (EARS)".to_string(), count: Some(ears_output.requirements.len()) }
+            div { class: "space-y-2",
+                for element in elements.iter() {
+                    {element.clone()}
+                }
+                if let Some(err) = error_element {
+                    {err}
+                }
+            }
+        }
+    })
 }
 
 /// ArtifactPanel component - displays accumulated planning artifacts
@@ -274,6 +433,7 @@ pub fn ArtifactPanel(
         tasks,
         progress,
         has_anything,
+        ears_output,
     } = data;
 
     let has_thesis = problem.is_some() || antithesis.is_some() || solution.is_some();
@@ -378,6 +538,11 @@ pub fn ArtifactPanel(
                             div { class: "animate-fade-up rounded-lg border border-border bg-card px-3 py-2.5",
                                 p { class: "font-mono text-xs leading-relaxed text-foreground/80", "{c}" }
                             }
+                        }
+
+                        // EARS Requirements section
+                        if let Some(ears_section) = render_ears_section(&ears_output) {
+                            {ears_section}
                         }
 
                         // Tasks section

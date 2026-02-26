@@ -427,10 +427,15 @@ pub fn InlineTerminalStream(cmds: Vec<TermCmd>, _step_id: String) -> Element {
 
 /// Coach chat bubble
 #[component]
-fn CoachBubble(label: Option<Option<String>>, children: Element) -> Element {
+fn CoachBubble(
+    label: Option<Option<String>>,
+    #[props(default)] step_number: Option<usize>,
+    children: Element,
+) -> Element {
+    let badge_text = step_number.map_or("?".to_string(), |n| n.to_string());
     rsx! {
         div { class: "flex gap-3 animate-fade-up",
-            div { class: "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary ring-1 ring-primary/30", "B" }
+            div { class: "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary ring-1 ring-primary/30", "{badge_text}" }
             div { class: "flex-1 space-y-1",
                 if let Some(Some(lbl)) = label {
                     span { class: "block text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50", "{lbl}" }
@@ -503,6 +508,7 @@ enum ThreadEntry {
     Coach {
         content: String,
         label: Option<String>,
+        step_number: Option<usize>,
     },
     User {
         content: String,
@@ -520,12 +526,15 @@ fn build_thread_entries(
 ) -> Vec<ThreadEntry> {
     phase_steps
         .iter()
-        .flat_map(|step| {
+        .enumerate()
+        .flat_map(|(idx, step)| {
+            let step_number = Some(idx + 1);
             let answer = answers.iter().find(|a| a.step_id == step.id);
 
             let mut entries = vec![ThreadEntry::Coach {
                 content: step.question.clone(),
                 label: Some(step.title.clone()),
+                step_number,
             }];
 
             if let Some(ans) = answer {
@@ -545,6 +554,7 @@ fn build_thread_entries(
                     entries.push(ThreadEntry::Coach {
                         content: follow_up.clone(),
                         label: None,
+                        step_number: None, // Follow-ups don't get a number
                     });
                 }
             }
@@ -557,11 +567,12 @@ fn build_thread_entries(
 /// Render a thread entry
 fn render_thread_entry(entry: &ThreadEntry) -> Element {
     match entry {
-        ThreadEntry::Coach { content, label } => {
+        ThreadEntry::Coach { content, label, step_number } => {
             let content = content.clone();
             let label = label.clone();
+            let step_number = *step_number;
             rsx! {
-                CoachBubble { label: Some(label), "{content}" }
+                CoachBubble { label: Some(label), step_number, "{content}" }
             }
         }
         ThreadEntry::User { content } => {

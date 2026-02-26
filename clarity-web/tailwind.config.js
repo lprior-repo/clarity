@@ -56,6 +56,15 @@ export default {
         sans: ["system-ui", "-apple-system", "sans-serif"],
         mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
+      animation: {
+        "extraction-shimmer": "extraction-shimmer 1.5s ease-in-out infinite",
+      },
+      keyframes: {
+        "extraction-shimmer": {
+          "0%": { "background-position": "200% 0" },
+          "100%": { "background-position": "-200% 0" },
+        },
+      },
     },
   },
   plugins: [],

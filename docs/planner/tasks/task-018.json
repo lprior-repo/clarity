@@ -1,0 +1,88 @@
+{
+  "id": "task-018",
+  "title": "ui-confirm: create AntithesisQuality indicator",
+  "type": "feature",
+  "priority": 1,
+  "effort": "30min",
+  "description": "Create an AntithesisQuality indicator component that visually displays the quality score of a user's antithesis. This component provides immediate feedback on how effectively the antithesis challenges the problem statement, using color coding and numeric scores to communicate quality levels.",
+  "ears": {
+    "ubiquitous": [
+      "THE SYSTEM SHALL display a quality score between 0 and 100",
+      "THE SYSTEM SHALL use color coding to indicate quality level (red/yellow/green)"
+    ],
+    "event_driven": [
+      {
+        "trigger": "WHEN an antithesis quality score is calculated",
+        "shall": "THE SYSTEM SHALL update the indicator with animated transition"
+      },
+      {
+        "trigger": "WHEN the quality score changes significantly",
+        "shall": "THE SYSTEM SHALL provide contextual feedback explaining the change"
+      }
+    ],
+    "unwanted": [
+      {
+        "condition": "IF the quality score calculation fails",
+        "shall_not": "THE SYSTEM SHALL NOT display an incorrect or stale score",
+        "because": "misleading quality indicators can cause poor decision making"
+      },
+      {
+        "condition": "IF the score is being recalculated",
+        "shall_not": "THE SYSTEM SHALL NOT show a frozen indicator without loading state",
+        "because": "users need to know when data is being processed"
+      }
+    ]
+  },
+  "contracts": {
+    "preconditions": [
+      "Quality calculation service must be available",
+      "Component must receive a valid antithesis reference or content"
+    ],
+    "postconditions": [
+      "Quality score is displayed with appropriate visual styling",
+      "Score reflects the most recent calculation result"
+    ],
+    "invariants": [
+      "Quality score is always displayed as a value between 0-100",
+      "Color mapping remains consistent (low=red, medium=yellow, high=green)"
+    ]
+  },
+  "tests": {
+    "happy": [
+      "Given a high-quality antithesis, when displayed, then shows green indicator with score above 70",
+      "Given a medium-quality antithesis, when displayed, then shows yellow indicator with score between 40-70",
+      "Given a low-quality antithesis, when displayed, then shows red indicator with score below 40"
+    ],
+    "error": [
+      "Given a calculation error, when displayed, then shows an error state with retry option",
+      "Given a null antithesis reference, when rendered, then shows a neutral/unknown state",
+      "Given an outdated score, when new calculation completes, then transitions smoothly to new value"
+    ]
+  },
+  "implementation": {
+    "phase_0": [
+      "Review progress/indicator component patterns",
+      "Check color coding patterns"
+    ],
+    "phase_1": [
+      "Write test_displays_score_correctly",
+      "Write test_color_coding_applied",
+      "Write test_shows_loading_state"
+    ],
+    "phase_2": [
+      "Create AntithesisQuality component with score prop",
+      "Add color coding logic based on score range",
+      "Add animated transitions",
+      "Add loading and error states"
+    ]
+  },
+  "context": {
+    "related_files": [
+      "clarity-web/src/components/discover/confirm_phase.rs",
+      "clarity-web/src/ui/confidence_badge.rs"
+    ],
+    "similar": [
+      "See ConfidenceBadge component for indicator patterns"
+    ]
+  }
+}

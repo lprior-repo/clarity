@@ -1,10 +1,44 @@
+#![deny(clippy::unwrap_used)]
+#![deny(clippy::expect_used)]
+#![deny(clippy::panic)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::nursery)]
+#![forbid(unsafe_code)]
+
 //! Server functions for the Clarity Planner backend
 //!
 //! These functions run on the server and can be called from the client
 //! using Dioxus fullstack server functions.
+//!
+//! ## Architecture
+//!
+//! This module implements server-side AI provider integration with:
+//! - Provider singleton initialization with config loading
+//! - Rate limiting per session (10 requests/min)
+//! - Comprehensive error handling and logging
+//! - Field extraction, field suggestion, and quality scoring
 
 use dioxus::prelude::*;
+use dioxus_fullstack::server;
+use dioxus_fullstack::ServerFnError;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+use tokio::sync::RwLock;
+use tracing::{info, warn};
+
+// Re-export types from lattice and providers
+use crate::lattice::quality::{
+    Answer as QualityAnswer, EarsRequirementRef, QualityScore,
+};
+use crate::providers::{
+    ExtractionContext, ExtractionError, ExtractedFields, FieldType,
+    OpenCodeProvider, SchemaField,
+};
+use crate::config::ai::load_ai_config;
+use crate::components::discover::straw_man::StrawManValidation;
+use crate::components::discover::types::{HolePunchingResults, ScenarioField};
 
 /// A planning bead (atomic work unit)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -152,4 +186,1241 @@ pub async fn get_coach_guidance(phase: Phase, context: String) -> Result<CoachRe
         guidance,
         questions,
     })
+}
+
+// ============================================================================
+// Extraction and Quality Server Functions
+// ============================================================================
+
+/// Rate limiter for API calls per session
+///
+/// Tracks request timestamps per session ID and enforces max requests per minute.
+#[derive(Debug, Clone)]
+struct RateLimiter {
+    max_requests_per_minute: u32,
+    requests: Arc<RwLock<HashMap<String, Vec<Instant>>>>,
+}
+
+impl RateLimiter {
+    /// Create a new rate limiter
+    fn new(max_requests_per_minute: u32) -> Self {
+        Self {
+            max_requests_per_minute,
+            requests: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+
+    /// Check if a session is allowed to make a request
+    ///
+    /// Returns `Ok(())` if allowed, `Err` with remaining seconds if rate limited.
+    async fn check_rate_limit(&self, session_id: &str) -> Result<(), u64> {
+        let mut requests = self.requests.write().await;
+        let now = Instant::now();
+        let one_minute_ago = now - Duration::from_secs(60);
+
+        let session_requests = requests.entry(session_id.to_string()).or_insert_with(Vec::new);
+
+        // Remove old requests outside the 1-minute window
+        session_requests.retain(|&timestamp| timestamp > one_minute_ago);
+
+        // Check if under limit
+        match session_requests.len() < self.max_requests_per_minute as usize {
+            true => {
+                session_requests.push(now);
+                Ok(())
+            }
+            false => {
+                // Calculate oldest request time to determine retry-after
+                let oldest = session_requests.first().copied().unwrap_or(now);
+                let elapsed = now.duration_since(oldest).as_secs();
+                let retry_after = 60_u64.saturating_sub(elapsed);
+                Err(retry_after)
+            }
+        }
+    }
+}
+
+/// Global rate limiter instance
+static RATE_LIMITER: once_cell::sync::Lazy<RateLimiter> =
+    once_cell::sync::Lazy::new(|| RateLimiter::new(10));
+
+/// Global AI provider singleton
+///
+/// Initialized once with config from `~/.config/clarity/ai.toml`.
+static AI_PROVIDER: once_cell::sync::Lazy<Arc<OpenCodeProvider>> =
+    once_cell::sync::Lazy::new(|| {
+        let config = load_ai_config()
+            .map_err(|e| {
+                warn!(error = %e, "Failed to load AI config, using defaults");
+                e
+            })
+            .unwrap_or_else(|_| crate::config::ai::default_config());
+
+        let session_id = if config.provider.session_id.is_empty() {
+            uuid::Uuid::new_v4().to_string()
+        } else {
+            config.provider.session_id.clone()
+        };
+
+        OpenCodeProvider::new(config.provider.endpoint, session_id)
+            .map(Arc::new)
+            .map_err(|e| {
+                warn!(error = %e, "Failed to create OpenCode provider");
+                e
+            })
+            .unwrap_or_else(|_| {
+                Arc::new(
+                    OpenCodeProvider::new(
+                        "https://api.opencode.ai/v1".to_string(),
+                        uuid::Uuid::new_v4().to_string(),
+                    )
+                    .expect("fallback provider should always succeed"),
+                )
+            })
+    });
+
+/// Extract structured fields from freeform text input
+///
+/// # Arguments
+/// * `input` - Freeform text to extract fields from
+/// * `session_id` - Optional session identifier for rate limiting
+///
+/// # Returns
+/// * `Ok(ExtractedFields)` - Successfully extracted fields with confidence scores
+/// * `Err(ServerFnError)` - Extraction failed or rate limited
+#[server]
+pub async fn extract_fields_server(
+    input: String,
+    session_id: Option<String>,
+) -> Result<ExtractedFields, ServerFnError> {
+    let session = session_id.as_deref().unwrap_or("default");
+
+    // Check rate limit
+    match RATE_LIMITER.check_rate_limit(session).await {
+        Ok(()) => {
+            info!(session, input_len = input.len(), "extract_fields_server: API call");
+        }
+        Err(retry_after) => {
+            warn!(
+                session,
+                retry_after,
+                "extract_fields_server: Rate limit exceeded"
+            );
+            return Err(ServerFnError::new(anyhow::anyhow!(
+                "Rate limit exceeded. Please retry after {retry_after}s"
+            )));
+        }
+    }
+
+    // Validate input
+    if input.trim().is_empty() {
+        return Err(ServerFnError::new(anyhow::anyhow!(
+            "Input text cannot be empty"
+        )));
+    }
+
+    // Build extraction context
+    let context = ExtractionContext {
+        document_type: Some("discover_phase".to_string()),
+        locale: Some("en_US".to_string()),
+        schema: None,
+        extra: serde_json::json!({}),
+    };
+
+    // Call provider
+    let result = AI_PROVIDER
+        .extract_fields(&input, &context)
+        .await
+        .map_err(|e| match e {
+            ExtractionError::RateLimited { retry_after_seconds } => {
+                ServerFnError::new(anyhow::anyhow!(
+                    "Provider rate limited. Retry after {retry_after_seconds}s"
+                ))
+            }
+            ExtractionError::AuthenticationError(msg) => {
+                ServerFnError::new(anyhow::anyhow!("Authentication failed: {msg}"))
+            }
+            ExtractionError::InvalidInput(msg) => {
+                ServerFnError::new(anyhow::anyhow!("Invalid input: {msg}"))
+            }
+            _ => ServerFnError::new(anyhow::anyhow!("Extraction failed: {e}")),
+        })?;
+
+    info!(
+        session,
+        field_count = result.fields.len(),
+        confidence = result.confidence,
+        duration_ms = result.metadata.processing_duration_ms,
+        "extract_fields_server: Extraction completed"
+    );
+
+    Ok(result)
+}
+
+/// Suggest content for a specific field type based on context
+///
+/// # Arguments
+/// * `field` - The type of field to suggest
+/// * `context` - Extraction context with prior answers
+/// * `session_id` - Optional session identifier for rate limiting
+///
+/// # Returns
+/// * `Ok(String)` - Suggested content for the field
+/// * `Err(ServerFnError)` - Suggestion failed or rate limited
+#[server]
+pub async fn suggest_field_server(
+    field: FieldType,
+    context: ExtractionContext,
+    session_id: Option<String>,
+) -> Result<String, ServerFnError> {
+    let session = session_id.as_deref().unwrap_or("default");
+
+    // Check rate limit
+    match RATE_LIMITER.check_rate_limit(session).await {
+        Ok(()) => {
+            info!(session, ?field, "suggest_field_server: API call");
+        }
+        Err(retry_after) => {
+            warn!(
+                session,
+                retry_after,
+                "suggest_field_server: Rate limit exceeded"
+            );
+            return Err(ServerFnError::new(anyhow::anyhow!(
+                "Rate limit exceeded. Please retry after {retry_after}s"
+            )));
+        }
+    }
+
+    // Build schema for single field suggestion
+    let schema = vec![SchemaField {
+        name: "suggestion".to_string(),
+        field_type: field.clone(),
+        required: true,
+        description: Some(format!("AI-suggested content for {:?} field", field)),
+        options: None,
+    }];
+
+    // Use extract_fields_with_schema with minimal prompt text
+    let prompt_text = format!(
+        "Generate a suggestion for a {:?} field based on context: {}",
+        field,
+        context.extra.as_object().and_then(|o| o.get("prior_answers"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+    );
+
+    // Call provider
+    let result = AI_PROVIDER
+        .extract_fields_with_schema(&prompt_text, &schema, &context)
+        .await
+        .map_err(|e| match e {
+            ExtractionError::RateLimited { retry_after_seconds } => {
+                ServerFnError::new(anyhow::anyhow!(
+                    "Provider rate limited. Retry after {retry_after_seconds}s"
+                ))
+            }
+            ExtractionError::AuthenticationError(msg) => {
+                ServerFnError::new(anyhow::anyhow!("Authentication failed: {msg}"))
+            }
+            ExtractionError::InvalidInput(msg) => {
+                ServerFnError::new(anyhow::anyhow!("Invalid input: {msg}"))
+            }
+            _ => ServerFnError::new(anyhow::anyhow!("Suggestion failed: {e}")),
+        })?;
+
+    // Extract the first field's value as string
+    let suggestion = result
+        .fields
+        .first()
+        .map(|f| {
+            serde_json::to_string(&f.value)
+                .map(|s| s.trim_matches('"').to_string())
+                .ok()
+        })
+        .flatten()
+        .unwrap_or_else(|| {
+            format!(
+                "Suggestion for {:?} field based on your context. Please review and edit.",
+                field
+            )
+        });
+
+    info!(
+        session,
+        ?field,
+        suggestion_len = suggestion.len(),
+        "suggest_field_server: Suggestion generated"
+    );
+
+    Ok(suggestion)
+}
+
+/// Calculate quality score from answers and EARS requirements
+///
+/// # Arguments
+/// * `answers` - User answers to prompt steps
+/// * `ears` - Optional EARS-formatted requirements
+/// * `session_id` - Optional session identifier for rate limiting
+///
+/// # Returns
+/// * `Ok(QualityScore)` - Quality assessment with dimensions and issues
+/// * `Err(ServerFnError)` - Calculation failed
+#[server]
+pub async fn calculate_quality_server(
+    answers: Vec<QualityAnswer>,
+    ears: Option<Vec<EarsRequirementRef>>,
+    session_id: Option<String>,
+) -> Result<QualityScore, ServerFnError> {
+    let session = session_id.as_deref().unwrap_or("default");
+
+    // Rate limit quality calculations (they're lightweight but we track them)
+    match RATE_LIMITER.check_rate_limit(session).await {
+        Ok(()) => {
+            info!(session, answer_count = answers.len(), "calculate_quality_server: API call");
+        }
+        Err(retry_after) => {
+            warn!(
+                session,
+                retry_after,
+                "calculate_quality_server: Rate limit exceeded"
+            );
+            return Err(ServerFnError::new(anyhow::anyhow!(
+                "Rate limit exceeded. Please retry after {retry_after}s"
+            )));
+        }
+    }
+
+    // Validate input
+    if answers.is_empty() {
+        return Err(ServerFnError::new(anyhow::anyhow!(
+            "Cannot calculate quality with empty answers"
+        )));
+    }
+
+    // Default to empty EARS if none provided
+    let ears_ref = ears.as_ref().map_or_else(Vec::new, |e| e.clone());
+
+    // Inversion control defaults (will be enhanced in future)
+    let inversion = InversionControl {
+        has_inversion_tests: false,
+        inverted_count: 0,
+    };
+
+    // Calculate quality
+    let result = calculate_quality(&answers, &ears_ref, &inversion).map_err(|e| match e {
+        QualityError::EmptyAnswers => ServerFnError::new(anyhow::anyhow!("No answers provided")),
+        QualityError::InvalidScore(msg) => {
+            ServerFnError::new(anyhow::anyhow!("Invalid score: {msg}"))
+        }
+        QualityError::DimensionFailed(msg) => {
+            ServerFnError::new(anyhow::anyhow!("Dimension failed: {msg}"))
+        }
+    })?;
+
+    info!(
+        session,
+        overall = result.overall,
+        dimension_count = result.dimensions.len(),
+        issue_count = result.issues.len(),
+        "calculate_quality_server: Quality calculated"
+    );
+
+    Ok(result)
+}
+
+/// Validate a persona description against straw man traps
+///
+/// This function uses AI to detect patterns that indicate unrealistic user
+/// persona assumptions (straw man traps). It analyzes the persona text for
+/// signs of:
+///
+/// - **Irrational Actor**: User acts against their own self-interest
+/// - **Manic Pixie Dream User**: User magically loves everything without discernment
+/// - **Stoic Monk**: User tolerates excessive friction without abandonment
+/// - **Your Clone**: User possesses the developer's system knowledge
+///
+/// # Arguments
+/// * `persona_text` - The persona description to validate
+/// * `session_id` - Optional session identifier for rate limiting
+///
+/// # Returns
+/// * `Ok(StrawManValidation)` - Validation result with detected traps and suggestions
+/// * `Err(ServerFnError)` - Validation failed or rate limited
+///
+/// # Example
+/// ```ignore
+/// let validation = validate_straw_man_traps_server(
+///     "Users will happily complete a 20-step onboarding flow".to_string(),
+///     Some("session-123".to_string())
+/// ).await?;
+///
+/// if !validation.passed {
+///     println!("Detected traps: {:?}", validation.traps_detected);
+/// }
+/// ```
+#[server]
+pub async fn validate_straw_man_traps_server(
+    persona_text: String,
+    session_id: Option<String>,
+) -> Result<StrawManValidation, ServerFnError> {
+    let session = session_id.as_deref().unwrap_or("default");
+
+    // Check rate limit
+    match RATE_LIMITER.check_rate_limit(session).await {
+        Ok(()) => {
+            info!(session, text_len = persona_text.len(), "validate_straw_man_traps_server: API call");
+        }
+        Err(retry_after) => {
+            warn!(
+                session,
+                retry_after,
+                "validate_straw_man_traps_server: Rate limit exceeded"
+            );
+            return Err(ServerFnError::new(anyhow::anyhow!(
+                "Rate limit exceeded. Please retry after {retry_after}s"
+            )));
+        }
+    }
+
+    // Validate input
+    if persona_text.trim().is_empty() {
+        return Err(ServerFnError::new(anyhow::anyhow!(
+            "Persona text cannot be empty"
+        )));
+    }
+
+    // Define schema for trap detection
+    // We'll extract which traps are present and get suggestions for each
+    let schema = vec![
+        SchemaField {
+            name: "irrational_actor_detected".to_string(),
+            field_type: FieldType::Boolean,
+            required: true,
+            description: Some(
+                "True if the persona acts against their own motivations or self-interest".to_string(),
+            ),
+            options: None,
+        },
+        SchemaField {
+            name: "manic_pixie_dream_user_detected".to_string(),
+            field_type: FieldType::Boolean,
+            required: true,
+            description: Some(
+                "True if the persona magically loves everything without discernment or constraints".to_string(),
+            ),
+            options: None,
+        },
+        SchemaField {
+            name: "stoic_monk_detected".to_string(),
+            field_type: FieldType::Boolean,
+            required: true,
+            description: Some(
+                "True if the persona tolerates immense friction or difficulty without complaint".to_string(),
+            ),
+            options: None,
+        },
+        SchemaField {
+            name: "your_clone_detected".to_string(),
+            field_type: FieldType::Boolean,
+            required: true,
+            description: Some(
+                "True if the persona has developer-level system knowledge or mental models".to_string(),
+            ),
+            options: None,
+        },
+        SchemaField {
+            name: "suggestions".to_string(),
+            field_type: FieldType::TextArea,
+            required: false,
+            description: Some(
+                "Specific suggestions for fixing detected traps. Be concrete and actionable.".to_string(),
+            ),
+            options: None,
+        },
+    ];
+
+    // Build context
+    let context = ExtractionContext {
+        document_type: Some("persona_validation".to_string()),
+        locale: Some("en_US".to_string()),
+        schema: Some(schema.clone()),
+        extra: serde_json::json!({
+            "validation_type": "straw_man_traps",
+            "traps": [
+                {
+                    "name": "IrrationalActor",
+                    "description": "User acts against their own motivations or self-interest"
+                },
+                {
+                    "name": "ManicPixieDreamUser",
+                    "description": "User magically loves everything without discernment"
+                },
+                {
+                    "name": "StoicMonk",
+                    "description": "User tolerates immense friction without complaint"
+                },
+                {
+                    "name": "YourClone",
+                    "description": "User has developer's system knowledge and mental models"
+                }
+            ]
+        }),
+    };
+
+    // Build analysis prompt
+    let analysis_prompt = format!(
+        "Analyze this user persona description for straw man trap patterns:\n\n{}\n\n\
+        Detect which of the following traps are present:\n\
+        1. Irrational Actor: User acts against their own motivations\n\
+        2. Manic Pixie Dream User: User magically loves everything\n\
+        3. Stoic Monk: User tolerates excessive friction\n\
+        4. Your Clone: User has developer's system knowledge\n\n\
+        Provide specific suggestions for any detected traps.",
+        persona_text
+    );
+
+    // Call AI provider
+    let result = AI_PROVIDER
+        .extract_fields_with_schema(&analysis_prompt, &schema, &context)
+        .await
+        .map_err(|e| match e {
+            ExtractionError::RateLimited { retry_after_seconds } => {
+                ServerFnError::new(anyhow::anyhow!(
+                    "Provider rate limited. Retry after {retry_after_seconds}s"
+                ))
+            }
+            ExtractionError::AuthenticationError(msg) => {
+                ServerFnError::new(anyhow::anyhow!("Authentication failed: {msg}"))
+            }
+            ExtractionError::InvalidInput(msg) => {
+                ServerFnError::new(anyhow::anyhow!("Invalid input: {msg}"))
+            }
+            _ => ServerFnError::new(anyhow::anyhow!("Trap detection failed: {e}")),
+        })?;
+
+    // Parse detected traps from response
+    let mut traps_detected = Vec::new();
+
+    for field in &result.fields {
+        match field.name.as_str() {
+            "irrational_actor_detected" => {
+                if let Some(true) = field.value.as_bool() {
+                    traps_detected.push(StrawManTrap::IrrationalActor);
+                }
+            }
+            "manic_pixie_dream_user_detected" => {
+                if let Some(true) = field.value.as_bool() {
+                    traps_detected.push(StrawManTrap::ManicPixieDreamUser);
+                }
+            }
+            "stoic_monk_detected" => {
+                if let Some(true) = field.value.as_bool() {
+                    traps_detected.push(StrawManTrap::StoicMonk);
+                }
+            }
+            "your_clone_detected" => {
+                if let Some(true) = field.value.as_bool() {
+                    traps_detected.push(StrawManTrap::YourClone);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    // Create validation result
+    let validation = StrawManValidation::new(traps_detected.clone());
+
+    info!(
+        session,
+        passed = validation.passed,
+        trap_count = traps_detected.len(),
+        traps = ?traps_detected,
+        "validate_straw_man_traps_server: Validation completed"
+    );
+
+    Ok(validation)
+}
+
+/// Validate a scenario description for hole punching gaps
+///
+/// This function analyzes a scenario (trigger, value moment, feeling) to identify
+/// coverage gaps across three critical dimensions:
+///
+/// - **Discovery Hole**: How did the user discover this feature/solution?
+///   Addresses the gap between user need and awareness of the solution.
+///
+/// - **Edge Case Hole**: What happens in edge cases (internet drops, typos, errors)?
+///   Addresses technical and usability edge cases that break the flow.
+///
+/// - **Motivation Drop-off**: Why would users continue through high-friction steps?
+///   Addresses motivation and engagement at critical points.
+///
+/// # Arguments
+/// * `scenario` - The scenario field containing trigger, value_moment, and feeling
+/// * `session_id` - Optional session identifier for rate limiting
+///
+/// # Returns
+/// * `Ok(HolePunchingResults)` - Results showing which holes have been addressed
+/// * `Err(ServerFnError)` - Validation failed or rate limited
+///
+/// # Example
+/// ```ignore
+/// let scenario = ScenarioField {
+///     trigger: "User encounters error message".to_string(),
+///     value_moment: "Instant problem resolution".to_string(),
+///     feeling: "Relieved and confident".to_string(),
+///     hole_punching: HolePunchingResults::default(),
+/// };
+///
+/// let results = validate_hole_punching_server(
+///     scenario,
+///     Some("session-123".to_string())
+/// ).await?;
+///
+/// if !results.is_complete() {
+///     println!("Missing: {:?}", results.unaddressed_holes());
+/// }
+/// ```
+#[server]
+pub async fn validate_hole_punching_server(
+    scenario: ScenarioField,
+    session_id: Option<String>,
+) -> Result<HolePunchingResults, ServerFnError> {
+    let session = session_id.as_deref().unwrap_or("default");
+
+    // Check rate limit
+    match RATE_LIMITER.check_rate_limit(session).await {
+        Ok(()) => {
+            info!(
+                session,
+                trigger_len = scenario.trigger.len(),
+                value_moment_len = scenario.value_moment.len(),
+                feeling_len = scenario.feeling.len(),
+                "validate_hole_punching_server: API call"
+            );
+        }
+        Err(retry_after) => {
+            warn!(
+                session,
+                retry_after,
+                "validate_hole_punching_server: Rate limit exceeded"
+            );
+            return Err(ServerFnError::new(anyhow::anyhow!(
+                "Rate limit exceeded. Please retry after {retry_after}s"
+            )));
+        }
+    }
+
+    // Validate input - scenario bullets should be complete
+    if !scenario.is_bullets_complete() {
+        return Err(ServerFnError::new(anyhow::anyhow!(
+            "Scenario must have all three bullet fields (trigger, value_moment, feeling) complete"
+        )));
+    }
+
+    // Define schema for hole detection
+    // We'll extract which holes are present and detect if they've been addressed
+    let schema = vec![
+        SchemaField {
+            name: "discovery_hole_addressed".to_string(),
+            field_type: FieldType::Boolean,
+            required: true,
+            description: Some(
+                "True if the scenario explains how the user discovers the feature/solution".to_string(),
+            ),
+            options: None,
+        },
+        SchemaField {
+            name: "edge_case_hole_addressed".to_string(),
+            field_type: FieldType::Boolean,
+            required: true,
+            description: Some(
+                "True if the scenario addresses what happens in edge cases (errors, network issues, typos)".to_string(),
+            ),
+            options: None,
+        },
+        SchemaField {
+            name: "motivation_dropoff_addressed".to_string(),
+            field_type: FieldType::Boolean,
+            required: true,
+            description: Some(
+                "True if the scenario explains why users continue through high-friction steps".to_string(),
+            ),
+            options: None,
+        },
+        SchemaField {
+            name: "identified_holes".to_string(),
+            field_type: FieldType::TextArea,
+            required: false,
+            description: Some(
+                "List any holes that were detected but not addressed in the scenario".to_string(),
+            ),
+            options: None,
+        },
+        SchemaField {
+            name: "suggestions".to_string(),
+            field_type: FieldType::TextArea,
+            required: false,
+            description: Some(
+                "Specific suggestions for addressing any detected holes. Be concrete and actionable.".to_string(),
+            ),
+            options: None,
+        },
+    ];
+
+    // Build context
+    let context = ExtractionContext {
+        document_type: Some("scenario_validation".to_string()),
+        locale: Some("en_US".to_string()),
+        schema: Some(schema.clone()),
+        extra: serde_json::json!({
+            "validation_type": "hole_punching",
+            "holes": [
+                {
+                    "name": "DiscoveryHole",
+                    "description": "How did they find the feature?",
+                    "question": "Addresses the gap between user need and awareness of the solution"
+                },
+                {
+                    "name": "EdgeCaseHole",
+                    "description": "What if internet drops, mistype, etc?",
+                    "question": "Addresses technical and usability edge cases"
+                },
+                {
+                    "name": "MotivationDropOff",
+                    "description": "Why continue at high-friction steps?",
+                    "question": "Addresses motivation and engagement at critical points"
+                }
+            ]
+        }),
+    };
+
+    // Build analysis prompt
+    let analysis_prompt = format!(
+        "Analyze this user scenario for hole punching gaps:\n\n\
+        Trigger: {}\n\
+        Value Moment: {}\n\
+        Feeling: {}\n\n\
+        Current hole punching status:\n\
+        - Discovery Hole: {}\n\
+        - Edge Case Hole: {}\n\
+        - Motivation Drop-off: {}\n\n\
+        Check which of the following holes have been adequately addressed:\n\
+        1. Discovery Hole: How did they find the feature/solution?\n\
+        2. Edge Case Hole: What if internet drops, typos, errors occur?\n\
+        3. Motivation Drop-off: Why continue through high-friction steps?\n\n\
+        Evaluate if each hole has been addressed. If a hole is present but not addressed,\n\
+        provide specific suggestions for how to address it.",
+        scenario.trigger,
+        scenario.value_moment,
+        scenario.feeling,
+        scenario.hole_punching.discovery_hole.as_deref().unwrap_or("Not addressed"),
+        scenario.hole_punching.edge_case_hole.as_deref().unwrap_or("Not addressed"),
+        scenario.hole_punching.motivation_dropoff.as_deref().unwrap_or("Not addressed")
+    );
+
+    // Call AI provider
+    let result = AI_PROVIDER
+        .extract_fields_with_schema(&analysis_prompt, &schema, &context)
+        .await
+        .map_err(|e| match e {
+            ExtractionError::RateLimited { retry_after_seconds } => {
+                ServerFnError::new(anyhow::anyhow!(
+                    "Provider rate limited. Retry after {retry_after_seconds}s"
+                ))
+            }
+            ExtractionError::AuthenticationError(msg) => {
+                ServerFnError::new(anyhow::anyhow!("Authentication failed: {msg}"))
+            }
+            ExtractionError::InvalidInput(msg) => {
+                ServerFnError::new(anyhow::anyhow!("Invalid input: {msg}"))
+            }
+            _ => ServerFnError::new(anyhow::anyhow!("Hole punching validation failed: {e}")),
+        })?;
+
+    // Parse hole addressing status from response
+    let mut discovery_hole = scenario.hole_punching.discovery_hole.clone();
+    let mut edge_case_hole = scenario.hole_punching.edge_case_hole.clone();
+    let mut motivation_dropoff = scenario.hole_punching.motivation_dropoff.clone();
+
+    for field in &result.fields {
+        match field.name.as_str() {
+            "discovery_hole_addressed" => {
+                if let Some(true) = field.value.as_bool() {
+                    // Mark as addressed if not already set
+                    if discovery_hole.is_none() {
+                        discovery_hole = Some("Addressed in scenario".to_string());
+                    }
+                }
+            }
+            "edge_case_hole_addressed" => {
+                if let Some(true) = field.value.as_bool() {
+                    if edge_case_hole.is_none() {
+                        edge_case_hole = Some("Addressed in scenario".to_string());
+                    }
+                }
+            }
+            "motivation_dropoff_addressed" => {
+                if let Some(true) = field.value.as_bool() {
+                    if motivation_dropoff.is_none() {
+                        motivation_dropoff = Some("Addressed in scenario".to_string());
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    // Create hole punching results
+    let hole_results = HolePunchingResults {
+        discovery_hole,
+        edge_case_hole,
+        motivation_dropoff,
+    };
+
+    info!(
+        session,
+        is_complete = hole_results.is_complete(),
+        addressed_count = hole_results.addressed_count(),
+        unaddressed = ?hole_results.unaddressed_holes(),
+        "validate_hole_punching_server: Validation completed"
+    );
+
+    Ok(hole_results)
+}
+
+// ============================================================================
+// Integration Tests
+// ============================================================================
+
+#[cfg(test)]
+mod integration_tests {
+    use super::*;
+    use crate::providers::FieldExtraction;
+    use serde_json::json;
+
+    /// Test rate limiter allows requests under limit
+    #[tokio::test]
+    async fn test_rate_limiter_under_limit() {
+        let limiter = RateLimiter::new(5);
+        let session = "test_session_under";
+
+        // Should allow 5 requests
+        for i in 0..5 {
+            let result = limiter.check_rate_limit(session).await;
+            assert!(result.is_ok(), "Request {} should be allowed", i + 1);
+        }
+
+        // Clean up
+        limiter.requests.write().await.remove(session);
+    }
+
+    /// Test rate limiter blocks requests over limit
+    #[tokio::test]
+    async fn test_rate_limiter_over_limit() {
+        let limiter = RateLimiter::new(3);
+        let session = "test_session_over";
+
+        // Should allow first 3
+        for i in 0..3 {
+            let result = limiter.check_rate_limit(session).await;
+            assert!(result.is_ok(), "Request {} should be allowed", i + 1);
+        }
+
+        // 4th should be blocked
+        let result = limiter.check_rate_limit(session).await;
+        assert!(result.is_err(), "Request 4 should be blocked");
+
+        // Should get retry-after duration
+        let retry_after = result.unwrap_err();
+        assert!(retry_after > 0, "Should have retry-after duration");
+
+        // Clean up
+        limiter.requests.write().await.remove(session);
+    }
+
+    /// Test rate limiter resets after time window
+    #[tokio::test]
+    async fn test_rate_limiter_resets_after_window() {
+        let limiter = RateLimiter::new(2);
+        let session = "test_session_reset";
+
+        // Fill up the limiter
+        let _ = limiter.check_rate_limit(session).await;
+        let _ = limiter.check_rate_limit(session).await;
+
+        // Should be blocked
+        assert!(limiter.check_rate_limit(session).await.is_err());
+
+        // Manipulate timestamps to simulate time passing
+        let mut requests = limiter.requests.write().await;
+        if let Some(session_reqs) = requests.get_mut(session) {
+            // Set all timestamps to > 60 seconds ago
+            let old_time = Instant::now() - Duration::from_secs(61);
+            session_reqs.clear();
+            session_reqs.push(old_time);
+        }
+        drop(requests);
+
+        // Should now be allowed again
+        assert!(limiter.check_rate_limit(session).await.is_ok());
+
+        // Clean up
+        limiter.requests.write().await.remove(session);
+    }
+
+    /// Test rate limiter handles multiple sessions independently
+    #[tokio::test]
+    async fn test_rate_limiter_multiple_sessions() {
+        let limiter = RateLimiter::new(2);
+
+        // Fill session1
+        let _ = limiter.check_rate_limit("session1").await;
+        let _ = limiter.check_rate_limit("session1").await;
+        assert!(limiter.check_rate_limit("session1").await.is_err());
+
+        // Session2 should still be allowed
+        assert!(limiter.check_rate_limit("session2").await.is_ok());
+        assert!(limiter.check_rate_limit("session2").await.is_ok());
+
+        // Clean up
+        limiter.requests.write().await.remove("session1");
+        limiter.requests.write().await.remove("session2");
+    }
+
+    /// Test extraction context serialization
+    #[test]
+    fn test_extraction_context_serialization() {
+        let context = ExtractionContext {
+            document_type: Some("discover_phase".to_string()),
+            locale: Some("en_US".to_string()),
+            schema: None,
+            extra: json!({"test": "value"}),
+        };
+
+        let serialized = serde_json::to_string(&context).unwrap();
+        let deserialized: ExtractionContext = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(deserialized.document_type, context.document_type);
+        assert_eq!(deserialized.locale, context.locale);
+    }
+
+    /// Test field type serialization
+    #[test]
+    fn test_field_type_serialization() {
+        let field_type = FieldType::TextArea;
+        let serialized = serde_json::to_string(&field_type).unwrap();
+        let deserialized: FieldType = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(deserialized, field_type);
+    }
+
+    /// Test extracted fields serialization
+    #[test]
+    fn test_extracted_fields_serialization() {
+        let fields = ExtractedFields {
+            fields: vec![
+                FieldExtraction {
+                    name: "problem".to_string(),
+                    field_type: FieldType::TextArea,
+                    value: json!("Users struggle with complex workflows"),
+                    confidence: 0.95,
+                    justification: Some("Directly stated in input".to_string()),
+                },
+            ],
+            confidence: 0.95,
+            metadata: crate::providers::ExtractionMetadata {
+                provider: "opencode".to_string(),
+                model: Some("test-model".to_string()),
+                timestamp: chrono::Utc::now(),
+                processing_duration_ms: 150,
+                extra: json!({}),
+            },
+        };
+
+        let serialized = serde_json::to_string(&fields).unwrap();
+        let deserialized: ExtractedFields = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(deserialized.fields.len(), fields.fields.len());
+        assert_eq!(deserialized.fields[0].name, "problem");
+        assert!((deserialized.fields[0].confidence - 0.95).abs() < f64::EPSILON);
+    }
+
+    /// Test quality score serialization
+    #[test]
+    fn test_quality_score_serialization() {
+        use crate::lattice::quality::{DimensionScore, QualityDimension};
+
+        let score = QualityScore {
+            overall: 85,
+            dimensions: vec![
+                DimensionScore {
+                    dimension: QualityDimension::Completeness,
+                    score: 90,
+                },
+            ],
+            issues: vec![],
+        };
+
+        let serialized = serde_json::to_string(&score).unwrap();
+        let deserialized: QualityScore = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(deserialized.overall, 85);
+        assert_eq!(deserialized.dimensions.len(), 1);
+        assert_eq!(deserialized.dimensions[0].score, 90);
+    }
+
+    /// Test EARS requirement ref serialization
+    #[test]
+    fn test_ears_requirement_ref_serialization() {
+        let ears = EarsRequirementRef {
+            id: "req-1".to_string(),
+            text: "User shall authenticate".to_string(),
+            has_acceptance_criteria: true,
+        };
+
+        let serialized = serde_json::to_string(&ears).unwrap();
+        let deserialized: EarsRequirementRef = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(deserialized.id, "req-1");
+        assert_eq!(deserialized.text, "User shall authenticate");
+        assert_eq!(deserialized.has_acceptance_criteria, true);
+    }
+
+    /// Test quality answer serialization
+    #[test]
+    fn test_quality_answer_serialization() {
+        let answer = QualityAnswer {
+            step_id: "user_goal".to_string(),
+            value: "Users want to complete tasks quickly".to_string(),
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+        };
+
+        let serialized = serde_json::to_string(&answer).unwrap();
+        let deserialized: QualityAnswer = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(deserialized.step_id, "user_goal");
+        assert_eq!(deserialized.value, "Users want to complete tasks quickly");
+    }
+
+    /// Test inversion control serialization
+    #[test]
+    fn test_inversion_control_serialization() {
+        use crate::lattice::quality::InversionControl;
+
+        let inversion = InversionControl {
+            has_inversion_tests: true,
+            inverted_count: 5,
+        };
+
+        let serialized = serde_json::to_string(&inversion).unwrap();
+        let deserialized: InversionControl = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(deserialized.has_inversion_tests, true);
+        assert_eq!(deserialized.inverted_count, 5);
+    }
+
+    /// Test StrawManValidation serialization
+    #[test]
+    fn test_straw_man_validation_serialization() {
+        use crate::components::discover::straw_man::{StrawManTrap, StrawManValidation};
+
+        let validation = StrawManValidation::new(vec![
+            StrawManTrap::IrrationalActor,
+            StrawManTrap::YourClone,
+        ]);
+
+        let serialized = serde_json::to_string(&validation).unwrap();
+        let deserialized: StrawManValidation = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(deserialized.traps_detected.len(), 2);
+        assert!(!deserialized.passed);
+        assert!(deserialized.has_trap(StrawManTrap::IrrationalActor));
+        assert!(deserialized.has_trap(StrawManTrap::YourClone));
+    }
+
+    /// Test StrawManTrap serialization
+    #[test]
+    fn test_straw_man_trap_serialization() {
+        use crate::components::discover::straw_man::StrawManTrap;
+
+        for trap in [
+            StrawManTrap::IrrationalActor,
+            StrawManTrap::ManicPixieDreamUser,
+            StrawManTrap::StoicMonk,
+            StrawManTrap::YourClone,
+        ] {
+            let serialized = serde_json::to_string(&trap).unwrap();
+            let deserialized: StrawManTrap = serde_json::from_str(&serialized).unwrap();
+            assert_eq!(trap, deserialized);
+        }
+    }
+
+    /// Test passing StrawManValidation
+    #[test]
+    fn test_passing_straw_man_validation() {
+        use crate::components::discover::straw_man::StrawManValidation;
+
+        let validation = StrawManValidation::passing();
+        assert!(validation.passed);
+        assert!(validation.traps_detected.is_empty());
+        assert_eq!(validation.trap_count(), 0);
+    }
+
+    /// Test failing StrawManValidation with multiple traps
+    #[test]
+    fn test_failing_straw_man_validation_multiple_traps() {
+        use crate::components::discover::straw_man::{StrawManTrap, StrawManValidation};
+
+        let traps = vec![
+            StrawManTrap::ManicPixieDreamUser,
+            StrawManTrap::StoicMonk,
+            StrawManTrap::YourClone,
+        ];
+        let validation = StrawManValidation::new(traps);
+
+        assert!(!validation.passed);
+        assert_eq!(validation.trap_count(), 3);
+        assert!(validation.has_trap(StrawManTrap::ManicPixieDreamUser));
+        assert!(validation.has_trap(StrawManTrap::StoicMonk));
+        assert!(validation.has_trap(StrawManTrap::YourClone));
+        assert!(!validation.has_trap(StrawManTrap::IrrationalActor));
+    }
+
+    /// Test HolePunchingResults serialization
+    #[test]
+    fn test_hole_punching_results_serialization() {
+        let results = HolePunchingResults {
+            discovery_hole: Some("Found via search".to_string()),
+            edge_case_hole: Some("Handles network errors".to_string()),
+            motivation_dropoff: None,
+        };
+
+        let serialized = serde_json::to_string(&results).unwrap();
+        let deserialized: HolePunchingResults = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(deserialized.discovery_hole, results.discovery_hole);
+        assert_eq!(deserialized.edge_case_hole, results.edge_case_hole);
+        assert_eq!(deserialized.motivation_dropoff, results.motivation_dropoff);
+    }
+
+    /// Test ScenarioField serialization
+    #[test]
+    fn test_scenario_field_serialization() {
+        let scenario = ScenarioField {
+            trigger: "User sees error".to_string(),
+            value_moment: "Quick fix".to_string(),
+            feeling: "Relieved".to_string(),
+            hole_punching: HolePunchingResults {
+                discovery_hole: Some("Via notification".to_string()),
+                edge_case_hole: None,
+                motivation_dropoff: None,
+            },
+        };
+
+        let serialized = serde_json::to_string(&scenario).unwrap();
+        let deserialized: ScenarioField = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(deserialized.trigger, "User sees error");
+        assert_eq!(deserialized.value_moment, "Quick fix");
+        assert_eq!(deserialized.feeling, "Relieved");
+        assert_eq!(
+            deserialized.hole_punching.discovery_hole,
+            Some("Via notification".to_string())
+        );
+    }
+
+    /// Test HolePunchingResults::is_complete
+    #[test]
+    fn test_hole_punching_results_is_complete() {
+        // All holes addressed
+        let complete = HolePunchingResults {
+            discovery_hole: Some("".to_string()),
+            edge_case_hole: Some("x".to_string()),
+            motivation_dropoff: Some("y".to_string()),
+        };
+        assert!(complete.is_complete());
+        assert_eq!(complete.addressed_count(), 3);
+
+        // Missing one hole
+        let incomplete = HolePunchingResults {
+            discovery_hole: Some("x".to_string()),
+            edge_case_hole: None,
+            motivation_dropoff: Some("y".to_string()),
+        };
+        assert!(!incomplete.is_complete());
+        assert_eq!(incomplete.addressed_count(), 2);
+
+        // All empty strings normalize to None
+        let empty = HolePunchingResults {
+            discovery_hole: Some("".to_string()),
+            edge_case_hole: Some("   ".to_string()),
+            motivation_dropoff: Some("\t\n".to_string()),
+        };
+        assert!(!empty.is_complete());
+        assert_eq!(empty.addressed_count(), 0);
+    }
+
+    /// Test HolePunchingResults::unaddressed_holes
+    #[test]
+    fn test_hole_punching_results_unaddressed_holes() {
+        use crate::components::discover::types::HoleType;
+
+        let results = HolePunchingResults {
+            discovery_hole: Some("x".to_string()),
+            edge_case_hole: None,
+            motivation_dropoff: None,
+        };
+
+        let unaddressed = results.unaddressed_holes();
+        assert_eq!(unaddressed.len(), 2);
+        assert!(unaddressed.contains(&HoleType::EdgeCaseHole));
+        assert!(unaddressed.contains(&HoleType::MotivationDropOff));
+        assert!(!unaddressed.contains(&HoleType::DiscoveryHole));
+    }
+
+    /// Test HolePunchingResults::from_strings normalizes empty strings
+    #[test]
+    fn test_hole_punching_results_from_strings() {
+        let results = HolePunchingResults::from_strings(
+            "valid".to_string(),
+            "".to_string(),
+            "   ".to_string(),
+        );
+
+        assert_eq!(results.discovery_hole, Some("valid".to_string()));
+        assert_eq!(results.edge_case_hole, None);
+        assert_eq!(results.motivation_dropoff, None);
+        assert_eq!(results.addressed_count(), 1);
+    }
+
+    /// Test ScenarioField validation helpers
+    #[test]
+    fn test_scenario_field_validation_helpers() {
+        // Complete scenario
+        let complete = ScenarioField {
+            trigger: "Trigger".to_string(),
+            value_moment: "Value".to_string(),
+            feeling: "Happy".to_string(),
+            hole_punching: HolePunchingResults::default(),
+        };
+        assert!(complete.is_bullets_complete());
+        assert!(!complete.is_complete()); // holes not addressed
+        assert!(!complete.is_trigger_empty());
+        assert!(!complete.is_value_moment_empty());
+        assert!(!complete.is_feeling_empty());
+
+        // Incomplete with whitespace
+        let whitespace = ScenarioField {
+            trigger: "   ".to_string(),
+            value_moment: "\t\n".to_string(),
+            feeling: "".to_string(),
+            hole_punching: HolePunchingResults::default(),
+        };
+        assert!(!whitespace.is_bullets_complete());
+        assert!(whitespace.is_trigger_empty());
+        assert!(whitespace.is_value_moment_empty());
+        assert!(whitespace.is_feeling_empty());
+    }
 }

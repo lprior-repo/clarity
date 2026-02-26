@@ -82,11 +82,12 @@ CONTINUOUS_*.md
 DOCUMENTATION_*.md
 REMAINING_*.md
 
-# All other markdown files except AGENTS.md, CLAUDE.md, and docs/
+# All other markdown files except AGENTS.md, CLAUDE.md, docs/, and kitty-specs/
 *.md
 !AGENTS.md
 !CLAUDE.md
 !docs/**/*.md
+!kitty-specs/**/*.md
 
 # Codanna index (binary build artifacts - never commit)
 .codanna/index/
@@ -95,3 +96,17 @@ REMAINING_*.md
 
 # fastembed model cache
 .fastembed_cache
+
+# Added by Spec Kitty CLI (auto-managed)
+.codex/
+.opencode/
+.windsurf/
+.gemini/
+.cursor/
+.qwen/
+.kilocode/
+.augment/
+.roo/
+.amazonq/
+.github/copilot/
+.kittify/.dashboard

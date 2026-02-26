@@ -10,6 +10,9 @@
 use dioxus::prelude::*;
 
 use crate::components::{ArtifactPanel, GraphVisualizer, PlanningCoach, StateMachine};
+use crate::components::quality::{QualityScoreBar, MINIMUM_GATE};
+// use crate::hooks::{use_quality_score, use_cached_quality_score};
+use crate::lattice::quality::{calculate_quality, EarsRequirementRef, InversionControl, QualityScore};
 use crate::types::{get_steps_for_phase, prompt_steps, Answer, PHASES, RightTab, TABS};
 
 /// Check if a phase is complete based on answers
@@ -32,6 +35,8 @@ struct PhaseButtonData {
     index: usize,
     is_done: bool,
     is_active: bool,
+    is_disabled: bool,
+    disabled_reason: Option<String>,
 }
 
 /// Create phase button element from data
@@ -42,55 +47,89 @@ fn render_phase_button(data: &PhaseButtonData, mut active_phase: Signal<String>)
         index,
         is_done,
         is_active,
+        is_disabled,
+        disabled_reason,
     } = data.clone();
 
     let number_class = if is_active {
         "bg-primary/20 text-primary"
+    } else if is_disabled {
+        "bg-muted text-muted-foreground/50"
     } else {
         "bg-secondary text-muted-foreground"
     };
 
-    let text_class = if is_active { "font-medium" } else { "" };
+    let text_class = if is_active {
+        "font-medium"
+    } else if is_disabled {
+        "text-muted-foreground/50"
+    } else {
+        ""
+    };
 
     let button_class = format!(
         "relative flex items-center gap-1.5 px-3 py-2 text-sm transition-colors {}",
         if is_active {
             "text-foreground"
+        } else if is_disabled {
+            "text-muted-foreground/50 cursor-not-allowed"
         } else {
             "text-muted-foreground hover:text-foreground/70"
         }
     );
 
     rsx! {
-        button {
-            key: "{key}",
-            "type": "button",
-            onclick: move |_| active_phase.set(key.clone()),
-            class: "{button_class}",
-            if is_done {
-                svg {
-                    width: "14",
-                    height: "14",
-                    view_box: "0 0 14 14",
-                    fill: "none",
-                    class: "text-chart-2",
-                    path {
-                        d: "M3.5 7L6 9.5L10.5 4.5",
-                        stroke: "currentColor",
-                        "stroke-width": "1.5",
-                        "stroke-linecap": "round",
-                        "stroke-linejoin": "round"
+        div {
+            class: "relative",
+            button {
+                key: "{key}",
+                "type": "button",
+                onclick: move |_| {
+                    if !is_disabled {
+                        active_phase.set(key.clone());
+                    }
+                },
+                disabled: is_disabled,
+                class: "{button_class}",
+                aria_label: if let Some(reason) = &disabled_reason {
+                    format!("{} - {}", label, reason)
+                } else {
+                    label.clone()
+                },
+                if is_done {
+                    svg {
+                        width: "14",
+                        height: "14",
+                        view_box: "0 0 14 14",
+                        fill: "none",
+                        class: "text-chart-2",
+                        path {
+                            d: "M3.5 7L6 9.5L10.5 4.5",
+                            stroke: "currentColor",
+                            "stroke-width": "1.5",
+                            "stroke-linecap": "round",
+                            "stroke-linejoin": "round"
+                        }
+                    }
+                } else {
+                    span {
+                        class: "flex h-4 w-4 items-center justify-center rounded-full text-xs {number_class}",
+                        "{index + 1}"
                     }
                 }
-            } else {
-                span {
-                    class: "flex h-4 w-4 items-center justify-center rounded-full text-xs {number_class}",
-                    "{index + 1}"
+                span { class: "{text_class}", "{label}" }
+                if is_active {
+                    span { class: "absolute inset-x-0 -bottom-[9px] h-0.5 bg-primary" }
                 }
             }
-            span { class: "{text_class}", "{label}" }
-            if is_active {
-                span { class: "absolute inset-x-0 -bottom-[9px] h-0.5 bg-primary" }
+            // Tooltip for disabled button
+            if is_disabled {
+                if let Some(reason) = &disabled_reason {
+                    div {
+                        class: "absolute left-0 top-full mt-2 z-50 w-64 rounded-md bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md border border-border",
+                        "{reason}"
+                    }
+                }
             }
         }
     }
@@ -209,6 +248,40 @@ pub fn HomePage() -> Element {
     let answers = use_signal(|| Vec::<Answer>::new());
     let right_tab = use_signal(|| RightTab::Plan);
 
+    // EARS requirements (empty for now - will be populated by lattice processing)
+    let ears_requirements = use_signal(|| Vec::<EarsRequirementRef>::new());
+
+    // Quality scoring - manual implementation to avoid type inference issues
+    let quality_score = use_signal(|| Option::<QualityScore>::None);
+
+    // Recalculate quality score when answers change
+    use_effect({
+        let answers = answers.clone();
+        let ears_requirements = ears_requirements.clone();
+        let mut quality_score = quality_score.clone();
+        move || {
+            let answers_clone = answers.read().clone();
+            let ears_clone = ears_requirements.read().clone();
+
+            if answers_clone.is_empty() {
+                *quality_score.write() = None;
+                return;
+            }
+
+            let inversion = InversionControl {
+                has_inversion_tests: false,
+                inverted_count: 0,
+            };
+
+            let result = calculate_quality(&answers_clone, &ears_clone, &inversion);
+            match result {
+                Ok(score) => quality_score.set(Some(score)),
+                Err(_) => quality_score.set(None),
+            }
+        }
+    });
+
+
     // Calculate progress using functional patterns
     let total_required = prompt_steps().iter().filter(|s| s.required).count();
 
@@ -222,6 +295,15 @@ pub fn HomePage() -> Element {
         })
         .count();
 
+    // Check if quality gate is passed
+    let quality_score_ref: &Signal<Option<crate::lattice::quality::QualityScore>> = &quality_score;
+    let score_read = quality_score_ref.read();
+    let passes_gate: bool = score_read
+        .as_ref()
+        .map(|s: &crate::lattice::quality::QualityScore| s.passes(MINIMUM_GATE))
+        .unwrap_or(false);
+    drop(score_read);
+
     // Pre-calculate phase states
     let active_phase_val = active_phase.read();
     let phase_buttons_data: Vec<PhaseButtonData> = PHASES
@@ -230,12 +312,26 @@ pub fn HomePage() -> Element {
         .map(|(i, phase)| {
             let is_done = is_phase_done(phase.key, &answers.read());
             let is_active = *active_phase_val == phase.key;
+
+            // Check if phase should be disabled due to quality gate
+            let (is_disabled, disabled_reason) = if phase.key == "develop" {
+                if is_phase_done("discover", &answers.read()) && !passes_gate {
+                    (true, Some(format!("Quality score must be at least {} to proceed", MINIMUM_GATE)))
+                } else {
+                    (false, None)
+                }
+            } else {
+                (false, None)
+            };
+
             PhaseButtonData {
                 key: phase.key.to_string(),
                 label: phase.label.to_string(),
                 index: i,
                 is_done,
                 is_active,
+                is_disabled,
+                disabled_reason,
             }
         })
         .collect();
@@ -266,7 +362,24 @@ pub fn HomePage() -> Element {
     // Get current tab for content rendering
     let current_tab = right_tab();
 
-    rsx! {
+    // Quality details toggle
+    let show_quality_details = use_signal(|| false);
+
+    // Get overall score for header display
+    let overall_score: Option<u8> = quality_score.read().as_ref().map(|s| s.overall);
+
+    // Calculate quality badge color class
+    let quality_badge_class: &'static str = overall_score.map_or("", |score| {
+        if score >= MINIMUM_GATE {
+            "text-chart-2 border-chart-2/30 bg-chart-2/10"
+        } else if score >= 50 {
+            "text-chart-3 border-chart-3/30 bg-chart-3/10"
+        } else {
+            "text-chart-4 border-chart-4/30 bg-chart-4/10"
+        }
+    });
+
+    let result: Element = rsx! {
         div { class: "flex h-screen flex-col overflow-hidden bg-background",
             // Top bar
             header {
@@ -306,21 +419,59 @@ pub fn HomePage() -> Element {
                     }
                 }
 
-                // Progress counter
-                span { class: "font-mono text-xs text-muted-foreground",
-                    "{total_done}/{total_required}"
+                // Progress counter and quality score
+                div {
+                    class: "flex items-center gap-4",
+                    span { class: "font-mono text-xs text-muted-foreground",
+                        "{total_done}/{total_required}"
+                    }
+                    // Quality score badge (shown when in Discover phase)
+                    if *active_phase.read() == "discover" {
+                        div {
+                            class: "flex items-center gap-2",
+                            if let Some(score) = overall_score {
+                                span {
+                                    class: format!("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold {}", quality_badge_class),
+                                    span { class: "opacity-70", "Quality:" }
+                                    span { class: "font-mono", "{score}" }
+                                    if score < MINIMUM_GATE {
+                                        span {
+                                            class: "ml-1 opacity-70",
+                                            "(need {MINIMUM_GATE})"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
             // Main content
             div { class: "flex flex-1 overflow-hidden",
                 // Left: Coach panel
-                main { class: "flex-1 overflow-hidden border-r border-border",
-                    PlanningCoach {
-                        active_phase: active_phase.clone(),
-                        answers: answers.clone(),
-                        mut_answers: answers.clone(),
-                        mut_active_phase: active_phase.clone()
+                main { class: "flex-1 overflow-hidden border-r border-border flex flex-col",
+                    // Quality score bar (shown in Discover phase)
+                    if *active_phase.read() == "discover" {
+                        div {
+                            class: "shrink-0 border-b border-border bg-muted/30 px-6 py-4",
+                            QualityScoreBar {
+                                score: quality_score.clone(),
+                                minimum_gate: MINIMUM_GATE,
+                                show_details: show_quality_details,
+                            }
+                        }
+                    }
+
+                    // Planning coach interface
+                    div {
+                        class: "flex-1 overflow-hidden",
+                        PlanningCoach {
+                            active_phase: active_phase.clone(),
+                            answers: answers.clone(),
+                            mut_answers: answers.clone(),
+                            mut_active_phase: active_phase.clone()
+                        }
                     }
                 }
 
@@ -340,5 +491,7 @@ pub fn HomePage() -> Element {
                 }
             }
         }
-    }
+    };
+
+    result
 }

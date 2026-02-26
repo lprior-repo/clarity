@@ -3,7 +3,7 @@
 name = "Clarity Planner"
 
 # The Dioxus platform to build for (web, desktop, fullstack)
-default_platform = "web"
+default_platform = "fullstack"
 
 # The binary to build
 binary = "clarity-web"
@@ -31,3 +31,10 @@ script = []
 # Dev mode uses same CSS (Dioxus rebuilds automatically)
 style = []
 script = []
+
+# Fullstack server configuration
+[fullstack]
+# The address to bind the server to
+address = "127.0.0.1"
+# The port to run the server on
+port = 8082

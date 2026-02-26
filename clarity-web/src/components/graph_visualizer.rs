@@ -9,6 +9,7 @@
 
 use dioxus::prelude::*;
 
+use crate::lattice::effects::trace_effects;
 use crate::types::Answer;
 
 /// Graph node with owned data
@@ -81,8 +82,67 @@ fn group_color(group: &str) -> (String, String) {
         "scenario" => ("hsl(142, 71%, 45%)".into(), "hsl(142, 71%, 45%, 0.15)".into()),
         "usecase" => ("hsl(38, 92%, 50%)".into(), "hsl(38, 92%, 50%, 0.15)".into()),
         "task" => ("hsl(0, 72%, 51%)".into(), "hsl(0, 72%, 51%, 0.15)".into()),
+        "effect-root" => ("hsl(173, 80%, 40%)".into(), "hsl(173, 80%, 40%, 0.15)".into()),
+        "effect-leaf" => ("hsl(280, 70%, 55%)".into(), "hsl(280, 70%, 55%, 0.15)".into()),
+        "effect" => ("hsl(200, 70%, 50%)".into(), "hsl(200, 70%, 50%, 0.15)".into()),
         _ => ("hsl(0, 0%, 80%)".into(), "hsl(0, 0%, 80%, 0.15)".into()),
     }
+}
+
+/// Build graph nodes and edges from effects analysis
+fn build_effects_graph(answers: &[Answer]) -> (Vec<GraphNode>, Vec<GraphEdge>) {
+    // Extract solution text for effects analysis
+    let solution_text: String = answers
+        .iter()
+        .filter(|a| {
+            let step = a.step_id.to_lowercase();
+            step.contains("solution") || step.contains("approach")
+        })
+        .map(|a| a.value.as_str())
+        .collect::<Vec<_>>()
+        .join(". ");
+
+    if solution_text.is_empty() {
+        return (Vec::new(), Vec::new());
+    }
+
+    let effects_output = trace_effects(&solution_text);
+
+    // Convert effects dependency nodes/edges to graph format
+    let nodes: Vec<GraphNode> = effects_output
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(i, dep_node)| {
+            let x = 300.0 + ((i as f64 - effects_output.nodes.len() as f64 / 2.0) * 100.0);
+            let y = 200.0;
+
+            GraphNode {
+                id: dep_node.id.clone(),
+                label: dep_node.label.clone(),
+                group: if dep_node.is_root {
+                    "effect-root".to_string()
+                } else if dep_node.is_leaf {
+                    "effect-leaf".to_string()
+                } else {
+                    "effect".to_string()
+                },
+                x,
+                y,
+            }
+        })
+        .collect();
+
+    let edges: Vec<GraphEdge> = effects_output
+        .edges
+        .iter()
+        .map(|dep_edge| GraphEdge {
+            from: dep_edge.from.clone(),
+            to: dep_edge.to.clone(),
+        })
+        .collect();
+
+    (nodes, edges)
 }
 
 /// Build graph nodes and edges from answers
@@ -346,7 +406,28 @@ fn render_legend_item(item: &LegendItem) -> Element {
 #[component]
 pub fn GraphVisualizer(answers: Signal<Vec<Answer>>) -> Element {
     let answers_guard = answers.read();
-    let (nodes, edges) = build_graph_data(&answers_guard);
+
+    // Try effects-based graph first, fall back to basic graph
+    let effects_output = trace_effects(&answers_guard
+        .iter()
+        .filter(|a| {
+            let step = a.step_id.to_lowercase();
+            step.contains("solution") || step.contains("approach")
+        })
+        .map(|a| a.value.as_str())
+        .collect::<Vec<_>>()
+        .join(". "));
+
+    let (effects_nodes, effects_edges) = build_effects_graph(&answers_guard);
+    let (nodes, edges, use_effects) = if !effects_nodes.is_empty() {
+        (effects_nodes, effects_edges, true)
+    } else {
+        let (basic_nodes, basic_edges) = build_graph_data(&answers_guard);
+        (basic_nodes, basic_edges, false)
+    };
+
+    let warnings = effects_output.warnings;
+
     drop(answers_guard);
 
     if nodes.is_empty() {
@@ -359,7 +440,15 @@ pub fn GraphVisualizer(answers: Signal<Vec<Answer>>) -> Element {
 
     let node_render_data = build_node_render_data(&nodes);
     let edge_render_data = build_edge_render_data(&edges, &nodes);
-    let legend_items = build_legend_items();
+    let legend_items = if use_effects {
+        vec![
+            LegendItem { group: "Causal Root".to_string(), color: group_color("effect-root").0 },
+            LegendItem { group: "Causal Link".to_string(), color: group_color("effect").0 },
+            LegendItem { group: "Outcome".to_string(), color: group_color("effect-leaf").0 },
+        ]
+    } else {
+        build_legend_items()
+    };
 
     let edge_elements: Vec<Element> = edge_render_data
         .iter()
@@ -372,28 +461,71 @@ pub fn GraphVisualizer(answers: Signal<Vec<Answer>>) -> Element {
     let legend_elements: Vec<Element> = legend_items.iter().map(render_legend_item).collect();
 
     rsx! {
-        div { class: "relative h-full w-full overflow-auto bg-[hsl(0,0%,2%)]",
-            svg {
-                view_box: "0 0 600 450",
-                class: "w-full h-full",
-                preserve_aspect_ratio: "xMidYMid meet",
-
-                // Draw edges
-                for edge in edge_elements.iter() {
-                    {edge.clone()}
-                }
-
-                // Draw nodes
-                for node in node_elements.iter() {
-                    {node.clone()}
+        div { class: "flex h-full w-full flex-col",
+            // Header showing graph type
+            div { class: "shrink-0 border-b border-border px-4 py-2",
+                div { class: "flex items-center justify-between",
+                    span {
+                        class: "text-xs font-medium uppercase tracking-wider text-muted-foreground/70",
+                        if use_effects { "Cusal Dependency Graph" } else { "Planning Graph" }
+                    }
+                    if !warnings.is_empty() {
+                        span {
+                            class: "flex items-center gap-1 rounded-full bg-chart-4/10 px-2 py-0.5 text-xs text-chart-4",
+                            "{warnings.len()} warning(s)"
+                        }
+                    }
                 }
             }
 
-            // Legend
-            div {
-                class: "absolute bottom-3 left-3 flex flex-wrap gap-3",
-                for item in legend_elements.iter() {
-                    {item.clone()}
+            // Graph area
+            div { class: "relative flex-1 overflow-auto bg-[hsl(0,0%,2%)]",
+                svg {
+                    view_box: "0 0 600 450",
+                    class: "w-full h-full",
+                    preserve_aspect_ratio: "xMidYMid meet",
+
+                    // Draw edges
+                    for edge in edge_elements.iter() {
+                        {edge.clone()}
+                    }
+
+                    // Draw nodes
+                    for node in node_elements.iter() {
+                        {node.clone()}
+                    }
+                }
+
+                // Legend
+                div {
+                    class: "absolute bottom-3 left-3 flex flex-wrap gap-3",
+                    for item in legend_elements.iter() {
+                        {item.clone()}
+                    }
+                }
+            }
+
+            // Warnings section
+            if !warnings.is_empty() {
+                div { class: "shrink-0 border-t border-border bg-chart-4/5 px-4 py-2",
+                    div { class: "space-y-1",
+                        for warning in warnings.iter() {
+                            div { class: "flex items-start gap-2 text-xs text-chart-4",
+                                svg {
+                                    width: "12",
+                                    height: "12",
+                                    view_box: "0 0 12 12",
+                                    fill: "none",
+                                    class: "shrink-0 mt-0.5",
+                                    path {
+                                        d: "M6 1C3.2 1 1 3.2 1 6C1 8.8 3.2 11 6 11C8.8 11 11 8.8 11 6C11 3.2 8.8 1 6 1ZM6 8.5C5.4 8.5 5 8.1 5 7.5C5 6.9 5.4 6.5 6 6.5C6.6 6.5 7 6.9 7 7.5C7 8.1 6.6 8.5 6 8.5ZM6 5.5C5.4 5.5 5 5.1 5 4.5V3C5 2.4 5.4 2 6 2C6.6 2 7 2.4 7 3V4.5C7 5.1 6.6 5.5 6 5.5Z",
+                                        fill: "currentColor"
+                                    }
+                                }
+                                "{warning}"
+                            }
+                        }
+                    }
                 }
             }
         }

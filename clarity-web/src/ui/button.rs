@@ -70,7 +70,7 @@ pub struct ButtonProps {
     pub disabled: bool,
     #[props(default)]
     pub r#type: String,
-    pub onclick: Option<EventHandler<MouseEvent>>,
+    pub onclick: Option<EventHandler<Event<MouseData>>>,
     pub children: Element,
 }
 
