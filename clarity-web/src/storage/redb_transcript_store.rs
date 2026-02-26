@@ -120,7 +120,11 @@ impl TranscriptStore for RedbTranscriptStore {
     let table_def: redb::TableDefinition<&str, &str> =
       redb::TableDefinition::new(TRANSCRIPTS_TABLE);
 
-    let table = txn.open_table(table_def)?;
+    let table = match txn.open_table(table_def) {
+      Ok(t) => t,
+      Err(e) if e.to_string().contains("does not exist") => return Ok(None),
+      Err(e) => return Err(StorageError::from(e)),
+    };
 
     match table.get(session_id)? {
       Some(guard) => {
@@ -168,7 +172,11 @@ impl TranscriptStore for RedbTranscriptStore {
     let table_def: redb::TableDefinition<&str, &str> =
       redb::TableDefinition::new(TRANSCRIPTS_TABLE);
 
-    let table = txn.open_table(table_def)?;
+    let table = match txn.open_table(table_def) {
+      Ok(t) => t,
+      Err(e) if e.to_string().contains("does not exist") => return Ok(Vec::new()),
+      Err(e) => return Err(StorageError::from(e)),
+    };
 
     let iter = table.iter()?;
     let sessions: Vec<String> = iter
