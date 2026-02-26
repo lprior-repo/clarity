@@ -1,7 +1,8 @@
 ---
-lane: "doing"
-shell_pid: "392507"
-agent: "claude"
+lane: doing
+dependencies: []
+agent: claude
+shell_pid: '392507'
 ---
 # WP01: Foundation Types and Storage
 
