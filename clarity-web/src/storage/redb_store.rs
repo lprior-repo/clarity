@@ -56,7 +56,12 @@ impl RedbStore {
     let txn = self.db.begin_read()?;
     let table_definition: redb::TableDefinition<&str, &str> =
       redb::TableDefinition::new(tables::PROJECT_METADATA);
-    let table = txn.open_table(table_definition)?;
+    // Table may not exist yet if no metadata has been saved
+    let table = match txn.open_table(table_definition) {
+      Ok(t) => t,
+      Err(redb::TableError::TableDoesNotExist(_)) => return Ok(None),
+      Err(e) => return Err(e.into()),
+    };
     match table.get("metadata")? {
       Some(guard) => {
         let json: &str = guard.value();
@@ -86,7 +91,12 @@ impl RedbStore {
     let txn = self.db.begin_read()?;
     let table_definition: redb::TableDefinition<&str, &str> =
       redb::TableDefinition::new(tables::EXTRACTIONS);
-    let table = txn.open_table(table_definition)?;
+    // Table may not exist yet if no cache has been saved
+    let table = match txn.open_table(table_definition) {
+      Ok(t) => t,
+      Err(redb::TableError::TableDoesNotExist(_)) => return Ok(None),
+      Err(e) => return Err(e.into()),
+    };
     match table.get(hash)? {
       Some(guard) => {
         let json: &str = guard.value();
@@ -116,7 +126,12 @@ impl RedbStore {
     let txn = self.db.begin_read()?;
     let table_definition: redb::TableDefinition<&str, &str> =
       redb::TableDefinition::new(tables::LATTICE_CACHE);
-    let table = txn.open_table(table_definition)?;
+    // Table may not exist yet if no cache has been saved
+    let table = match txn.open_table(table_definition) {
+      Ok(t) => t,
+      Err(redb::TableError::TableDoesNotExist(_)) => return Ok(None),
+      Err(e) => return Err(e.into()),
+    };
     match table.get(phase)? {
       Some(guard) => {
         let json: &str = guard.value();
@@ -163,7 +178,12 @@ impl RedbStore {
     let txn = self.db.begin_read()?;
     let table_definition: redb::TableDefinition<&str, &str> =
       redb::TableDefinition::new(tables::ANSWERS);
-    let table = txn.open_table(table_definition)?;
+    // Table may not exist yet if no answers have been saved
+    let table = match txn.open_table(table_definition) {
+      Ok(t) => t,
+      Err(redb::TableError::TableDoesNotExist(_)) => return Ok(Vec::new()),
+      Err(e) => return Err(e.into()),
+    };
 
     let mut answers = Vec::new();
     let mut iter = table.iter()?;
@@ -191,7 +211,12 @@ impl RedbStore {
     let txn = self.db.begin_read()?;
     let table_definition: redb::TableDefinition<&str, &str> =
       redb::TableDefinition::new(tables::ANSWERS);
-    let table = txn.open_table(table_definition)?;
+    // Table may not exist yet if no answers have been saved
+    let table = match txn.open_table(table_definition) {
+      Ok(t) => t,
+      Err(redb::TableError::TableDoesNotExist(_)) => return Ok(None),
+      Err(e) => return Err(e.into()),
+    };
 
     match table.get(step_id)? {
       Some(guard) => {

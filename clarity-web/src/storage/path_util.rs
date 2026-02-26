@@ -270,6 +270,7 @@ pub fn ensure_project_dir_exists(project_id: &str) -> Result<(), StorageError> {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use serial_test::serial;
   use tempfile::TempDir;
 
   /// Helper to set a custom XDG data directory for testing
@@ -338,6 +339,7 @@ mod tests {
   }
 
   #[test]
+  #[serial]
   fn test_get_app_dir() {
     let temp_dir = TempDir::new().expect("failed to create temp dir");
     set_test_data_dir(&temp_dir);
@@ -350,6 +352,7 @@ mod tests {
   }
 
   #[test]
+  #[serial]
   fn test_get_projects_base_dir() {
     let temp_dir = TempDir::new().expect("failed to create temp dir");
     set_test_data_dir(&temp_dir);
@@ -364,6 +367,7 @@ mod tests {
   }
 
   #[test]
+  #[serial]
   fn test_get_project_dir_valid() {
     let temp_dir = TempDir::new().expect("failed to create temp dir");
     set_test_data_dir(&temp_dir);
@@ -378,6 +382,7 @@ mod tests {
   }
 
   #[test]
+  #[serial]
   fn test_get_project_dir_invalid_id() {
     let temp_dir = TempDir::new().expect("failed to create temp dir");
     set_test_data_dir(&temp_dir);
@@ -389,6 +394,7 @@ mod tests {
   }
 
   #[test]
+  #[serial]
   fn test_get_project_db_path_valid() {
     let temp_dir = TempDir::new().expect("failed to create temp dir");
     set_test_data_dir(&temp_dir);
@@ -403,6 +409,7 @@ mod tests {
   }
 
   #[test]
+  #[serial]
   fn test_get_project_db_path_invalid_id() {
     let temp_dir = TempDir::new().expect("failed to create temp dir");
     set_test_data_dir(&temp_dir);
@@ -414,6 +421,7 @@ mod tests {
   }
 
   #[test]
+  #[serial]
   fn test_ensure_project_dir_exists_creates_directory() {
     let temp_dir = TempDir::new().expect("failed to create temp dir");
     set_test_data_dir(&temp_dir);
@@ -434,6 +442,7 @@ mod tests {
   }
 
   #[test]
+  #[serial]
   fn test_ensure_project_dir_exists_idempotent() {
     let temp_dir = TempDir::new().expect("failed to create temp dir");
     set_test_data_dir(&temp_dir);
@@ -450,6 +459,7 @@ mod tests {
   }
 
   #[test]
+  #[serial]
   fn test_ensure_project_dir_invalid_id() {
     let temp_dir = TempDir::new().expect("failed to create temp dir");
     set_test_data_dir(&temp_dir);
@@ -461,6 +471,7 @@ mod tests {
   }
 
   #[test]
+  #[serial]
   fn test_project_dir_structure() {
     let temp_dir = TempDir::new().expect("failed to create temp dir");
     set_test_data_dir(&temp_dir);
@@ -482,6 +493,7 @@ mod tests {
   }
 
   #[test]
+  #[serial]
   fn test_multiple_projects_separate_directories() {
     let temp_dir = TempDir::new().expect("failed to create temp dir");
     set_test_data_dir(&temp_dir);
@@ -506,6 +518,7 @@ mod tests {
   }
 
   #[test]
+  #[serial]
   fn test_db_filename_consistent() {
     let temp_dir = TempDir::new().expect("failed to create temp dir");
     set_test_data_dir(&temp_dir);

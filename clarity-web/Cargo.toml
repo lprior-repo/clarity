@@ -39,6 +39,7 @@ redb = { workspace = true }
 [dev-dependencies]
 tempfile = "3"
 tokio = { workspace = true }
+serial_test = "3"
 
 [[test]]
 name = "e2e_discover_guided"
