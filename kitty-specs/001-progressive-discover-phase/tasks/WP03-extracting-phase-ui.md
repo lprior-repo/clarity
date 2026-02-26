@@ -1,6 +1,7 @@
 ---
 lane: "doing"
 shell_pid: "576257"
+agent: "claude"
 ---
 # WP03: Extracting Phase UI
 
@@ -138,3 +139,7 @@ br claim bd-23qy bd-xz68
 # Implement components
 br close bd-23qy bd-xz68
 ```
+
+## Activity Log
+
+- 2026-02-26T16:29:07Z – claude – shell_pid=576257 – lane=doing – Assigned agent via workflow command
