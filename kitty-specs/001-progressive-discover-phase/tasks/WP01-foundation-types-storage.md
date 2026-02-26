@@ -1,6 +1,7 @@
 ---
 lane: "doing"
 shell_pid: "392507"
+agent: "claude"
 ---
 # WP01: Foundation Types and Storage
 
@@ -334,3 +335,7 @@ Focus on:
 2. Does storage handle errors gracefully?
 3. Is crash recovery robust?
 4. Are there any panics lurking?
+
+## Activity Log
+
+- 2026-02-26T15:08:46Z – claude – shell_pid=392507 – lane=doing – Assigned agent via workflow command
