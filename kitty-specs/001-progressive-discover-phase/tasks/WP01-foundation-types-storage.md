@@ -1,5 +1,5 @@
 ---
-lane: doing
+lane: "for_review"
 dependencies: []
 agent: claude
 shell_pid: '392507'
@@ -340,3 +340,4 @@ Focus on:
 ## Activity Log
 
 - 2026-02-26T15:08:46Z – claude – shell_pid=392507 – lane=doing – Assigned agent via workflow command
+- 2026-02-26T17:46:08Z – claude – shell_pid=392507 – lane=for_review – T010 Auto-save and T011 crash recovery implemented
