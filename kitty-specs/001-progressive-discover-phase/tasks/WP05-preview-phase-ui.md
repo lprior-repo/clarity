@@ -1,6 +1,7 @@
 ---
 lane: "doing"
 shell_pid: "581470"
+agent: "claude"
 ---
 # WP05: Preview Phase UI
 
@@ -173,3 +174,7 @@ br claim bd-3h2v bd-2k1q bd-3fz2
 # Implement components
 br close bd-3h2v bd-2k1q bd-3fz2
 ```
+
+## Activity Log
+
+- 2026-02-26T16:30:19Z – claude – shell_pid=581470 – lane=doing – Assigned agent via workflow command
