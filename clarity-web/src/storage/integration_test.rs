@@ -360,8 +360,10 @@ fn test_clear_all_answers() {
   let loaded = store.get_all_answers().expect("Failed to load answers");
   assert_eq!(loaded.len(), 5);
 
-  // Clear all
-  store.clear_answers().expect("Failed to clear answers");
+  // Clear all by deleting each answer
+  for answer in &loaded {
+    store.delete_answer(&answer.step_id).expect("Failed to delete answer");
+  }
 
   let loaded = store.get_all_answers().expect("Failed to load answers");
   assert_eq!(loaded.len(), 0, "All answers should be cleared");

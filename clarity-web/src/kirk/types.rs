@@ -628,10 +628,10 @@ mod tests {
         );
         assert_eq!(req.actor(), "system");
 
-        let json = serde_json::to_string(&req).ok();
-        assert!(json.is_some());
-        let deserialized: Result<EarsRequirement, _> =
-            serde_json::from_str(json.as_ref().map(|s| s.as_str()).ok_or("").ok().ok_or("").ok());
+        let json = serde_json::to_string(&req);
+        assert!(json.is_ok());
+        let json_str = json.as_ref().unwrap();
+        let deserialized: Result<EarsRequirement, _> = serde_json::from_str(json_str);
         assert!(deserialized.is_ok());
     }
 
@@ -959,11 +959,11 @@ mod tests {
             "Always safe".to_string(),
         ));
 
-        let json = serde_json::to_string(&contract).ok();
-        assert!(json.is_some());
+        let json = serde_json::to_string(&contract);
+        assert!(json.is_ok());
 
-        let deserialized: Result<KirkContract, _> =
-            serde_json::from_str(json.as_ref().map(|s| s.as_str()).ok_or("").ok().ok_or("").ok());
+        let json_str = json.as_ref().unwrap();
+        let deserialized: Result<KirkContract, _> = serde_json::from_str(json_str);
         assert!(deserialized.is_ok());
         assert_eq!(deserialized.ok().map(|c| c.id), Some("test-contract".to_string()));
     }

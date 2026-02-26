@@ -478,17 +478,14 @@ mod tests {
             motivation_dropoff: None,
         };
 
-        let json = serde_json::to_string(&holes).ok();
-        assert!(json.is_some());
+        let json = serde_json::to_string(&holes);
+        assert!(json.is_ok());
 
         let deserialized: HolePunchingResults =
-            serde_json::from_str(&json.unwrap_or_default()).ok();
-        assert!(deserialized.is_some());
-        let deserialized = deserialized;
-
-        assert_eq!(deserialized.as_ref().and_then(|d| d.discovery_hole.as_deref()), Some("Found via search"));
-        assert_eq!(deserialized.as_ref().and_then(|d| d.edge_case_hole.as_deref()), Some("Handles offline"));
-        assert!(deserialized.as_ref().map_or(true, |d| d.motivation_dropoff.is_none()));
+            serde_json::from_str(&json.unwrap_or_default()).unwrap_or_default();
+        assert_eq!(deserialized.discovery_hole.as_deref(), Some("Found via search"));
+        assert_eq!(deserialized.edge_case_hole.as_deref(), Some("Handles offline"));
+        assert!(deserialized.motivation_dropoff.is_none());
     }
 
     // ========== ScenarioField Tests ==========
@@ -568,16 +565,14 @@ mod tests {
             },
         };
 
-        let json = serde_json::to_string(&scenario).ok();
-        assert!(json.is_some());
+        let json = serde_json::to_string(&scenario);
+        assert!(json.is_ok());
 
         let deserialized: ScenarioField =
-            serde_json::from_str(&json.unwrap_or_default()).ok();
-        assert!(deserialized.is_some());
-        let deserialized = deserialized;
+            serde_json::from_str(&json.unwrap_or_default()).unwrap_or_default();
 
-        assert_eq!(deserialized.as_ref().map(|s| s.trigger.as_str()), Some("Error occurs"));
-        assert_eq!(deserialized.as_ref().map(|s| s.value_moment.as_str()), Some("Fixed quickly"));
-        assert_eq!(deserialized.as_ref().map(|s| s.feeling.as_str()), Some("Happy"));
+        assert_eq!(deserialized.trigger.as_str(), "Error occurs");
+        assert_eq!(deserialized.value_moment.as_str(), "Fixed quickly");
+        assert_eq!(deserialized.feeling.as_str(), "Happy");
     }
 }

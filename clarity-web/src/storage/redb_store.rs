@@ -10,7 +10,7 @@ use redb::ReadableTable;
 use std::path::Path;
 
 use crate::storage::{
-  tables, AnswerRecord, Confidence, ExtractionCache, LatticeCache, ProjectMetadata, StorageError,
+  tables, AnswerRecord, ExtractionCache, LatticeCache, ProjectMetadata, StorageError,
 };
 use crate::types::Answer;
 
