@@ -14,6 +14,7 @@ pub mod extracting_progress;
 pub mod field_card;
 pub mod locked_phase;
 pub mod locked_summary;
+pub mod phases;
 pub mod preview_summary;
 pub mod problem_confirm;
 pub mod progressive_discover;

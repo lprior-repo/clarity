@@ -10,6 +10,23 @@
 //! This is the main orchestration component for the Progressive Discover flow.
 //! It renders the appropriate phase component based on the current state
 //! and handles phase transitions.
+//!
+//! # Features
+//!
+//! - **Crash Recovery**: Automatically saves state to localStorage and restores on reload
+//! - **Auto-save**: State is persisted on every change
+//! - **Phase Navigation**: Handles forward/backward navigation through phases
+//!
+//! # State Machine
+//!
+//! ```text
+//! Prompt -> Extracting -> ConfirmingFields -> Preview -> KirkCompilation -> Locked
+//! ```
+//!
+//! Within ConfirmingFields:
+//! ```text
+//! Problem -> Persona -> Solution -> Nonpersona -> Scenario
+//! ```
 
 use dioxus::prelude::*;
 use std::sync::Arc;
@@ -796,6 +813,8 @@ pub fn PlaceholderConfirmPhase(props: PlaceholderConfirmPhaseProps) -> Element {
 // Preview Phase Component
 // ============================================================================
 
+use super::brutal_truths::{BrutalTruthsChecklist, BrutalTruthsState};
+
 /// Props for PreviewPhase component
 #[derive(Clone, Props, PartialEq)]
 pub struct PreviewPhaseProps {
@@ -812,12 +831,19 @@ pub struct PreviewPhaseProps {
 /// Preview phase component
 ///
 /// Shows summary and allows refining or locking in.
+/// Uses the proper Four Brutal Truths checklist (bd-2k1q).
 #[component]
 pub fn PreviewPhase(props: PreviewPhaseProps) -> Element {
     let transcript_signal = use_signal(|| {
         let state = props.state.read();
         state.transcript.clone()
     });
+
+    // Signal for brutal truths state (bd-2k1q)
+    let brutal_truths = use_signal(BrutalTruthsState::new);
+
+    // Check if all truths are acknowledged
+    let all_acknowledged = brutal_truths.read().is_complete();
 
     let on_refine = {
         let mut actions = props.actions.clone();
@@ -857,27 +883,14 @@ pub fn PreviewPhase(props: PreviewPhaseProps) -> Element {
                 on_change: None,
             }
 
-            // Four Brutal Truths checklist
+            // Four Brutal Truths checklist (bd-2k1q)
             div {
-                class: "rounded-lg border border-border/50 bg-card p-6 space-y-4",
-                h3 {
-                    class: "text-sm font-medium text-muted-foreground uppercase tracking-wide",
-                    "Four Brutal Truths"
-                }
-                div {
-                    class: "space-y-2",
-                    BrutalTruthItem {
-                        text: "I have a specific user in mind, not everyone".to_string(),
-                    }
-                    BrutalTruthItem {
-                        text: "I know why they will switch from their current solution".to_string(),
-                    }
-                    BrutalTruthItem {
-                        text: "I can describe a concrete scenario where this delivers value".to_string(),
-                    }
-                    BrutalTruthItem {
-                        text: "I understand why this might fail and am ready to learn".to_string(),
-                    }
+                class: "rounded-lg border border-border/50 bg-card p-6",
+                BrutalTruthsChecklist {
+                    checked: brutal_truths,
+                    enabled: true,
+                    show_help: true,
+                    show_status: true,
                 }
             }
 
@@ -906,28 +919,37 @@ pub fn PreviewPhase(props: PreviewPhaseProps) -> Element {
 
                 Button {
                     variant: ButtonVariant::Primary,
+                    disabled: !all_acknowledged,
                     onclick: on_lock_in,
-                    "Lock In"
-                    svg {
-                        xmlns: "http://www.w3.org/2000/svg",
-                        width: "16",
-                        height: "16",
-                        view_box: "0 0 24 24",
-                        fill: "none",
-                        stroke: "currentColor",
-                        stroke_width: "2",
-                        stroke_linecap: "round",
-                        stroke_linejoin: "round",
-                        class: "ml-2",
-                        rect {
-                            x: "3",
-                            y: "11",
-                            width: "18",
-                            height: "11",
-                            rx: "2",
-                            ry: "2",
+                    if all_acknowledged {
+                        svg {
+                            xmlns: "http://www.w3.org/2000/svg",
+                            width: "16",
+                            height: "16",
+                            view_box: "0 0 24 24",
+                            fill: "none",
+                            stroke: "currentColor",
+                            stroke_width: "2",
+                            stroke_linecap: "round",
+                            stroke_linejoin: "round",
+                            class: "mr-2",
+                            rect {
+                                x: "3",
+                                y: "11",
+                                width: "18",
+                                height: "11",
+                                rx: "2",
+                                ry: "2",
+                            }
+                            path { d: "M7 11V7a5 5 0 0 1 10 0v4" }
                         }
-                        path { d: "M7 11V7a5 5 0 0 1 10 0v4" }
+                    }
+                    "Lock In"
+                    if !all_acknowledged {
+                        span {
+                            class: "ml-2 text-xs opacity-70",
+                            "(Acknowledge all truths)"
+                        }
                     }
                 }
             }
