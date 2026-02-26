@@ -1,5 +1,5 @@
 ---
-lane: "doing"
+lane: "for_review"
 shell_pid: "576257"
 agent: "claude"
 ---
@@ -143,3 +143,4 @@ br close bd-23qy bd-xz68
 ## Activity Log
 
 - 2026-02-26T16:29:07Z – claude – shell_pid=576257 – lane=doing – Assigned agent via workflow command
+- 2026-02-26T16:39:28Z – claude – shell_pid=576257 – lane=for_review – Ready for review
