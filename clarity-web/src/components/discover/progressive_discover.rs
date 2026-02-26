@@ -246,7 +246,7 @@ pub fn ProgressiveDiscover(props: ProgressiveDiscoverProps) -> Element {
 // ============================================================================
 
 /// Props for PhaseProgress component
-#[derive(Clone, Copy, Props, PartialEq)]
+#[derive(Clone, Copy, Debug, Props, PartialEq)]
 pub struct PhaseProgressProps {
     /// Current phase
     pub phase: ProgressiveDiscoverPhase,
@@ -531,12 +531,25 @@ pub fn ExtractingPhase(props: ExtractingPhaseProps) -> Element {
     ];
     let current_message = use_signal(|| 0usize);
 
+    // Guard flag to prevent multiple phase transitions (Issue C2)
+    let has_transitioned = use_signal(|| false);
+
+    // Error state for failed extractions (Issue C3)
+    let error = use_signal(|| None::<String>);
+
     // Simulate extraction progress
     use_effect({
         let mut actions = props.actions.clone();
         let mut progress = progress.clone();
         let mut current_message = current_message.clone();
+        let mut has_transitioned = has_transitioned.clone();
+        let mut error = error.clone();
         move || {
+            // Check for existing error - don't continue if failed
+            if error.read().is_some() {
+                return;
+            }
+
             // For now, auto-advance through the extraction
             // In a real implementation, this would be driven by the AI provider
             let current_progress = *progress.read();
@@ -545,7 +558,9 @@ pub fn ExtractingPhase(props: ExtractingPhaseProps) -> Element {
                 *progress.write() = new_progress;
                 *current_message.write() = (new_progress as usize / 20).min(status_messages.len() - 1);
 
-                if new_progress >= 100 {
+                // Guard against multiple transitions (Issue C2)
+                if new_progress >= 100 && !*has_transitioned.read() {
+                    *has_transitioned.write() = true;
                     // Auto-advance to confirming fields after extraction completes
                     actions.advance_phase();
                 }
@@ -560,15 +575,43 @@ pub fn ExtractingPhase(props: ExtractingPhaseProps) -> Element {
         div {
             class: "flex flex-col items-center justify-center py-12 space-y-6",
 
-            ExtractingProgress {
-                status: ExtractionStatus::Extracting,
-                progress: *progress.read(),
-                message: Some(message.to_string()),
-            }
+            // Error display (Issue C3)
+            if let Some(err) = error.read().as_ref() {
+                div {
+                    class: "w-full max-w-md p-4 bg-destructive/10 text-destructive rounded-lg border border-destructive/50",
+                    p {
+                        class: "text-sm font-medium mb-2",
+                        "Extraction failed: {err}"
+                    }
+                    Button {
+                        variant: ButtonVariant::Secondary,
+                        onclick: {
+                            let mut error = error.clone();
+                            let mut progress = progress.clone();
+                            let mut current_message = current_message.clone();
+                            let mut has_transitioned = has_transitioned.clone();
+                            move |_| {
+                                // Reset state for retry
+                                *error.write() = None;
+                                *progress.write() = 0;
+                                *current_message.write() = 0;
+                                *has_transitioned.write() = false;
+                            }
+                        },
+                        "Retry"
+                    }
+                }
+            } else {
+                ExtractingProgress {
+                    status: ExtractionStatus::Extracting,
+                    progress: *progress.read(),
+                    message: Some(message.to_string()),
+                }
 
-            p {
-                class: "text-sm text-muted-foreground text-center max-w-md",
-                "Analyzing your input and extracting structured fields. This usually takes a few seconds."
+                p {
+                    class: "text-sm text-muted-foreground text-center max-w-md",
+                    "Analyzing your input and extracting structured fields. This usually takes a few seconds."
+                }
             }
         }
     }
@@ -958,7 +1001,7 @@ pub fn PreviewPhase(props: PreviewPhaseProps) -> Element {
 }
 
 /// Props for BrutalTruthItem
-#[derive(Clone, Props, PartialEq)]
+#[derive(Clone, Debug, Props, PartialEq)]
 pub struct BrutalTruthItemProps {
     /// The truth text
     pub text: String,
@@ -1011,6 +1054,26 @@ pub struct KirkCompilationPhaseProps {
     pub actions: ProgressiveDiscoverActions,
 }
 
+/// KIRK contract sections per specification
+const KIRK_SECTIONS: &[&str] = &[
+    "Problem Definition",
+    "Target Users",
+    "User Personas",
+    "Non-Users",
+    "Solution Overview",
+    "Key Features",
+    "User Scenarios",
+    "Success Criteria",
+    "Technical Constraints",
+    "Dependencies",
+    "Risks",
+    "Mitigations",
+    "Timeline",
+    "Resources",
+    "Milestones",
+    "Deliverables",
+];
+
 /// Kirk compilation phase component
 ///
 /// Shows progress while compiling to KIRK contracts.
@@ -1018,13 +1081,8 @@ pub struct KirkCompilationPhaseProps {
 pub fn KirkCompilationPhase(props: KirkCompilationPhaseProps) -> Element {
     let progress = use_signal(|| 0u8);
     let section_index = use_signal(|| 0usize);
-    let sections = [
-        "Metadata",
-        "EARS Requirements",
-        "Inversion Controls",
-        "Contracts",
-        "Acceptance Tests",
-    ];
+    // Number of sections determines progress increment (100/16 ≈ 7)
+    const PROGRESS_INCREMENT: u8 = 7;
 
     // Simulate compilation progress
     use_effect({
@@ -1034,9 +1092,13 @@ pub fn KirkCompilationPhase(props: KirkCompilationPhaseProps) -> Element {
         move || {
             let current_progress = *progress.read();
             if current_progress < 100 {
-                let new_progress = (current_progress + 20).min(100);
+                let new_progress = (current_progress + PROGRESS_INCREMENT).min(100);
                 *progress.write() = new_progress;
-                *section_index.write() = (new_progress as usize / 20).min(sections.len() - 1);
+                // Calculate section index based on progress percentage
+                let calculated_index = ((new_progress as usize * KIRK_SECTIONS.len()) / 100)
+                    .saturating_sub(1)
+                    .min(KIRK_SECTIONS.len() - 1);
+                *section_index.write() = calculated_index;
 
                 if new_progress >= 100 {
                     // Auto-advance to Locked phase
@@ -1046,7 +1108,7 @@ pub fn KirkCompilationPhase(props: KirkCompilationPhaseProps) -> Element {
         }
     });
 
-    let current_section = sections.get(*section_index.read()).map_or("Processing...", |s| *s);
+    let current_section = KIRK_SECTIONS.get(*section_index.read()).map_or("Processing...", |s| *s);
 
     rsx! {
         div {
@@ -1066,7 +1128,7 @@ pub fn KirkCompilationPhase(props: KirkCompilationPhaseProps) -> Element {
             // Section list
             div {
                 class: "w-full max-w-sm space-y-2",
-                for (idx, section) in sections.iter().enumerate() {
+                for (idx, section) in KIRK_SECTIONS.iter().enumerate() {
                     div {
                         class: format!(
                             "flex items-center gap-2 text-sm {}",
@@ -1277,11 +1339,13 @@ mod tests {
     #[test]
     fn test_scaffolding_prompt_button_props_equality() {
         let props1 = ScaffoldingPromptButtonProps {
-            text: "Test".to_string(),
+            label: "Test".to_string(),
+            template: "Template text".to_string(),
             onclick: EventHandler::new(|_| {}),
         };
         let props2 = ScaffoldingPromptButtonProps {
-            text: "Test".to_string(),
+            label: "Test".to_string(),
+            template: "Template text".to_string(),
             onclick: EventHandler::new(|_| {}),
         };
         // Props with EventHandler cannot be compared for equality
