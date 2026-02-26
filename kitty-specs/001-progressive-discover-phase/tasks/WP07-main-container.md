@@ -1,7 +1,9 @@
 ---
-lane: "for_review"
+lane: "done"
 shell_pid: "788107"
 agent: "claude"
+reviewed_by: "Lewis Prior"
+review_status: "approved"
 ---
 # WP07: Main Container
 
@@ -167,3 +169,4 @@ br close bd-1vgj bd-3ja1
 
 - 2026-02-26T16:48:13Z – claude – shell_pid=788107 – lane=doing – Assigned agent via workflow command
 - 2026-02-26T17:51:22Z – claude – shell_pid=788107 – lane=for_review – Crash recovery and phase state implemented (already in main at 2213459)
+- 2026-02-26T17:56:16Z – claude – shell_pid=788107 – lane=done – Review passed: crash recovery and phase state complete
