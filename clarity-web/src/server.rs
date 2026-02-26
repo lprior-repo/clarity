@@ -26,15 +26,15 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use tracing::{info, warn};
+use tracing::warn;
 
 // Re-export types from lattice and providers
 use crate::lattice::quality::{
     Answer as QualityAnswer, EarsRequirementRef, QualityScore,
 };
 use crate::providers::{
-    ExtractionContext, ExtractionError, ExtractedFields, FieldType,
-    OpenCodeProvider, SchemaField,
+    ExtractionContext, ExtractedFields, FieldType,
+    OpenCodeProvider,
 };
 use crate::config::ai::load_ai_config;
 use crate::components::discover::straw_man::StrawManValidation;
@@ -1581,6 +1581,7 @@ pub async fn compile_to_kirk(
 // ============================================================================
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod integration_tests {
     use super::*;
     use crate::providers::FieldExtraction;
