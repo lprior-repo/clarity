@@ -1274,23 +1274,6 @@ mod tests {
     }
 
     #[test]
-    fn test_scaffolding_prompt_button_props_equality() {
-        let props1 = ScaffoldingPromptButtonProps {
-            label: "Test".to_string(),
-            template: "Template text".to_string(),
-            onclick: EventHandler::new(|_| {}),
-        };
-        let props2 = ScaffoldingPromptButtonProps {
-            label: "Test".to_string(),
-            template: "Template text".to_string(),
-            onclick: EventHandler::new(|_| {}),
-        };
-        // Props with EventHandler cannot be compared for equality
-        drop(props1);
-        drop(props2);
-    }
-
-    #[test]
     fn test_brutal_truth_item_props_equality() {
         let props1 = BrutalTruthItemProps {
             text: "Test truth".to_string(),
@@ -1317,4 +1300,7 @@ mod tests {
         assert!(ConfirmSubPhase::ConfirmSolution.ordinal() < ConfirmSubPhase::ConfirmNonpersona.ordinal());
         assert!(ConfirmSubPhase::ConfirmNonpersona.ordinal() < ConfirmSubPhase::ConfirmScenario.ordinal());
     }
+
+    // Note: test_scaffolding_prompt_button_props_equality requires Dioxus runtime (EventHandler).
+    // It needs dioxus::prelude::launch_test() wrapper to run.
 }
