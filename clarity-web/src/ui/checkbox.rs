@@ -33,6 +33,7 @@ pub struct CheckboxProps {
 }
 
 /// Checkmark icon component
+#[allow(non_snake_case)]
 fn CheckIcon() -> Element {
     rsx! {
         svg {

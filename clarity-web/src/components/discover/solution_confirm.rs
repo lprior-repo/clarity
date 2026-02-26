@@ -180,7 +180,7 @@ pub fn VorpInput(props: VorpInputProps) -> Element {
         }
     });
 
-    let mut update_field = {
+    let update_field = {
         let mut vorp = vorp.clone();
         move |field: &str, value: String| {
             let current = local_vorp.read().clone();

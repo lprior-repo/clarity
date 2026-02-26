@@ -1,0 +1,12 @@
+{
+  "wp_id": "WP07",
+  "feature_slug": "001-progressive-discover-phase",
+  "worktree_path": ".worktrees/001-progressive-discover-phase-WP07",
+  "branch_name": "001-progressive-discover-phase-WP07",
+  "base_branch": "main",
+  "base_commit": "94c93186abfd959b91620348637c04ceb3dc8f1e",
+  "dependencies": [],
+  "created_at": "2026-02-26T16:48:13.475947+00:00",
+  "created_by": "implement-command",
+  "vcs_backend": "git"
+}

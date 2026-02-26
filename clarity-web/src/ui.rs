@@ -1,5 +1,7 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
+// Public API exports - used by library consumers
+#![allow(unused_imports)]
 
 // UI components module - shadcn-inspired components for Dioxus
 pub mod badge;

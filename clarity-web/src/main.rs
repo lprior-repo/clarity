@@ -1,5 +1,8 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
+// Binary crate - modules contain public items for future use
+#![allow(dead_code)]
+#![allow(unused_imports)]
 
 // Import main app component
 mod app;

@@ -10,6 +10,7 @@ use crate::lattice::quality::{calculate_quality, Answer, EarsRequirementRef, Inv
 use crate::storage::types::LatticeCache;
 
 /// Debounce delay for quality score calculation (ms)
+#[allow(dead_code)]
 const DEBOUNCE_MS: u64 = 500;
 
 /// Hook for calculating quality score with debouncing

@@ -34,7 +34,7 @@ pub fn QualityScoreBar(props: QualityScoreBarProps) -> Element {
     let QualityScoreBarProps {
         score,
         minimum_gate,
-        show_details: mut show_details,
+        mut show_details,
     } = props;
 
     let score_read = score.read();

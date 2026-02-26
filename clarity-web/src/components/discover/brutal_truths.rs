@@ -319,7 +319,7 @@ pub struct BrutalTruthsChecklistProps {
 pub fn BrutalTruthsChecklist(props: BrutalTruthsChecklistProps) -> Element {
   let mut expanded_help = use_signal(|| None::<BrutalTruth>);
 
-  let mut toggle_truth = {
+  let toggle_truth = {
     let mut checked = props.checked.clone();
     move |truth: BrutalTruth| {
       if props.enabled {
@@ -329,7 +329,7 @@ pub fn BrutalTruthsChecklist(props: BrutalTruthsChecklistProps) -> Element {
     }
   };
 
-  let mut toggle_help = {
+  let toggle_help = {
     move |truth: BrutalTruth| {
       let current = *expanded_help.read();
       *expanded_help.write() = if current == Some(truth) {

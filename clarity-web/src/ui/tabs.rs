@@ -77,7 +77,7 @@ struct TabsContext {
 pub fn Tabs(props: TabsProps) -> Element {
     let selected = use_signal(|| props.default_value.clone());
 
-    let context = use_context_provider(|| TabsContext {
+    let _context = use_context_provider(|| TabsContext {
         selected,
         on_change: props.on_value_change.clone(),
     });

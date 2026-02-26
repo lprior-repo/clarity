@@ -87,7 +87,7 @@ pub fn ExtractingPhase(props: ExtractingPhaseProps) -> Element {
         let mut progress = progress.clone();
         let mut current_message = current_message.clone();
         let mut has_transitioned = has_transitioned.clone();
-        let mut error = error.clone();
+        let error = error.clone();
         move || {
             // Check for existing error - don't continue if failed
             if error.read().is_some() {

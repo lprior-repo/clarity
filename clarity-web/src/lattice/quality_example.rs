@@ -18,6 +18,7 @@ use crate::lattice::quality::{
 };
 
 /// Default quality gate threshold (70%)
+#[allow(dead_code)]
 const DEFAULT_QUALITY_GATE: u8 = 70;
 
 /// Check if requirements pass quality gate
@@ -27,6 +28,7 @@ const DEFAULT_QUALITY_GATE: u8 = 70;
 ///
 /// # Returns
 /// `Ok(())` if passing, `Err` with quality issues if failing
+#[allow(dead_code)]
 pub fn check_quality_gate(
     answers: &[Answer],
     ears: &[EarsRequirementRef],

@@ -4,6 +4,8 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+// These re-exports are part of the public API, used by consumers via explicit import
+#![allow(unused_imports)]
 
 pub mod antithesis;
 pub mod brutal_truths;

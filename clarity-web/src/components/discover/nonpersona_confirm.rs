@@ -83,6 +83,7 @@ pub struct NonpersonaGuidanceProps {
 /// NonpersonaGuidance component
 ///
 /// Displays guidance and examples for defining nonpersonas.
+#[allow(non_snake_case)]
 pub fn NonpersonaGuidance(_props: NonpersonaGuidanceProps) -> Element {
     rsx! {
         div {

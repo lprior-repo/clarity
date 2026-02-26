@@ -122,6 +122,7 @@ pub struct DialogContentProps {
 }
 
 /// Close icon SVG component
+#[allow(non_snake_case)]
 fn CloseIcon() -> Element {
     rsx! {
         svg {

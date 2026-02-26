@@ -246,7 +246,7 @@ pub fn HolePunchingChecklist(props: HolePunchingChecklistProps) -> Element {
         }
     });
 
-    let mut update_hole = {
+    let update_hole = {
         let mut holes = holes.clone();
         move |hole_type: HoleType, value: String| {
             let current = local_holes.read().clone();

@@ -358,7 +358,7 @@ pub struct PromptPhaseProps {
 
 // Manual PartialEq implementation since Arc<dyn ExtractionProvider> doesn't implement it
 impl PartialEq for PromptPhaseProps {
-    fn eq(&self, other: &Self) -> bool {
+    fn eq(&self, _other: &Self) -> bool {
         // Signals and Arc<dyn Trait> can't be meaningfully compared
         // Return false to avoid incorrect equality assumptions
         false

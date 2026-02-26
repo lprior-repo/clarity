@@ -195,6 +195,7 @@ pub async fn get_coach_guidance(phase: Phase, context: String) -> Result<CoachRe
 /// Rate limiter for API calls per session
 ///
 /// Tracks request timestamps per session ID and enforces max requests per minute.
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 struct RateLimiter {
     max_requests_per_minute: u32,
@@ -213,6 +214,7 @@ impl RateLimiter {
     /// Check if a session is allowed to make a request
     ///
     /// Returns `Ok(())` if allowed, `Err` with remaining seconds if rate limited.
+    #[allow(dead_code)]
     async fn check_rate_limit(&self, session_id: &str) -> Result<(), u64> {
         let mut requests = self.requests.write().await;
         let now = Instant::now();
@@ -241,12 +243,14 @@ impl RateLimiter {
 }
 
 /// Global rate limiter instance
+#[allow(dead_code)]
 static RATE_LIMITER: once_cell::sync::Lazy<RateLimiter> =
     once_cell::sync::Lazy::new(|| RateLimiter::new(10));
 
 /// Global AI provider singleton
 ///
 /// Initialized once with config from `~/.config/clarity/ai.toml`.
+#[allow(dead_code)]
 static AI_PROVIDER: once_cell::sync::Lazy<Arc<OpenCodeProvider>> =
     once_cell::sync::Lazy::new(|| {
         let config = load_ai_config()
@@ -1083,6 +1087,7 @@ pub async fn validate_antithesis(
 }
 
 /// Calculate specificity score for a single antithesis point.
+#[allow(dead_code)]
 fn calculate_specificity(text: &str) -> f64 {
     let trimmed = text.trim();
 
@@ -1168,6 +1173,7 @@ pub async fn validate_vorp(
 }
 
 /// Validate the Value dimension.
+#[allow(dead_code)]
 fn validate_v_dimension(text: &str) -> f64 {
     let word_count = text.split_whitespace().count();
     let has_quantified_benefit = text.chars().any(|c| c.is_numeric())
@@ -1182,6 +1188,7 @@ fn validate_v_dimension(text: &str) -> f64 {
 }
 
 /// Validate the Obvious dimension.
+#[allow(dead_code)]
 fn validate_o_dimension(text: &str) -> f64 {
     let word_count = text.split_whitespace().count();
     let mentions_immediate = text.to_lowercase().contains("immediately")
@@ -1196,6 +1203,7 @@ fn validate_o_dimension(text: &str) -> f64 {
 }
 
 /// Validate the Real dimension.
+#[allow(dead_code)]
 fn validate_r_dimension(text: &str) -> f64 {
     let word_count = text.split_whitespace().count();
     let has_evidence = text.to_lowercase().contains("research")
@@ -1211,6 +1219,7 @@ fn validate_r_dimension(text: &str) -> f64 {
 }
 
 /// Validate the Possible dimension.
+#[allow(dead_code)]
 fn validate_p_dimension(text: &str) -> f64 {
     let word_count = text.split_whitespace().count();
     let mentions_resources = text.to_lowercase().contains("can build")
@@ -1367,6 +1376,7 @@ pub async fn extract_ears(
 }
 
 /// Extract EARS requirements from a text string.
+#[allow(dead_code)]
 fn extract_ears_from_text(text: &str, source_section: &str) -> Vec<ExtractedEarsRequirement> {
     let mut requirements = Vec::new();
     let sentences: Vec<&str> = text.split(&['.', '!', '?'][..]).collect();

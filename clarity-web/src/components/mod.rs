@@ -4,6 +4,9 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(ambiguous_glob_reexports)]
+// Public API exports - used by library consumers
+#![allow(unused_imports)]
 
 // Re-export discover components
 pub mod discover;
@@ -19,14 +22,8 @@ pub mod state_machine;
 
 // Re-exports
 pub use artifact_panel::ArtifactPanel;
-pub use discover::{
-    antithesis::AntithesisResponse, brutal_truths::*, extract_fields_button::*, extracting_progress::*,
-    field_card::*, locked_phase::*, locked_summary::*, nonpersona_confirm::*, persona_confirm::*,
-    preview_summary::*, problem_confirm::*, progressive_discover::*, prompt_textarea::*, quality_score::*,
-    scenario_confirm::*, solution_confirm::*, state::*, straw_man::*, types::*, phases::*,
-};
+pub use discover::*;
 pub use graph_visualizer::GraphVisualizer;
 pub use planning_coach::PlanningCoach;
-// Re-export specific items from quality to avoid ambiguous glob re-exports
-pub use quality::{QualityDimension, QualityScore, quality_issues};
+pub use quality::*;
 pub use state_machine::StateMachine;

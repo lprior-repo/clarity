@@ -4,6 +4,8 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+// Public API exports - used by library consumers
+#![allow(unused_imports)]
 
 //! Extraction provider trait and implementations
 //!

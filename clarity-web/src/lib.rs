@@ -4,6 +4,8 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+// Library crate - public items may not be used internally but are part of the public API
+#![allow(dead_code)]
 
 pub mod app;
 pub mod components;
