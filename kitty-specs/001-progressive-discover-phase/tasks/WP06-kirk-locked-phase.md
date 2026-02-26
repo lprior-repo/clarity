@@ -1,6 +1,7 @@
 ---
 lane: "doing"
 shell_pid: "749044"
+agent: "claude"
 ---
 # WP06: Kirk Compilation + Locked Phase
 
@@ -211,3 +212,7 @@ br claim bd-1jie bd-3cpp bd-1le0 bd-3nia
 # Implement components
 br close bd-1jie bd-3cpp bd-1le0 bd-3nia
 ```
+
+## Activity Log
+
+- 2026-02-26T16:46:35Z – claude – shell_pid=749044 – lane=doing – Assigned agent via workflow command
