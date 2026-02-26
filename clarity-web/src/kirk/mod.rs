@@ -24,9 +24,19 @@
 //! - **Ubiquitous**: Always applicable requirements
 //! - **Event-driven**: Triggered by specific events
 //! - **Unwanted**: Behaviors that must NOT occur
+//!
+//! # Progressive Discover Integration
+//!
+//! The `progressive_discover` module provides types for the Progressive Discover phase,
+//! including the 16-section KIRK contract structure and validation types.
 
+pub mod progressive_discover;
 pub mod types;
 
+pub use progressive_discover::{
+    AntithesisValidation, EarsExtraction, EarsPattern, ExtractedEarsRequirement,
+    HolePunchingValidation, KirkContract16, KirkSection, VorpValidation,
+};
 pub use types::{
     ContractVersion, EarsRequirement, EarsSection, Invariant, KirkContract, KirkContractError,
     Postcondition, Precondition, TypeRegistry, TypeSchema,

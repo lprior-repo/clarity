@@ -991,6 +991,592 @@ pub async fn validate_hole_punching_server(
 }
 
 // ============================================================================
+// Progressive Discover Server Functions (WP01)
+// ============================================================================
+
+use crate::kirk::progressive_discover::{
+    AntithesisValidation, EarsExtraction, EarsPattern, ExtractedEarsRequirement,
+    HolePunchingValidation, KirkContract16, VorpValidation,
+};
+use crate::storage::transcript_store::InterrogationTranscript;
+
+/// Validate antithesis (null hypothesis) points (bd-378l)
+///
+/// This function scores the quality of 3 null hypothesis points that represent
+/// realistic reasons why users might reject or ignore a proposed solution.
+///
+/// # Arguments
+/// * `points` - Array of exactly 3 antithesis points
+/// * `session_id` - Optional session identifier for rate limiting
+///
+/// # Returns
+/// * `Ok(AntithesisValidation)` - Validation result with score and suggestions
+/// * `Err(ServerFnError)` - Validation failed or rate limited
+///
+/// # Quality Scoring
+/// Points score higher for:
+/// - Being non-empty (base score)
+/// - Containing specific details (word count heuristics)
+/// - Using concrete language vs vague abstractions
+/// - Including numbers or specific reasoning
+#[server]
+pub async fn validate_antithesis(
+    points: [String; 3],
+    session_id: Option<String>,
+) -> Result<AntithesisValidation, ServerFnError> {
+    let session = session_id.as_deref().unwrap_or("default");
+
+    // Check rate limit
+    match RATE_LIMITER.check_rate_limit(session).await {
+        Ok(()) => {
+            info!(session, points_count = points.len(), "validate_antithesis: API call");
+        }
+        Err(retry_after) => {
+            warn!(
+                session,
+                retry_after,
+                "validate_antithesis: Rate limit exceeded"
+            );
+            return Err(ServerFnError::new(anyhow::anyhow!(
+                "Rate limit exceeded. Please retry after {retry_after}s"
+            )));
+        }
+    }
+
+    // Calculate quality scores for each point
+    let scores: Vec<f64> = points
+        .iter()
+        .map(|p| calculate_specificity(p))
+        .collect();
+
+    // Average score
+    let overall_score = scores.iter().sum::<f64>() / 3.0;
+
+    // Generate suggestions for low-scoring points
+    let suggestions = points
+        .iter()
+        .enumerate()
+        .filter(|(_, p)| p.len() < 20 || calculate_specificity(p) < 0.5)
+        .map(|(i, p)| {
+            if p.trim().is_empty() {
+                format!("Point {} is empty - please provide a specific reason users might reject this", i + 1)
+            } else if p.len() < 20 {
+                format!("Point {} is too brief - add more specific details", i + 1)
+            } else {
+                format!("Point {} needs more specificity - include concrete examples or numbers", i + 1)
+            }
+        })
+        .collect();
+
+    // Check if all points are valid (non-empty and specific enough)
+    let is_valid = points.iter().all(|p| !p.trim().is_empty() && calculate_specificity(p) >= 0.3);
+
+    info!(
+        session,
+        score = overall_score,
+        is_valid,
+        suggestion_count = suggestions.len(),
+        "validate_antithesis: Validation completed"
+    );
+
+    Ok(AntithesisValidation::new(overall_score, suggestions, is_valid))
+}
+
+/// Calculate specificity score for a single antithesis point.
+fn calculate_specificity(text: &str) -> f64 {
+    let trimmed = text.trim();
+
+    if trimmed.is_empty() {
+        return 0.0;
+    }
+
+    let word_count = trimmed.split_whitespace().count();
+    let has_numbers = trimmed.chars().any(|c| c.is_numeric());
+    let has_specific_terms = ["exactly", "specifically", "precisely", "only", "because", "for example"]
+        .iter()
+        .any(|t| trimmed.to_lowercase().contains(t));
+
+    // Base score from word count (capped at 1.0)
+    let base = (word_count as f64 / 20.0).min(1.0);
+
+    // Boosts for specificity indicators
+    let number_boost = if has_numbers { 0.15 } else { 0.0 };
+    let term_boost = if has_specific_terms { 0.1 } else { 0.0 };
+
+    (base + number_boost + term_boost).min(1.0)
+}
+
+/// Validate VORP justification (bd-2mcc)
+///
+/// VORP (Value, Obvious, Real, Possible) is a framework for evaluating
+/// whether a solution idea is worth pursuing.
+///
+/// # Arguments
+/// * `value` - Does it provide meaningful value to users?
+/// * `obvious` - Is the value immediately apparent to users?
+/// * `real` - Are the users and problem real?
+/// * `possible` - Can we actually build this?
+/// * `session_id` - Optional session identifier for rate limiting
+///
+/// # Returns
+/// * `Ok(VorpValidation)` - Validation result with scores and suggestions
+/// * `Err(ServerFnError)` - Validation failed or rate limited
+#[server]
+pub async fn validate_vorp(
+    value: String,
+    obvious: String,
+    real: String,
+    possible: String,
+    session_id: Option<String>,
+) -> Result<VorpValidation, ServerFnError> {
+    let session = session_id.as_deref().unwrap_or("default");
+
+    // Check rate limit
+    match RATE_LIMITER.check_rate_limit(session).await {
+        Ok(()) => {
+            info!(session, "validate_vorp: API call");
+        }
+        Err(retry_after) => {
+            warn!(
+                session,
+                retry_after,
+                "validate_vorp: Rate limit exceeded"
+            );
+            return Err(ServerFnError::new(anyhow::anyhow!(
+                "Rate limit exceeded. Please retry after {retry_after}s"
+            )));
+        }
+    }
+
+    // Validate each dimension
+    let value_score = validate_v_dimension(&value);
+    let obvious_score = validate_o_dimension(&obvious);
+    let real_score = validate_r_dimension(&real);
+    let possible_score = validate_p_dimension(&possible);
+
+    let validation = VorpValidation::new(value_score, obvious_score, real_score, possible_score);
+
+    info!(
+        session,
+        overall = validation.overall_score,
+        passes = validation.passes(),
+        weakest = validation.weakest_dimension().map(|(n, _)| n.as_str()),
+        "validate_vorp: Validation completed"
+    );
+
+    Ok(validation)
+}
+
+/// Validate the Value dimension.
+fn validate_v_dimension(text: &str) -> f64 {
+    let word_count = text.split_whitespace().count();
+    let has_quantified_benefit = text.chars().any(|c| c.is_numeric())
+        || text.to_lowercase().contains("save")
+        || text.to_lowercase().contains("reduce")
+        || text.to_lowercase().contains("increase");
+
+    let base = (word_count as f64 / 15.0).min(1.0);
+    let boost = if has_quantified_benefit { 0.2 } else { 0.0 };
+
+    (base + boost).min(1.0)
+}
+
+/// Validate the Obvious dimension.
+fn validate_o_dimension(text: &str) -> f64 {
+    let word_count = text.split_whitespace().count();
+    let mentions_immediate = text.to_lowercase().contains("immediately")
+        || text.to_lowercase().contains("instant")
+        || text.to_lowercase().contains("right away")
+        || text.to_lowercase().contains("clear");
+
+    let base = (word_count as f64 / 15.0).min(1.0);
+    let boost = if mentions_immediate { 0.2 } else { 0.0 };
+
+    (base + boost).min(1.0)
+}
+
+/// Validate the Real dimension.
+fn validate_r_dimension(text: &str) -> f64 {
+    let word_count = text.split_whitespace().count();
+    let has_evidence = text.to_lowercase().contains("research")
+        || text.to_lowercase().contains("study")
+        || text.to_lowercase().contains("survey")
+        || text.to_lowercase().contains("interview")
+        || text.chars().any(|c| c.is_numeric());
+
+    let base = (word_count as f64 / 15.0).min(1.0);
+    let boost = if has_evidence { 0.2 } else { 0.0 };
+
+    (base + boost).min(1.0)
+}
+
+/// Validate the Possible dimension.
+fn validate_p_dimension(text: &str) -> f64 {
+    let word_count = text.split_whitespace().count();
+    let mentions_resources = text.to_lowercase().contains("can build")
+        || text.to_lowercase().contains("technology")
+        || text.to_lowercase().contains("team")
+        || text.to_lowercase().contains("skill");
+
+    let base = (word_count as f64 / 15.0).min(1.0);
+    let boost = if mentions_resources { 0.2 } else { 0.0 };
+
+    (base + boost).min(1.0)
+}
+
+/// Validate hole punching for scenario gaps (bd-13yb)
+///
+/// Checks if all 3 hole types have been addressed in the scenario.
+///
+/// # Arguments
+/// * `discovery_hole` - How the user discovers the feature
+/// * `edge_case_hole` - What happens in edge cases
+/// * `motivation_dropoff` - Why users continue through friction
+/// * `session_id` - Optional session identifier for rate limiting
+///
+/// # Returns
+/// * `Ok(HolePunchingValidation)` - Validation result
+/// * `Err(ServerFnError)` - Validation failed or rate limited
+#[server]
+pub async fn validate_hole_punching_v2(
+    discovery_hole: Option<String>,
+    edge_case_hole: Option<String>,
+    motivation_dropoff: Option<String>,
+    session_id: Option<String>,
+) -> Result<HolePunchingValidation, ServerFnError> {
+    let session = session_id.as_deref().unwrap_or("default");
+
+    // Check rate limit
+    match RATE_LIMITER.check_rate_limit(session).await {
+        Ok(()) => {
+            info!(session, "validate_hole_punching_v2: API call");
+        }
+        Err(retry_after) => {
+            warn!(
+                session,
+                retry_after,
+                "validate_hole_punching_v2: Rate limit exceeded"
+            );
+            return Err(ServerFnError::new(anyhow::anyhow!(
+                "Rate limit exceeded. Please retry after {retry_after}s"
+            )));
+        }
+    }
+
+    // Normalize empty strings to None
+    let discovery_hole = discovery_hole.filter(|s| !s.trim().is_empty());
+    let edge_case_hole = edge_case_hole.filter(|s| !s.trim().is_empty());
+    let motivation_dropoff = motivation_dropoff.filter(|s| !s.trim().is_empty());
+
+    let results = HolePunchingResults {
+        discovery_hole,
+        edge_case_hole,
+        motivation_dropoff,
+    };
+
+    let validation = HolePunchingValidation::new(results);
+
+    info!(
+        session,
+        is_complete = validation.is_complete,
+        addressed_count = validation.addressed_count,
+        "validate_hole_punching_v2: Validation completed"
+    );
+
+    Ok(validation)
+}
+
+/// Extract EARS requirements from transcript (bd-zf68)
+///
+/// EARS (Easy Approach to Requirements Syntax) provides patterns for
+/// writing clear, testable requirements.
+///
+/// # Arguments
+/// * `transcript` - The interrogation transcript to extract from
+/// * `session_id` - Optional session identifier for rate limiting
+///
+/// # Returns
+/// * `Ok(EarsExtraction)` - Extracted requirements
+/// * `Err(ServerFnError)` - Extraction failed or rate limited
+#[server]
+pub async fn extract_ears(
+    transcript: InterrogationTranscript,
+    session_id: Option<String>,
+) -> Result<EarsExtraction, ServerFnError> {
+    let session = session_id.as_deref().unwrap_or("default");
+
+    // Check rate limit
+    match RATE_LIMITER.check_rate_limit(session).await {
+        Ok(()) => {
+            info!(session, "extract_ears: API call");
+        }
+        Err(retry_after) => {
+            warn!(
+                session,
+                retry_after,
+                "extract_ears: Rate limit exceeded"
+            );
+            return Err(ServerFnError::new(anyhow::anyhow!(
+                "Rate limit exceeded. Please retry after {retry_after}s"
+            )));
+        }
+    }
+
+    let mut requirements = Vec::new();
+
+    // Extract from problem statement
+    if !transcript.problem.content.is_empty() {
+        requirements.extend(extract_ears_from_text(
+            &transcript.problem.content,
+            "problem",
+        ));
+    }
+
+    // Extract from solution
+    if !transcript.solution.content.is_empty() {
+        requirements.extend(extract_ears_from_text(
+            &transcript.solution.content,
+            "solution",
+        ));
+    }
+
+    // Extract from scenario
+    if !transcript.scenario.trigger.is_empty() {
+        requirements.extend(extract_ears_from_text(
+            &transcript.scenario.trigger,
+            "scenario.trigger",
+        ));
+    }
+    if !transcript.scenario.value_moment.is_empty() {
+        requirements.extend(extract_ears_from_text(
+            &transcript.scenario.value_moment,
+            "scenario.value_moment",
+        ));
+    }
+
+    let extraction = EarsExtraction::new(requirements);
+
+    info!(
+        session,
+        total_count = extraction.total_count,
+        sections_analyzed = extraction.analyzed_sections.len(),
+        "extract_ears: Extraction completed"
+    );
+
+    Ok(extraction)
+}
+
+/// Extract EARS requirements from a text string.
+fn extract_ears_from_text(text: &str, source_section: &str) -> Vec<ExtractedEarsRequirement> {
+    let mut requirements = Vec::new();
+    let sentences: Vec<&str> = text.split(&['.', '!', '?'][..]).collect();
+
+    // Look for EARS patterns
+    for (i, sentence) in sentences.iter().enumerate() {
+        let sentence_lower = sentence.to_lowercase();
+
+        let pattern = if sentence_lower.contains("shall not") || sentence_lower.contains("must not") {
+            Some(EarsPattern::Unwanted)
+        } else if sentence_lower.contains("when ") || sentence_lower.contains("if ") {
+            Some(EarsPattern::EventDriven)
+        } else if sentence_lower.contains("while ") || sentence_lower.contains("during ") {
+            Some(EarsPattern::StateDriven)
+        } else if sentence_lower.contains("shall ") || sentence_lower.contains("must ") || sentence_lower.contains("will ") {
+            Some(EarsPattern::Ubiquitous)
+        } else {
+            None
+        };
+
+        if let Some(p) = pattern {
+            let trimmed = sentence.trim();
+            if !trimmed.is_empty() {
+                requirements.push(ExtractedEarsRequirement::new(
+                    format!("{}-{}", source_section, i),
+                    trimmed.to_string(),
+                    p,
+                    source_section.to_string(),
+                ));
+            }
+        }
+    }
+
+    // Also check for keywords indicating requirements
+    let lower = text.to_lowercase();
+    if lower.contains("require") || lower.contains("need") || lower.contains("should") {
+        // Add as ubiquitous if no specific pattern found and sentence is substantive
+        if requirements.is_empty() && text.len() > 20 {
+            requirements.push(ExtractedEarsRequirement::new(
+                format!("{}-implicit", source_section),
+                text.trim().to_string(),
+                EarsPattern::Ubiquitous,
+                source_section.to_string(),
+            ));
+        }
+    }
+
+    requirements
+}
+
+/// Compile transcript to 16-section KIRK contract (bd-l1qq)
+///
+/// Takes a completed interrogation transcript and compiles it into
+/// the 16-section KIRK contract structure.
+///
+/// # Arguments
+/// * `transcript` - The interrogation transcript to compile
+/// * `session_id` - Optional session identifier for rate limiting
+///
+/// # Returns
+/// * `Ok(KirkContract16)` - Compiled 16-section contract
+/// * `Err(ServerFnError)` - Compilation failed or rate limited
+#[server]
+pub async fn compile_to_kirk(
+    transcript: InterrogationTranscript,
+    session_id: Option<String>,
+) -> Result<KirkContract16, ServerFnError> {
+    let session = session_id.as_deref().unwrap_or("default");
+
+    // Check rate limit
+    match RATE_LIMITER.check_rate_limit(session).await {
+        Ok(()) => {
+            info!(session, "compile_to_kirk: API call");
+        }
+        Err(retry_after) => {
+            warn!(
+                session,
+                retry_after,
+                "compile_to_kirk: Rate limit exceeded"
+            );
+            return Err(ServerFnError::new(anyhow::anyhow!(
+                "Rate limit exceeded. Please retry after {retry_after}s"
+            )));
+        }
+    }
+
+    let mut contract = KirkContract16::new();
+
+    // Section 0: Original Prompt
+    contract = contract
+        .with_section_content(0, transcript.original_prompt.clone())
+        .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 0")))?;
+
+    // Section 1: Problem Statement
+    contract = contract
+        .with_section_content(1, transcript.problem.content.clone())
+        .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 1")))?;
+
+    // Section 2: Antithesis Points
+    let antithesis_content = transcript.antithesis.points.join("\n\n");
+    contract = contract
+        .with_section_content(2, antithesis_content)
+        .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 2")))?;
+
+    // Section 3: Target Persona
+    contract = contract
+        .with_section_content(3, transcript.persona.content.clone())
+        .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 3")))?;
+
+    // Section 4: Straw Man Validation
+    let straw_man_content = if transcript.straw_man_validation.passed {
+        "Passed - No straw man traps detected".to_string()
+    } else {
+        format!(
+            "Traps detected: {:?}",
+            transcript.straw_man_validation.traps_detected
+        )
+    };
+    contract = contract
+        .with_section_content(4, straw_man_content)
+        .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 4")))?;
+
+    // Section 5: Solution Description
+    contract = contract
+        .with_section_content(5, transcript.solution.content.clone())
+        .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 5")))?;
+
+    // Section 6: VORP Justification
+    contract = contract
+        .with_section_content(6, transcript.vorp_justification.clone())
+        .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 6")))?;
+
+    // Section 7: Non-Persona
+    contract = contract
+        .with_section_content(7, transcript.nonpersona.content.clone())
+        .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 7")))?;
+
+    // Section 8: Scenario Trigger
+    contract = contract
+        .with_section_content(8, transcript.scenario.trigger.clone())
+        .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 8")))?;
+
+    // Section 9: Scenario Value Moment
+    contract = contract
+        .with_section_content(9, transcript.scenario.value_moment.clone())
+        .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 9")))?;
+
+    // Section 10: Scenario Feeling
+    contract = contract
+        .with_section_content(10, transcript.scenario.feeling.clone())
+        .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 10")))?;
+
+    // Section 11: Discovery Hole
+    if let Some(ref discovery) = transcript.scenario.hole_punching.discovery_hole {
+        contract = contract
+            .with_section_content(11, discovery.clone())
+            .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 11")))?;
+    }
+
+    // Section 12: Edge Case Hole
+    if let Some(ref edge_case) = transcript.scenario.hole_punching.edge_case_hole {
+        contract = contract
+            .with_section_content(12, edge_case.clone())
+            .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 12")))?;
+    }
+
+    // Section 13: Motivation Drop-off
+    if let Some(ref motivation) = transcript.scenario.hole_punching.motivation_dropoff {
+        contract = contract
+            .with_section_content(13, motivation.clone())
+            .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 13")))?;
+    }
+
+    // Section 14: EARS Requirements (extracted)
+    let ears_extraction = extract_ears_from_text(&transcript.problem.content, "problem")
+        .into_iter()
+        .chain(extract_ears_from_text(&transcript.solution.content, "solution"))
+        .map(|r| r.text)
+        .collect::<Vec<_>>()
+        .join("\n\n");
+
+    contract = contract
+        .with_section_content(14, ears_extraction)
+        .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 14")))?;
+
+    // Section 15: Compilation Metadata
+    let metadata = serde_json::json!({
+        "compiled_at": chrono::Utc::now().to_rfc3339(),
+        "schema_version": "1.0.0",
+        "session_id": session,
+        "is_completed": transcript.is_completed(),
+    })
+    .to_string();
+
+    contract = contract
+        .with_section_content(15, metadata)
+        .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 15")))?;
+
+    info!(
+        session,
+        filled_sections = contract.filled_section_count(),
+        completion = contract.completion_percentage(),
+        is_complete = contract.is_complete(),
+        "compile_to_kirk: Compilation completed"
+    );
+
+    Ok(contract)
+}
+
+// ============================================================================
 // Integration Tests
 // ============================================================================
 
