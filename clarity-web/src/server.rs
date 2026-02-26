@@ -1931,9 +1931,9 @@ mod integration_tests {
     /// Test HolePunchingResults::is_complete
     #[test]
     fn test_hole_punching_results_is_complete() {
-        // All holes addressed
+        // All holes addressed with non-empty content
         let complete = HolePunchingResults {
-            discovery_hole: Some("".to_string()),
+            discovery_hole: Some("a".to_string()),
             edge_case_hole: Some("x".to_string()),
             motivation_dropoff: Some("y".to_string()),
         };

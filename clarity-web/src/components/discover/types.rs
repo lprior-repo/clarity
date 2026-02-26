@@ -146,18 +146,27 @@ impl HolePunchingResults {
     /// (i.e., all fields are `Some` with non-empty content).
     #[must_use]
     pub fn is_complete(&self) -> bool {
-        self.discovery_hole.is_some()
-            && self.edge_case_hole.is_some()
-            && self.motivation_dropoff.is_some()
+        self.discovery_hole.as_ref().map_or(false, |s| !s.trim().is_empty())
+            && self.edge_case_hole.as_ref().map_or(false, |s| !s.trim().is_empty())
+            && self.motivation_dropoff.as_ref().map_or(false, |s| !s.trim().is_empty())
     }
 
     /// Check if a specific hole type has been addressed
     #[must_use]
     pub fn is_addressed(&self, hole_type: HoleType) -> bool {
         match hole_type {
-            HoleType::DiscoveryHole => self.discovery_hole.is_some(),
-            HoleType::EdgeCaseHole => self.edge_case_hole.is_some(),
-            HoleType::MotivationDropOff => self.motivation_dropoff.is_some(),
+            HoleType::DiscoveryHole => self
+                .discovery_hole
+                .as_ref()
+                .map_or(false, |s| !s.trim().is_empty()),
+            HoleType::EdgeCaseHole => self
+                .edge_case_hole
+                .as_ref()
+                .map_or(false, |s| !s.trim().is_empty()),
+            HoleType::MotivationDropOff => self
+                .motivation_dropoff
+                .as_ref()
+                .map_or(false, |s| !s.trim().is_empty()),
         }
     }
 
@@ -198,9 +207,10 @@ impl HolePunchingResults {
     /// Get count of addressed holes (0-3)
     #[must_use]
     pub fn addressed_count(&self) -> usize {
-        usize::from(self.discovery_hole.is_some())
-            + usize::from(self.edge_case_hole.is_some())
-            + usize::from(self.motivation_dropoff.is_some())
+        HoleType::all()
+            .iter()
+            .filter(|&&hole_type| self.is_addressed(hole_type))
+            .count()
     }
 
     /// Normalize an explanation string, converting empty/whitespace to None
