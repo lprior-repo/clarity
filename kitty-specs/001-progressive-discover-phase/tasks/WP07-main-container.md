@@ -1,6 +1,7 @@
 ---
 lane: "doing"
 shell_pid: "788107"
+agent: "claude"
 ---
 # WP07: Main Container
 
@@ -161,3 +162,7 @@ br claim bd-1vgj bd-3ja1
 # Implement components
 br close bd-1vgj bd-3ja1
 ```
+
+## Activity Log
+
+- 2026-02-26T16:48:13Z – claude – shell_pid=788107 – lane=doing – Assigned agent via workflow command
