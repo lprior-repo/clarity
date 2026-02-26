@@ -1,8 +1,10 @@
 ---
-lane: "for_review"
+lane: "done"
 dependencies: []
 agent: claude
 shell_pid: '392507'
+reviewed_by: "Lewis Prior"
+review_status: "approved"
 ---
 # WP01: Foundation Types and Storage
 
@@ -341,3 +343,4 @@ Focus on:
 
 - 2026-02-26T15:08:46Z – claude – shell_pid=392507 – lane=doing – Assigned agent via workflow command
 - 2026-02-26T17:46:08Z – claude – shell_pid=392507 – lane=for_review – T010 Auto-save and T011 crash recovery implemented
+- 2026-02-26T17:55:39Z – claude – shell_pid=392507 – lane=done – Review passed: tests fixed
