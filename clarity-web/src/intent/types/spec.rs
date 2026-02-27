@@ -5,7 +5,7 @@
 #![forbid(unsafe_code)]
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use super::{AIHints, AntiPattern, Feature, Invariant, TypeError};
 
@@ -128,6 +128,13 @@ impl Spec {
   fn detect_circular_dependencies(&self) -> Result<(), TypeError> {
     let feature_names: HashSet<&str> = self.features.iter().map(|f| f.name.as_str()).collect();
 
+    // Build dependency map for efficient lookup
+    let dep_map: HashMap<&str, &Vec<String>> = self
+      .features
+      .iter()
+      .map(|f| (f.name.as_str(), &f.depends_on))
+      .collect();
+
     let mut visiting: HashSet<&str> = HashSet::new();
     let mut visited: HashSet<&str> = HashSet::new();
 
@@ -140,10 +147,9 @@ impl Spec {
 
       Self::dfs_visit(
         feature.name.as_str(),
-        &feature.depends_on,
+        &dep_map,
         &mut visiting,
         &mut visited,
-        &feature_names,
       )?;
     }
 
@@ -152,10 +158,9 @@ impl Spec {
 
   fn dfs_visit<'a>(
     node: &'a str,
-    dependencies: &[String],
+    dep_map: &HashMap<&'a str, &'a Vec<String>>,
     visiting: &mut HashSet<&'a str>,
     visited: &mut HashSet<&'a str>,
-    all_features: &HashSet<&'a str>,
   ) -> Result<(), TypeError> {
     if visited.contains(node) {
       return Ok(());
@@ -170,12 +175,14 @@ impl Spec {
 
     visiting.insert(node);
 
-    for dep in dependencies {
-      if !all_features.contains(dep.as_str()) {
-        continue;
-      }
-      if visiting.contains(dep.as_str()) {
-        return Err(TypeError::CircularDependency(node.to_string(), dep.clone()));
+    // Get this node's dependencies and recursively visit each one
+    if let Some(dependencies) = dep_map.get(node) {
+      for dep in *dependencies {
+        if visiting.contains(dep.as_str()) {
+          return Err(TypeError::CircularDependency(node.to_string(), dep.clone()));
+        }
+        // Recursively visit the dependency to traverse its own dependencies
+        Self::dfs_visit(dep.as_str(), dep_map, visiting, visited)?;
       }
     }
 
@@ -295,5 +302,79 @@ mod tests {
 
     let result = spec.validate();
     assert!(result.is_ok());
+  }
+
+  #[test]
+  fn test_spec_validate_direct_cycle() {
+    // Test A -> B -> A cycle detection
+    let mut spec = match Spec::new("test-spec".to_string()) {
+      Ok(value) => value,
+      Err(_) => return,
+    };
+
+    // Feature A depends on B
+    let mut feature_a = match Feature::new("feature_a".to_string()) {
+      Ok(value) => value,
+      Err(_) => return,
+    };
+    feature_a.add_dependency("feature_b".to_string());
+
+    // Feature B depends on A (creates cycle)
+    let mut feature_b = match Feature::new("feature_b".to_string()) {
+      Ok(value) => value,
+      Err(_) => return,
+    };
+    feature_b.add_dependency("feature_a".to_string());
+
+    let add_a_result = spec.add_feature(feature_a);
+    assert!(add_a_result.is_ok());
+
+    let add_b_result = spec.add_feature(feature_b);
+    assert!(add_b_result.is_ok());
+
+    let result = spec.validate();
+    assert!(matches!(result, Err(TypeError::CircularDependency(_, _))));
+  }
+
+  #[test]
+  fn test_spec_validate_multi_hop_cycle() {
+    // Test A -> B -> C -> A cycle detection (3-hop cycle)
+    let mut spec = match Spec::new("test-spec".to_string()) {
+      Ok(value) => value,
+      Err(_) => return,
+    };
+
+    // Feature A depends on B
+    let mut feature_a = match Feature::new("feature_a".to_string()) {
+      Ok(value) => value,
+      Err(_) => return,
+    };
+    feature_a.add_dependency("feature_b".to_string());
+
+    // Feature B depends on C
+    let mut feature_b = match Feature::new("feature_b".to_string()) {
+      Ok(value) => value,
+      Err(_) => return,
+    };
+    feature_b.add_dependency("feature_c".to_string());
+
+    // Feature C depends on A (creates 3-hop cycle)
+    let mut feature_c = match Feature::new("feature_c".to_string()) {
+      Ok(value) => value,
+      Err(_) => return,
+    };
+    feature_c.add_dependency("feature_a".to_string());
+
+    let add_a_result = spec.add_feature(feature_a);
+    assert!(add_a_result.is_ok());
+
+    let add_b_result = spec.add_feature(feature_b);
+    assert!(add_b_result.is_ok());
+
+    let add_c_result = spec.add_feature(feature_c);
+    assert!(add_c_result.is_ok());
+
+    let result = spec.validate();
+    assert!(matches!(result, Err(TypeError::CircularDependency(_, _))));
   }
 }
