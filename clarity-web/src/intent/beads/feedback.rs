@@ -11,8 +11,5 @@ mod store;
 
 pub use domain::{BeadFeedback, BeadRecord, BeadStatus, FeedbackError};
 pub use service::{
-    collect_feedback,
-    collect_feedback_with_reviewer,
-    get_bead_feedback_history,
-    update_bead_status,
+  collect_feedback, collect_feedback_with_reviewer, get_bead_feedback_history, update_bead_status,
 };

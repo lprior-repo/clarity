@@ -80,7 +80,7 @@ fn dfs_collect_cycles(
     neighbors
       .iter()
       .fold((visited, stack, cycles), |state, neighbor| {
-        let (visited_next, stack_next, cycles_next) = state;
+        let (visited_next, stack_next, cycles_list) = state;
         if !visited_next.contains(neighbor) {
           dfs_collect_cycles(
             neighbor,
@@ -88,7 +88,7 @@ fn dfs_collect_cycles(
             visited_next,
             stack_next,
             path_now.clone(),
-            cycles_next,
+            cycles_list,
           )
         } else if stack_next.contains(neighbor) {
           let cycle = path_now
@@ -98,11 +98,11 @@ fn dfs_collect_cycles(
           let cycles_added = (!cycle.is_empty())
             .then_some(cycle)
             .into_iter()
-            .chain(cycles_next)
+            .chain(cycles_list)
             .collect::<Vec<_>>();
           (visited_next, stack_next, cycles_added)
         } else {
-          (visited_next, stack_next, cycles_next)
+          (visited_next, stack_next, cycles_list)
         }
       })
   } else {
