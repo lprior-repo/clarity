@@ -20,7 +20,7 @@ pub fn compute_critical_path(beads: &[PlanBead]) -> Vec<String> {
     ),
     |(completion, predecessor), bead_id| {
       let bead = beads.iter().find(|candidate| candidate.id == *bead_id);
-      bead.map_or((completion, predecessor), |current| {
+      if let Some(current) = bead {
         let best_dependency = current
           .dependencies
           .iter()
@@ -44,15 +44,19 @@ pub fn compute_critical_path(beads: &[PlanBead]) -> Vec<String> {
           .chain(std::iter::once((bead_id.clone(), completion_score)))
           .collect::<HashMap<_, _>>();
 
-        let predecessor_next = best_dependency.map_or(predecessor, |(dep, _)| {
+        let predecessor_next = if let Some((dep, _)) = best_dependency {
           predecessor
             .into_iter()
             .chain(std::iter::once((bead_id.clone(), dep)))
             .collect::<HashMap<_, _>>()
-        });
+        } else {
+          predecessor
+        };
 
         (completion_next, predecessor_next)
-      })
+      } else {
+        (completion, predecessor)
+      }
     },
   );
 

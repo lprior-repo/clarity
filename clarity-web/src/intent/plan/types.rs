@@ -4,12 +4,12 @@
 #![warn(clippy::pedantic)]
 #![forbid(unsafe_code)]
 
-mod types_bead;
-mod types_error;
-mod types_execution_plan;
-mod types_phase;
+mod bead;
+mod error;
+mod execution_plan;
+mod phase;
 
-pub use types_bead::PlanBead;
-pub use types_error::PlanError;
-pub use types_execution_plan::ExecutionPlan;
-pub use types_phase::PlanPhase;
+pub use bead::PlanBead;
+pub use error::PlanError;
+pub use execution_plan::ExecutionPlan;
+pub use phase::PlanPhase;

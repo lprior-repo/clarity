@@ -1,5 +1,5 @@
 use crate::intent::interview::types::InterviewSession;
-use crate::intent::plan::plan_mode_types::{BeadStatus, ExecutionPlan, PhaseStatus, PlanBead};
+use super::types::{BeadStatus, ExecutionPlan, PhaseStatus, PlanBead};
 use std::collections::HashSet;
 
 #[must_use]

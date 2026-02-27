@@ -76,39 +76,38 @@ fn dfs_collect_cycles(
     .chain(std::iter::once(node.to_string()))
     .collect::<Vec<_>>();
 
-  let cycled = adjacency.get(node).map_or_else(
-    || (visited, stack, cycles),
-    |neighbors| {
-      neighbors
-        .iter()
-        .fold((visited, stack, cycles), |state, neighbor| {
-          let (visited_next, stack_next, cycles_next) = state;
-          if !visited_next.contains(neighbor) {
-            dfs_collect_cycles(
-              neighbor,
-              adjacency,
-              visited_next,
-              stack_next,
-              path_now.clone(),
-              cycles_next,
-            )
-          } else if stack_next.contains(neighbor) {
-            let cycle = path_now
-              .iter()
-              .position(|item| item == neighbor)
-              .map_or_else(Vec::new, |index| path_now[index..].to_vec());
-            let cycles_added = (!cycle.is_empty())
-              .then_some(cycle)
-              .into_iter()
-              .chain(cycles_next)
-              .collect::<Vec<_>>();
-            (visited_next, stack_next, cycles_added)
-          } else {
-            (visited_next, stack_next, cycles_next)
-          }
-        })
-    },
-  );
+  let cycled = if let Some(neighbors) = adjacency.get(node) {
+    neighbors
+      .iter()
+      .fold((visited, stack, cycles), |state, neighbor| {
+        let (visited_next, stack_next, cycles_next) = state;
+        if !visited_next.contains(neighbor) {
+          dfs_collect_cycles(
+            neighbor,
+            adjacency,
+            visited_next,
+            stack_next,
+            path_now.clone(),
+            cycles_next,
+          )
+        } else if stack_next.contains(neighbor) {
+          let cycle = path_now
+            .iter()
+            .position(|item| item == neighbor)
+            .map_or_else(Vec::new, |index| path_now[index..].to_vec());
+          let cycles_added = (!cycle.is_empty())
+            .then_some(cycle)
+            .into_iter()
+            .chain(cycles_next)
+            .collect::<Vec<_>>();
+          (visited_next, stack_next, cycles_added)
+        } else {
+          (visited_next, stack_next, cycles_next)
+        }
+      })
+  } else {
+    (visited, stack, cycles)
+  };
 
   let (visited_final, stack_final, cycles_final) = cycled;
   let stack_without = stack_final
@@ -144,18 +143,17 @@ fn visit_node(
   adjacency: &HashMap<String, Vec<String>>,
   order: Vec<String>,
 ) -> Vec<String> {
-  let with_dependencies = adjacency.get(node).map_or_else(
-    || order,
-    |dependencies| {
-      dependencies.iter().fold(order, |current, dep| {
-        if current.contains(dep) {
-          current
-        } else {
-          visit_node(dep, adjacency, current)
-        }
-      })
-    },
-  );
+  let with_dependencies = if let Some(dependencies) = adjacency.get(node) {
+    dependencies.iter().fold(order, |current, dep| {
+      if current.contains(dep) {
+        current
+      } else {
+        visit_node(dep, adjacency, current)
+      }
+    })
+  } else {
+    order
+  };
 
   if with_dependencies.iter().any(|existing| existing == node) {
     with_dependencies

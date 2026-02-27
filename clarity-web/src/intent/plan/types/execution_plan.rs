@@ -1,6 +1,6 @@
-use super::types_bead::PlanBead;
-use super::types_error::PlanError;
-use super::types_phase::PlanPhase;
+use super::bead::PlanBead;
+use super::error::PlanError;
+use super::phase::PlanPhase;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

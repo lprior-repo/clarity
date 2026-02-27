@@ -1,4 +1,4 @@
-use super::types_error::PlanError;
+use super::error::PlanError;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

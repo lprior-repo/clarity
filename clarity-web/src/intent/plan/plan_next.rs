@@ -4,7 +4,7 @@
 #![warn(clippy::pedantic)]
 #![forbid(unsafe_code)]
 
-mod plan_next_logic;
+mod logic;
 
 use crate::intent::interview::types::{Gap, InterviewSession};
 use crate::intent::plan::types::{ExecutionPlan, PlanBead};
@@ -92,17 +92,17 @@ impl NextAction {
 
 #[must_use]
 pub fn get_next_action(session: &InterviewSession, plan: &ExecutionPlan) -> Option<NextAction> {
-    plan_next_logic::get_next_action(session, plan)
+    logic::get_next_action(session, plan)
 }
 
 #[must_use]
 pub fn determine_next_phase(plan: &ExecutionPlan) -> Option<u32> {
-    plan_next_logic::determine_next_phase(plan)
+    logic::determine_next_phase(plan)
 }
 
 #[must_use]
 pub fn get_actionable_beads(plan: &ExecutionPlan) -> Vec<&PlanBead> {
-    plan_next_logic::get_actionable_beads(plan)
+    logic::get_actionable_beads(plan)
 }
 
 #[must_use]

@@ -4,8 +4,8 @@
 #![warn(clippy::pedantic)]
 #![forbid(unsafe_code)]
 
-mod plan_emit_beads_core;
-mod plan_emit_beads_profile;
+mod core;
+mod profile;
 
 use crate::intent::interview::types::{InterviewSession, Profile};
 use crate::intent::plan::types::{ExecutionPlan, PlanBead, PlanError};
@@ -58,7 +58,7 @@ pub fn emit_beads(
     plan: &mut ExecutionPlan,
     dry_run: bool,
 ) -> Result<(Vec<PlanBead>, EmissionResult), PlanError> {
-    plan_emit_beads_core::emit_beads(session, plan, dry_run)
+    core::emit_beads(session, plan, dry_run)
 }
 
 #[must_use]
@@ -73,5 +73,5 @@ pub fn check_existing_beads(titles: &[String], existing: &[String]) -> Vec<Strin
 
 #[must_use]
 pub fn generate_profile_beads(profile: Profile, phase: u32) -> Vec<PlanBead> {
-    plan_emit_beads_profile::generate_profile_beads(profile, phase)
+    profile::generate_profile_beads(profile, phase)
 }

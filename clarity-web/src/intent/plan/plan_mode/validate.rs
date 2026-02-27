@@ -1,4 +1,4 @@
-use crate::intent::plan::plan_mode_types::{ExecutionPlan, PlanBead, PlanError};
+use super::types::{ExecutionPlan, PlanBead, PlanError};
 use std::collections::{HashMap, HashSet};
 
 pub fn validate_plan_dependencies(plan: &ExecutionPlan) -> Result<(), PlanError> {
@@ -42,7 +42,7 @@ fn validate_bead_dependencies<'a>(
     .chain(std::iter::once(bead_id))
     .collect::<HashSet<_>>();
 
-  let visited_after_dependencies = all_beads.get(bead_id).map_or(Ok(visited), |bead| {
+  let visited_after_dependencies = all_beads.get(bead_id).map_or(Ok(visited.clone()), |bead| {
     bead
       .depends_on
       .iter()

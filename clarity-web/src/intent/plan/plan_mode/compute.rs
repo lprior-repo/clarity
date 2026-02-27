@@ -1,5 +1,5 @@
 use crate::intent::interview::types::InterviewSession;
-use crate::intent::plan::plan_mode_types::{
+use super::types::{
   BeadStatus, ExecutionPlan, Phase, PhaseStatus, PlanBead, PlanError,
 };
 use std::collections::HashSet;
@@ -138,8 +138,8 @@ fn assign_beads_to_phase(beads: &[PlanBead], phase_number: u32) -> Vec<PlanBead>
 }
 
 fn detect_blockers(session: &InterviewSession) -> Vec<String> {
-  let unresolved_gaps = session
-    .get_blocking_gaps()
+  let blocking_gaps = session.get_blocking_gaps();
+  let unresolved_gaps = blocking_gaps
     .iter()
     .map(|gap| format!("Unresolved gap: {} - {}", gap.field, gap.description));
 
