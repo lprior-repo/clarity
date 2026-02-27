@@ -24,13 +24,13 @@
 //! Prompt -> Extracting -> ConfirmingFields -> Preview -> KirkCompilation -> Locked
 //! ```
 //!
-//! Within ConfirmingFields:
+//! Within `ConfirmingFields`:
 //! ```text
 //! Problem -> Persona -> Solution -> Nonpersona -> Scenario
 //! ```
 
 use dioxus::prelude::*;
-use std::sync::Arc;
+use std::{cmp::Ordering, sync::Arc};
 
 use super::extract_fields_button::ExtractFieldsButton;
 use super::extracting_progress::{ExtractingProgress, ExtractionStatus};
@@ -79,7 +79,7 @@ const SCAFFOLDING_PROMPTS: &[(&str, &str)] = &[
   ),
 ];
 
-/// Props for ProgressiveDiscover component
+/// Props for `ProgressiveDiscover` component
 #[derive(Clone, Props)]
 pub struct ProgressiveDiscoverProps {
   /// Optional extraction provider for AI field extraction
@@ -101,7 +101,7 @@ impl PartialEq for ProgressiveDiscoverProps {
   }
 }
 
-/// ProgressiveDiscover component
+/// `ProgressiveDiscover` component
 ///
 /// Main orchestration component for the Progressive Discover flow.
 ///
@@ -109,9 +109,9 @@ impl PartialEq for ProgressiveDiscoverProps {
 ///
 /// 1. **Prompt** - User enters freeform description
 /// 2. **Extracting** - AI extracts structured fields
-/// 3. **ConfirmingFields** - Field-by-field confirmation with adversarial coaching
+/// 3. **`ConfirmingFields`** - Field-by-field confirmation with adversarial coaching
 /// 4. **Preview** - Review summary before locking
-/// 5. **KirkCompilation** - Compile to KIRK contracts
+/// 5. **`KirkCompilation`** - Compile to KIRK contracts
 /// 6. **Locked** - Final state, ready for Bead Factory
 ///
 /// # State Management
@@ -121,10 +121,12 @@ impl PartialEq for ProgressiveDiscoverProps {
 #[component]
 pub fn ProgressiveDiscover(props: ProgressiveDiscoverProps) -> Element {
   // Initialize state
-  let state = match props.initial_prompt.as_ref() {
-    Some(prompt) => use_progressive_discover_with_prompt(prompt.clone()),
-    None => use_progressive_discover(),
-  };
+  let state = props
+    .initial_prompt
+    .as_ref()
+    .map_or_else(use_progressive_discover, |prompt| {
+      use_progressive_discover_with_prompt(prompt.clone())
+    });
 
   let actions = use_progressive_discover_actions(state);
 
@@ -189,8 +191,8 @@ pub fn ProgressiveDiscover(props: ProgressiveDiscoverProps) -> Element {
                           PreviewPhase {
                               state,
                               actions,
-                              on_refine: props.on_refine.clone(),
-                              on_complete: props.on_complete.clone(),
+                              on_refine: props.on_refine,
+                              on_complete: props.on_complete,
                           }
                       }
                   }
@@ -206,7 +208,7 @@ pub fn ProgressiveDiscover(props: ProgressiveDiscoverProps) -> Element {
                       rsx! {
                           LockedPhase {
                               state,
-                              on_complete: props.on_complete.clone(),
+                              on_complete: props.on_complete,
                           }
                       }
                   }
@@ -253,8 +255,8 @@ pub fn ProgressiveDiscover(props: ProgressiveDiscoverProps) -> Element {
 // Phase Progress Component
 // ============================================================================
 
-/// Props for PhaseProgress component
-#[derive(Clone, Copy, Debug, Props, PartialEq)]
+/// Props for `PhaseProgress` component
+#[derive(Clone, Copy, Debug, Props, PartialEq, Eq)]
 pub struct PhaseProgressProps {
   /// Current phase
   pub phase: ProgressiveDiscoverPhase,
@@ -283,15 +285,13 @@ pub fn PhaseProgress(props: PhaseProgressProps) -> Element {
                   div {
                       class: format!(
                           "flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium {}",
-                          if phase.ordinal() < current_ordinal {
-                              "bg-primary text-primary-foreground"
-                          } else if phase.ordinal() == current_ordinal {
-                              "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2"
-                          } else {
-                              "bg-muted text-muted-foreground"
+                          match phase.ordinal().cmp(&current_ordinal) {
+                              Ordering::Less => "bg-primary text-primary-foreground",
+                              Ordering::Equal => "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2",
+                              Ordering::Greater => "bg-muted text-muted-foreground",
                           }
                       ),
-                      if phase.ordinal() < current_ordinal {
+                      if matches!(phase.ordinal().cmp(&current_ordinal), Ordering::Less) {
                           // Checkmark for completed phases
                           svg {
                               xmlns: "http://www.w3.org/2000/svg",
@@ -314,7 +314,7 @@ pub fn PhaseProgress(props: PhaseProgressProps) -> Element {
                   span {
                       class: format!(
                           "text-xs font-medium hidden sm:block {}",
-                          if phase.ordinal() == current_ordinal {
+                          if matches!(phase.ordinal().cmp(&current_ordinal), Ordering::Equal) {
                               "text-foreground"
                           } else {
                               "text-muted-foreground"
@@ -329,11 +329,11 @@ pub fn PhaseProgress(props: PhaseProgressProps) -> Element {
                   div {
                       class: format!(
                           "h-0.5 w-4 {}",
-                          if phase.ordinal() < current_ordinal {
+                          if matches!(phase.ordinal().cmp(&current_ordinal), Ordering::Less) {
                               "bg-primary"
                           } else {
                               "bg-muted"
-                          }
+                           }
                       ),
                   }
               }
@@ -346,7 +346,7 @@ pub fn PhaseProgress(props: PhaseProgressProps) -> Element {
 // Prompt Phase Component
 // ============================================================================
 
-/// Props for PromptPhase component
+/// Props for `PromptPhase` component
 #[derive(Clone, Props)]
 pub struct PromptPhaseProps {
   /// State signal
@@ -379,11 +379,11 @@ pub fn PromptPhase(props: PromptPhaseProps) -> Element {
   let is_extracting = use_signal(|| false);
 
   let on_submit = {
-    let mut actions = props.actions.clone();
-    let prompt = prompt.clone();
-    let mut is_extracting = is_extracting.clone();
-    move |_| {
-      let prompt_value = prompt.read().clone();
+    let mut actions = props.actions;
+    let prompt_signal = prompt;
+    let mut is_extracting = is_extracting;
+    move |()| {
+      let prompt_value = prompt_signal.read().clone();
       if prompt_value.trim().len() >= MIN_PROMPT_LENGTH {
         // Set loading state
         is_extracting.set(true);
@@ -398,9 +398,9 @@ pub fn PromptPhase(props: PromptPhaseProps) -> Element {
   };
 
   let on_input = {
-    let mut prompt = prompt.clone();
+    let mut prompt_signal = prompt;
     move |value: String| {
-      prompt.set(value);
+      prompt_signal.set(value);
     }
   };
 
@@ -438,9 +438,9 @@ pub fn PromptPhase(props: PromptPhaseProps) -> Element {
                           label: (*label).to_string(),
                           template: (*template).to_string(),
                           onclick: {
-                              let mut prompt = prompt.clone();
+                              let mut prompt_signal = prompt;
                               move |_| {
-                                  prompt.set((*template).to_string());
+                                  prompt_signal.set((*template).to_string());
                               }
                           },
                       }
@@ -473,7 +473,7 @@ pub fn PromptPhase(props: PromptPhaseProps) -> Element {
                   is_loading: *is_extracting.read(),
                   disabled: !is_ready,
                   on_click: {
-                      let mut on_submit = on_submit.clone();
+                      let mut on_submit = on_submit;
                       move |_prompt: String| {
                           on_submit(());
                       }
@@ -484,7 +484,7 @@ pub fn PromptPhase(props: PromptPhaseProps) -> Element {
   }
 }
 
-/// Props for ScaffoldingPromptButton
+/// Props for `ScaffoldingPromptButton`
 #[derive(Clone, Props, PartialEq)]
 pub struct ScaffoldingPromptButtonProps {
   /// Label for the button
@@ -515,7 +515,7 @@ pub fn ScaffoldingPromptButton(props: ScaffoldingPromptButtonProps) -> Element {
 // Confirm Phase Component
 // ============================================================================
 
-/// Props for ConfirmPhase component
+/// Props for `ConfirmPhase` component
 #[derive(Clone, Props, PartialEq)]
 pub struct ConfirmPhaseProps {
   /// State signal
@@ -578,7 +578,7 @@ pub fn ConfirmPhase(props: ConfirmPhaseProps) -> Element {
   let holes = use_signal(HolePunchingResults::new);
 
   let on_next = {
-    let mut actions = props.actions.clone();
+    let mut actions = props.actions;
     move |_: Event<MouseData>| {
       // Check if we're at the last sub-phase
       let state = props.state.read();
@@ -593,7 +593,7 @@ pub fn ConfirmPhase(props: ConfirmPhaseProps) -> Element {
   };
 
   let on_back = {
-    let mut actions = props.actions.clone();
+    let mut actions = props.actions;
     move |_: Event<MouseData>| {
       let state = props.state.read();
       if state.sub_phase.is_first() {
@@ -606,6 +606,9 @@ pub fn ConfirmPhase(props: ConfirmPhaseProps) -> Element {
     }
   };
 
+  let step = usize_to_u8(props.sub_phase.ordinal());
+  let total_steps = usize_to_u8(ConfirmSubPhase::count());
+
   // Render the appropriate sub-phase content
   let sub_phase_content = match props.sub_phase {
     ConfirmSubPhase::ConfirmProblem => {
@@ -613,10 +616,10 @@ pub fn ConfirmPhase(props: ConfirmPhaseProps) -> Element {
           ProblemConfirm {
               problem,
               antithesis,
-              step: props.sub_phase.ordinal() as u8,
-              total_steps: ConfirmSubPhase::count() as u8,
-              on_next: Some(EventHandler::new(on_next.clone())),
-              on_back: Some(EventHandler::new(on_back.clone())),
+              step,
+              total_steps,
+              on_next: Some(EventHandler::new(on_next)),
+              on_back: Some(EventHandler::new(on_back)),
               next_disabled: false,
               back_disabled: false,
           }
@@ -627,10 +630,10 @@ pub fn ConfirmPhase(props: ConfirmPhaseProps) -> Element {
           PersonaConfirm {
               persona,
               detected_traps: persona_traps,
-              step: props.sub_phase.ordinal() as u8,
-              total_steps: ConfirmSubPhase::count() as u8,
-              on_next: Some(EventHandler::new(on_next.clone())),
-              on_back: Some(EventHandler::new(on_back.clone())),
+              step,
+              total_steps,
+              on_next: Some(EventHandler::new(on_next)),
+              on_back: Some(EventHandler::new(on_back)),
               next_disabled: false,
               back_disabled: false,
           }
@@ -641,10 +644,10 @@ pub fn ConfirmPhase(props: ConfirmPhaseProps) -> Element {
           SolutionConfirm {
               solution,
               vorp,
-              step: props.sub_phase.ordinal() as u8,
-              total_steps: ConfirmSubPhase::count() as u8,
-              on_next: Some(EventHandler::new(on_next.clone())),
-              on_back: Some(EventHandler::new(on_back.clone())),
+              step,
+              total_steps,
+              on_next: Some(EventHandler::new(on_next)),
+              on_back: Some(EventHandler::new(on_back)),
               next_disabled: false,
               back_disabled: false,
           }
@@ -654,10 +657,10 @@ pub fn ConfirmPhase(props: ConfirmPhaseProps) -> Element {
       rsx! {
           NonpersonaConfirm {
               nonpersona,
-              step: props.sub_phase.ordinal() as u8,
-              total_steps: ConfirmSubPhase::count() as u8,
-              on_next: Some(EventHandler::new(on_next.clone())),
-              on_back: Some(EventHandler::new(on_back.clone())),
+              step,
+              total_steps,
+              on_next: Some(EventHandler::new(on_next)),
+              on_back: Some(EventHandler::new(on_back)),
               next_disabled: false,
               back_disabled: false,
           }
@@ -670,10 +673,10 @@ pub fn ConfirmPhase(props: ConfirmPhaseProps) -> Element {
               value_moment,
               feeling,
               holes,
-              step: props.sub_phase.ordinal() as u8,
-              total_steps: ConfirmSubPhase::count() as u8,
-              on_next: Some(EventHandler::new(on_next.clone())),
-              on_back: Some(EventHandler::new(on_back.clone())),
+              step,
+              total_steps,
+              on_next: Some(EventHandler::new(on_next)),
+              on_back: Some(EventHandler::new(on_back)),
               next_disabled: false,
               back_disabled: false,
           }
@@ -689,7 +692,7 @@ pub fn ConfirmPhase(props: ConfirmPhaseProps) -> Element {
   }
 }
 
-/// Props for PlaceholderConfirmPhase
+/// Props for `PlaceholderConfirmPhase`
 #[derive(Clone, Props, PartialEq)]
 pub struct PlaceholderConfirmPhaseProps {
   /// Title of the phase
@@ -796,7 +799,7 @@ pub fn PlaceholderConfirmPhase(props: PlaceholderConfirmPhaseProps) -> Element {
 
 use super::brutal_truths::{BrutalTruthsChecklist, BrutalTruthsState};
 
-/// Props for PreviewPhase component
+/// Props for `PreviewPhase` component
 #[derive(Clone, Props, PartialEq)]
 pub struct PreviewPhaseProps {
   /// State signal
@@ -827,8 +830,8 @@ pub fn PreviewPhase(props: PreviewPhaseProps) -> Element {
   let all_acknowledged = brutal_truths.read().is_complete();
 
   let on_refine = {
-    let mut actions = props.actions.clone();
-    let on_refine = props.on_refine.clone();
+    let mut actions = props.actions;
+    let on_refine = props.on_refine;
     move |_| {
       // Go back to Prompt phase
       actions.regress_phase();
@@ -841,9 +844,9 @@ pub fn PreviewPhase(props: PreviewPhaseProps) -> Element {
   };
 
   let on_lock_in = {
-    let mut actions = props.actions.clone();
-    let on_complete = props.on_complete.clone();
-    let state = props.state.clone();
+    let mut actions = props.actions;
+    let on_complete = props.on_complete;
+    let state = props.state;
     move |_| {
       // Advance to KirkCompilation
       actions.advance_phase();
@@ -938,8 +941,8 @@ pub fn PreviewPhase(props: PreviewPhaseProps) -> Element {
   }
 }
 
-/// Props for BrutalTruthItem
-#[derive(Clone, Debug, Props, PartialEq)]
+/// Props for `BrutalTruthItem`
+#[derive(Clone, Debug, Props, PartialEq, Eq)]
 pub struct BrutalTruthItemProps {
   /// The truth text
   pub text: String,
@@ -957,7 +960,7 @@ pub fn BrutalTruthItem(props: BrutalTruthItemProps) -> Element {
               r#type: "checkbox",
               checked: *checked.read(),
               onchange: {
-                  let mut checked = checked.clone();
+                  let mut checked = checked;
                   move |e: Event<FormData>| {
                       *checked.write() = e.checked();
                   }
@@ -983,7 +986,7 @@ pub fn BrutalTruthItem(props: BrutalTruthItemProps) -> Element {
 // Kirk Compilation Phase Component
 // ============================================================================
 
-/// Props for KirkCompilationPhase component
+/// Props for `KirkCompilationPhase` component
 #[derive(Clone, Props, PartialEq)]
 pub struct KirkCompilationPhaseProps {
   /// State signal
@@ -1012,6 +1015,9 @@ const KIRK_SECTIONS: &[&str] = &[
   "Deliverables",
 ];
 
+// Number of sections determines progress increment (100/16 ~= 7).
+const PROGRESS_INCREMENT: u8 = 7;
+
 /// Kirk compilation phase component
 ///
 /// Shows progress while compiling to KIRK contracts.
@@ -1019,14 +1025,12 @@ const KIRK_SECTIONS: &[&str] = &[
 pub fn KirkCompilationPhase(props: KirkCompilationPhaseProps) -> Element {
   let progress = use_signal(|| 0u8);
   let section_index = use_signal(|| 0usize);
-  // Number of sections determines progress increment (100/16 ≈ 7)
-  const PROGRESS_INCREMENT: u8 = 7;
 
   // Simulate compilation progress
   use_effect({
-    let mut actions = props.actions.clone();
-    let mut progress = progress.clone();
-    let mut section_index = section_index.clone();
+    let mut actions = props.actions;
+    let mut progress = progress;
+    let mut section_index = section_index;
     move || {
       let current_progress = *progress.read();
       if current_progress < 100 {
@@ -1049,6 +1053,7 @@ pub fn KirkCompilationPhase(props: KirkCompilationPhaseProps) -> Element {
   let current_section = KIRK_SECTIONS
     .get(*section_index.read())
     .map_or("Processing...", |s| *s);
+  let current_section_index = *section_index.read();
 
   rsx! {
       div {
@@ -1066,22 +1071,22 @@ pub fn KirkCompilationPhase(props: KirkCompilationPhaseProps) -> Element {
           }
 
           // Section list
-          div {
-              class: "w-full max-w-sm space-y-2",
-              for (idx, section) in KIRK_SECTIONS.iter().enumerate() {
-                  div {
-                      class: format!(
-                          "flex items-center gap-2 text-sm {}",
-                          if idx <= *section_index.read() {
-                              "text-foreground"
-                          } else {
-                              "text-muted-foreground"
-                          }
-                      ),
-                      if idx < *section_index.read() {
-                          svg {
-                              xmlns: "http://www.w3.org/2000/svg",
-                              width: "16",
+              div {
+                  class: "w-full max-w-sm space-y-2",
+                   for (idx, section) in KIRK_SECTIONS.iter().enumerate() {
+                   div {
+                       class: format!(
+                           "flex items-center gap-2 text-sm {}",
+                           if matches!(idx.cmp(&current_section_index), Ordering::Less | Ordering::Equal) {
+                               "text-foreground"
+                           } else {
+                               "text-muted-foreground"
+                           }
+                       ),
+                      if matches!(idx.cmp(&current_section_index), Ordering::Less) {
+                           svg {
+                               xmlns: "http://www.w3.org/2000/svg",
+                               width: "16",
                               height: "16",
                               view_box: "0 0 24 24",
                               fill: "none",
@@ -1089,13 +1094,13 @@ pub fn KirkCompilationPhase(props: KirkCompilationPhaseProps) -> Element {
                               stroke_width: "2",
                               stroke_linecap: "round",
                               stroke_linejoin: "round",
-                              class: "text-emerald-500",
-                              polyline { points: "20 6 9 17 4 12" }
-                          }
-                      } else if idx == *section_index.read() {
-                          svg {
-                              class: "h-4 w-4 animate-spin text-primary",
-                              xmlns: "http://www.w3.org/2000/svg",
+                               class: "text-emerald-500",
+                               polyline { points: "20 6 9 17 4 12" }
+                           }
+                      } else if matches!(idx.cmp(&current_section_index), Ordering::Equal) {
+                           svg {
+                               class: "h-4 w-4 animate-spin text-primary",
+                               xmlns: "http://www.w3.org/2000/svg",
                               fill: "none",
                               view_box: "0 0 24 24",
                               circle {
@@ -1129,7 +1134,7 @@ pub fn KirkCompilationPhase(props: KirkCompilationPhaseProps) -> Element {
 // Locked Phase Component
 // ============================================================================
 
-/// Props for LockedPhase component
+/// Props for `LockedPhase` component
 #[derive(Clone, Props, PartialEq)]
 pub struct LockedPhaseProps {
   /// State signal
@@ -1214,7 +1219,7 @@ pub fn LockedPhase(props: LockedPhaseProps) -> Element {
                       {if transcript.solution.content.is_empty() {
                           "No solution defined".to_string()
                       } else {
-                          transcript.solution.content.clone()
+                          transcript.solution.content
                       }}
                   }
               }
@@ -1233,9 +1238,9 @@ pub fn LockedPhase(props: LockedPhaseProps) -> Element {
               Button {
                   variant: ButtonVariant::Primary,
                   onclick: {
-                      let on_complete = props.on_complete.clone();
+                      let on_complete = props.on_complete;
                       move |_| {
-                          if let Some(handler) = on_complete.clone() {
+                          if let Some(handler) = on_complete {
                               let transcript = props.state.read().transcript.clone();
                               handler.call(transcript);
                           }
@@ -1259,6 +1264,10 @@ pub fn LockedPhase(props: LockedPhaseProps) -> Element {
           }
       }
   }
+}
+
+fn usize_to_u8(value: usize) -> u8 {
+  u8::try_from(value).unwrap_or(u8::MAX)
 }
 
 #[cfg(test)]

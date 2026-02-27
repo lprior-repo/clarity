@@ -60,7 +60,8 @@ impl HoleType {
 
 impl fmt::Display for HoleType {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "{}", self.label())
+    let label = self.label();
+    write!(f, "{label}")
   }
 }
 
@@ -81,7 +82,7 @@ pub struct Hole {
 impl Hole {
   /// Create a new hole with the given type and description
   #[must_use]
-  pub fn new(hole_type: HoleType, description: String) -> Self {
+  pub const fn new(hole_type: HoleType, description: String) -> Self {
     Self {
       hole_type,
       description,
@@ -104,7 +105,7 @@ impl Hole {
 
   /// Check if this hole is high severity (4 or 5)
   #[must_use]
-  pub fn is_high_severity(&self) -> bool {
+  pub const fn is_high_severity(&self) -> bool {
     self.severity >= 4
   }
 }
@@ -133,13 +134,13 @@ pub struct HolePunchingResults {
 }
 
 impl HolePunchingResults {
-  /// Create a new HolePunchingResults with all holes unaddressed
+  /// Create a new `HolePunchingResults` with all holes unaddressed
   #[must_use]
   pub fn new() -> Self {
     Self::default()
   }
 
-  /// Create an empty HolePunchingResults (alias for default)
+  /// Create an empty `HolePunchingResults` (alias for default)
   #[must_use]
   pub fn empty() -> Self {
     Self::default()
@@ -154,15 +155,15 @@ impl HolePunchingResults {
     self
       .discovery_hole
       .as_ref()
-      .map_or(false, |s| !s.trim().is_empty())
+      .is_some_and(|s| !s.trim().is_empty())
       && self
         .edge_case_hole
         .as_ref()
-        .map_or(false, |s| !s.trim().is_empty())
+        .is_some_and(|s| !s.trim().is_empty())
       && self
         .motivation_dropoff
         .as_ref()
-        .map_or(false, |s| !s.trim().is_empty())
+        .is_some_and(|s| !s.trim().is_empty())
   }
 
   /// Check if a specific hole type has been addressed
@@ -172,15 +173,15 @@ impl HolePunchingResults {
       HoleType::DiscoveryHole => self
         .discovery_hole
         .as_ref()
-        .map_or(false, |s| !s.trim().is_empty()),
+        .is_some_and(|s| !s.trim().is_empty()),
       HoleType::EdgeCaseHole => self
         .edge_case_hole
         .as_ref()
-        .map_or(false, |s| !s.trim().is_empty()),
+        .is_some_and(|s| !s.trim().is_empty()),
       HoleType::MotivationDropOff => self
         .motivation_dropoff
         .as_ref()
-        .map_or(false, |s| !s.trim().is_empty()),
+        .is_some_and(|s| !s.trim().is_empty()),
     }
   }
 
@@ -303,7 +304,7 @@ impl ScenarioField {
     self.trigger.trim().is_empty()
   }
 
-  /// Check if the value_moment field is empty (for validation)
+  /// Check if the `value_moment` field is empty (for validation)
   #[must_use]
   pub fn is_value_moment_empty(&self) -> bool {
     self.value_moment.trim().is_empty()
@@ -431,7 +432,7 @@ mod tests {
   #[test]
   fn test_empty_string_treated_as_none() {
     let holes =
-      HolePunchingResults::from_strings("".to_string(), "   ".to_string(), "\t\n".to_string());
+      HolePunchingResults::from_strings(String::new(), "   ".to_string(), "\t\n".to_string());
     assert!(holes.discovery_hole.is_none());
     assert!(holes.edge_case_hole.is_none());
     assert!(holes.motivation_dropoff.is_none());
@@ -456,7 +457,7 @@ mod tests {
 
   #[test]
   fn test_address_method_empty_normalizes() {
-    let holes = HolePunchingResults::new().address(HoleType::DiscoveryHole, "".to_string());
+    let holes = HolePunchingResults::new().address(HoleType::DiscoveryHole, String::new());
     assert!(holes.discovery_hole.is_none());
   }
 
@@ -565,7 +566,7 @@ mod tests {
     let scenario = ScenarioField {
       trigger: "   ".to_string(),
       value_moment: "\t\n".to_string(),
-      feeling: "".to_string(),
+      feeling: String::new(),
       hole_punching: HolePunchingResults::default(),
     };
     assert!(!scenario.is_bullets_complete());
@@ -578,7 +579,7 @@ mod tests {
   fn test_individual_field_empty_checks() {
     let scenario = ScenarioField {
       trigger: "valid".to_string(),
-      value_moment: "".to_string(),
+      value_moment: String::new(),
       feeling: "valid".to_string(),
       hole_punching: HolePunchingResults::default(),
     };

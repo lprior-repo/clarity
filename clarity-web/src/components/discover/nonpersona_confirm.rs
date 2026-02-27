@@ -12,8 +12,8 @@ use super::quality_score::{QualityDimension, QualityScore, QualityScoreBar};
 use crate::ui::button::ButtonVariant;
 use crate::ui::{Button, Textarea};
 
-/// Props for NonpersonaDisplay component
-#[derive(Clone, Debug, PartialEq, Props)]
+/// Props for `NonpersonaDisplay` component
+#[derive(Clone, Debug, PartialEq, Eq, Props)]
 pub struct NonpersonaDisplayProps {
   /// The nonpersona text to display/edit
   pub nonpersona: Signal<String>,
@@ -25,7 +25,7 @@ pub struct NonpersonaDisplayProps {
   pub editable: bool,
 }
 
-/// NonpersonaDisplay component
+/// `NonpersonaDisplay` component
 ///
 /// Displays and allows editing of the nonpersona description.
 /// Nonpersonas define who you are explicitly NOT building for,
@@ -37,9 +37,9 @@ pub fn NonpersonaDisplay(props: NonpersonaDisplayProps) -> Element {
 
   // Sync local nonpersona when external signal changes
   use_effect({
-    let nonpersona = nonpersona.clone();
+    let source_nonpersona = nonpersona;
     move || {
-      let external = nonpersona.read().clone();
+      let external = source_nonpersona.read().clone();
       let local = local_nonpersona.read().clone();
       if external != local {
         *local_nonpersona.write() = external;
@@ -48,9 +48,9 @@ pub fn NonpersonaDisplay(props: NonpersonaDisplayProps) -> Element {
   });
 
   let on_input = {
-    let mut nonpersona = nonpersona.clone();
+    let mut nonpersona = nonpersona;
     move |value: String| {
-      *local_nonpersona.write() = value.clone();
+      local_nonpersona.write().clone_from(&value);
       *nonpersona.write() = value;
     }
   };
@@ -73,17 +73,21 @@ pub fn NonpersonaDisplay(props: NonpersonaDisplayProps) -> Element {
   }
 }
 
-/// Props for NonpersonaGuidance component
-#[derive(Clone, Debug, PartialEq, Props)]
+/// Props for `NonpersonaGuidance` component
+#[derive(Clone, Debug, PartialEq, Eq, Props)]
 pub struct NonpersonaGuidanceProps {
   /// Additional guidance text
   #[props(default = String::new())]
   pub guidance: String,
 }
 
-/// NonpersonaGuidance component
+/// `NonpersonaGuidance` component
 ///
 /// Displays guidance and examples for defining nonpersonas.
+///
+/// # Errors
+///
+/// Returns an error if rendering the component fails.
 #[allow(non_snake_case)]
 pub fn NonpersonaGuidance(_props: NonpersonaGuidanceProps) -> Element {
   rsx! {
@@ -127,8 +131,8 @@ pub fn NonpersonaGuidance(_props: NonpersonaGuidanceProps) -> Element {
   }
 }
 
-/// Props for NonpersonaQuality component
-#[derive(Clone, Debug, PartialEq, Props)]
+/// Props for `NonpersonaQuality` component
+#[derive(Clone, Debug, PartialEq, Eq, Props)]
 pub struct NonpersonaQualityProps {
   /// The nonpersona text to evaluate
   pub nonpersona: Signal<String>,
@@ -137,7 +141,7 @@ pub struct NonpersonaQualityProps {
   pub expanded: bool,
 }
 
-/// NonpersonaQuality component
+/// `NonpersonaQuality` component
 ///
 /// Displays quality metrics for the nonpersona description.
 #[component]
@@ -146,9 +150,9 @@ pub fn NonpersonaQuality(props: NonpersonaQualityProps) -> Element {
 
   // Calculate quality dimensions based on nonpersona
   let quality_score = use_memo({
-    let nonpersona = nonpersona.clone();
+    let source_nonpersona = nonpersona;
     move || {
-      let text = nonpersona.read();
+      let text = source_nonpersona.read();
       let overall = calculate_nonpersona_score(&text);
 
       let clarity = calculate_clarity_score(&text);
@@ -266,7 +270,7 @@ fn get_clarity_issues(text: &str) -> Vec<String> {
 
 /// Get specificity issues
 fn get_specificity_issues(text: &str) -> Vec<String> {
-  let word_count = text.trim().split_whitespace().count();
+  let word_count = text.split_whitespace().count();
   if word_count < 10 {
     vec!["Add more specific details about who you're excluding".to_string()]
   } else {
@@ -289,7 +293,7 @@ fn get_completeness_issues(text: &str) -> Vec<String> {
   Vec::new()
 }
 
-/// Props for NonpersonaConfirm component
+/// Props for `NonpersonaConfirm` component
 #[derive(Clone, Debug, PartialEq, Props)]
 pub struct NonpersonaConfirmProps {
   /// The nonpersona text
@@ -312,12 +316,12 @@ pub struct NonpersonaConfirmProps {
   pub back_disabled: bool,
 }
 
-/// NonpersonaConfirm component
+/// `NonpersonaConfirm` component
 ///
 /// Composes:
-/// - NonpersonaDisplay: Shows the nonpersona text for review/editing
-/// - NonpersonaGuidance: Guidance for defining nonpersonas
-/// - NonpersonaQuality: Quality score indicator
+/// - `NonpersonaDisplay`: Shows the nonpersona text for review/editing
+/// - `NonpersonaGuidance`: Guidance for defining nonpersonas
+/// - `NonpersonaQuality`: Quality score indicator
 /// - Navigation: Back/Next buttons
 ///
 /// This is the fourth confirmation step in the Progressive Discover flow.
@@ -446,7 +450,7 @@ mod tests {
   #[test]
   fn test_calculate_nonpersona_score_medium() {
     let score = calculate_nonpersona_score("This is a medium length description of who we exclude");
-    assert!(score >= 50 && score <= 85);
+    assert!((50..=85).contains(&score));
   }
 
   #[test]

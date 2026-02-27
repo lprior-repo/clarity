@@ -16,7 +16,7 @@
 //! # Beads
 //!
 //! - **bd-23qy**: Progress animation with status messages
-//! - **bd-xz68**: ExtractingPhase component with auto-transition
+//! - **bd-xz68**: `ExtractingPhase` component with auto-transition
 
 use dioxus::prelude::*;
 
@@ -44,7 +44,7 @@ const EXTRACTION_STATUS_MESSAGES: &[&str] = &[
 // ExtractingPhase Component (bd-xz68)
 // ============================================================================
 
-/// Props for ExtractingPhase component
+/// Props for `ExtractingPhase` component
 #[derive(Clone, Props, PartialEq)]
 pub struct ExtractingPhaseProps {
   /// State signal
@@ -57,7 +57,7 @@ pub struct ExtractingPhaseProps {
 ///
 /// Shows progress while AI extracts fields from user input.
 /// Displays an animated progress bar and status messages.
-/// Auto-transitions to ConfirmingFields phase when extraction completes.
+/// Auto-transitions to `ConfirmingFields` phase when extraction completes.
 ///
 /// # Features
 ///
@@ -84,11 +84,10 @@ pub fn ExtractingPhase(props: ExtractingPhaseProps) -> Element {
 
   // Simulate extraction progress
   use_effect({
-    let mut actions = props.actions.clone();
-    let mut progress = progress.clone();
-    let mut current_message = current_message.clone();
-    let mut has_transitioned = has_transitioned.clone();
-    let error = error.clone();
+    let mut actions = props.actions;
+    let mut progress = progress;
+    let mut current_message = current_message;
+    let mut has_transitioned = has_transitioned;
     move || {
       // Check for existing error - don't continue if failed
       if error.read().is_some() {
@@ -134,10 +133,10 @@ pub fn ExtractingPhase(props: ExtractingPhaseProps) -> Element {
                   Button {
                       variant: ButtonVariant::Secondary,
                       onclick: {
-                          let mut error = error.clone();
-                          let mut progress = progress.clone();
-                          let mut current_message = current_message.clone();
-                          let mut has_transitioned = has_transitioned.clone();
+                          let mut error = error;
+                          let mut progress = progress;
+                          let mut current_message = current_message;
+                          let mut has_transitioned = has_transitioned;
                           move |_| {
                               // Reset state for retry
                               *error.write() = None;

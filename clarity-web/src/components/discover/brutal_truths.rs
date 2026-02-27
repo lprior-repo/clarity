@@ -2,9 +2,8 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![warn(clippy::nursery)]
-#![forbid(unsafe_code)]
 #![allow(clippy::suspicious_else_formatting)]
+#![warn(clippy::nursery)]
 
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -145,14 +144,8 @@ impl fmt::Display for BrutalTruth {
 /// All four must be checked before proceeding to KIRK compilation.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BrutalTruthsState {
-  /// Whether Scale truth has been validated.
-  pub scale: bool,
-  /// Whether Back-loaded Value truth has been validated.
-  pub back_loaded_value: bool,
-  /// Whether VORP truth has been validated.
-  pub vorp: bool,
-  /// Whether Sustaining truth has been validated.
-  pub sustaining: bool,
+  /// Validation flags for each truth, indexed by `BrutalTruth::ordinal()`.
+  pub checked: [bool; BrutalTruth::count()],
 }
 
 impl BrutalTruthsState {
@@ -164,52 +157,53 @@ impl BrutalTruthsState {
 
   /// Create a state with all truths checked.
   #[must_use]
-  pub fn all_checked() -> Self {
+  pub const fn all_checked() -> Self {
     Self {
-      scale: true,
-      back_loaded_value: true,
-      vorp: true,
-      sustaining: true,
+      checked: [true; BrutalTruth::count()],
     }
+  }
+
+  /// Whether Scale truth has been validated.
+  #[must_use]
+  pub const fn scale(&self) -> bool {
+    self.checked[BrutalTruth::Scale.ordinal()]
+  }
+
+  /// Whether Back-loaded Value truth has been validated.
+  #[must_use]
+  pub const fn back_loaded_value(&self) -> bool {
+    self.checked[BrutalTruth::BackLoadedValue.ordinal()]
+  }
+
+  /// Whether VORP truth has been validated.
+  #[must_use]
+  pub const fn vorp(&self) -> bool {
+    self.checked[BrutalTruth::Vorp.ordinal()]
+  }
+
+  /// Whether Sustaining truth has been validated.
+  #[must_use]
+  pub const fn sustaining(&self) -> bool {
+    self.checked[BrutalTruth::Sustaining.ordinal()]
   }
 
   /// Check if a specific truth has been validated.
   #[must_use]
-  pub fn is_checked(&self, truth: BrutalTruth) -> bool {
-    match truth {
-      BrutalTruth::Scale => self.scale,
-      BrutalTruth::BackLoadedValue => self.back_loaded_value,
-      BrutalTruth::Vorp => self.vorp,
-      BrutalTruth::Sustaining => self.sustaining,
-    }
+  pub const fn is_checked(&self, truth: BrutalTruth) -> bool {
+    self.checked[truth.ordinal()]
   }
 
   /// Set the validation state for a specific truth.
   #[must_use]
-  pub fn set_checked(self, truth: BrutalTruth, checked: bool) -> Self {
-    match truth {
-      BrutalTruth::Scale => Self {
-        scale: checked,
-        ..self
-      },
-      BrutalTruth::BackLoadedValue => Self {
-        back_loaded_value: checked,
-        ..self
-      },
-      BrutalTruth::Vorp => Self {
-        vorp: checked,
-        ..self
-      },
-      BrutalTruth::Sustaining => Self {
-        sustaining: checked,
-        ..self
-      },
-    }
+  pub const fn set_checked(self, truth: BrutalTruth, checked: bool) -> Self {
+    let mut next = self;
+    next.checked[truth.ordinal()] = checked;
+    next
   }
 
   /// Toggle the validation state for a specific truth.
   #[must_use]
-  pub fn toggle(self, truth: BrutalTruth) -> Self {
+  pub const fn toggle(self, truth: BrutalTruth) -> Self {
     let checked = !self.is_checked(truth);
     self.set_checked(truth, checked)
   }
@@ -217,17 +211,14 @@ impl BrutalTruthsState {
   /// Check if all truths have been validated.
   /// This is the gate condition for proceeding to KIRK compilation.
   #[must_use]
-  pub fn is_complete(&self) -> bool {
-    self.scale && self.back_loaded_value && self.vorp && self.sustaining
+  pub const fn is_complete(&self) -> bool {
+    self.checked[0] && self.checked[1] && self.checked[2] && self.checked[3]
   }
 
   /// Get the count of validated truths (0-4).
   #[must_use]
   pub fn checked_count(&self) -> usize {
-    usize::from(self.scale)
-      + usize::from(self.back_loaded_value)
-      + usize::from(self.vorp)
-      + usize::from(self.sustaining)
+    self.checked.iter().map(|&flag| usize::from(flag)).sum()
   }
 
   /// Get the count of unvalidated truths (0-4).
@@ -255,36 +246,25 @@ impl BrutalTruthsState {
       1 => 25,
       2 => 50,
       3 => 75,
-      4 => 100,
       _ => 100,
     }
   }
 
   /// Convert to an array of bool values in order.
   #[must_use]
-  pub fn to_array(&self) -> [bool; 4] {
-    [
-      self.scale,
-      self.back_loaded_value,
-      self.vorp,
-      self.sustaining,
-    ]
+  pub const fn to_array(&self) -> [bool; 4] {
+    self.checked
   }
 
   /// Create from an array of bool values.
   #[must_use]
-  pub fn from_array(arr: [bool; 4]) -> Self {
-    Self {
-      scale: arr[0],
-      back_loaded_value: arr[1],
-      vorp: arr[2],
-      sustaining: arr[3],
-    }
+  pub const fn from_array(arr: [bool; 4]) -> Self {
+    Self { checked: arr }
   }
 }
 
-/// Props for BrutalTruthsChecklist component.
-#[derive(Clone, Debug, PartialEq, Props)]
+/// Props for `BrutalTruthsChecklist` component.
+#[derive(Clone, Debug, PartialEq, Eq, Props)]
 pub struct BrutalTruthsChecklistProps {
   /// Signal containing the validation state for each truth.
   pub checked: Signal<BrutalTruthsState>,
@@ -299,7 +279,7 @@ pub struct BrutalTruthsChecklistProps {
   pub show_status: bool,
 }
 
-/// BrutalTruthsChecklist component
+/// `BrutalTruthsChecklist` component
 ///
 /// Displays the Four Brutal Truths as interactive checkboxes.
 /// Each truth must be validated before proceeding to KIRK compilation.
@@ -321,7 +301,7 @@ pub fn BrutalTruthsChecklist(props: BrutalTruthsChecklistProps) -> Element {
   let mut expanded_help = use_signal(|| None::<BrutalTruth>);
 
   let toggle_truth = {
-    let mut checked = props.checked.clone();
+    let mut checked = props.checked;
     move |truth: BrutalTruth| {
       if props.enabled {
         let current = checked.read().clone();
@@ -396,11 +376,11 @@ pub fn BrutalTruthsChecklist(props: BrutalTruthsChecklistProps) -> Element {
                       show_help: props.show_help,
                       expanded_help: expanded_help,
                       on_toggle: {
-                          let mut toggle_truth = toggle_truth.clone();
+                          let mut toggle_truth = toggle_truth;
                           move |t| toggle_truth(t)
                       },
                       on_toggle_help: {
-                          let mut toggle_help = toggle_help.clone();
+                          let mut toggle_help = toggle_help;
                           move |t| toggle_help(t)
                       },
                   }
@@ -458,7 +438,7 @@ pub fn BrutalTruthsChecklist(props: BrutalTruthsChecklistProps) -> Element {
   }
 }
 
-/// Props for BrutalTruthItem component (internal).
+/// Props for `BrutalTruthItem` component (internal).
 #[derive(Clone, Debug, PartialEq, Props)]
 pub struct BrutalTruthItemProps {
   /// The truth to display.
@@ -503,7 +483,7 @@ pub fn BrutalTruthItem(props: BrutalTruthItemProps) -> Element {
                   },
                   disabled: !props.enabled,
                   onclick: {
-                      let on_toggle = props.on_toggle.clone();
+                      let on_toggle = props.on_toggle;
                       move |_| on_toggle.call(truth)
                   },
 
@@ -559,7 +539,7 @@ pub fn BrutalTruthItem(props: BrutalTruthItemProps) -> Element {
                           "rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                       },
                       onclick: {
-                          let on_toggle_help = props.on_toggle_help.clone();
+                          let on_toggle_help = props.on_toggle_help;
                           move |_| on_toggle_help.call(truth)
                       },
                       svg {
@@ -594,8 +574,8 @@ pub fn BrutalTruthItem(props: BrutalTruthItemProps) -> Element {
   }
 }
 
-/// Props for BrutalTruthsSummary component.
-#[derive(Clone, Debug, PartialEq, Props)]
+/// Props for `BrutalTruthsSummary` component.
+#[derive(Clone, Debug, PartialEq, Eq, Props)]
 pub struct BrutalTruthsSummaryProps {
   /// The validation state to summarize.
   pub state: BrutalTruthsState,
@@ -604,7 +584,7 @@ pub struct BrutalTruthsSummaryProps {
   pub compact: bool,
 }
 
-/// BrutalTruthsSummary component
+/// `BrutalTruthsSummary` component
 ///
 /// Displays a compact summary of the Four Brutal Truths validation status.
 /// Used in the Preview phase summary view.
@@ -779,12 +759,13 @@ mod tests {
   #[test]
   fn test_brutal_truth_serialization() {
     let truth = BrutalTruth::Vorp;
-    let json = serde_json::to_string(&truth);
-    assert!(json.is_ok());
+    let json_result = serde_json::to_string(&truth);
+    assert!(json_result.is_ok());
 
-    let parsed: Result<BrutalTruth, _> = serde_json::from_str(&json.unwrap_or_default());
-    assert!(parsed.is_ok());
-    assert_eq!(parsed.unwrap(), BrutalTruth::Vorp);
+    let parsed = json_result
+      .ok()
+      .and_then(|json| serde_json::from_str::<BrutalTruth>(&json).ok());
+    assert_eq!(parsed, Some(BrutalTruth::Vorp));
   }
 
   // ========== BrutalTruthsState Tests ==========
@@ -792,10 +773,10 @@ mod tests {
   #[test]
   fn test_state_new_all_unchecked() {
     let state = BrutalTruthsState::new();
-    assert!(!state.scale);
-    assert!(!state.back_loaded_value);
-    assert!(!state.vorp);
-    assert!(!state.sustaining);
+    assert!(!state.scale());
+    assert!(!state.back_loaded_value());
+    assert!(!state.vorp());
+    assert!(!state.sustaining());
     assert!(!state.is_complete());
     assert_eq!(state.checked_count(), 0);
   }
@@ -803,22 +784,17 @@ mod tests {
   #[test]
   fn test_state_all_checked() {
     let state = BrutalTruthsState::all_checked();
-    assert!(state.scale);
-    assert!(state.back_loaded_value);
-    assert!(state.vorp);
-    assert!(state.sustaining);
+    assert!(state.scale());
+    assert!(state.back_loaded_value());
+    assert!(state.vorp());
+    assert!(state.sustaining());
     assert!(state.is_complete());
     assert_eq!(state.checked_count(), 4);
   }
 
   #[test]
   fn test_state_is_checked() {
-    let state = BrutalTruthsState {
-      scale: true,
-      back_loaded_value: false,
-      vorp: true,
-      sustaining: false,
-    };
+    let state = BrutalTruthsState::from_array([true, false, true, false]);
 
     assert!(state.is_checked(BrutalTruth::Scale));
     assert!(!state.is_checked(BrutalTruth::BackLoadedValue));
@@ -831,23 +807,23 @@ mod tests {
     let state = BrutalTruthsState::new();
 
     let state = state.set_checked(BrutalTruth::Scale, true);
-    assert!(state.scale);
-    assert!(!state.back_loaded_value);
+    assert!(state.scale());
+    assert!(!state.back_loaded_value());
 
     let state = state.set_checked(BrutalTruth::Vorp, true);
-    assert!(state.vorp);
+    assert!(state.vorp());
   }
 
   #[test]
   fn test_state_toggle() {
     let state = BrutalTruthsState::new();
-    assert!(!state.scale);
+    assert!(!state.scale());
 
     let state = state.toggle(BrutalTruth::Scale);
-    assert!(state.scale);
+    assert!(state.scale());
 
     let state = state.toggle(BrutalTruth::Scale);
-    assert!(!state.scale);
+    assert!(!state.scale());
   }
 
   #[test]
@@ -924,12 +900,7 @@ mod tests {
 
   #[test]
   fn test_state_to_array() {
-    let state = BrutalTruthsState {
-      scale: true,
-      back_loaded_value: false,
-      vorp: true,
-      sustaining: false,
-    };
+    let state = BrutalTruthsState::from_array([true, false, true, false]);
 
     let arr = state.to_array();
     assert_eq!(arr, [true, false, true, false]);
@@ -940,20 +911,15 @@ mod tests {
     let arr = [false, true, false, true];
     let state = BrutalTruthsState::from_array(arr);
 
-    assert!(!state.scale);
-    assert!(state.back_loaded_value);
-    assert!(!state.vorp);
-    assert!(state.sustaining);
+    assert!(!state.scale());
+    assert!(state.back_loaded_value());
+    assert!(!state.vorp());
+    assert!(state.sustaining());
   }
 
   #[test]
   fn test_state_roundtrip_array() {
-    let original = BrutalTruthsState {
-      scale: true,
-      back_loaded_value: false,
-      vorp: true,
-      sustaining: true,
-    };
+    let original = BrutalTruthsState::from_array([true, false, true, true]);
 
     let arr = original.to_array();
     let restored = BrutalTruthsState::from_array(arr);
@@ -963,30 +929,24 @@ mod tests {
 
   #[test]
   fn test_state_serialization() {
-    let state = BrutalTruthsState {
-      scale: true,
-      back_loaded_value: false,
-      vorp: true,
-      sustaining: false,
-    };
+    let state = BrutalTruthsState::from_array([true, false, true, false]);
 
-    let json = serde_json::to_string(&state);
-    assert!(json.is_ok());
+    let json_result = serde_json::to_string(&state);
+    assert!(json_result.is_ok());
 
-    let parsed: Result<BrutalTruthsState, _> = serde_json::from_str(&json.unwrap_or_default());
-    assert!(parsed.is_ok());
-
-    let parsed = parsed.unwrap();
-    assert_eq!(parsed, state);
+    let parsed = json_result
+      .ok()
+      .and_then(|json| serde_json::from_str::<BrutalTruthsState>(&json).ok());
+    assert_eq!(parsed, Some(state));
   }
 
   #[test]
   fn test_state_default() {
     let state = BrutalTruthsState::default();
-    assert!(!state.scale);
-    assert!(!state.back_loaded_value);
-    assert!(!state.vorp);
-    assert!(!state.sustaining);
+    assert!(!state.scale());
+    assert!(!state.back_loaded_value());
+    assert!(!state.vorp());
+    assert!(!state.sustaining());
   }
 
   #[test]

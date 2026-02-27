@@ -6,10 +6,49 @@
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
+use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use thiserror::Error;
+
+/// Pattern for capitalized words with a capture group (e.g., "Service", "Controller")
+const CAPITALIZED_WORD_PATTERN_STR: &str = r"(\b[A-Z][a-z]{2,}\b)";
+
+/// Ultra-simple fallback that matches any non-empty content - guaranteed valid by regex syntax
+const ULTIMATE_FALLBACK_PATTERN_STR: &str = r"(.+)";
+
+/// Attempt to create a Regex, returning an Option to avoid panicking
+fn try_create_regex(pattern: &str) -> Option<Regex> {
+    Regex::new(pattern).ok()
+}
+
+/// Create a Regex with cascading fallbacks, never panicking
+///
+/// Tries patterns in order: primary -> secondary -> ultimate fallback
+fn create_regex_safe(primary: &str, secondary: &str) -> Regex {
+    try_create_regex(primary)
+        .or_else(|| try_create_regex(secondary))
+        .or_else(|| try_create_regex(ULTIMATE_FALLBACK_PATTERN_STR))
+        .unwrap_or_else(|| {
+            // SAFETY: The pattern "(.+)" is syntactically valid and will always compile.
+            // This branch is unreachable in practice, but required by the type system.
+            #[allow(clippy::expect_used)]
+            Regex::new(ULTIMATE_FALLBACK_PATTERN_STR)
+                .expect("ULTIMATE_FALLBACK_PATTERN_STR must be valid regex syntax")
+        })
+}
+
+/// Lazy-initialized regex for capitalized word detection
+/// Uses functional pattern with safe initialization
+static CAPITALIZED_WORD_PATTERN: Lazy<Regex> = Lazy::new(|| {
+    create_regex_safe(CAPITALIZED_WORD_PATTERN_STR, ULTIMATE_FALLBACK_PATTERN_STR)
+});
+
+/// Lazy-initialized fallback regex that matches any non-empty content
+static FALLBACK_PATTERN: Lazy<Regex> = Lazy::new(|| {
+    create_regex_safe(ULTIMATE_FALLBACK_PATTERN_STR, r".+")
+});
 
 /// Domain errors for coverage analysis
 #[derive(Debug, Error, PartialEq, Clone)]
@@ -448,39 +487,35 @@ fn generate_coverage_gaps(
 
 /// Extract missing components from use case
 fn extract_missing_components(
-  use_case: &UseCase,
-  covered_components: &[CoveredComponent],
+    use_case: &UseCase,
+    covered_components: &[CoveredComponent],
 ) -> Vec<String> {
-  let covered_names: HashSet<_> = covered_components
-    .iter()
-    .map(|cc| cc.name.as_str())
-    .collect();
+    let covered_names: HashSet<_> = covered_components
+        .iter()
+        .map(|cc| cc.name.as_str())
+        .collect();
 
-  // Try to extract component names from use case
-  let text = format!("{} {}", use_case.name, use_case.description);
+    // Try to extract component names from use case
+    let text = format!("{} {}", use_case.name, use_case.description);
 
-  // Look for capitalized words that might be components
-  let capitalized_pattern =
-    Regex::new(r"\b[A-Z][a-z]{2,}\b").unwrap_or_else(|_| Regex::new(r"").unwrap());
+    // Use functional iterator pipeline to extract components
+    let components: Vec<String> = CAPITALIZED_WORD_PATTERN
+        .captures_iter(&text)
+        .filter_map(|cap| cap.get(1))
+        .map(|m| m.as_str())
+        .filter(|name| !is_common_word(name) && !covered_names.contains(*name))
+        .map(|s| s.to_string())
+        .collect();
 
-  let mut components = Vec::new();
-
-  for cap in capitalized_pattern.captures_iter(&text) {
-    if let Some(name) = cap.get(1) {
-      let name_str = name.as_str();
-      if !is_common_word(name_str) && !covered_names.contains(name_str) {
-        components.push(name_str.to_string());
-      }
+    // If no components found, suggest based on use case
+    if components.is_empty() {
+        vec![
+            format!("{}Handler", use_case.name),
+            format!("{}Service", use_case.name),
+        ]
+    } else {
+        components
     }
-  }
-
-  // If no components found, suggest based on use case
-  if components.is_empty() {
-    components.push(format!("{}Handler", use_case.name));
-    components.push(format!("{}Service", use_case.name));
-  }
-
-  components
 }
 
 /// Generate suggestion for covering a use case

@@ -13,8 +13,8 @@ use super::types::{HolePunchingResults, HoleType};
 use crate::ui::button::ButtonVariant;
 use crate::ui::Button;
 
-/// Props for ScenarioBulletInput component
-#[derive(Clone, Debug, PartialEq, Props)]
+/// Props for `ScenarioBulletInput` component.
+#[derive(Clone, Debug, PartialEq, Eq, Props)]
 pub struct ScenarioBulletInputProps {
   /// The trigger text (what triggers them to look for a solution?)
   pub trigger: Signal<String>,
@@ -27,7 +27,7 @@ pub struct ScenarioBulletInputProps {
   pub enabled: bool,
 }
 
-/// ScenarioBulletInput component
+/// `ScenarioBulletInput` component.
 ///
 /// Displays three input fields for the North Star Scenario bullet prompts:
 /// 1. Trigger: What triggers them to look for a solution?
@@ -41,7 +41,7 @@ pub fn ScenarioBulletInput(props: ScenarioBulletInputProps) -> Element {
 
   // Sync local values when external signals change
   use_effect({
-    let trigger = props.trigger.clone();
+    let trigger = props.trigger;
     move || {
       let external = trigger.read().clone();
       let local = local_trigger.read().clone();
@@ -52,7 +52,7 @@ pub fn ScenarioBulletInput(props: ScenarioBulletInputProps) -> Element {
   });
 
   use_effect({
-    let value_moment = props.value_moment.clone();
+    let value_moment = props.value_moment;
     move || {
       let external = value_moment.read().clone();
       let local = local_value_moment.read().clone();
@@ -63,7 +63,7 @@ pub fn ScenarioBulletInput(props: ScenarioBulletInputProps) -> Element {
   });
 
   use_effect({
-    let feeling = props.feeling.clone();
+    let feeling = props.feeling;
     move || {
       let external = feeling.read().clone();
       let local = local_feeling.read().clone();
@@ -74,25 +74,25 @@ pub fn ScenarioBulletInput(props: ScenarioBulletInputProps) -> Element {
   });
 
   let update_trigger = {
-    let mut trigger = props.trigger.clone();
+    let mut trigger = props.trigger;
     move |value: String| {
-      *local_trigger.write() = value.clone();
+      local_trigger.write().clone_from(&value);
       *trigger.write() = value;
     }
   };
 
   let update_value_moment = {
-    let mut value_moment = props.value_moment.clone();
+    let mut value_moment = props.value_moment;
     move |value: String| {
-      *local_value_moment.write() = value.clone();
+      local_value_moment.write().clone_from(&value);
       *value_moment.write() = value;
     }
   };
 
   let update_feeling = {
-    let mut feeling = props.feeling.clone();
+    let mut feeling = props.feeling;
     move |value: String| {
-      *local_feeling.write() = value.clone();
+      local_feeling.write().clone_from(&value);
       *feeling.write() = value;
     }
   };
@@ -136,7 +136,7 @@ pub fn ScenarioBulletInput(props: ScenarioBulletInputProps) -> Element {
                       placeholder: "e.g., User gets an error message they don't understand",
                       class: "ml-8 w-[calc(100%-2rem)] rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
                       oninput: {
-                          let mut update_trigger = update_trigger.clone();
+                          let mut update_trigger = update_trigger;
                           move |e: Event<FormData>| {
                               update_trigger(e.value());
                           }
@@ -169,7 +169,7 @@ pub fn ScenarioBulletInput(props: ScenarioBulletInputProps) -> Element {
                       placeholder: "e.g., Problem is resolved instantly with one click",
                       class: "ml-8 w-[calc(100%-2rem)] rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
                       oninput: {
-                          let mut update_value_moment = update_value_moment.clone();
+                          let mut update_value_moment = update_value_moment;
                           move |e: Event<FormData>| {
                               update_value_moment(e.value());
                           }
@@ -202,7 +202,7 @@ pub fn ScenarioBulletInput(props: ScenarioBulletInputProps) -> Element {
                       placeholder: "e.g., Relieved and confident in the product",
                       class: "ml-8 w-[calc(100%-2rem)] rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
                       oninput: {
-                          let mut update_feeling = update_feeling.clone();
+                          let mut update_feeling = update_feeling;
                           move |e: Event<FormData>| {
                               update_feeling(e.value());
                           }
@@ -214,8 +214,8 @@ pub fn ScenarioBulletInput(props: ScenarioBulletInputProps) -> Element {
   }
 }
 
-/// Props for HolePunchingChecklist component
-#[derive(Clone, Debug, PartialEq, Props)]
+/// Props for `HolePunchingChecklist` component.
+#[derive(Clone, Debug, PartialEq, Eq, Props)]
 pub struct HolePunchingChecklistProps {
   /// The hole punching results
   pub holes: Signal<HolePunchingResults>,
@@ -224,7 +224,7 @@ pub struct HolePunchingChecklistProps {
   pub enabled: bool,
 }
 
-/// HolePunchingChecklist component
+/// `HolePunchingChecklist` component.
 ///
 /// Displays three input fields for addressing scenario holes:
 /// 1. Discovery Hole: How did they find the feature?
@@ -237,7 +237,6 @@ pub fn HolePunchingChecklist(props: HolePunchingChecklistProps) -> Element {
 
   // Sync local holes when external signal changes
   use_effect({
-    let holes = holes.clone();
     move || {
       let external = holes.read().clone();
       let local = local_holes.read().clone();
@@ -248,11 +247,11 @@ pub fn HolePunchingChecklist(props: HolePunchingChecklistProps) -> Element {
   });
 
   let update_hole = {
-    let mut holes = holes.clone();
+    let mut holes = holes;
     move |hole_type: HoleType, value: String| {
       let current = local_holes.read().clone();
       let new_holes = current.address(hole_type, value);
-      *local_holes.write() = new_holes.clone();
+      local_holes.write().clone_from(&new_holes);
       *holes.write() = new_holes;
     }
   };
@@ -325,15 +324,19 @@ pub fn HolePunchingChecklist(props: HolePunchingChecklistProps) -> Element {
                           }
                           input {
                               r#type: "text",
-                              value: local_holes.read().explanation(*hole_type).map_or(String::new(), |s| s.to_string()),
+                               value: local_holes
+                                   .read()
+                                   .explanation(*hole_type)
+                                   .map(ToOwned::to_owned)
+                                   .unwrap_or_default(),
                               disabled: !props.enabled,
                               placeholder: "Explain how this is addressed...",
                               class: "ml-7 w-[calc(100%-1.75rem)] rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
-                              oninput: {
-                                  let mut update_hole = update_hole.clone();
-                                  move |e: Event<FormData>| {
-                                      update_hole(*hole_type, e.value());
-                                  }
+                               oninput: {
+                                   let mut update_hole = update_hole;
+                                   move |e: Event<FormData>| {
+                                       update_hole(*hole_type, e.value());
+                                   }
                               },
                           }
                       }
@@ -344,8 +347,8 @@ pub fn HolePunchingChecklist(props: HolePunchingChecklistProps) -> Element {
   }
 }
 
-/// Props for ScenarioQuality component
-#[derive(Clone, Debug, PartialEq, Props)]
+/// Props for `ScenarioQuality` component.
+#[derive(Clone, Debug, PartialEq, Eq, Props)]
 pub struct ScenarioQualityProps {
   /// The trigger text
   pub trigger: Signal<String>,
@@ -360,7 +363,7 @@ pub struct ScenarioQualityProps {
   pub expanded: bool,
 }
 
-/// ScenarioQuality component
+/// `ScenarioQuality` component.
 ///
 /// Displays quality metrics for the scenario.
 #[component]
@@ -372,10 +375,6 @@ pub fn ScenarioQuality(props: ScenarioQualityProps) -> Element {
 
   // Calculate quality dimensions based on scenario
   let quality_score = use_memo({
-    let trigger = trigger.clone();
-    let value_moment = value_moment.clone();
-    let feeling = feeling.clone();
-    let holes = holes.clone();
     move || {
       let trigger_text = trigger.read();
       let value_moment_text = value_moment.read();
@@ -385,7 +384,11 @@ pub fn ScenarioQuality(props: ScenarioQualityProps) -> Element {
       let bullets_score = calculate_bullets_score(&trigger_text, &value_moment_text, &feeling_text);
       let holes_score = calculate_holes_score(&holes_data);
 
-      let overall = ((bullets_score as u16 + holes_score as u16) / 2) as u8;
+      let overall = u8::try_from(u16::midpoint(
+        u16::from(bullets_score),
+        u16::from(holes_score),
+      ))
+      .unwrap_or_default();
 
       QualityScore::new(overall).with_dimensions(vec![
         QualityDimension::new("Scenario Bullets", bullets_score).with_issues(get_bullets_issues(
@@ -418,8 +421,8 @@ fn calculate_bullets_score(trigger: &str, value_moment: &str, feeling: &str) -> 
     calculate_single_bullet_score(feeling),
   ];
 
-  let sum: u16 = scores.iter().map(|&s| s as u16).sum();
-  (sum / 3) as u8
+  let sum: u16 = scores.iter().map(|&s| u16::from(s)).sum();
+  u8::try_from(sum / 3).unwrap_or_default()
 }
 
 /// Calculate score for a single bullet (0-100)
@@ -445,8 +448,7 @@ fn calculate_holes_score(holes: &HolePunchingResults) -> u8 {
     0 => 0,
     1 => 35,
     2 => 70,
-    3 => 100,
-    _ => 100,
+    3.. => 100,
   }
 }
 
@@ -484,7 +486,7 @@ fn get_holes_issues(holes: &HolePunchingResults) -> Vec<String> {
     .collect()
 }
 
-/// Props for ScenarioConfirm component
+/// Props for `ScenarioConfirm` component.
 #[derive(Clone, Debug, PartialEq, Props)]
 pub struct ScenarioConfirmProps {
   /// The trigger text
@@ -513,12 +515,12 @@ pub struct ScenarioConfirmProps {
   pub back_disabled: bool,
 }
 
-/// ScenarioConfirm component
+/// `ScenarioConfirm` component.
 ///
 /// Composes:
-/// - ScenarioBulletInput: Three bullet prompts for North Star Scenario
-/// - HolePunchingChecklist: Address gaps in the scenario
-/// - ScenarioQuality: Quality score indicator
+/// - `ScenarioBulletInput`: Three bullet prompts for North Star Scenario
+/// - `HolePunchingChecklist`: Address gaps in the scenario
+/// - `ScenarioQuality`: Quality score indicator
 /// - Navigation: Back/Next buttons
 ///
 /// This is the fifth and final confirmation step in the Progressive Discover flow.

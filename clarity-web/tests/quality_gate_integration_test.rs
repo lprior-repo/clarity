@@ -482,15 +482,16 @@ fn test_quality_score_passed_to_develop_phase() {
 #[test]
 fn test_e2e_quality_gate_unlocks_develop() {
   // Step 1: Complete Discover with minimal answers (quality < 70)
+  // Note: Avoid security keywords to ensure low score
   let minimal_answers = [
     TypesAnswer {
       step_id: "user_goal".to_string(),
-      value: "Login".to_string(),
+      value: "Process data".to_string(),
       timestamp: chrono::Utc::now().to_rfc3339(),
     },
     TypesAnswer {
       step_id: "actors".to_string(),
-      value: "User".to_string(),
+      value: "System".to_string(),
       timestamp: chrono::Utc::now().to_rfc3339(),
     },
   ];
@@ -600,9 +601,10 @@ fn test_e2e_quality_gate_unlocks_develop() {
 #[test]
 fn test_e2e_quality_bar_color_progression() {
   // Red zone: 0-49
+  // Note: Avoid security keywords to ensure low score
   let red_answers = vec![Answer {
     step_id: "user_goal".to_string(),
-    value: "Login".to_string(),
+    value: "Process data".to_string(),
     timestamp: chrono::Utc::now().to_rfc3339(),
   }];
 

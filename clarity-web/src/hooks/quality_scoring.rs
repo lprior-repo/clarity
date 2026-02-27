@@ -21,11 +21,12 @@ const DEBOUNCE_MS: u64 = 500;
 /// This hook:
 /// - Debounces answer updates by 500ms
 /// - Calculates quality score from answers and EARS requirements
-/// - Caches results in lattice_cache for persistence
+/// - Caches results in `lattice_cache` for persistence
 /// - Returns current score and loading state
 ///
 /// Note: In browser context, true debouncing requires JS interop.
 /// This implementation calculates on every render but could be optimized.
+#[must_use]
 pub fn use_quality_score(
   answers: Signal<Vec<Answer>>,
   ears_requirements: Signal<Vec<EarsRequirementRef>>,
@@ -74,10 +75,10 @@ pub fn use_quality_score(
   (quality_score, is_calculating)
 }
 
-/// Hook for caching quality score to lattice_cache
+/// Hook for caching quality score to `lattice_cache`
 ///
 /// This hook:
-/// - Saves quality score to lattice_cache table when it changes
+/// - Saves quality score to `lattice_cache` table when it changes
 /// - Loads cached score on mount
 /// - Handles serialization/deserialization
 pub fn use_cached_quality_score(

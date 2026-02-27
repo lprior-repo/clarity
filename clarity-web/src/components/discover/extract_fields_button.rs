@@ -6,7 +6,7 @@
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
-//! ExtractFieldsButton component for the Progressive Discover flow.
+//! `ExtractFieldsButton` component for the Progressive Discover flow.
 //!
 //! This button triggers field extraction from user input. It enforces
 //! a minimum character threshold (50 characters) and shows loading
@@ -16,7 +16,7 @@
 //!
 //! - THE SYSTEM SHALL display a clear label indicating the button's extraction function
 //! - THE SYSTEM SHALL show a loading state during extraction processing
-//! - WHEN the user clicks the ExtractFieldsButton, THE SYSTEM SHALL initiate the extraction process
+//! - WHEN the user clicks the `ExtractFieldsButton`, THE SYSTEM SHALL initiate the extraction process
 //! - IF the prompt textarea is empty (<50 chars), THE SYSTEM SHALL NOT trigger the extraction process
 //! - IF extraction is already in progress, THE SYSTEM SHALL NOT start a new extraction request
 
@@ -29,7 +29,7 @@ use crate::ui::button::{Button, ButtonVariant};
 /// Minimum character count required to enable extraction
 pub const MIN_PROMPT_CHARS: usize = 50;
 
-/// Props for ExtractFieldsButton component
+/// Props for `ExtractFieldsButton` component
 #[derive(Clone, Props, PartialEq)]
 pub struct ExtractFieldsButtonProps {
   /// The prompt text to extract fields from
@@ -47,10 +47,10 @@ pub struct ExtractFieldsButtonProps {
   pub disabled: bool,
 }
 
-/// ExtractFieldsButton component
+/// `ExtractFieldsButton` component
 ///
 /// A button that triggers field extraction from user input.
-/// Disabled when prompt is less than MIN_PROMPT_CHARS characters.
+/// Disabled when prompt is less than `MIN_PROMPT_CHARS` characters.
 /// Shows loading spinner during extraction.
 ///
 /// # Example
@@ -96,7 +96,7 @@ pub fn ExtractFieldsButton(props: ExtractFieldsButtonProps) -> Element {
               variant: ButtonVariant::Primary,
               disabled: is_disabled,
               onclick: {
-                  let on_click = props.on_click.clone();
+                  let on_click = props.on_click;
                   let prompt = props.prompt.clone();
                   move |_| {
                       if !prompt.trim().is_empty() {
@@ -158,7 +158,7 @@ pub fn ExtractFieldsButton(props: ExtractFieldsButtonProps) -> Element {
   }
 }
 
-/// Props for ExtractFieldsButtonWithServer component
+/// Props for `ExtractFieldsButtonWithServer` component
 ///
 /// This variant includes server function integration for actual extraction.
 #[derive(Clone, Props)]
@@ -209,7 +209,7 @@ pub struct ExtractedField {
   pub confidence: f64,
 }
 
-/// ExtractFieldsButton with server integration
+/// `ExtractFieldsButton` with server integration
 ///
 /// This component handles the full extraction flow including:
 /// - Calling the server function
@@ -234,9 +234,9 @@ pub fn ExtractFieldsButtonWithServer(props: ExtractFieldsButtonWithServerProps) 
               on_click: {
                   let prompt = props.prompt.clone();
                   let session_id = props.session_id.clone();
-                  let on_start = props.on_extraction_start.clone();
-                  let on_complete = props.on_extraction_complete.clone();
-                  let on_error = props.on_extraction_error.clone();
+                  let on_start = props.on_extraction_start;
+                  let on_complete = props.on_extraction_complete;
+                  let on_error = props.on_extraction_error;
 
                   move |_prompt_text: String| {
                       // Prevent double-clicks
@@ -260,10 +260,10 @@ pub fn ExtractFieldsButtonWithServer(props: ExtractFieldsButtonWithServerProps) 
 
                       // Spawn async task for server call
                       spawn({
-                          let mut is_loading = is_loading.clone();
-                          let mut error = error.clone();
-                          let on_complete = on_complete.clone();
-                          let on_error = on_error.clone();
+                          let mut is_loading = is_loading;
+                          let mut error = error;
+                          let on_complete = on_complete;
+                          let on_error = on_error;
 
                           async move {
                               let result = extract_fields_server(prompt_text, session).await;
@@ -344,9 +344,24 @@ mod tests {
       confidence: 0.95,
     };
 
-    let json = serde_json::to_string(&field).expect("Serialization should succeed");
-    let deserialized: ExtractedField =
-      serde_json::from_str(&json).expect("Deserialization should succeed");
+    let json_result = serde_json::to_string(&field);
+    assert!(
+      json_result.is_ok(),
+      "Serialization should succeed: {json_result:?}"
+    );
+    let Ok(json) = json_result else {
+      return;
+    };
+
+    let deserialized_result: Result<ExtractedField, serde_json::Error> =
+      serde_json::from_str(&json);
+    assert!(
+      deserialized_result.is_ok(),
+      "Deserialization should succeed: {deserialized_result:?}"
+    );
+    let Ok(deserialized) = deserialized_result else {
+      return;
+    };
 
     assert_eq!(deserialized.name, field.name);
     assert_eq!(deserialized.value, field.value);
@@ -371,9 +386,24 @@ mod tests {
       confidence: 0.875,
     };
 
-    let json = serde_json::to_string(&data).expect("Serialization should succeed");
-    let deserialized: ExtractedFieldsData =
-      serde_json::from_str(&json).expect("Deserialization should succeed");
+    let json_result = serde_json::to_string(&data);
+    assert!(
+      json_result.is_ok(),
+      "Serialization should succeed: {json_result:?}"
+    );
+    let Ok(json) = json_result else {
+      return;
+    };
+
+    let deserialized_result: Result<ExtractedFieldsData, serde_json::Error> =
+      serde_json::from_str(&json);
+    assert!(
+      deserialized_result.is_ok(),
+      "Deserialization should succeed: {deserialized_result:?}"
+    );
+    let Ok(deserialized) = deserialized_result else {
+      return;
+    };
 
     assert_eq!(deserialized.fields.len(), 2);
     assert_eq!(deserialized.fields[0].name, "problem");
@@ -406,7 +436,8 @@ mod tests {
     // Prompt with leading/trailing whitespace should use trimmed length
     let prompt = "   This is a prompt with exactly fifty chars in it!!!   ".to_string();
     let trimmed_len = prompt.trim().len();
-    // The component should use trimmed length for the check
-    assert!(trimmed_len >= MIN_PROMPT_CHARS || trimmed_len < MIN_PROMPT_CHARS);
+    let expected_trimmed = "This is a prompt with exactly fifty chars in it!!!";
+    assert_eq!(trimmed_len, expected_trimmed.len());
+    assert!(trimmed_len >= MIN_PROMPT_CHARS);
   }
 }

@@ -1,0 +1,25 @@
+--- clarity-web/src/lattice/quality.rs
++++ replace QualityScore::get_issues -> Vec<&QualityIssue> with vec![Box::leak(Box::new(Default::default()))]
+@@ -164,21 +164,17 @@
+ 
+   /// Get score for a specific dimension
+   pub fn get_dimension(&self, dimension: QualityDimension) -> Option<&DimensionScore> {
+     self.dimensions.iter().find(|d| d.dimension == dimension)
+   }
+ 
+   /// Get issues for a specific dimension
+   pub fn get_issues(&self, dimension: QualityDimension) -> Vec<&QualityIssue> {
+-    self
+-      .issues
+-      .iter()
+-      .filter(|i| i.dimension == dimension)
+-      .collect()
++    vec![Box::leak(Box::new(Default::default()))] /* ~ changed by cargo-mutants ~ */
+   }
+ }
+ 
+ /// EARS requirement reference for quality scoring
+ #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+ pub struct EarsRequirementRef {
+   pub id: String,
+   pub text: String,

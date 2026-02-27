@@ -39,3 +39,6 @@ pub use types::{tables, AnswerRecord, Confidence, ExtractionCache, LatticeCache,
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use redb_transcript_store::RedbTranscriptStore;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use redb_store::RedbStore;

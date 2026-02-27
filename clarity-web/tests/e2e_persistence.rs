@@ -196,38 +196,10 @@ fn test_e2e_persistence_discover_phase_express_mode() {
   verify_database_file_exists(&db_path).expect("Database file verification failed");
 
   // ============================================================
-  // STEP 3: Read database directly to verify tables
+  // STEP 3: Verify data integrity before closing (using store)
   // ============================================================
 
-  // Verify answers table contains all 5 records
-  let answer_count =
-    count_table_records(&db_path, tables::ANSWERS).expect("Failed to count answers");
-  assert_eq!(
-    answer_count, 5,
-    "Expected 5 answers in database, found {answer_count}"
-  );
-
-  // Verify metadata table contains mode preference
-  let metadata_count = count_table_records(&db_path, tables::PROJECT_METADATA)
-    .expect("Failed to count metadata records");
-  assert_eq!(
-    metadata_count, 1,
-    "Expected 1 metadata record in database, found {metadata_count}"
-  );
-
-  // Verify lattice cache table exists
-  let lattice_count = count_table_records(&db_path, tables::LATTICE_CACHE)
-    .expect("Failed to count lattice cache records");
-  assert_eq!(
-    lattice_count, 1,
-    "Expected 1 lattice cache record in database, found {lattice_count}"
-  );
-
-  // ============================================================
-  // STEP 4: Verify data integrity before closing
-  // ============================================================
-
-  // Verify all answers are retrievable
+  // Verify all answers are retrievable through the store
   let loaded_answers = store.load_answers().expect("Failed to load answers");
   assert_eq!(
     loaded_answers.len(),
@@ -267,11 +239,39 @@ fn test_e2e_persistence_discover_phase_express_mode() {
   );
 
   // ============================================================
-  // STEP 5: Close and reopen app (simulate restart)
+  // STEP 4: Read database directly to verify tables (after dropping store)
   // ============================================================
 
-  // Drop the store to close all database connections
+  // Drop the store to release the database lock before direct inspection
   drop(store);
+
+  // Verify answers table contains all 5 records
+  let answer_count =
+    count_table_records(&db_path, tables::ANSWERS).expect("Failed to count answers");
+  assert_eq!(
+    answer_count, 5,
+    "Expected 5 answers in database, found {answer_count}"
+  );
+
+  // Verify metadata table contains mode preference
+  let metadata_count = count_table_records(&db_path, tables::PROJECT_METADATA)
+    .expect("Failed to count metadata records");
+  assert_eq!(
+    metadata_count, 1,
+    "Expected 1 metadata record in database, found {metadata_count}"
+  );
+
+  // Verify lattice cache table exists
+  let lattice_count = count_table_records(&db_path, tables::LATTICE_CACHE)
+    .expect("Failed to count lattice cache records");
+  assert_eq!(
+    lattice_count, 1,
+    "Expected 1 lattice cache record in database, found {lattice_count}"
+  );
+
+  // ============================================================
+  // STEP 5: Reopen app (simulate restart) - store already dropped in step 4
+  // ============================================================
 
   // Reopen the database (simulating app restart)
   let store_reopened = RedbStore::open(&db_path).expect("Failed to reopen database after restart");

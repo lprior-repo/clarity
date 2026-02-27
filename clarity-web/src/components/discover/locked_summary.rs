@@ -61,7 +61,7 @@ impl ArtifactStats {
   }
 }
 
-/// Props for LockedSummary component
+/// Props for `LockedSummary` component
 #[derive(Clone, Props, PartialEq)]
 pub struct LockedSummaryProps {
   /// Artifact statistics to display
@@ -77,7 +77,7 @@ pub struct LockedSummaryProps {
   pub is_exporting: bool,
 }
 
-/// LockedSummary component
+/// `LockedSummary` component
 ///
 /// Displays the completion summary when the plan is locked:
 /// - "Plan Locked" header with success icon
@@ -368,13 +368,13 @@ pub fn LockedSummary(props: LockedSummaryProps) -> Element {
 /// Format an ISO 8601 timestamp for display
 fn format_timestamp(iso_timestamp: &str) -> String {
   // Try to parse and format nicely, fall back to original string on error
-  match chrono::DateTime::parse_from_rfc3339(iso_timestamp) {
-    Ok(dt) => dt.format("%B %d, %Y at %I:%M %p").to_string(),
-    Err(_) => iso_timestamp.to_string(),
-  }
+  chrono::DateTime::parse_from_rfc3339(iso_timestamp).map_or_else(
+    |_| iso_timestamp.to_string(),
+    |dt| dt.format("%B %d, %Y at %I:%M %p").to_string(),
+  )
 }
 
-/// Props for StatItem component
+/// Props for `StatItem` component
 #[derive(Clone, Props, PartialEq)]
 struct StatItemProps {
   /// Label for the stat

@@ -19,7 +19,7 @@ use crate::storage::transcript_store::{
   AntithesisResponse, ExtractedField, InterrogationTranscript, StrawManValidation,
 };
 
-/// Props for PreviewSummary component
+/// Props for `PreviewSummary` component
 #[derive(Clone, Props, PartialEq)]
 pub struct PreviewSummaryProps {
   /// The interrogation transcript to display
@@ -360,7 +360,7 @@ pub fn PreviewSummary(props: PreviewSummaryProps) -> Element {
   }
 }
 
-/// Convert an ExtractedField to FieldData for display
+/// Convert an `ExtractedField` to `FieldData` for display
 fn field_from_extracted(id: &str, title: &str, field: &ExtractedField) -> FieldData {
   FieldData {
     id: id.to_string(),
@@ -380,8 +380,8 @@ fn confidence_from_score(score: f64) -> Confidence {
   }
 }
 
-/// Props for HoleStatusBadge component
-#[derive(Clone, Debug, PartialEq, Props)]
+/// Props for `HoleStatusBadge` component
+#[derive(Clone, Debug, PartialEq, Eq, Props)]
 pub struct HoleStatusBadgeProps {
   /// Label for the badge
   pub label: String,

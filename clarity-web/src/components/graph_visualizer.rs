@@ -109,6 +109,14 @@ fn group_color(group: &str) -> (String, String) {
   }
 }
 
+fn usize_to_f64(value: usize) -> Option<f64> {
+  u32::try_from(value).ok().map(f64::from)
+}
+
+fn centered_start(count: usize, spacing: f64, center: f64) -> f64 {
+  usize_to_f64(count).map_or(center, |count_f| center - (count_f - 1.0) * spacing / 2.0)
+}
+
 /// Build graph nodes and edges from effects analysis
 fn build_effects_graph(answers: &[Answer]) -> (Vec<GraphNode>, Vec<GraphEdge>) {
   // Extract solution text for effects analysis
@@ -127,6 +135,7 @@ fn build_effects_graph(answers: &[Answer]) -> (Vec<GraphNode>, Vec<GraphEdge>) {
   }
 
   let effects_output = trace_effects(&solution_text);
+  let node_count_f = usize_to_f64(effects_output.nodes.len()).map_or(0.0, std::convert::identity);
 
   // Convert effects dependency nodes/edges to graph format
   let nodes: Vec<GraphNode> = effects_output
@@ -134,7 +143,9 @@ fn build_effects_graph(answers: &[Answer]) -> (Vec<GraphNode>, Vec<GraphEdge>) {
     .iter()
     .enumerate()
     .map(|(i, dep_node)| {
-      let x = 300.0 + ((i as f64 - effects_output.nodes.len() as f64 / 2.0) * 100.0);
+      let x = usize_to_f64(i).map_or(300.0, |idx_f| {
+        (idx_f - node_count_f / 2.0).mul_add(100.0, 300.0)
+      });
       let y = 200.0;
 
       GraphNode {
@@ -163,6 +174,84 @@ fn build_effects_graph(answers: &[Answer]) -> (Vec<GraphNode>, Vec<GraphEdge>) {
     .collect();
 
   (nodes, edges)
+}
+
+fn add_use_case_nodes(
+  use_cases: &[String],
+  scenario: Option<&String>,
+  nodes: &mut Vec<GraphNode>,
+  edges: &mut Vec<GraphEdge>,
+) {
+  let uc_start = centered_start(use_cases.len(), 70.0, 300.0);
+
+  for (i, uc) in use_cases.iter().enumerate() {
+    let id = format!("uc-{i}");
+    let short = if uc.len() > 20 {
+      format!("{}..", &uc[..18])
+    } else {
+      uc.clone()
+    };
+
+    let x = usize_to_f64(i).map_or(uc_start, |idx_f| idx_f.mul_add(70.0, uc_start));
+
+    nodes.push(GraphNode {
+      id: id.clone(),
+      label: short,
+      group: "usecase".into(),
+      x,
+      y: 300.0,
+    });
+
+    if scenario.is_some() {
+      edges.push(GraphEdge {
+        from: "scenario".into(),
+        to: id,
+      });
+    }
+  }
+}
+
+fn add_task_nodes(
+  tasks: &[String],
+  use_cases: &[String],
+  scenario: Option<&String>,
+  nodes: &mut Vec<GraphNode>,
+  edges: &mut Vec<GraphEdge>,
+) {
+  let t_start = centered_start(tasks.len(), 60.0, 300.0);
+
+  for (i, t) in tasks.iter().enumerate() {
+    let id = format!("task-{i}");
+    let parts: Vec<&str> = t.splitn(2, ':').collect();
+    let short = if parts.len() > 1 {
+      parts[0].trim().to_string()
+    } else {
+      t[..t.len().min(14)].to_string()
+    };
+
+    let x = usize_to_f64(i).map_or(t_start, |idx_f| idx_f.mul_add(60.0, t_start));
+
+    nodes.push(GraphNode {
+      id: id.clone(),
+      label: short,
+      group: "task".into(),
+      x,
+      y: 400.0,
+    });
+
+    if !use_cases.is_empty() {
+      let uc_idx = i.min(use_cases.len() - 1);
+      edges.push(GraphEdge {
+        from: format!("uc-{uc_idx}"),
+        to: id,
+      });
+    } else if scenario.is_some() {
+      edges.push(GraphEdge {
+        from: "scenario".into(),
+        to: id,
+      });
+    }
+  }
 }
 
 /// Build graph nodes and edges from answers
@@ -261,62 +350,16 @@ fn build_graph_data(answers: &[Answer]) -> (Vec<GraphNode>, Vec<GraphEdge>) {
   }
 
   let use_cases = parse_lines(get_val(answers, "use-cases"));
-  let uc_start = 300.0 - ((use_cases.len() as f64 - 1.0) * 70.0) / 2.0;
-
-  for (i, uc) in use_cases.iter().enumerate() {
-    let id = format!("uc-{}", i);
-    let short = if uc.len() > 20 {
-      format!("{}..", &uc[..18])
-    } else {
-      uc.clone()
-    };
-    nodes.push(GraphNode {
-      id: id.clone(),
-      label: short,
-      group: "usecase".into(),
-      x: uc_start + (i as f64) * 70.0,
-      y: 300.0,
-    });
-    if scenario.is_some() {
-      edges.push(GraphEdge {
-        from: "scenario".into(),
-        to: id,
-      });
-    }
-  }
+  add_use_case_nodes(&use_cases, scenario.as_ref(), &mut nodes, &mut edges);
 
   let tasks = parse_lines(get_val(answers, "tasks"));
-  let t_start = 300.0 - ((tasks.len() as f64 - 1.0) * 60.0) / 2.0;
-
-  for (i, t) in tasks.iter().enumerate() {
-    let id = format!("task-{}", i);
-    let parts: Vec<&str> = t.splitn(2, ':').collect();
-    let short = if parts.len() > 1 {
-      parts[0].trim().to_string()
-    } else {
-      t[..t.len().min(14)].to_string()
-    };
-    nodes.push(GraphNode {
-      id: id.clone(),
-      label: short,
-      group: "task".into(),
-      x: t_start + (i as f64) * 60.0,
-      y: 400.0,
-    });
-
-    if !use_cases.is_empty() {
-      let uc_idx = i.min(use_cases.len() - 1);
-      edges.push(GraphEdge {
-        from: format!("uc-{}", uc_idx),
-        to: id,
-      });
-    } else if scenario.is_some() {
-      edges.push(GraphEdge {
-        from: "scenario".into(),
-        to: id,
-      });
-    }
-  }
+  add_task_nodes(
+    &tasks,
+    &use_cases,
+    scenario.as_ref(),
+    &mut nodes,
+    &mut edges,
+  );
 
   (nodes, edges)
 }
@@ -422,7 +465,7 @@ fn render_legend_item(item: &LegendItem) -> Element {
   }
 }
 
-/// GraphVisualizer component - simplified SVG-based graph visualization
+/// `GraphVisualizer` component - simplified SVG-based graph visualization
 #[component]
 pub fn GraphVisualizer(answers: Signal<Vec<Answer>>) -> Element {
   let answers_guard = answers.read();
@@ -441,11 +484,11 @@ pub fn GraphVisualizer(answers: Signal<Vec<Answer>>) -> Element {
   );
 
   let (effects_nodes, effects_edges) = build_effects_graph(&answers_guard);
-  let (nodes, edges, use_effects) = if !effects_nodes.is_empty() {
-    (effects_nodes, effects_edges, true)
-  } else {
+  let (nodes, edges, use_effects) = if effects_nodes.is_empty() {
     let (basic_nodes, basic_edges) = build_graph_data(&answers_guard);
     (basic_nodes, basic_edges, false)
+  } else {
+    (effects_nodes, effects_edges, true)
   };
 
   let warnings = effects_output.warnings;

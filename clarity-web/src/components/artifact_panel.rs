@@ -35,9 +35,8 @@ fn SectionHeader(label: String, count: Option<usize>) -> Element {
 /// Thesis card component
 #[component]
 fn ThesisCard(label: String, value: Option<String>, accent_class: String) -> Element {
-  let content = match value {
-    Some(v) => v,
-    None => return rsx! { "" },
+  let Some(content) = value else {
+    return rsx! { "" };
   };
 
   rsx! {
@@ -217,7 +216,7 @@ fn build_ears_display(output: &EarsOutput) -> Vec<EarsDisplayData> {
       let (requirement_type, text, color_class) = match req {
         EarsRequirement::Ubiquitous { actor, action } => (
           "Ubiquitous".to_string(),
-          format!("{} shall {}", actor, action),
+          format!("{actor} shall {action}"),
           "border-chart-1/20 bg-chart-1/5 text-chart-1".to_string(),
         ),
         EarsRequirement::StateDriven {
@@ -226,7 +225,7 @@ fn build_ears_display(output: &EarsOutput) -> Vec<EarsDisplayData> {
           action,
         } => (
           "State-Driven".to_string(),
-          format!("When {}, {} shall {}", trigger, actor, action),
+          format!("When {trigger}, {actor} shall {action}"),
           "border-chart-2/20 bg-chart-2/5 text-chart-2".to_string(),
         ),
         EarsRequirement::EventDriven {
@@ -235,7 +234,7 @@ fn build_ears_display(output: &EarsOutput) -> Vec<EarsDisplayData> {
           action,
         } => (
           "Event-Driven".to_string(),
-          format!("During {}, {} shall {}", trigger, actor, action),
+          format!("During {trigger}, {actor} shall {action}"),
           "border-chart-3/20 bg-chart-3/5 text-chart-3".to_string(),
         ),
         EarsRequirement::Unwanted {
@@ -244,7 +243,7 @@ fn build_ears_display(output: &EarsOutput) -> Vec<EarsDisplayData> {
           action,
         } => (
           "Unwanted".to_string(),
-          format!("If {}, {} shall NOT {}", condition, actor, action),
+          format!("If {condition}, {actor} shall NOT {action}"),
           "border-chart-4/20 bg-chart-4/5 text-chart-4".to_string(),
         ),
         EarsRequirement::Optional {
@@ -253,7 +252,7 @@ fn build_ears_display(output: &EarsOutput) -> Vec<EarsDisplayData> {
           action,
         } => (
           "Optional".to_string(),
-          format!("Where {}, {} shall {}", condition, actor, action),
+          format!("Where {condition}, {actor} shall {action}"),
           "border-chart-5/20 bg-chart-5/5 text-chart-5".to_string(),
         ),
       };
@@ -426,7 +425,7 @@ fn render_ears_section(ears_output: &EarsOutput) -> Option<Element> {
   })
 }
 
-/// ArtifactPanel component - displays accumulated planning artifacts
+/// `ArtifactPanel` component - displays accumulated planning artifacts
 #[component]
 pub fn ArtifactPanel(answers: Signal<Vec<Answer>>, active_phase: Signal<String>) -> Element {
   let mut selected_task = use_signal(|| None as Option<usize>);
@@ -465,13 +464,13 @@ pub fn ArtifactPanel(answers: Signal<Vec<Answer>>, active_phase: Signal<String>)
     .map(|(i, t)| {
       let t = t.clone();
       let selected = current_selected == Some(i);
-      let mut signal = selected_task.clone();
+      let mut signal = selected_task;
       rsx! {
           TaskRow {
               text: t,
               index: i,
               selected,
-              on_click: move |_| {
+              on_click: move |()| {
                   let current = *signal.read();
                   signal.set(if current == Some(i) { None } else { Some(i) });
               }
@@ -510,9 +509,9 @@ pub fn ArtifactPanel(answers: Signal<Vec<Answer>>, active_phase: Signal<String>)
                       if has_thesis {
                           SectionHeader { label: "Thesis".to_string(), count: None }
                           div { class: "space-y-2",
-                              ThesisCard { label: "Problem".to_string(), value: problem.clone(), accent_class: "border-border bg-card".to_string() }
-                              ThesisCard { label: "Antithesis".to_string(), value: antithesis.clone(), accent_class: "border-chart-4/20 bg-chart-4/5".to_string() }
-                              ThesisCard { label: "Solution".to_string(), value: solution.clone(), accent_class: "border-border bg-card".to_string() }
+                              ThesisCard { label: "Problem".to_string(), value: problem, accent_class: "border-border bg-card".to_string() }
+                              ThesisCard { label: "Antithesis".to_string(), value: antithesis, accent_class: "border-chart-4/20 bg-chart-4/5".to_string() }
+                              ThesisCard { label: "Solution".to_string(), value: solution, accent_class: "border-border bg-card".to_string() }
                           }
                       }
 
@@ -564,7 +563,7 @@ pub fn ArtifactPanel(answers: Signal<Vec<Answer>>, active_phase: Signal<String>)
                                       TaskDetail {
                                           task: tasks_clone[selected].clone(),
                                           index: selected,
-                                          on_close: move |_| selected_task.set(None)
+                                          on_close: move |()| selected_task.set(None)
                                       }
                                   }
                               }

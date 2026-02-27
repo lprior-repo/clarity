@@ -6,7 +6,7 @@
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
-//! PromptTextarea component for the Progressive Discover Prompt phase.
+//! `PromptTextarea` component for the Progressive Discover Prompt phase.
 //!
 //! This component provides a specialized textarea with:
 //! - 2000 character limit
@@ -23,7 +23,7 @@ pub const MAX_PROMPT_LENGTH: usize = 2000;
 /// Minimum character count required for extraction
 pub const MIN_PROMPT_LENGTH: usize = 50;
 
-/// Props for PromptTextarea component
+/// Props for `PromptTextarea` component.
 #[derive(Props, PartialEq, Clone)]
 pub struct PromptTextareaProps {
   /// Current value of the textarea
@@ -49,7 +49,7 @@ pub struct PromptTextareaProps {
   pub class: String,
 }
 
-/// PromptTextarea component
+/// `PromptTextarea` component.
 ///
 /// A specialized textarea for the Prompt phase with character limit and live count.
 ///
@@ -82,7 +82,7 @@ pub fn PromptTextarea(props: PromptTextareaProps) -> Element {
 
   // Handle input with character limit enforcement
   let handle_input = {
-    let on_change = props.on_change.clone();
+    let on_change = props.on_change;
     move |e: Event<FormData>| {
       let new_value = e.value();
       if new_value.len() <= MAX_PROMPT_LENGTH {
@@ -95,7 +95,7 @@ pub fn PromptTextarea(props: PromptTextareaProps) -> Element {
   // Handle blur with trimming
   let handle_blur = {
     let value = props.value.clone();
-    let on_change = props.on_change.clone();
+    let on_change = props.on_change;
     move |_| {
       let trimmed = value.trim().to_string();
       if trimmed != value {
@@ -135,10 +135,10 @@ pub fn PromptTextarea(props: PromptTextareaProps) -> Element {
           // Textarea
           textarea {
               class: textarea_classes,
-              placeholder: if !props.placeholder.is_empty() {
-                  Some(props.placeholder.clone())
-              } else {
+              placeholder: if props.placeholder.is_empty() {
                   None
+              } else {
+                  Some(props.placeholder.clone())
               },
               value: props.value.clone(),
               disabled: props.disabled,
@@ -189,8 +189,8 @@ pub fn PromptTextarea(props: PromptTextareaProps) -> Element {
 // CharacterCount Component
 // ============================================================================
 
-/// Props for CharacterCount component
-#[derive(Props, PartialEq, Clone)]
+/// Props for `CharacterCount` component.
+#[derive(Props, PartialEq, Eq, Clone)]
 pub struct CharacterCountProps {
   /// Current character count
   pub current: usize,
@@ -205,7 +205,7 @@ pub struct CharacterCountProps {
   pub class: String,
 }
 
-/// CharacterCount component
+/// `CharacterCount` component.
 ///
 /// Displays character count with progress toward minimum threshold.
 /// Shows "Need X more" when under minimum, "Ready!" when at or above.
@@ -223,10 +223,10 @@ pub struct CharacterCountProps {
 /// ```
 #[component]
 pub fn CharacterCount(props: CharacterCountProps) -> Element {
-  let progress = if props.minimum > 0 {
-    (props.current as f64 / props.minimum as f64).min(1.0)
+  let progress_percent = if props.minimum > 0 {
+    (props.current.saturating_mul(100) / props.minimum).min(100)
   } else {
-    1.0
+    100
   };
 
   let is_at_minimum = props.current >= props.minimum;
@@ -255,11 +255,11 @@ pub fn CharacterCount(props: CharacterCountProps) -> Element {
 
   // Status message
   let status_message = if is_at_limit {
-    "Character limit reached".to_string()
+    String::from("Character limit reached")
   } else if is_near_limit {
-    "Approaching limit".to_string()
+    String::from("Approaching limit")
   } else if is_at_minimum {
-    "Ready!".to_string()
+    String::from("Ready!")
   } else {
     format!("Need {} more", props.minimum.saturating_sub(props.current))
   };
@@ -290,11 +290,11 @@ pub fn CharacterCount(props: CharacterCountProps) -> Element {
               div {
                   class: "h-1 w-full bg-muted rounded-full overflow-hidden",
                   div {
-                      class: "h-full {progress_color} transition-all duration-200",
-                      style: "width: {progress * 100.0}%",
-                  }
-              }
-          }
+                       class: "h-full {progress_color} transition-all duration-200",
+                       style: "width: {progress_percent}%",
+                   }
+               }
+           }
       }
   }
 }
@@ -328,11 +328,11 @@ mod tests {
     assert!(empty.len() <= MAX_PROMPT_LENGTH.saturating_sub(200));
 
     // Test at limit
-    let at_limit: String = "a".repeat(MAX_PROMPT_LENGTH);
+    let at_limit = "a".repeat(MAX_PROMPT_LENGTH);
     assert_eq!(at_limit.len(), MAX_PROMPT_LENGTH);
 
     // Test over limit (should be blocked by input handler)
-    let over_limit: String = "a".repeat(MAX_PROMPT_LENGTH + 1);
+    let over_limit = "a".repeat(MAX_PROMPT_LENGTH + 1);
     assert!(over_limit.len() > MAX_PROMPT_LENGTH);
   }
 

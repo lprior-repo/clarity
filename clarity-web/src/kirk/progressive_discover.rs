@@ -698,7 +698,7 @@ mod tests {
   }
 
   #[test]
-  fn test_kirk_contract_16_with_section_content() {
+  fn test_kirk_contract_16_with_section_content() -> Result<(), &'static str> {
     let contract = KirkContract16::new();
 
     let updated = contract.with_section_content(0, "New content".to_string());
@@ -711,28 +711,29 @@ mod tests {
       Some("New content")
     );
 
-    let out_of_bounds = updated
-      .unwrap()
-      .with_section_content(20, "Invalid".to_string());
+    let updated_contract = updated.ok_or("Updated contract should exist")?;
+    let out_of_bounds = updated_contract.with_section_content(20, "Invalid".to_string());
     assert!(out_of_bounds.is_none());
+    Ok(())
   }
 
   #[test]
-  fn test_kirk_contract_16_filled_count() {
+  fn test_kirk_contract_16_filled_count() -> Result<(), &'static str> {
     let contract = KirkContract16::new();
     assert_eq!(contract.filled_section_count(), 0);
 
     let filled = contract
       .with_section_content(0, "Content 1".to_string())
-      .unwrap()
+      .ok_or("Should set section 0")?
       .with_section_content(5, "Content 2".to_string())
-      .unwrap();
+      .ok_or("Should set section 5")?;
 
     assert_eq!(filled.filled_section_count(), 2);
+    Ok(())
   }
 
   #[test]
-  fn test_kirk_contract_16_completion_percentage() {
+  fn test_kirk_contract_16_completion_percentage() -> Result<(), &'static str> {
     let contract = KirkContract16::new();
     assert_eq!(contract.completion_percentage(), 0);
 
@@ -740,13 +741,14 @@ mod tests {
     for i in 0..8 {
       contract = contract
         .with_section_content(i, format!("Content {}", i))
-        .unwrap();
+        .ok_or("Should set section content")?;
     }
     assert_eq!(contract.completion_percentage(), 50);
+    Ok(())
   }
 
   #[test]
-  fn test_kirk_contract_16_is_complete() {
+  fn test_kirk_contract_16_is_complete() -> Result<(), &'static str> {
     let contract = KirkContract16::new();
     assert!(!contract.is_complete());
 
@@ -754,9 +756,10 @@ mod tests {
     for i in 0..14 {
       contract = contract
         .with_section_content(i, format!("Content {}", i))
-        .unwrap();
+        .ok_or("Should set section content")?;
     }
     assert!(contract.is_complete());
+    Ok(())
   }
 
   #[test]
@@ -901,40 +904,40 @@ mod tests {
   }
 
   #[test]
-  fn test_kirk_contract_serialization() {
+  fn test_kirk_contract_serialization() -> Result<(), serde_json::Error> {
     let contract = KirkContract16::new();
 
-    let json = serde_json::to_string(&contract);
-    assert!(json.is_ok());
+    let json = serde_json::to_string(&contract)?;
 
-    let deserialized: Result<KirkContract16, _> = serde_json::from_str(&json.unwrap());
-    assert!(deserialized.is_ok());
+    let deserialized: KirkContract16 = serde_json::from_str(&json)?;
+    assert_eq!(contract, deserialized);
+    Ok(())
   }
 
   #[test]
-  fn test_vorp_validation_serialization() {
+  fn test_vorp_validation_serialization() -> Result<(), serde_json::Error> {
     let vorp = VorpValidation::new(0.8, 0.7, 0.9, 0.6);
 
-    let json = serde_json::to_string(&vorp);
-    assert!(json.is_ok());
+    let json = serde_json::to_string(&vorp)?;
 
-    let deserialized: Result<VorpValidation, _> = serde_json::from_str(&json.unwrap());
-    assert!(deserialized.is_ok());
+    let deserialized: VorpValidation = serde_json::from_str(&json)?;
+    assert_eq!(vorp, deserialized);
+    Ok(())
   }
 
   #[test]
-  fn test_antithesis_validation_serialization() {
+  fn test_antithesis_validation_serialization() -> Result<(), serde_json::Error> {
     let validation = AntithesisValidation::passing(0.85);
 
-    let json = serde_json::to_string(&validation);
-    assert!(json.is_ok());
+    let json = serde_json::to_string(&validation)?;
 
-    let deserialized: Result<AntithesisValidation, _> = serde_json::from_str(&json.unwrap());
-    assert!(deserialized.is_ok());
+    let deserialized: AntithesisValidation = serde_json::from_str(&json)?;
+    assert_eq!(validation, deserialized);
+    Ok(())
   }
 
   #[test]
-  fn test_ears_extraction_serialization() {
+  fn test_ears_extraction_serialization() -> Result<(), serde_json::Error> {
     let extraction = EarsExtraction::new(vec![ExtractedEarsRequirement::new(
       "1".to_string(),
       "Req".to_string(),
@@ -942,10 +945,10 @@ mod tests {
       "section".to_string(),
     )]);
 
-    let json = serde_json::to_string(&extraction);
-    assert!(json.is_ok());
+    let json = serde_json::to_string(&extraction)?;
 
-    let deserialized: Result<EarsExtraction, _> = serde_json::from_str(&json.unwrap());
-    assert!(deserialized.is_ok());
+    let deserialized: EarsExtraction = serde_json::from_str(&json)?;
+    assert_eq!(extraction, deserialized);
+    Ok(())
   }
 }

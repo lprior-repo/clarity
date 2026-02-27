@@ -182,8 +182,32 @@ fn test_e2e_persistence_discover_phase_express_mode() {
   verify_database_file_exists(&db_path).expect("Database file verification failed");
 
   // ============================================================
-  // STEP 3: Read database directly to verify tables
+  // STEP 3: Verify data integrity before closing (using store)
   // ============================================================
+
+  let loaded_answers = store.load_answers().expect("Failed to load answers");
+  assert_eq!(loaded_answers.len(), 5);
+
+  let loaded_metadata = store.get_metadata().expect("Failed to get metadata");
+  assert!(loaded_metadata.is_some());
+  let loaded_metadata = loaded_metadata.unwrap();
+  assert_eq!(loaded_metadata.mode_preference, "express");
+  assert_eq!(loaded_metadata.current_phase, "discover");
+
+  let loaded_lattice = store
+    .get_lattice_cache("discover")
+    .expect("Failed to get lattice cache");
+  assert!(loaded_lattice.is_some());
+  let loaded_lattice = loaded_lattice.unwrap();
+  assert!(loaded_lattice.output_data.contains("quality_score"));
+  assert!(loaded_lattice.output_data.contains("0.92"));
+
+  // ============================================================
+  // STEP 4: Read database directly to verify tables (after dropping store)
+  // ============================================================
+
+  // Drop the store to release the database lock before direct inspection
+  drop(store);
 
   let answer_count =
     count_table_records(&db_path, tables::ANSWERS).expect("Failed to count answers");
@@ -207,31 +231,8 @@ fn test_e2e_persistence_discover_phase_express_mode() {
   );
 
   // ============================================================
-  // STEP 4: Verify data integrity before closing
+  // STEP 5: Reopen app (simulate restart) - store already dropped in step 4
   // ============================================================
-
-  let loaded_answers = store.load_answers().expect("Failed to load answers");
-  assert_eq!(loaded_answers.len(), 5);
-
-  let loaded_metadata = store.get_metadata().expect("Failed to get metadata");
-  assert!(loaded_metadata.is_some());
-  let loaded_metadata = loaded_metadata.unwrap();
-  assert_eq!(loaded_metadata.mode_preference, "express");
-  assert_eq!(loaded_metadata.current_phase, "discover");
-
-  let loaded_lattice = store
-    .get_lattice_cache("discover")
-    .expect("Failed to get lattice cache");
-  assert!(loaded_lattice.is_some());
-  let loaded_lattice = loaded_lattice.unwrap();
-  assert!(loaded_lattice.output_data.contains("quality_score"));
-  assert!(loaded_lattice.output_data.contains("0.92"));
-
-  // ============================================================
-  // STEP 5: Close and reopen app (simulate restart)
-  // ============================================================
-
-  drop(store);
 
   let store_reopened = RedbStore::open(&db_path).expect("Failed to reopen database after restart");
 

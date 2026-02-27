@@ -13,8 +13,10 @@ pub mod brutal_truths;
 pub mod extract_fields_button;
 pub mod extracting_progress;
 pub mod field_card;
+pub mod guided;
 pub mod locked_phase;
 pub mod locked_summary;
+pub mod mode_toggle;
 pub mod nonpersona_confirm;
 pub mod persona_confirm;
 pub mod phases;
@@ -40,8 +42,10 @@ pub use extract_fields_button::{
 };
 pub use extracting_progress::{ExtractingProgress, ExtractingProgressProps, ExtractionStatus};
 pub use field_card::{Confidence, FieldCard, FieldCardProps, FieldData};
+pub use guided::{GuidedFlow, QuestionState, SuggestionProvider};
 pub use locked_phase::{LockedPhase, LockedPhaseProps};
 pub use locked_summary::{ArtifactStats, LockedSummary, LockedSummaryProps};
+pub use mode_toggle::DiscoverMode;
 pub use nonpersona_confirm::{
   NonpersonaConfirm, NonpersonaConfirmProps, NonpersonaDisplay, NonpersonaDisplayProps,
   NonpersonaGuidance, NonpersonaGuidanceProps, NonpersonaQuality, NonpersonaQualityProps,

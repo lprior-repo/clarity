@@ -94,7 +94,7 @@ Session creation leads to personalized dashboard.
 Dashboard enables feature access.
 Feature access requires user permissions.
 Poor authentication blocks session creation.
-Invalid permissions prevent feature access.";
+Invalid permissions prevents feature access.";
 
   let output = trace_effects(solution);
 
@@ -157,7 +157,7 @@ fn test_partial_ars_requirements() {
 
   // Should report 1 error
   assert_eq!(output.errors.len(), 1);
-  assert!(output.errors[0].contains("unrecognized pattern"));
+  assert!(output.errors[0].contains("unrecognized requirement pattern"));
 }
 
 #[test]

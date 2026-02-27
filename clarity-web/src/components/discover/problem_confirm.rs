@@ -13,8 +13,8 @@ use super::quality_score::{QualityDimension, QualityScore, QualityScoreBar};
 use crate::ui::button::ButtonVariant;
 use crate::ui::{Button, Textarea};
 
-/// Props for ProblemDisplay component
-#[derive(Clone, Debug, PartialEq, Props)]
+/// Props for `ProblemDisplay` component.
+#[derive(Clone, Debug, PartialEq, Eq, Props)]
 pub struct ProblemDisplayProps {
   /// The problem text to display/edit
   pub problem: Signal<String>,
@@ -26,10 +26,10 @@ pub struct ProblemDisplayProps {
   pub editable: bool,
 }
 
-/// ProblemDisplay component
+/// `ProblemDisplay` component.
 ///
 /// Displays and allows editing of the problem statement.
-/// This is the first part of the ProblemConfirm flow.
+/// This is the first part of the `ProblemConfirm` flow.
 #[component]
 pub fn ProblemDisplay(props: ProblemDisplayProps) -> Element {
   let problem = props.problem;
@@ -37,7 +37,6 @@ pub fn ProblemDisplay(props: ProblemDisplayProps) -> Element {
 
   // Sync local problem when external signal changes
   use_effect({
-    let problem = problem.clone();
     move || {
       let external = problem.read().clone();
       let local = local_problem.read().clone();
@@ -48,9 +47,9 @@ pub fn ProblemDisplay(props: ProblemDisplayProps) -> Element {
   });
 
   let on_input = {
-    let mut problem = problem.clone();
+    let mut problem = problem;
     move |value: String| {
-      *local_problem.write() = value.clone();
+      local_problem.write().clone_from(&value);
       *problem.write() = value;
     }
   };
@@ -73,8 +72,8 @@ pub fn ProblemDisplay(props: ProblemDisplayProps) -> Element {
   }
 }
 
-/// Props for AntithesisInput component
-#[derive(Clone, Debug, PartialEq, Props)]
+/// Props for `AntithesisInput` component.
+#[derive(Clone, Debug, PartialEq, Eq, Props)]
 pub struct AntithesisInputProps {
   /// The antithesis response containing 3 points
   pub antithesis: Signal<AntithesisResponse>,
@@ -83,7 +82,7 @@ pub struct AntithesisInputProps {
   pub enabled: bool,
 }
 
-/// AntithesisInput component
+/// `AntithesisInput` component.
 ///
 /// Displays three input fields for the null hypothesis points.
 /// These are realistic reasons why users might reject the solution.
@@ -94,7 +93,6 @@ pub fn AntithesisInput(props: AntithesisInputProps) -> Element {
 
   // Sync local points when external signal changes
   use_effect({
-    let antithesis = antithesis.clone();
     move || {
       let external = antithesis.read().points.clone();
       let local = local_points.read().clone();
@@ -105,7 +103,7 @@ pub fn AntithesisInput(props: AntithesisInputProps) -> Element {
   });
 
   let update_point = {
-    let mut antithesis = antithesis.clone();
+    let mut antithesis = antithesis;
     move |index: usize, value: String| {
       let current_points = local_points.read();
       if index < current_points.len() {
@@ -115,7 +113,7 @@ pub fn AntithesisInput(props: AntithesisInputProps) -> Element {
           .map(|(i, p)| if i == index { value.clone() } else { p.clone() })
           .collect::<Vec<_>>();
         drop(current_points);
-        *local_points.write() = new_points.clone();
+        local_points.write().clone_from(&new_points);
         *antithesis.write() = AntithesisResponse::new(new_points);
       }
     }
@@ -144,7 +142,7 @@ pub fn AntithesisInput(props: AntithesisInputProps) -> Element {
                           placeholder: format!("Antithesis point {}", index + 1),
                           class: "flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
                           oninput: {
-                              let mut update_point = update_point.clone();
+                              let mut update_point = update_point;
                               move |e: Event<FormData>| {
                                   update_point(index, e.value());
                               }
@@ -157,8 +155,8 @@ pub fn AntithesisInput(props: AntithesisInputProps) -> Element {
   }
 }
 
-/// Props for AntithesisQuality component
-#[derive(Clone, Debug, PartialEq, Props)]
+/// Props for `AntithesisQuality` component.
+#[derive(Clone, Debug, PartialEq, Eq, Props)]
 pub struct AntithesisQualityProps {
   /// The antithesis response to display quality for
   pub antithesis: Signal<AntithesisResponse>,
@@ -167,10 +165,10 @@ pub struct AntithesisQualityProps {
   pub expanded: bool,
 }
 
-/// AntithesisQuality component
+/// `AntithesisQuality` component.
 ///
 /// Displays quality metrics for the antithesis response.
-/// Uses the QualityScoreBar component with dimensions for:
+/// Uses the `QualityScoreBar` component with dimensions for:
 /// - Specificity: How specific are the rejection reasons?
 /// - Realism: How realistic/plausible are they?
 /// - Actionability: Can the team address these concerns?
@@ -180,7 +178,6 @@ pub fn AntithesisQuality(props: AntithesisQualityProps) -> Element {
 
   // Calculate quality dimensions based on antithesis
   let quality_score = use_memo({
-    let antithesis = antithesis.clone();
     move || {
       let response = antithesis.read();
       let overall = response.score();
@@ -230,7 +227,7 @@ fn calculate_specificity_score(points: &[String]) -> u8 {
     })
     .sum();
 
-  u8::try_from(total / 3).unwrap_or(0)
+  u8::try_from(total / 3).unwrap_or_default()
 }
 
 /// Calculate realism score (0-100) for antithesis points
@@ -260,7 +257,7 @@ fn calculate_realism_score(points: &[String]) -> u8 {
     })
     .sum();
 
-  u8::try_from(total / 3).unwrap_or(0)
+  u8::try_from(total / 3).unwrap_or_default()
 }
 
 /// Calculate actionability score (0-100) for antithesis points
@@ -290,12 +287,12 @@ fn calculate_actionability_score(points: &[String]) -> u8 {
     })
     .sum();
 
-  u8::try_from(total / 3).unwrap_or(0)
+  u8::try_from(total / 3).unwrap_or_default()
 }
 
 /// Get specificity issues for the points
 fn get_specificity_issues(points: &[String]) -> Vec<String> {
-  let issues: Vec<String> = points
+  points
     .iter()
     .enumerate()
     .filter_map(|(i, p)| {
@@ -309,14 +306,12 @@ fn get_specificity_issues(points: &[String]) -> Vec<String> {
         _ => None,
       }
     })
-    .collect();
-
-  issues
+    .collect()
 }
 
 /// Get realism issues for the points
 fn get_realism_issues(points: &[String]) -> Vec<String> {
-  let issues: Vec<String> = points
+  points
     .iter()
     .enumerate()
     .filter_map(|(i, p)| {
@@ -326,9 +321,7 @@ fn get_realism_issues(points: &[String]) -> Vec<String> {
         None
       }
     })
-    .collect();
-
-  issues
+    .collect()
 }
 
 /// Get actionability issues for the points
@@ -341,7 +334,7 @@ fn get_actionability_issues(points: &[String]) -> Vec<String> {
   }
 }
 
-/// Props for ProblemConfirm component
+/// Props for `ProblemConfirm` component.
 #[derive(Clone, Debug, PartialEq, Props)]
 pub struct ProblemConfirmProps {
   /// The problem text
@@ -366,12 +359,12 @@ pub struct ProblemConfirmProps {
   pub back_disabled: bool,
 }
 
-/// ProblemConfirm component
+/// `ProblemConfirm` component.
 ///
 /// Composes:
-/// - ProblemDisplay: Shows the problem text for review/editing
-/// - AntithesisInput: Three inputs for null hypothesis points
-/// - AntithesisQuality: Quality score indicator
+/// - `ProblemDisplay`: Shows the problem text for review/editing
+/// - `AntithesisInput`: Three inputs for null hypothesis points
+/// - `AntithesisQuality`: Quality score indicator
 /// - Navigation: Back/Next buttons
 ///
 /// This is the first confirmation step in the Progressive Discover flow.
@@ -502,7 +495,7 @@ mod tests {
       "Brief".to_string(),
     ];
     let score = calculate_specificity_score(&points);
-    assert!(score >= 20 && score <= 50);
+    assert!((20..=50).contains(&score));
   }
 
   #[test]

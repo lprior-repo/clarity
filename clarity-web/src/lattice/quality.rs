@@ -1037,4 +1037,449 @@ mod tests {
     assert_eq!(warning.severity, IssueSeverity::Warning);
     assert_eq!(critical.severity, IssueSeverity::Critical);
   }
+
+  // =========================================================================
+  // MUTANT CATCHING TESTS
+  // These tests specifically target mutations that cargo-mutants found missed
+  // =========================================================================
+
+  #[test]
+  fn test_quality_dimension_description_exact_content() {
+    // Catches mutation: description() returning "xyzzy" (line 74)
+    // Each dimension must return its exact expected description
+    assert_eq!(
+      QualityDimension::Completeness.description(),
+      "Percentage of required fields filled"
+    );
+    assert_eq!(
+      QualityDimension::Consistency.description(),
+      "Absence of contradictory requirements"
+    );
+    assert_eq!(
+      QualityDimension::Testability.description(),
+      "Presence of acceptance criteria"
+    );
+    assert_eq!(
+      QualityDimension::Clarity.description(),
+      "Readability and minimal jargon"
+    );
+    assert_eq!(
+      QualityDimension::Security.description(),
+      "Security considerations present"
+    );
+  }
+
+  #[test]
+  fn test_completeness_exact_boundary_all_five_fields() {
+    // Catches mutation: `>` to `>=` at line 270 in calculate_completeness
+    // With exactly 5 required fields, all 5 filled should equal 100%
+    let answers = vec![
+      create_answer("user_goal", "User logs in"),
+      create_answer("actors", "Admin"),
+      create_answer("precondition", "User exists"),
+      create_answer("outcome", "Access granted"),
+      create_answer("acceptance_criteria", "Login works"),
+    ];
+
+    let mut issues = vec![];
+    let score = calculate_completeness(&answers, &mut issues);
+
+    // 5/5 = 100%, but the `>` mutation would make it 0%
+    assert_eq!(score.score, 100, "All 5 fields filled should equal 100%");
+    assert!(issues.is_empty(), "No issues when all fields present");
+  }
+
+  #[test]
+  fn test_completeness_partial_calculation() {
+    // Catches mutations in calculation math at line 270
+    // 3/5 fields should equal 60%
+    let answers = vec![
+      create_answer("user_goal", "Goal"),
+      create_answer("actors", "Actor"),
+      create_answer("precondition", "Precond"),
+      // Missing outcome and acceptance_criteria
+    ];
+
+    let mut issues = vec![];
+    let score = calculate_completeness(&answers, &mut issues);
+
+    // (3 * 100) / 5 = 60
+    // If `+` mutates to `*`, this would be (3 + 100) * 5 = 515 (clamped to 100)
+    // If `/` mutates to `*`, this would be (3 * 100) * 5 = 1500 (clamped to 100)
+    assert_eq!(score.score, 60, "3 of 5 fields should equal 60%");
+    assert_eq!(issues.len(), 2, "Should have 2 missing field issues");
+  }
+
+  #[test]
+  fn test_consistency_exact_contradiction_count() {
+    // Catches mutations: `+` to `*` at line 291, `/` to `*` at line 301
+    // Test with exactly 1 contradiction among 3 answers (3 pairs)
+    let answers = vec![
+      create_answer("req1", "must allow"),
+      create_answer("req2", "must not allow"),
+      create_answer("req3", "optional field"),
+    ];
+
+    let mut issues = vec![];
+    let score = calculate_consistency(&answers, &mut issues);
+
+    // 1 contradiction in 2 pairs = (1 * 100) / 2 = 50% penalty, so score = 50
+    // If `+` mutates to `*`, contradiction count becomes product (wrong)
+    // If `/` mutates to `*`, ratio becomes product (wrong)
+    assert_eq!(score.score, 50, "1 contradiction in 2 pairs should give 50%");
+    assert_eq!(issues.len(), 1);
+    assert!(issues[0].message.contains("1"));
+  }
+
+  #[test]
+  fn test_consistency_multiple_contradictions() {
+    // Catches math mutations in contradiction counting/scoring
+    let answers = vec![
+      create_answer("req1", "must allow"),
+      create_answer("req2", "must not allow"),
+      create_answer("req3", "always enabled"),
+      create_answer("req4", "never enabled"),
+    ];
+
+    let mut issues = vec![];
+    let score = calculate_consistency(&answers, &mut issues);
+
+    // 4 answers = 3 total_pairs (len - 1)
+    // 2 contradictions found: (must/must not) and (always/never)
+    // ratio = (2 * 100) / 3 = 66
+    // score = 100 - 66 = 34
+    // If `+` mutates to `*`, contradictions become product (wrong!)
+    // If `/` mutates to `*`, ratio becomes product (wrong!)
+    assert_eq!(score.score, 34, "2 contradictions in 3 pairs should give score 34");
+    assert_eq!(issues.len(), 1);
+  }
+
+  #[test]
+  fn test_clarity_exact_boundary_complex_sentence() {
+    // Catches mutations: `>` to `>=` at line 403
+    // Exactly 4 commas should trigger complexity (threshold is > 3)
+    let answers = vec![create_answer(
+      "req1",
+      "The system shall, process data, validate input, save results, exit",
+    )];
+
+    let mut issues = vec![];
+    let score = calculate_clarity(&answers, &mut issues);
+
+    // 4 commas > 3, so should be complex
+    // If `>` mutates to `>=`, then 4 commas >= 3 would still trigger (same behavior)
+    // But we want to catch the boundary case
+    assert!(score.score < 100, "4 commas should reduce clarity score");
+    assert!(!issues.is_empty(), "Should have complexity issue");
+  }
+
+  #[test]
+  fn test_clarity_boundary_exactly_three_commas() {
+    // Catches mutation: `>` to `>=` at line 403
+    // Exactly 3 commas should NOT trigger complexity (threshold is > 3)
+    let answers = vec![create_answer(
+      "req1",
+      "The system shall, process data, validate input, save results",
+    )];
+
+    let mut issues = vec![];
+    let score = calculate_clarity(&answers, &mut issues);
+
+    // 3 commas is not > 3, so should NOT be complex
+    // If `>` mutates to `>=`, then 3 commas >= 3 would trigger (wrong!)
+    assert_eq!(
+      score.score, 100,
+      "Exactly 3 commas should NOT reduce score (threshold is > 3)"
+    );
+
+    // Check no complexity issue
+    let complex_issues: Vec<_> = issues
+      .iter()
+      .filter(|i| i.message.contains("complex"))
+      .collect();
+    assert!(
+      complex_issues.is_empty(),
+      "3 commas should not create complexity issue"
+    );
+  }
+
+  #[test]
+  fn test_clarity_boundary_exactly_thirty_words() {
+    // Catches mutation: `>` to `>=` at line 403
+    // Exactly 30 words should NOT trigger complexity (threshold is > 30)
+    let text = "word ".repeat(15); // 15 words
+    let answers = vec![create_answer("req1", &format!("{} {}", text, text.trim()))]; // 30 words
+
+    let mut issues = vec![];
+    let score = calculate_clarity(&answers, &mut issues);
+
+    // 30 words is not > 30, so should NOT be complex
+    // If `>` mutates to `>=`, then 30 words >= 30 would trigger (wrong!)
+    assert_eq!(
+      score.score, 100,
+      "Exactly 30 words should NOT reduce score (threshold is > 30)"
+    );
+  }
+
+  #[test]
+  fn test_clarity_complex_ratio_calculation() {
+    // Catches mutations: `/` to `*` at line 416, `*` to `/` at line 417
+    // Test specific sentence/complex ratio to catch math mutations
+    let answers = vec![
+      create_answer("req1", "Simple."), // 1 sentence, 0 complex
+      create_answer("req2", "Simple."), // 1 sentence, 0 complex
+      create_answer(
+        "req3",
+        "The system shall, process data, validate input, save results, and exit.",
+      ), // 1 sentence, 1 complex (5 commas > 3)
+    ];
+
+    let mut issues = vec![];
+    let score = calculate_clarity(&answers, &mut issues);
+
+    // 3 total sentences, 1 complex = (1 * 100) / 3 = 33
+    // Score = 100 - 33 = 67
+    // If `/` mutates to `*`, ratio becomes (1 * 100) * 3 = 300 (wrong!)
+    // If `*` mutates to `/`, ratio becomes (1 / 100) / 3 = 0 (wrong!)
+    assert_eq!(score.score, 67, "1 complex in 3 sentences should give ~67%");
+  }
+
+  #[test]
+  fn test_clarity_jargon_penalty_calculation() {
+    // Catches mutation: `*` to `/` at line 422
+    // Test specific jargon count to catch math mutation
+    let answers = vec![create_answer(
+      "req1",
+      "microservice kubernetes blockchain serverless",
+    )];
+
+    let mut issues = vec![];
+    let score = calculate_clarity(&answers, &mut issues);
+
+    // 4 jargon terms = 4 * 5 = 20 penalty
+    // Score = 100 - 20 = 80
+    // If `*` mutates to `/`, penalty becomes 4 / 5 = 0 (wrong!)
+    assert_eq!(score.score, 80, "4 jargon terms should give 20 penalty");
+  }
+
+  #[test]
+  fn test_clarity_jargon_threshold() {
+    // Catches mutation: `>` to `>=` at line 439
+    // Exactly 2 jargon terms should NOT trigger warning (threshold is > 2)
+    let answers = vec![create_answer("req1", "microservice kubernetes")];
+
+    let mut issues = vec![];
+    calculate_clarity(&answers, &mut issues);
+
+    // 2 jargon terms is not > 2, so should NOT warn
+    // If `>` mutates to `>=`, then 2 >= 2 would trigger (wrong!)
+    let jargon_issues: Vec<_> = issues
+      .iter()
+      .filter(|i| i.message.contains("jargon"))
+      .collect();
+    assert!(
+      jargon_issues.is_empty(),
+      "Exactly 2 jargon terms should NOT trigger warning (threshold is > 2)"
+    );
+  }
+
+  #[test]
+  fn test_clarity_three_jargon_terms_triggers_warning() {
+    // Catches mutation: `>` to `>=` at line 439
+    // Exactly 3 jargon terms SHOULD trigger warning (threshold is > 2)
+    let answers = vec![create_answer("req1", "microservice kubernetes blockchain")];
+
+    let mut issues = vec![];
+    calculate_clarity(&answers, &mut issues);
+
+    // 3 jargon terms is > 2, so should warn
+    // If `>` mutates to `>=`, then 3 >= 2 would still trigger (same)
+    let jargon_issues: Vec<_> = issues
+      .iter()
+      .filter(|i| i.message.contains("jargon"))
+      .collect();
+    assert_eq!(
+      jargon_issues.len(),
+      1,
+      "3 jargon terms should trigger warning"
+    );
+  }
+
+  #[test]
+  fn test_security_auth_keyword_detection() {
+    // Catches mutation: `||` to `&&` at line 487
+    // "auth" keyword should be caught by contains("auth")
+    let answers = vec![create_answer("req1", "Use auth for access")];
+
+    let mut issues = vec![];
+    let score = calculate_security(&answers, &mut issues);
+
+    // "auth" contains "auth", should trigger authentication area
+    // If `||` mutates to `&&`, all three conditions must be true (wrong!)
+    assert!(score.score > 0, "auth keyword should give positive score");
+
+    // Should not have "missing authentication" issue
+    let missing_auth: Vec<_> = issues
+      .iter()
+      .filter(|i| i.message.contains("missing") && i.message.contains("authentication"))
+      .collect();
+    assert!(missing_auth.is_empty(), "auth keyword should cover authentication");
+  }
+
+  #[test]
+  fn test_security_login_keyword_detection() {
+    // Catches mutation: `||` to `&&` at line 487
+    // "login" keyword should be caught independently
+    let answers = vec![create_answer("req1", "User login required")];
+
+    let mut issues = vec![];
+    let score = calculate_security(&answers, &mut issues);
+
+    // "login" contains "login", should trigger authentication area
+    // If `||` mutates to `&&`, keyword wouldn't match other conditions (wrong!)
+    assert!(score.score > 0, "login keyword should give positive score");
+  }
+
+  #[test]
+  fn test_security_password_keyword_detection() {
+    // Catches mutation: `||` to `&&` at line 487
+    // "password" keyword should be caught independently
+    let answers = vec![create_answer("req1", "Enter password to continue")];
+
+    let mut issues = vec![];
+    let score = calculate_security(&answers, &mut issues);
+
+    // "password" contains "password", should trigger authentication area
+    assert!(score.score > 0, "password keyword should give positive score");
+  }
+
+  #[test]
+  fn test_security_encrypt_keyword_detection() {
+    // Catches mutation: `||` to `&&` at line 490
+    // "encrypt" keyword should trigger encryption area
+    let answers = vec![create_answer("req1", "Data must encrypt")];
+
+    let mut issues = vec![];
+    let score = calculate_security(&answers, &mut issues);
+
+    // "encrypt" contains "encrypt", should trigger encryption area
+    // If `||` mutates to `&&`, all three conditions must be true (wrong!)
+    assert!(score.score > 0, "encrypt keyword should give positive score");
+  }
+
+  #[test]
+  fn test_security_tls_keyword_detection() {
+    // Catches mutation: `||` to `&&` at line 490
+    // "tls" keyword should be caught independently
+    let answers = vec![create_answer("req1", "Use tls for transport")];
+
+    let mut issues = vec![];
+    let score = calculate_security(&answers, &mut issues);
+
+    // "tls" contains "tls", should trigger encryption area
+    assert!(score.score > 0, "tls keyword should give positive score");
+  }
+
+  #[test]
+  fn test_security_validate_keyword_detection() {
+    // Catches mutation: `||` to `&&` at line 493
+    // "validate" contains "validat", should trigger validation area
+    let answers = vec![create_answer("req1", "Always validate user input")];
+
+    let mut issues = vec![];
+    let score = calculate_security(&answers, &mut issues);
+
+    // "validate" contains "validat", should trigger validation area
+    // If `||` mutates to `&&`, all three conditions must be true (wrong!)
+    assert!(score.score > 0, "validate keyword should give positive score");
+  }
+
+  #[test]
+  fn test_security_sanitize_keyword_detection() {
+    // Catches mutation: `||` to `&&` at line 493
+    // "sanitize" contains "sanitiz", should trigger validation area
+    let answers = vec![create_answer("req1", "Sanitize all inputs")];
+
+    let mut issues = vec![];
+    let score = calculate_security(&answers, &mut issues);
+
+    // "sanitize" contains "sanitiz", should trigger validation area
+    assert!(score.score > 0, "sanitize keyword should give positive score");
+  }
+
+  #[test]
+  fn test_security_escape_keyword_detection() {
+    // Catches mutation: `||` to `&&` at line 493
+    // "escape" should be caught independently
+    let answers = vec![create_answer("req1", "Escape special characters")];
+
+    let mut issues = vec![];
+    let score = calculate_security(&answers, &mut issues);
+
+    // "escape" should trigger validation area
+    assert!(score.score > 0, "escape keyword should give positive score");
+  }
+
+  #[test]
+  fn test_security_keyword_present_but_area_uncovered() {
+    // Catches mutation: delete `!` at line 517
+    // Test that missing area detection actually checks for absence
+    // With only "authentication" covered, should warn about missing "encryption" and "validation"
+    let answers = vec![create_answer("req1", "Users must authenticate with password")];
+
+    let mut issues = vec![];
+    calculate_security(&answers, &mut issues);
+
+    // Should have warning about missing areas
+    let incomplete_issues: Vec<_> = issues
+      .iter()
+      .filter(|i| i.message.contains("incomplete"))
+      .collect();
+    assert_eq!(
+      incomplete_issues.len(),
+      1,
+      "Should warn about incomplete coverage"
+    );
+    assert!(
+      incomplete_issues[0].message.contains("encryption")
+        && incomplete_issues[0].message.contains("validation"),
+      "Should mention missing encryption and validation"
+    );
+  }
+
+  #[test]
+  fn test_security_only_encryption_covered() {
+    // Tests area coverage calculation logic
+    let answers = vec![create_answer("req1", "Use TLS for encryption")];
+
+    let mut issues = vec![];
+    let score = calculate_security(&answers, &mut issues);
+
+    // Only encryption covered (1 area) = 1 * 30 = 30 points
+    // "tls" and "encrypt" both match = 2 mentions * 2 = 4 bonus
+    // Total = 30 + 4 = 34
+    assert_eq!(score.score, 34, "Only encryption should give 34% (30 coverage + 4 bonus)");
+
+    // Should warn about missing areas
+    assert!(!issues.is_empty());
+    assert!(issues[0].message.contains("incomplete"));
+  }
+
+  #[test]
+  fn test_security_two_areas_covered() {
+    // Tests area coverage calculation with 2/3 areas
+    let answers = vec![create_answer(
+      "req1",
+      "Users authenticate with password and data uses TLS encryption",
+    )];
+
+    let mut issues = vec![];
+    let score = calculate_security(&answers, &mut issues);
+
+    // Authentication + encryption = 2 areas = 2 * 30 = 60 + mention bonus
+    assert!(
+      (60..=80).contains(&score.score),
+      "Two areas should give 60-70% score"
+    );
+  }
 }

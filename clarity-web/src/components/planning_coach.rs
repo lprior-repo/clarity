@@ -16,191 +16,194 @@ use dioxus::prelude::*;
 use crate::types::{get_steps_for_phase, Answer};
 
 /// Terminal command for visualization
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TermCmd {
   pub agent: String,
   pub cmd: String,
   pub out: String,
 }
 
-/// Generate terminal commands for a given step answer
-fn cmds_for_step(id: &str, val: &str) -> Vec<TermCmd> {
-  let v = if val.len() > 55 { &val[..55] } else { val };
+fn truncate(value: &str, max: usize) -> &str {
+  if value.len() > max {
+    &value[..max]
+  } else {
+    value
+  }
+}
 
-  match id {
-    "problem" => vec![
-      TermCmd {
-        agent: "planner".into(),
-        cmd: "bd init --project beads-plan".into(),
-        out: "Initialized .beads/ — SQLite + JSONL ready".into(),
-      },
-      TermCmd {
-        agent: "planner".into(),
-        cmd: format!("bd create -t epic --title \"Problem: {}...\"", v),
-        out: "Created bd-a1f0  [epic] Problem Statement".into(),
-      },
-    ],
-    "antithesis" => vec![TermCmd {
+fn non_empty_lines(value: &str) -> Vec<&str> {
+  value
+    .lines()
+    .map(str::trim)
+    .filter(|line| !line.is_empty())
+    .collect()
+}
+
+fn problem_cmds(value: &str) -> Vec<TermCmd> {
+  vec![
+    TermCmd {
       agent: "planner".into(),
-      cmd: format!("bd update bd-a1f0 --label antithesis --note \"{}...\"", v),
-      out: "Updated bd-a1f0  +label:antithesis".into(),
-    }],
-    "solution" => vec![
-      TermCmd {
-        agent: "planner".into(),
-        cmd: format!("bd create -t epic --title \"Solution: {}...\"", v),
-        out: "Created bd-b2e1  [epic] Solution".into(),
-      },
-      TermCmd {
-        agent: "planner".into(),
-        cmd: "bd dep add bd-b2e1 --blocks bd-a1f0 --type discovered-from".into(),
-        out: "Edge: bd-b2e1 -[discovered-from]-> bd-a1f0".into(),
-      },
-    ],
-    "persona" => vec![TermCmd {
+      cmd: "bd init --project beads-plan".into(),
+      out: "Initialized .beads/ — SQLite + JSONL ready".into(),
+    },
+    TermCmd {
       agent: "planner".into(),
-      cmd: format!(
-        "bd create -t task --parent bd-b2e1 --title \"Persona: {}...\"",
-        v
-      ),
-      out: "Created bd-b2e1.1  [task] Persona".into(),
-    }],
-    "scenario" => vec![
-      TermCmd {
-        agent: "planner".into(),
-        cmd: "bd create -t task --parent bd-b2e1 --title \"North Star Scenario\"".into(),
-        out: "Created bd-b2e1.2  [task] North Star".into(),
-      },
-      TermCmd {
-        agent: "planner".into(),
-        cmd: "bd dep add bd-b2e1.2 --related bd-b2e1.1".into(),
-        out: "Edge: bd-b2e1.2 -[related]-> bd-b2e1.1".into(),
-      },
-      TermCmd {
-        agent: "planner".into(),
-        cmd: "bd show bd-b2e1 --graph".into(),
-        out: "Graph: 2 nodes, 3 edges, 0 cycles  [valid]".into(),
-      },
-    ],
-    "use-cases" => {
-      let lines: Vec<String> = val
-        .lines()
-        .map(str::trim)
-        .filter(|l| !l.is_empty())
-        .map(String::from)
-        .collect();
+      cmd: format!("bd create -t epic --title \"Problem: {value}...\""),
+      out: "Created bd-a1f0  [epic] Problem Statement".into(),
+    },
+  ]
+}
 
-      let feature_cmds: Vec<TermCmd> = lines
-        .iter()
-        .enumerate()
-        .map(|(i, uc)| {
-          let short = if uc.len() > 48 {
-            &uc[..48]
-          } else {
-            uc.as_str()
-          };
-          let out_short = if uc.len() > 28 {
-            &uc[..28]
-          } else {
-            uc.as_str()
-          };
-          TermCmd {
-            agent: "planner".into(),
-            cmd: format!("bd create -t feature --title \"{}...\"", short),
-            out: format!("Created bd-c{}d{}  [feature] {}...", i, i, out_short),
-          }
-        })
-        .collect();
+fn antithesis_cmds(value: &str) -> Vec<TermCmd> {
+  vec![TermCmd {
+    agent: "planner".into(),
+    cmd: format!("bd update bd-a1f0 --label antithesis --note \"{value}...\""),
+    out: "Updated bd-a1f0  +label:antithesis".into(),
+  }]
+}
 
-      let count_cmd = TermCmd {
+fn solution_cmds(value: &str) -> Vec<TermCmd> {
+  vec![
+    TermCmd {
+      agent: "planner".into(),
+      cmd: format!("bd create -t epic --title \"Solution: {value}...\""),
+      out: "Created bd-b2e1  [epic] Solution".into(),
+    },
+    TermCmd {
+      agent: "planner".into(),
+      cmd: "bd dep add bd-b2e1 --blocks bd-a1f0 --type discovered-from".into(),
+      out: "Edge: bd-b2e1 -[discovered-from]-> bd-a1f0".into(),
+    },
+  ]
+}
+
+fn persona_cmds(value: &str) -> Vec<TermCmd> {
+  vec![TermCmd {
+    agent: "planner".into(),
+    cmd: format!("bd create -t task --parent bd-b2e1 --title \"Persona: {value}...\""),
+    out: "Created bd-b2e1.1  [task] Persona".into(),
+  }]
+}
+
+fn scenario_cmds() -> Vec<TermCmd> {
+  vec![
+    TermCmd {
+      agent: "planner".into(),
+      cmd: "bd create -t task --parent bd-b2e1 --title \"North Star Scenario\"".into(),
+      out: "Created bd-b2e1.2  [task] North Star".into(),
+    },
+    TermCmd {
+      agent: "planner".into(),
+      cmd: "bd dep add bd-b2e1.2 --related bd-b2e1.1".into(),
+      out: "Edge: bd-b2e1.2 -[related]-> bd-b2e1.1".into(),
+    },
+    TermCmd {
+      agent: "planner".into(),
+      cmd: "bd show bd-b2e1 --graph".into(),
+      out: "Graph: 2 nodes, 3 edges, 0 cycles  [valid]".into(),
+    },
+  ]
+}
+
+fn use_case_cmds(value: &str) -> Vec<TermCmd> {
+  let lines = non_empty_lines(value);
+  let count_cmd = TermCmd {
+    agent: "planner".into(),
+    cmd: "bd list --status open --json | jq length".into(),
+    out: (lines.len() + 2).to_string(),
+  };
+
+  lines
+    .iter()
+    .enumerate()
+    .map(|(i, use_case)| {
+      let short = truncate(use_case, 48);
+      let out_short = truncate(use_case, 28);
+      TermCmd {
         agent: "planner".into(),
-        cmd: "bd list --status open --json | jq length".into(),
-        out: format!("{}", lines.len() + 2),
+        cmd: format!("bd create -t feature --title \"{short}...\""),
+        out: format!("Created bd-c{i}d{i}  [feature] {out_short}..."),
+      }
+    })
+    .chain(std::iter::once(count_cmd))
+    .collect()
+}
+
+fn constraints_cmds(value: &str) -> Vec<TermCmd> {
+  vec![
+    TermCmd {
+      agent: "planner".into(),
+      cmd: format!("bd update bd-b2e1 --label stack --note \"{value}...\""),
+      out: "Updated bd-b2e1  +label:stack".into(),
+    },
+    TermCmd {
+      agent: "claude-code".into(),
+      cmd: "bd ready --assignee claude-code --json".into(),
+      out: "[] — no tasks claimed yet".into(),
+    },
+  ]
+}
+
+fn tasks_cmds(value: &str) -> Vec<TermCmd> {
+  let lines = non_empty_lines(value);
+  let task_count = lines.len();
+  let final_cmds = [
+    TermCmd {
+      agent: "opencode".into(),
+      cmd: "bd ready --json".into(),
+      out: format!("[{task_count} task(s) on execution frontier]"),
+    },
+    TermCmd {
+      agent: "opencode".into(),
+      cmd: "bd list --status open --fmt table".into(),
+      out: format!("{task_count} open  0 in-progress  0 done"),
+    },
+  ];
+
+  lines
+    .iter()
+    .enumerate()
+    .flat_map(|(i, task)| {
+      let (module, title) = task
+        .split_once(':')
+        .map_or(("core", *task), |(m, rest)| (m.trim(), rest.trim()));
+
+      let title_short = truncate(title, 44);
+      let create_cmd = TermCmd {
+        agent: "claude-code".into(),
+        cmd: format!("bd create -t task --title \"{title_short}\" --label \"{module}\" -p P2"),
+        out: format!("Created bd-d{i}e{i}  [{module}]"),
       };
 
-      feature_cmds
-        .into_iter()
-        .chain(std::iter::once(count_cmd))
-        .collect()
-    }
-    "constraints" => vec![
-      TermCmd {
-        agent: "planner".into(),
-        cmd: format!("bd update bd-b2e1 --label stack --note \"{}...\"", v),
-        out: "Updated bd-b2e1  +label:stack".into(),
-      },
-      TermCmd {
-        agent: "claude-code".into(),
-        cmd: "bd ready --assignee claude-code --json".into(),
-        out: "[] — no tasks claimed yet".into(),
-      },
-    ],
-    "tasks" => {
-      let lines: Vec<String> = val
-        .lines()
-        .map(str::trim)
-        .filter(|l| !l.is_empty())
-        .map(String::from)
-        .collect();
-
-      let task_cmds: Vec<TermCmd> = lines
-        .iter()
-        .enumerate()
-        .flat_map(|(i, t)| {
-          let (module, title) = t
-            .split_once(':')
-            .map_or(("core", t.as_str()), |(m, rest)| (m.trim(), rest.trim()));
-
-          let title_short = if title.len() > 44 {
-            &title[..44]
-          } else {
-            title
-          };
-
-          let create_cmd = TermCmd {
-            agent: "claude-code".into(),
-            cmd: format!(
-              "bd create -t task --title \"{}\" --label \"{}\" -p P2",
-              title_short, module
-            ),
-            out: format!("Created bd-d{}e{}  [{}]", i, i, module),
-          };
-
-          let dep_cmd = if i > 0 {
-            Some(TermCmd {
-              agent: "claude-code".into(),
-              cmd: format!(
-                "bd dep add bd-d{}e{} --related bd-d{}e{}",
-                i,
-                i,
-                i - 1,
-                i - 1
-              ),
-              out: format!("Edge: bd-d{}e{} -[related]-> bd-d{}e{}", i, i, i - 1, i - 1),
-            })
-          } else {
-            None
-          };
-
-          std::iter::once(create_cmd).chain(dep_cmd)
+      let dep_cmd = if i > 0 {
+        Some(TermCmd {
+          agent: "claude-code".into(),
+          cmd: format!("bd dep add bd-d{i}e{i} --related bd-d{}e{}", i - 1, i - 1),
+          out: format!("Edge: bd-d{i}e{i} -[related]-> bd-d{}e{}", i - 1, i - 1),
         })
-        .collect();
+      } else {
+        None
+      };
 
-      let final_cmds = vec![
-        TermCmd {
-          agent: "opencode".into(),
-          cmd: "bd ready --json".into(),
-          out: format!("[{} task(s) on execution frontier]", lines.len()),
-        },
-        TermCmd {
-          agent: "opencode".into(),
-          cmd: "bd list --status open --fmt table".into(),
-          out: format!("{} open  0 in-progress  0 done", lines.len()),
-        },
-      ];
+      std::iter::once(create_cmd).chain(dep_cmd)
+    })
+    .chain(final_cmds)
+    .collect()
+}
 
-      task_cmds.into_iter().chain(final_cmds).collect()
-    }
+/// Generate terminal commands for a given step answer
+fn cmds_for_step(id: &str, val: &str) -> Vec<TermCmd> {
+  let value = truncate(val, 55);
+
+  match id {
+    "problem" => problem_cmds(value),
+    "antithesis" => antithesis_cmds(value),
+    "solution" => solution_cmds(value),
+    "persona" => persona_cmds(value),
+    "scenario" => scenario_cmds(),
+    "use-cases" => use_case_cmds(val),
+    "constraints" => constraints_cmds(value),
+    "tasks" => tasks_cmds(val),
     _ => vec![],
   }
 }
@@ -321,7 +324,7 @@ fn render_frame(frame: &FrameData) -> Element {
                       let (badge, _) = agent_color(ag);
                       rsx! {
                           span {
-                              class: format!("mt-px shrink-0 rounded px-1.5 py-px text-[9px] font-semibold leading-none tracking-wide {}", badge),
+                              class: format!("mt-px shrink-0 rounded px-1.5 py-px text-[9px] font-semibold leading-none tracking-wide {badge}"),
                               "{ag}"
                           }
                       }
@@ -344,7 +347,8 @@ fn render_frame(frame: &FrameData) -> Element {
 
 /// Inline terminal stream component - shows animated terminal commands
 #[component]
-pub fn InlineTerminalStream(cmds: Vec<TermCmd>, _step_id: String) -> Element {
+pub fn InlineTerminalStream(cmds: Vec<TermCmd>, step_id: String) -> Element {
+  let _ = step_id;
   let visible_chars = use_signal(|| 0usize);
   let total_chars: usize = cmds.iter().map(|c| c.cmd.len() + c.out.len()).sum();
 
@@ -354,8 +358,7 @@ pub fn InlineTerminalStream(cmds: Vec<TermCmd>, _step_id: String) -> Element {
 
   let last_timestamp = frames
     .last()
-    .map(|f| f.timestamp.clone())
-    .unwrap_or_else(|| "00:00:00".to_string());
+    .map_or_else(|| "00:00:00".to_string(), |f| f.timestamp.clone());
 
   let frame_elements: Vec<Element> = frames.iter().map(render_frame).collect();
 
@@ -424,16 +427,16 @@ pub fn InlineTerminalStream(cmds: Vec<TermCmd>, _step_id: String) -> Element {
 /// Coach chat bubble
 #[component]
 fn CoachBubble(
-  label: Option<Option<String>>,
+  label: Option<String>,
   #[props(default)] step_number: Option<usize>,
   children: Element,
 ) -> Element {
-  let badge_text = step_number.map_or("?".to_string(), |n| n.to_string());
+  let badge_text = step_number.map_or_else(|| "?".to_string(), |n| n.to_string());
   rsx! {
       div { class: "flex gap-3 animate-fade-up",
           div { class: "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary ring-1 ring-primary/30", "{badge_text}" }
           div { class: "flex-1 space-y-1",
-              if let Some(Some(lbl)) = label {
+              if let Some(lbl) = label {
                   span { class: "block text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50", "{lbl}" }
               }
               div { class: "max-w-lg text-sm leading-relaxed text-foreground", {children} }
@@ -491,7 +494,7 @@ fn HUDStrip(answers: Vec<Answer>) -> Element {
           span { class: "font-mono text-[10px] text-white/20", "API CALLS" }
           span { class: "font-mono text-[10px] font-bold text-primary", "{total}" }
           for call in agent_calls.iter() {
-              span { class: "font-mono text-[10px]", style: format!("color: {}", call.color), "{call.agent}:{call.count}" }
+              span { class: "font-mono text-[10px]", style: format!("color: {color}", color = call.color), "{call.agent}:{call.count}" }
           }
           span { class: "ml-auto h-1.5 w-1.5 animate-pulse rounded-full bg-[hsl(142,71%,45%)]" }
       }
@@ -572,7 +575,7 @@ fn render_thread_entry(entry: &ThreadEntry) -> Element {
       let label = label.clone();
       let step_number = *step_number;
       rsx! {
-          CoachBubble { label: Some(label), step_number, "{content}" }
+          CoachBubble { label, step_number, "{content}" }
       }
     }
     ThreadEntry::User { content } => {
@@ -585,13 +588,13 @@ fn render_thread_entry(entry: &ThreadEntry) -> Element {
       let cmds = cmds.clone();
       let step_id = step_id.clone();
       rsx! {
-          InlineTerminalStream { cmds, _step_id: step_id }
+          InlineTerminalStream { cmds, step_id }
       }
     }
   }
 }
 
-/// PlanningCoach component - main coaching interface
+/// `PlanningCoach` component - main coaching interface
 #[component]
 pub fn PlanningCoach(
   active_phase: Signal<String>,
@@ -599,7 +602,7 @@ pub fn PlanningCoach(
   mut_answers: Signal<Vec<Answer>>,
   mut_active_phase: Signal<String>,
 ) -> Element {
-  let mut draft = use_signal(|| String::new());
+  let mut draft = use_signal(String::new);
 
   let completed_ids: Vec<String> = answers.read().iter().map(|a| a.step_id.clone()).collect();
 
@@ -647,7 +650,7 @@ pub fn PlanningCoach(
                   if phase_complete {
                       div { class: "space-y-3 pt-1",
                           CoachBubble {
-                              label: None::<Option<String>>,
+                              label: None::<String>,
                               if next_phase.is_some() {
                                   "This phase is locked in. Ready to move forward?"
                               } else {
@@ -660,7 +663,7 @@ pub fn PlanningCoach(
                                       let np = np.clone();
                                       let first_char = np.chars().next().map(|c| c.to_uppercase().to_string()).unwrap_or_default();
                                       let rest = if np.len() > 1 { &np[1..] } else { "" };
-                                      let label = format!("Continue to {}{}", first_char, rest);
+                                      let label = format!("Continue to {first_char}{rest}");
                                       rsx! {
                                           button {
                                               "type": "button",
@@ -681,7 +684,8 @@ pub fn PlanningCoach(
           if let Some(step) = current_step {
               if !phase_complete {
                   {
-                      let placeholder = format!("{}...", step.title);
+                      let step_title = &step.title;
+                      let placeholder = format!("{step_title}...");
                       let step_id = step.id.clone();
                       let step_id_for_skip = step_id.clone();
                       let step_required = step.required;
@@ -690,7 +694,7 @@ pub fn PlanningCoach(
                       let is_draft_empty = draft_val.trim().is_empty();
                       drop(draft_val);
                       let char_count_text = if draft_len > 0 {
-                          format!("{} chars", draft_len)
+                          format!("{draft_len} chars")
                       } else {
                           String::new()
                       };

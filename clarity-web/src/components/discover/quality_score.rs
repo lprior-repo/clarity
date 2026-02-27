@@ -12,7 +12,7 @@ use dioxus::prelude::*;
 const QUALITY_GATE_THRESHOLD: u8 = 70;
 
 /// Color classes based on score
-fn score_color_classes(score: u8) -> &'static str {
+const fn score_color_classes(score: u8) -> &'static str {
   match score {
     70..=100 => "bg-emerald-500/60",
     50..=69 => "bg-amber-500/60",
@@ -21,7 +21,7 @@ fn score_color_classes(score: u8) -> &'static str {
 }
 
 /// Text color based on score
-fn score_text_color_classes(score: u8) -> &'static str {
+const fn score_text_color_classes(score: u8) -> &'static str {
   match score {
     70..=100 => "text-emerald-400",
     50..=69 => "text-amber-400",
@@ -30,7 +30,7 @@ fn score_text_color_classes(score: u8) -> &'static str {
 }
 
 /// Ring color based on score
-fn score_ring_classes(score: u8) -> &'static str {
+const fn score_ring_classes(score: u8) -> &'static str {
   match score {
     70..=100 => "ring-emerald-500/30",
     50..=69 => "ring-amber-500/30",
@@ -48,6 +48,7 @@ pub struct QualityDimension {
 
 impl QualityDimension {
   /// Create a new quality dimension
+  #[must_use]
   pub fn new(name: impl Into<String>, score: u8) -> Self {
     Self {
       name: name.into(),
@@ -57,6 +58,7 @@ impl QualityDimension {
   }
 
   /// Add issues to the dimension
+  #[must_use]
   pub fn with_issues(mut self, issues: Vec<String>) -> Self {
     self.issues = issues;
     self
@@ -64,7 +66,7 @@ impl QualityDimension {
 }
 
 /// Overall quality assessment
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct QualityScore {
   pub overall: u8,
   pub dimensions: Vec<QualityDimension>,
@@ -72,7 +74,8 @@ pub struct QualityScore {
 
 impl QualityScore {
   /// Create a new quality score with default dimensions
-  pub fn new(overall: u8) -> Self {
+  #[must_use]
+  pub const fn new(overall: u8) -> Self {
     Self {
       overall,
       dimensions: Vec::new(),
@@ -80,17 +83,20 @@ impl QualityScore {
   }
 
   /// Create a new quality score with dimensions
+  #[must_use]
   pub fn with_dimensions(mut self, dimensions: Vec<QualityDimension>) -> Self {
     self.dimensions = dimensions;
     self
   }
 
   /// Check if quality gate passes
-  pub fn gate_passes(&self) -> bool {
+  #[must_use]
+  pub const fn gate_passes(&self) -> bool {
     self.overall >= QUALITY_GATE_THRESHOLD
   }
 
   /// Get gate status message
+  #[must_use]
   pub fn gate_message(&self) -> String {
     if self.gate_passes() {
       "Quality gate: PASS".to_string()
@@ -103,16 +109,7 @@ impl QualityScore {
   }
 }
 
-impl Default for QualityScore {
-  fn default() -> Self {
-    Self {
-      overall: 0,
-      dimensions: Vec::new(),
-    }
-  }
-}
-
-/// Props for QualityScoreBar component
+/// Props for `QualityScoreBar` component.
 #[derive(Clone, Debug, PartialEq, Props)]
 pub struct QualityScoreBarProps {
   /// Quality score data (accepts Memo for computed scores)
@@ -294,8 +291,7 @@ pub fn QualityScoreBar(props: QualityScoreBarProps) -> Element {
                               // Warning indicator if has issues
                               if has_issues {
                                   div {
-                                      class: "relative group/indicator",
-                                      class: "w-4 h-4 rounded-full bg-amber-500/20 border border-amber-500/50 flex items-center justify-center",
+                                      class: "relative group/indicator w-4 h-4 rounded-full bg-amber-500/20 border border-amber-500/50 flex items-center justify-center",
                                       svg {
                                           xmlns: "http://www.w3.org/2000/svg",
                                           width: "10",
@@ -514,7 +510,7 @@ mod tests {
       QualityDimension::new("Completeness", 70),
       QualityDimension::new("Accuracy", 90),
     ];
-    let score = QualityScore::new(80).with_dimensions(dimensions.clone());
+    let score = QualityScore::new(80).with_dimensions(dimensions);
     assert_eq!(score.overall, 80);
     assert_eq!(score.dimensions.len(), 3);
   }
@@ -592,7 +588,7 @@ mod tests {
 
   #[test]
   fn test_five_dimensions() {
-    let dimensions = vec![
+    let dimensions = [
       QualityDimension::new("Clarity", 85),
       QualityDimension::new("Completeness", 70),
       QualityDimension::new("Accuracy", 90),

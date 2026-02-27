@@ -1139,7 +1139,7 @@ mod tests {
   }
 
   #[test]
-  fn test_processed_transcript_serialization() {
+  fn test_processed_transcript_serialization() -> Result<(), serde_json::Error> {
     let processed = ProcessedTranscript {
       original_prompt: "Build a todo app".to_string(),
       problem: "Users can't track tasks".to_string(),
@@ -1152,16 +1152,14 @@ mod tests {
       nonpersona_confidence: 0.80,
     };
 
-    let json = serde_json::to_string(&processed);
-    assert!(json.is_ok());
+    let json = serde_json::to_string(&processed)?;
 
-    let deserialized: Result<ProcessedTranscript, _> = serde_json::from_str(&json.unwrap());
-    assert!(deserialized.is_ok());
-    let restored = deserialized.unwrap();
+    let restored: ProcessedTranscript = serde_json::from_str(&json)?;
 
     assert_eq!(restored.original_prompt, "Build a todo app");
     assert_eq!(restored.problem, "Users can't track tasks");
     assert!((restored.problem_confidence - 0.95).abs() < f64::EPSILON);
+    Ok(())
   }
 
   #[test]
@@ -1453,14 +1451,13 @@ mod mock_client {
   }
 
   #[tokio::test]
-  async fn test_mock_client_success() {
+  async fn test_mock_client_success() -> Result<(), TerminalError> {
     let client = MockTerminalClient::new();
-    let result = client.extract_problem("Test input").await;
+    let fields = client.extract_problem("Test input").await?;
 
-    assert!(result.is_ok());
-    let fields = result.unwrap();
     assert_eq!(fields.fields.len(), 1);
     assert_eq!(fields.fields[0].name, "problem");
+    Ok(())
   }
 
   #[tokio::test]
@@ -1480,17 +1477,14 @@ mod mock_client {
   }
 
   #[tokio::test]
-  async fn test_transcript_processor() {
+  async fn test_transcript_processor() -> Result<(), TerminalError> {
     let client = Arc::new(MockTerminalClient::new());
     let processor = TranscriptProcessor::new(client);
 
     let transcript =
       InterrogationTranscript::from_prompt("Build a todo app for busy professionals".to_string());
 
-    let result = processor.process_transcript(&transcript).await;
-
-    assert!(result.is_ok());
-    let processed = result.unwrap();
+    let processed = processor.process_transcript(&transcript).await?;
 
     assert_eq!(
       processed.original_prompt,
@@ -1500,5 +1494,6 @@ mod mock_client {
     assert_eq!(processed.persona, "Mock persona");
     assert_eq!(processed.solution, "Mock solution");
     assert_eq!(processed.nonpersona, "Mock nonpersona");
+    Ok(())
   }
 }

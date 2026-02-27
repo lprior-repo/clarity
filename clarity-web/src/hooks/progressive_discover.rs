@@ -37,10 +37,10 @@ use crate::storage::transcript_store::InterrogationTranscript;
 // Storage Keys and Constants
 // ============================================================================
 
-/// LocalStorage key for the current session state
+/// `LocalStorage` key for the current session state
 const SESSION_STORAGE_KEY: &str = "clarity_discover_session";
 
-/// LocalStorage key for the session ID (for crash recovery detection)
+/// `LocalStorage` key for the session ID (for crash recovery detection)
 const SESSION_ID_KEY: &str = "clarity_discover_session_id";
 
 /// Debounce duration for auto-save (500ms as per T010 spec)
@@ -58,7 +58,7 @@ const AUTO_SAVE_DEBOUNCE_MS: u64 = 500;
 pub struct PersistableState {
   /// Current phase in the discovery flow
   pub phase: ProgressiveDiscoverPhase,
-  /// Current sub-phase when in ConfirmingFields phase
+  /// Current sub-phase when in `ConfirmingFields` phase
   pub sub_phase: ConfirmSubPhase,
   /// The interrogation transcript containing all extracted data
   pub transcript: InterrogationTranscript,
@@ -115,7 +115,7 @@ impl PersistableState {
     }
   }
 
-  /// Convert from ProgressiveDiscoverState.
+  /// Convert from `ProgressiveDiscoverState`.
   #[must_use]
   pub fn from_state(state: &ProgressiveDiscoverState, session_id: &str) -> Self {
     Self::new(
@@ -188,6 +188,7 @@ pub fn save_to_local_storage(state: &PersistableState) -> Result<(), String> {
 /// This function attempts to restore a previously saved session from localStorage.
 /// Returns `None` if no session exists or if deserialization fails.
 #[must_use]
+#[allow(clippy::missing_const_for_fn)]
 pub fn load_from_local_storage() -> Option<PersistableState> {
   #[cfg(target_arch = "wasm32")]
   {
@@ -215,6 +216,7 @@ pub fn load_from_local_storage() -> Option<PersistableState> {
 ///
 /// This should be called when a session is explicitly ended or when
 /// the user chooses to start fresh instead of recovering.
+#[allow(clippy::missing_const_for_fn)]
 pub fn clear_local_storage() {
   #[cfg(target_arch = "wasm32")]
   {
@@ -231,6 +233,7 @@ pub fn clear_local_storage() {
 
 /// Check if a recoverable session exists in localStorage.
 #[must_use]
+#[allow(clippy::missing_const_for_fn)]
 pub fn has_recoverable_session() -> bool {
   #[cfg(target_arch = "wasm32")]
   {
@@ -251,6 +254,7 @@ pub fn has_recoverable_session() -> bool {
 
 /// Get the session ID of a recoverable session without loading the full state.
 #[must_use]
+#[allow(clippy::missing_const_for_fn)]
 pub fn get_recoverable_session_id() -> Option<String> {
   #[cfg(target_arch = "wasm32")]
   {
@@ -298,10 +302,7 @@ impl AutoSaveDebouncer {
   #[must_use]
   pub fn should_save_now(&self) -> bool {
     let last_save = self.last_save.borrow();
-    match *last_save {
-      None => true,
-      Some(last) => last.elapsed() >= Duration::from_millis(AUTO_SAVE_DEBOUNCE_MS),
-    }
+    last_save.is_none_or(|last| last.elapsed() >= Duration::from_millis(AUTO_SAVE_DEBOUNCE_MS))
   }
 
   /// Mark that a save is pending (will be executed after debounce period).
@@ -350,7 +351,7 @@ pub fn generate_session_id() -> String {
 pub struct ProgressiveDiscoverState {
   /// Current phase in the discovery flow
   pub phase: ProgressiveDiscoverPhase,
-  /// Current sub-phase when in ConfirmingFields phase
+  /// Current sub-phase when in `ConfirmingFields` phase
   pub sub_phase: ConfirmSubPhase,
   /// The interrogation transcript containing all extracted data
   pub transcript: InterrogationTranscript,
@@ -491,7 +492,7 @@ impl ProgressiveDiscoverState {
     })
   }
 
-  /// Transition to the next sub-phase within ConfirmingFields.
+  /// Transition to the next sub-phase within `ConfirmingFields`.
   ///
   /// Returns the new state with the sub-phase advanced.
   /// Returns `None` if at the last sub-phase.
@@ -515,7 +516,7 @@ impl ProgressiveDiscoverState {
     })
   }
 
-  /// Transition to the previous sub-phase within ConfirmingFields.
+  /// Transition to the previous sub-phase within `ConfirmingFields`.
   ///
   /// Returns the new state with the sub-phase regressed.
   /// Returns `None` if at the first sub-phase.
@@ -599,7 +600,7 @@ impl ProgressiveDiscoverState {
     }
   }
 
-  /// Check if the current phase is ConfirmingFields.
+  /// Check if the current phase is `ConfirmingFields`.
   #[must_use]
   pub const fn is_confirming(&self) -> bool {
     matches!(self.phase, ProgressiveDiscoverPhase::ConfirmingFields)
@@ -805,6 +806,7 @@ pub fn use_progressive_discover() -> Signal<ProgressiveDiscoverState> {
 /// Hook for managing Progressive Discover state with an initial prompt.
 ///
 /// This is a convenience wrapper that initializes the state with a prompt.
+#[must_use]
 pub fn use_progressive_discover_with_prompt(prompt: String) -> Signal<ProgressiveDiscoverState> {
   use_signal(|| ProgressiveDiscoverState::from_prompt(prompt))
 }
@@ -905,7 +907,7 @@ impl ProgressiveDiscoverActions {
     self.state.set(current.with_transcript(transcript));
   }
 
-  /// Advance to the next sub-phase within ConfirmingFields.
+  /// Advance to the next sub-phase within `ConfirmingFields`.
   pub fn advance_sub_phase(&mut self) {
     let current = self.state.read().clone();
     if let Some(next) = current.advance_sub_phase() {
@@ -913,7 +915,7 @@ impl ProgressiveDiscoverActions {
     }
   }
 
-  /// Regress to the previous sub-phase within ConfirmingFields.
+  /// Regress to the previous sub-phase within `ConfirmingFields`.
   pub fn regress_sub_phase(&mut self) {
     let current = self.state.read().clone();
     if let Some(prev) = current.regress_sub_phase() {
@@ -976,6 +978,8 @@ impl ProgressiveDiscoverActions {
 ///     }
 /// }
 /// ```
+#[must_use]
+#[allow(clippy::missing_const_for_fn)]
 pub fn use_progressive_discover_actions(
   state: Signal<ProgressiveDiscoverState>,
 ) -> ProgressiveDiscoverActions {
@@ -1010,9 +1014,9 @@ pub fn use_auto_save(state: Signal<ProgressiveDiscoverState>) {
     drop(current_state);
 
     // Check if we should save now or debounce
-    let should_save = last_save_instant.read().map_or(true, |last| {
-      last.elapsed() >= Duration::from_millis(AUTO_SAVE_DEBOUNCE_MS)
-    });
+    let should_save = last_save_instant
+      .read()
+      .is_none_or(|last| last.elapsed() >= Duration::from_millis(AUTO_SAVE_DEBOUNCE_MS));
 
     if should_save {
       // Save immediately
@@ -1046,7 +1050,7 @@ pub enum CrashRecoveryStatus {
   /// A recoverable session was found
   Recoverable {
     /// The recovered state
-    state: ProgressiveDiscoverState,
+    state: Box<ProgressiveDiscoverState>,
     /// When the session was saved
     saved_at: String,
   },
@@ -1081,7 +1085,7 @@ pub fn use_crash_recovery_check() -> CrashRecoveryStatus {
   // This is not a reactive hook - it runs once on mount
   load_from_local_storage().map_or(CrashRecoveryStatus::NoSession, |persistable| {
     let saved_at = persistable.saved_at.clone();
-    let state = ProgressiveDiscoverState::from_persistable(persistable);
+    let state = Box::new(ProgressiveDiscoverState::from_persistable(persistable));
     CrashRecoveryStatus::Recoverable { state, saved_at }
   })
 }
@@ -1114,7 +1118,7 @@ pub fn use_progressive_discover_with_recovery() -> (
   let recovery_status = use_crash_recovery_check();
 
   let initial_state = match &recovery_status {
-    CrashRecoveryStatus::Recoverable { state, .. } => state.clone(),
+    CrashRecoveryStatus::Recoverable { state, .. } => (**state).clone(),
     CrashRecoveryStatus::NoSession => ProgressiveDiscoverState::default(),
   };
 
@@ -1148,7 +1152,7 @@ pub fn use_progressive_discover_full() -> (Signal<ProgressiveDiscoverState>, Cra
   let recovery_status = use_crash_recovery_check();
 
   let initial_state = match &recovery_status {
-    CrashRecoveryStatus::Recoverable { state, .. } => state.clone(),
+    CrashRecoveryStatus::Recoverable { state, .. } => (**state).clone(),
     CrashRecoveryStatus::NoSession => ProgressiveDiscoverState::default(),
   };
 
@@ -1193,23 +1197,39 @@ mod tests {
   fn test_advance_phase_transitions_correctly() {
     let state = ProgressiveDiscoverState::default();
 
-    let state = state.advance_phase().expect("Should advance to Extracting");
+    let state = state.advance_phase();
+    assert!(state.is_some());
+    let Some(state) = state else {
+      return;
+    };
     assert_eq!(state.phase, ProgressiveDiscoverPhase::Extracting);
 
-    let state = state
-      .advance_phase()
-      .expect("Should advance to ConfirmingFields");
+    let state = state.advance_phase();
+    assert!(state.is_some());
+    let Some(state) = state else {
+      return;
+    };
     assert_eq!(state.phase, ProgressiveDiscoverPhase::ConfirmingFields);
 
-    let state = state.advance_phase().expect("Should advance to Preview");
+    let state = state.advance_phase();
+    assert!(state.is_some());
+    let Some(state) = state else {
+      return;
+    };
     assert_eq!(state.phase, ProgressiveDiscoverPhase::Preview);
 
-    let state = state
-      .advance_phase()
-      .expect("Should advance to KirkCompilation");
+    let state = state.advance_phase();
+    assert!(state.is_some());
+    let Some(state) = state else {
+      return;
+    };
     assert_eq!(state.phase, ProgressiveDiscoverPhase::KirkCompilation);
 
-    let state = state.advance_phase().expect("Should advance to Locked");
+    let state = state.advance_phase();
+    assert!(state.is_some());
+    let Some(state) = state else {
+      return;
+    };
     assert_eq!(state.phase, ProgressiveDiscoverPhase::Locked);
 
     // Cannot advance past Locked
@@ -1223,12 +1243,18 @@ mod tests {
       ..Default::default()
     };
 
-    let state = state
-      .regress_phase()
-      .expect("Should regress to KirkCompilation");
+    let state = state.regress_phase();
+    assert!(state.is_some());
+    let Some(state) = state else {
+      return;
+    };
     assert_eq!(state.phase, ProgressiveDiscoverPhase::KirkCompilation);
 
-    let state = state.regress_phase().expect("Should regress to Preview");
+    let state = state.regress_phase();
+    assert!(state.is_some());
+    let Some(state) = state else {
+      return;
+    };
     assert_eq!(state.phase, ProgressiveDiscoverPhase::Preview);
 
     // Cannot regress past Prompt
@@ -1244,24 +1270,32 @@ mod tests {
       ..Default::default()
     };
 
-    let state = state
-      .advance_sub_phase()
-      .expect("Should advance to Persona");
+    let state = state.advance_sub_phase();
+    assert!(state.is_some());
+    let Some(state) = state else {
+      return;
+    };
     assert_eq!(state.sub_phase, ConfirmSubPhase::ConfirmPersona);
 
-    let state = state
-      .advance_sub_phase()
-      .expect("Should advance to Solution");
+    let state = state.advance_sub_phase();
+    assert!(state.is_some());
+    let Some(state) = state else {
+      return;
+    };
     assert_eq!(state.sub_phase, ConfirmSubPhase::ConfirmSolution);
 
-    let state = state
-      .advance_sub_phase()
-      .expect("Should advance to Nonpersona");
+    let state = state.advance_sub_phase();
+    assert!(state.is_some());
+    let Some(state) = state else {
+      return;
+    };
     assert_eq!(state.sub_phase, ConfirmSubPhase::ConfirmNonpersona);
 
-    let state = state
-      .advance_sub_phase()
-      .expect("Should advance to Scenario");
+    let state = state.advance_sub_phase();
+    assert!(state.is_some());
+    let Some(state) = state else {
+      return;
+    };
     assert_eq!(state.sub_phase, ConfirmSubPhase::ConfirmScenario);
 
     // Cannot advance past Scenario
@@ -1276,9 +1310,11 @@ mod tests {
       ..Default::default()
     };
 
-    let state = state
-      .regress_sub_phase()
-      .expect("Should regress to Nonpersona");
+    let state = state.regress_sub_phase();
+    assert!(state.is_some());
+    let Some(state) = state else {
+      return;
+    };
     assert_eq!(state.sub_phase, ConfirmSubPhase::ConfirmNonpersona);
 
     // Cannot regress past Problem
@@ -1347,7 +1383,11 @@ mod tests {
       ..Default::default()
     };
 
-    let state = state.advance_phase().expect("Should advance to Preview");
+    let state = state.advance_phase();
+    assert!(state.is_some());
+    let Some(state) = state else {
+      return;
+    };
     // Sub-phase should reset to default when phase changes
     assert_eq!(state.sub_phase, ConfirmSubPhase::ConfirmProblem);
   }

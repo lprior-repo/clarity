@@ -19,7 +19,7 @@ pub enum Confidence {
 
 impl Confidence {
   /// Get display text for confidence
-  fn display(&self) -> &'static str {
+  const fn display(self) -> &'static str {
     match self {
       Self::Low => "Low",
       Self::Medium => "Med",
@@ -28,7 +28,7 @@ impl Confidence {
   }
 
   /// Get color classes for confidence badge
-  fn badge_classes(&self) -> &'static str {
+  const fn badge_classes(self) -> &'static str {
     match self {
       Self::Low => "bg-chart-4/10 text-chart-4 border-chart-4/20",
       Self::Medium => "bg-chart-3/10 text-chart-3 border-chart-3/20",
@@ -37,13 +37,13 @@ impl Confidence {
   }
 
   /// Check if confidence is low (for auto-expand)
-  fn is_low(&self) -> bool {
+  const fn is_low(self) -> bool {
     matches!(self, Self::Low)
   }
 }
 
 /// Field data for review card
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct FieldData {
   pub id: String,
   pub title: String,
@@ -52,20 +52,8 @@ pub struct FieldData {
   pub locked: bool,
 }
 
-impl Default for FieldData {
-  fn default() -> Self {
-    Self {
-      id: String::new(),
-      title: String::new(),
-      content: String::new(),
-      confidence: Confidence::default(),
-      locked: false,
-    }
-  }
-}
-
-/// Props for FieldCard component
-#[derive(Clone, Props, PartialEq)]
+/// Props for `FieldCard` component
+#[derive(Clone, Props, PartialEq, Eq)]
 pub struct FieldCardProps {
   /// Field data
   pub field: Signal<FieldData>,
@@ -86,10 +74,7 @@ pub struct FieldCardProps {
 #[component]
 pub fn FieldCard(props: FieldCardProps) -> Element {
   let field = props.field;
-  let mut is_editing = use_signal(|| match field.read().confidence.is_low() {
-    true => true,
-    false => false,
-  });
+  let mut is_editing = use_signal(|| field.read().confidence.is_low());
   let mut local_content = use_signal(|| field.read().content.clone());
 
   // Sync local content when field changes externally
@@ -98,7 +83,7 @@ pub fn FieldCard(props: FieldCardProps) -> Element {
       let field_read = field.read();
       let local_content_val = local_content.read().to_string();
       if local_content_val != field_read.content {
-        *local_content.write() = field_read.content.clone();
+        (*local_content.write()).clone_from(&field_read.content);
       }
     }
   });
@@ -112,7 +97,7 @@ pub fn FieldCard(props: FieldCardProps) -> Element {
   drop(field_read);
 
   let on_toggle_lock = {
-    let mut field = field.clone();
+    let mut field = field;
     move |_| {
       let mut field_write = field.write();
       field_write.locked = !field_write.locked;
@@ -126,10 +111,10 @@ pub fn FieldCard(props: FieldCardProps) -> Element {
   };
 
   let on_content_change = {
-    let mut field = field.clone();
+    let mut field = field;
     move |e: Event<FormData>| {
       let new_content = e.value();
-      *local_content.write() = new_content.clone();
+      (*local_content.write()).clone_from(&new_content);
       let mut field_write = field.write();
       field_write.content = new_content;
     }

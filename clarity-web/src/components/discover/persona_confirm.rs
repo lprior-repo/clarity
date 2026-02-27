@@ -13,8 +13,8 @@ use super::straw_man::StrawManTrap;
 use crate::ui::button::ButtonVariant;
 use crate::ui::{Button, Textarea};
 
-/// Props for PersonaDisplay component
-#[derive(Clone, Debug, PartialEq, Props)]
+/// Props for `PersonaDisplay` component.
+#[derive(Clone, Debug, PartialEq, Eq, Props)]
 pub struct PersonaDisplayProps {
   /// The persona text to display/edit
   pub persona: Signal<String>,
@@ -26,7 +26,7 @@ pub struct PersonaDisplayProps {
   pub editable: bool,
 }
 
-/// PersonaDisplay component
+/// `PersonaDisplay` component.
 ///
 /// Displays and allows editing of the persona description.
 /// This shows the extracted persona content for review.
@@ -37,7 +37,6 @@ pub fn PersonaDisplay(props: PersonaDisplayProps) -> Element {
 
   // Sync local persona when external signal changes
   use_effect({
-    let persona = persona.clone();
     move || {
       let external = persona.read().clone();
       let local = local_persona.read().clone();
@@ -48,9 +47,9 @@ pub fn PersonaDisplay(props: PersonaDisplayProps) -> Element {
   });
 
   let on_input = {
-    let mut persona = persona.clone();
+    let mut persona = persona;
     move |value: String| {
-      *local_persona.write() = value.clone();
+      local_persona.write().clone_from(&value);
       *persona.write() = value;
     }
   };
@@ -73,8 +72,8 @@ pub fn PersonaDisplay(props: PersonaDisplayProps) -> Element {
   }
 }
 
-/// Props for StrawManChecklist component
-#[derive(Clone, Debug, PartialEq, Props)]
+/// Props for `StrawManChecklist` component.
+#[derive(Clone, Debug, PartialEq, Eq, Props)]
 pub struct StrawManChecklistProps {
   /// Which traps have been detected/confirmed
   pub detected_traps: Signal<Vec<StrawManTrap>>,
@@ -83,7 +82,7 @@ pub struct StrawManChecklistProps {
   pub enabled: bool,
 }
 
-/// StrawManChecklist component
+/// `StrawManChecklist` component.
 ///
 /// Displays a checklist of straw man traps for the user to validate.
 /// Each trap has a checkbox that indicates whether the persona falls into that trap.
@@ -92,7 +91,7 @@ pub fn StrawManChecklist(props: StrawManChecklistProps) -> Element {
   let detected_traps = props.detected_traps;
 
   let toggle_trap = {
-    let mut detected_traps = detected_traps.clone();
+    let mut detected_traps = detected_traps;
     move |trap: StrawManTrap| {
       let current = detected_traps.read().clone();
       let new_traps = if current.contains(&trap) {
@@ -134,7 +133,7 @@ pub fn StrawManChecklist(props: StrawManChecklistProps) -> Element {
                           checked: detected_traps.read().contains(trap),
                           disabled: !props.enabled,
                           onchange: {
-                              let mut toggle_trap = toggle_trap.clone();
+                              let mut toggle_trap = toggle_trap;
                               move |_| {
                                   toggle_trap(*trap);
                               }
@@ -163,8 +162,8 @@ pub fn StrawManChecklist(props: StrawManChecklistProps) -> Element {
   }
 }
 
-/// Props for PersonaQuality component
-#[derive(Clone, Debug, PartialEq, Props)]
+/// Props for `PersonaQuality` component.
+#[derive(Clone, Debug, PartialEq, Eq, Props)]
 pub struct PersonaQualityProps {
   /// The persona text to evaluate
   pub persona: Signal<String>,
@@ -175,10 +174,10 @@ pub struct PersonaQualityProps {
   pub expanded: bool,
 }
 
-/// PersonaQuality component
+/// `PersonaQuality` component.
 ///
 /// Displays quality metrics for the persona.
-/// Uses the QualityScoreBar component with dimensions for:
+/// Uses the `QualityScoreBar` component with dimensions for:
 /// - Specificity: How specific is the persona description?
 /// - Realism: Is this a realistic user?
 /// - Straw Man Check: Are there any trap warnings?
@@ -189,8 +188,6 @@ pub fn PersonaQuality(props: PersonaQualityProps) -> Element {
 
   // Calculate quality dimensions based on persona
   let quality_score = use_memo({
-    let persona = persona.clone();
-    let detected_traps = detected_traps.clone();
     move || {
       let persona_text = persona.read();
       let traps = detected_traps.read();
@@ -198,8 +195,10 @@ pub fn PersonaQuality(props: PersonaQualityProps) -> Element {
 
       // Base score on content and trap count
       let base_score = calculate_persona_score(&persona_text);
-      let trap_penalty = trap_count * 15;
-      let overall = base_score.saturating_sub(trap_penalty as u8);
+      let trap_penalty = trap_count.saturating_mul(15);
+      let trap_penalty_u8 = u8::try_from(trap_penalty).unwrap_or(u8::MAX);
+      let overall = base_score.saturating_sub(trap_penalty_u8);
+      let straw_man_score = u8::try_from(100usize.saturating_sub(trap_penalty)).unwrap_or_default();
 
       let specificity = calculate_specificity_score(&persona_text);
       let realism = calculate_realism_score(&persona_text, trap_count);
@@ -209,7 +208,7 @@ pub fn PersonaQuality(props: PersonaQualityProps) -> Element {
           .with_issues(get_specificity_issues(&persona_text)),
         QualityDimension::new("Realism", realism)
           .with_issues(get_realism_issues(&persona_text, &traps)),
-        QualityDimension::new("Straw Man Check", (100 - trap_penalty).min(100) as u8)
+        QualityDimension::new("Straw Man Check", straw_man_score)
           .with_issues(get_trap_issues(&traps)),
       ])
     }
@@ -279,7 +278,7 @@ fn calculate_realism_score(text: &str, trap_count: usize) -> u8 {
   }
 
   let base = 70u8;
-  let trap_penalty = (trap_count * 15) as u8;
+  let trap_penalty = u8::try_from(trap_count.saturating_mul(15)).unwrap_or(u8::MAX);
 
   // Check for realistic language
   let lower = trimmed.to_lowercase();
@@ -299,7 +298,7 @@ fn calculate_realism_score(text: &str, trap_count: usize) -> u8 {
 
 /// Get specificity issues
 fn get_specificity_issues(text: &str) -> Vec<String> {
-  let word_count = text.trim().split_whitespace().count();
+  let word_count = text.split_whitespace().count();
   if word_count < 10 {
     vec!["Add more specific details about your target user".to_string()]
   } else if word_count < 25 {
@@ -332,7 +331,7 @@ fn get_trap_issues(traps: &[StrawManTrap]) -> Vec<String> {
     .collect()
 }
 
-/// Props for PersonaConfirm component
+/// Props for `PersonaConfirm` component.
 #[derive(Clone, Debug, PartialEq, Props)]
 pub struct PersonaConfirmProps {
   /// The persona text
@@ -357,12 +356,12 @@ pub struct PersonaConfirmProps {
   pub back_disabled: bool,
 }
 
-/// PersonaConfirm component
+/// `PersonaConfirm` component.
 ///
 /// Composes:
-/// - PersonaDisplay: Shows the persona text for review/editing
-/// - StrawManChecklist: Validates against straw man traps
-/// - PersonaQuality: Quality score indicator
+/// - `PersonaDisplay`: Shows the persona text for review/editing
+/// - `StrawManChecklist`: Validates against straw man traps
+/// - `PersonaQuality`: Quality score indicator
 /// - Navigation: Back/Next buttons
 ///
 /// This is the second confirmation step in the Progressive Discover flow.
@@ -495,7 +494,7 @@ mod tests {
   fn test_calculate_persona_score_medium() {
     let score =
       calculate_persona_score("This is a medium length persona description with some details");
-    assert!(score >= 50 && score <= 85);
+    assert!((50..=85).contains(&score));
   }
 
   #[test]

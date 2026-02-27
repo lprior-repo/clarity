@@ -1,0 +1,21 @@
+--- clarity-web/src/lattice/quality.rs
++++ replace > with == in calculate_completeness
+@@ -262,17 +262,17 @@
+       issues.push(QualityIssue::new(
+         QualityDimension::Completeness,
+         IssueSeverity::Error,
+         format!("Missing required field: {pattern}"),
+       ));
+     }
+   }
+ 
+-  let score = if total_required > 0 {
++  let score = if total_required == /* ~ changed by cargo-mutants ~ */ 0 {
+     u8::try_from((filled_count * 100) / total_required).unwrap_or(100)
+   } else {
+     100
+   };
+ 
+   DimensionScore::new(QualityDimension::Completeness, score).unwrap_or_else(|_| DimensionScore {
+     dimension: QualityDimension::Completeness,
+     score: 0,

@@ -9,16 +9,11 @@
 use serde::{Deserialize, Serialize};
 
 /// Test mode toggle for discover phase
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DiscoverMode {
   /// Express mode - user types freely
   Express,
   /// Guided mode - structured questions with AI suggestions
+  #[default]
   Guided,
-}
-
-impl Default for DiscoverMode {
-  fn default() -> Self {
-    Self::Guided
-  }
 }

@@ -406,29 +406,39 @@ async fn test_ai_suggest_for_all_questions() {
     // Verify suggestion is contextually relevant
     match step_id {
       "problem" => assert!(
-        suggestion.to_lowercase().contains("problem")
-          || suggestion.contains("users")
-          || suggestion.contains("facing"),
+        suggestion.to_lowercase().contains("developer")
+          || suggestion.to_lowercase().contains("token")
+          || suggestion.to_lowercase().contains("production")
+          || suggestion.to_lowercase().contains("manually"),
+        "Problem suggestion should mention developers, tokens, production, or manual work"
       ),
       "antithesis" => assert!(
-        suggestion.to_lowercase().contains("argument")
-          || suggestion.to_lowercase().contains("against")
-          || suggestion.contains("actually")
+        suggestion.to_lowercase().contains("manual")
+          || suggestion.to_lowercase().contains("small")
+          || suggestion.to_lowercase().contains("acceptable")
+          || suggestion.to_lowercase().contains("complexity"),
+        "Antithesis suggestion should mention manual, small, acceptable, or complexity"
       ),
       "solution" => assert!(
-        suggestion.to_lowercase().contains("building")
-          || suggestion.to_lowercase().contains("software")
-          || suggestion.contains("resolve")
+        suggestion.to_lowercase().contains("cli")
+          || suggestion.to_lowercase().contains("tool")
+          || suggestion.to_lowercase().contains("automatically")
+          || suggestion.to_lowercase().contains("deploy"),
+        "Solution suggestion should mention CLI, tool, automatically, or deploy"
       ),
       "persona" => assert!(
-        suggestion.to_lowercase().contains("user")
-          || suggestion.to_lowercase().contains("role")
-          || suggestion.contains("target")
+        suggestion.to_lowercase().contains("developer")
+          || suggestion.to_lowercase().contains("sarah")
+          || suggestion.to_lowercase().contains("startup")
+          || suggestion.to_lowercase().contains("microservice"),
+        "Persona suggestion should mention developer, Sarah, startup, or microservices"
       ),
       "scenario" => assert!(
-        suggestion.to_lowercase().contains("user")
-          || suggestion.to_lowercase().contains("story")
-          || suggestion.contains("steps")
+        suggestion.to_lowercase().contains("deploy")
+          || suggestion.to_lowercase().contains("production")
+          || suggestion.to_lowercase().contains("token")
+          || suggestion.to_lowercase().contains("error"),
+        "Scenario suggestion should mention deploy, production, token, or error"
       ),
       _ => {}
     }

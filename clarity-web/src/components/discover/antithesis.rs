@@ -147,20 +147,19 @@ impl AntithesisResponse {
 
   /// Check if the response is valid (exactly 3 non-empty points).
   #[must_use]
-  #[must_use]
   pub const fn is_valid(&self) -> bool {
     self.validated
   }
 
   /// Get the quality score (0-100).
   #[must_use]
-  pub fn score(&self) -> u8 {
+  pub const fn score(&self) -> u8 {
     self.quality_score
   }
 
   /// Check if quality gate passes (score >= 70).
   #[must_use]
-  pub fn quality_gate_passes(&self) -> bool {
+  pub const fn quality_gate_passes(&self) -> bool {
     self.quality_score >= 70
   }
 
@@ -168,12 +167,12 @@ impl AntithesisResponse {
   ///
   /// Returns None if index is out of bounds.
   #[must_use]
-  #[must_use]
   pub fn get_point(&self, index: usize) -> Option<&String> {
     self.points.get(index)
   }
 
   /// Create a new response with updated points.
+  #[must_use]
   pub fn with_points(self, points: Vec<String>) -> Self {
     Self::new(points)
   }
@@ -181,6 +180,7 @@ impl AntithesisResponse {
   /// Create a new response with a manually set quality score.
   ///
   /// The score is clamped to the valid range 0..=100.
+  #[must_use]
   pub fn with_quality_score(mut self, score: u8) -> Self {
     self.quality_score = score.min(100);
     self
@@ -366,13 +366,16 @@ mod tests {
     let json = serde_json::to_string(&response);
     assert!(json.is_ok());
 
-    let parsed: Result<AntithesisResponse, _> = serde_json::from_str(&json.unwrap());
-    assert!(parsed.is_ok());
+    if let Ok(json_str) = json {
+      let parsed: Result<AntithesisResponse, _> = serde_json::from_str(&json_str);
+      assert!(parsed.is_ok());
 
-    let parsed = parsed.unwrap();
-    assert_eq!(parsed.points, response.points);
-    assert_eq!(parsed.quality_score, response.quality_score);
-    assert_eq!(parsed.validated, response.validated);
+      if let Ok(parsed_response) = parsed {
+        assert_eq!(parsed_response.points, response.points);
+        assert_eq!(parsed_response.quality_score, response.quality_score);
+        assert_eq!(parsed_response.validated, response.validated);
+      }
+    }
   }
 
   #[test]
@@ -423,21 +426,15 @@ mod tests {
 
     assert!(
       medium > short,
-      "medium ({}) should be > short ({})",
-      medium,
-      short
+      "medium ({medium}) should be > short ({short})"
     );
     assert!(
       detailed > medium,
-      "detailed ({}) should be > medium ({})",
-      detailed,
-      medium
+      "detailed ({detailed}) should be > medium ({medium})"
     );
     assert!(
       with_number > medium,
-      "with_number ({}) should be > medium ({})",
-      with_number,
-      medium
+      "with_number ({with_number}) should be > medium ({medium})"
     );
   }
 }

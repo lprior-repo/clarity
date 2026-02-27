@@ -7,6 +7,7 @@
 #![forbid(unsafe_code)]
 
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 use std::path::PathBuf;
 use thiserror::Error;
 
@@ -30,16 +31,11 @@ pub enum ConfigError {
 }
 
 /// AI provider configuration
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum ProviderType {
+  #[default]
   Opencode,
   Other(String),
-}
-
-impl Default for ProviderType {
-  fn default() -> Self {
-    Self::Opencode
-  }
 }
 
 impl Serialize for ProviderType {
@@ -84,7 +80,7 @@ impl<'de> Deserialize<'de> for ProviderType {
 }
 
 /// Provider connection details
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ProviderConfig {
   #[serde(default)]
   pub provider: ProviderType,
@@ -111,7 +107,7 @@ fn default_endpoint() -> String {
 }
 
 /// Quality scoring configuration
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct QualityConfig {
   #[serde(default = "default_quality_min_score")]
   pub min_score: u8,
@@ -125,12 +121,12 @@ impl Default for QualityConfig {
   }
 }
 
-fn default_quality_min_score() -> u8 {
+const fn default_quality_min_score() -> u8 {
   70
 }
 
 /// Complete AI configuration
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct AiConfig {
   #[serde(default)]
   pub provider: ProviderConfig,
@@ -139,18 +135,10 @@ pub struct AiConfig {
   pub quality: QualityConfig,
 }
 
-impl Default for AiConfig {
-  fn default() -> Self {
-    Self {
-      provider: ProviderConfig::default(),
-      quality: QualityConfig::default(),
-    }
-  }
-}
-
 /// Get the path to the AI configuration file
 ///
 /// Returns `None` if XDG config directory cannot be determined
+#[must_use]
 pub fn config_path() -> Option<PathBuf> {
   dirs::config_dir()
     .map(|dir| dir.join("clarity"))
@@ -160,21 +148,21 @@ pub fn config_path() -> Option<PathBuf> {
 /// Load AI configuration from XDG config directory
 ///
 /// Creates default config with 0600 permissions if not found
+///
+/// # Errors
+/// Returns [`ConfigError`] when path resolution, parsing, or writes fail.
 pub fn load_ai_config() -> Result<AiConfig, ConfigError> {
   let config_file = config_path().ok_or(ConfigError::ConfigDirNotFound)?;
 
   // Try to read existing config
-  match std::fs::read_to_string(&config_file) {
-    Ok(content) => toml::from_str(&content).map_err(|e| ConfigError::ParseError(e.to_string())),
-    Err(_) => {
-      // Config doesn't exist, create default
-      create_default_config(&config_file)
-    }
-  }
+  std::fs::read_to_string(&config_file).map_or_else(
+    |_| create_default_config(&config_file),
+    |content| toml::from_str(&content).map_err(|e| ConfigError::ParseError(e.to_string())),
+  )
 }
 
 /// Create default configuration file with secure permissions
-fn create_default_config(path: &PathBuf) -> Result<AiConfig, ConfigError> {
+fn create_default_config(path: &Path) -> Result<AiConfig, ConfigError> {
   let config = AiConfig::default();
 
   // Ensure parent directory exists
@@ -212,6 +200,7 @@ fn create_default_config(path: &PathBuf) -> Result<AiConfig, ConfigError> {
 }
 
 /// Get default configuration without creating files
+#[must_use]
 pub fn default_config() -> AiConfig {
   AiConfig::default()
 }
@@ -219,6 +208,7 @@ pub fn default_config() -> AiConfig {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use std::error::Error;
   use std::fs;
   use tempfile::TempDir;
 
@@ -253,13 +243,13 @@ mod tests {
 
   /// Test ProviderType serialization/deserialization
   #[test]
-  fn test_provider_type_serde() {
+  fn test_provider_type_serde() -> Result<(), Box<dyn Error>> {
     // Test deserialization via serde_json (TOML requires key=value)
-    let deserialized: ProviderType = serde_json::from_str("\"opencode\"").unwrap();
+    let deserialized: ProviderType = serde_json::from_str("\"opencode\"")?;
     assert_eq!(deserialized, ProviderType::Opencode);
 
     // Test deserialization of unknown provider
-    let custom: ProviderType = serde_json::from_str("\"custom_provider\"").unwrap();
+    let custom: ProviderType = serde_json::from_str("\"custom_provider\"")?;
     assert!(matches!(custom, ProviderType::Other(_)));
     if let ProviderType::Other(s) = custom {
       assert_eq!(s, "custom_provider");
@@ -270,11 +260,11 @@ mod tests {
       provider: ProviderType::Opencode,
       ..Default::default()
     };
-    let serialized = toml::to_string(&config).unwrap();
+    let serialized = toml::to_string(&config)?;
     assert!(serialized.contains("opencode"));
 
     // Test round-trip through TOML
-    let parsed: ProviderConfig = toml::from_str(&serialized).unwrap();
+    let parsed: ProviderConfig = toml::from_str(&serialized)?;
     assert_eq!(parsed.provider, ProviderType::Opencode);
 
     // Test custom provider in TOML config
@@ -283,30 +273,33 @@ mod tests {
 provider = "custom_openai"
 endpoint = "https://api.openai.com/v1"
 "#;
-    let parsed_config: AiConfig = toml::from_str(toml_content).unwrap();
+    let parsed_config: AiConfig = toml::from_str(toml_content)?;
     assert!(matches!(
       parsed_config.provider.provider,
       ProviderType::Other(_)
     ));
+
+    Ok(())
   }
 
   /// Test AiConfig serialization/deserialization
   #[test]
-  fn test_ai_config_serde() {
+  fn test_ai_config_serde() -> Result<(), Box<dyn Error>> {
     let config = AiConfig::default();
 
     // Serialize
-    let toml_str = toml::to_string_pretty(&config).unwrap();
+    let toml_str = toml::to_string_pretty(&config)?;
 
     // Deserialize
-    let parsed: AiConfig = toml::from_str(&toml_str).unwrap();
+    let parsed: AiConfig = toml::from_str(&toml_str)?;
 
     assert_eq!(parsed, config);
+    Ok(())
   }
 
   /// Test config parsing from TOML
   #[test]
-  fn test_parse_toml_config() {
+  fn test_parse_toml_config() -> Result<(), Box<dyn Error>> {
     let toml_content = r#"
 [provider]
 provider = "opencode"
@@ -317,23 +310,24 @@ session_id = "test-session-123"
 min_score = 85
 "#;
 
-    let config: AiConfig = toml::from_str(toml_content).unwrap();
+    let config: AiConfig = toml::from_str(toml_content)?;
 
     assert_eq!(config.provider.provider, ProviderType::Opencode);
     assert_eq!(config.provider.endpoint, "https://api.example.com/v1");
     assert_eq!(config.provider.session_id, "test-session-123");
     assert_eq!(config.quality.min_score, 85);
+    Ok(())
   }
 
   /// Test partial config with defaults
   #[test]
-  fn test_partial_config_uses_defaults() {
+  fn test_partial_config_uses_defaults() -> Result<(), Box<dyn Error>> {
     let toml_content = r#"
 [provider]
 provider = "opencode"
 "#;
 
-    let config: AiConfig = toml::from_str(toml_content).unwrap();
+    let config: AiConfig = toml::from_str(toml_content)?;
 
     assert_eq!(config.provider.provider, ProviderType::Opencode);
     assert_eq!(
@@ -341,15 +335,16 @@ provider = "opencode"
       "https://api.opencode.ai/v1" // default
     );
     assert_eq!(config.quality.min_score, 70); // default
+    Ok(())
   }
 
   /// Test config file creation in temp directory
   #[test]
-  fn test_create_config_file() {
-    let temp_dir = TempDir::new().unwrap();
+  fn test_create_config_file() -> Result<(), Box<dyn Error>> {
+    let temp_dir = TempDir::new()?;
     let config_path = temp_dir.path().join("ai.toml");
 
-    let config = create_default_config(&config_path).unwrap();
+    let config = create_default_config(&config_path)?;
 
     // Verify config values
     assert_eq!(config.provider.provider, ProviderType::Opencode);
@@ -359,24 +354,26 @@ provider = "opencode"
     assert!(config_path.exists());
 
     // Verify file contents can be parsed
-    let content = fs::read_to_string(&config_path).unwrap();
-    let parsed: AiConfig = toml::from_str(&content).unwrap();
+    let content = fs::read_to_string(&config_path)?;
+    let parsed: AiConfig = toml::from_str(&content)?;
     assert_eq!(parsed, config);
 
     // Verify file permissions on Unix
     #[cfg(unix)]
     {
       use std::os::unix::fs::PermissionsExt;
-      let metadata = fs::metadata(&config_path).unwrap();
+      let metadata = fs::metadata(&config_path)?;
       let mode = metadata.permissions().mode();
       assert_eq!(mode & 0o777, 0o600);
     }
+
+    Ok(())
   }
 
   /// Test loading existing config
   #[test]
-  fn test_load_existing_config() {
-    let temp_dir = TempDir::new().unwrap();
+  fn test_load_existing_config() -> Result<(), Box<dyn Error>> {
+    let temp_dir = TempDir::new()?;
     let config_path = temp_dir.path().join("ai.toml");
 
     // Write config file
@@ -389,51 +386,54 @@ session_id = "test-session"
 [quality]
 min_score = 90
 "#;
-    fs::write(&config_path, toml_content).unwrap();
+    fs::write(&config_path, toml_content)?;
 
     // Load and verify
-    let config = load_ai_config_from_path(&config_path).unwrap();
+    let config = load_ai_config_from_path(&config_path)?;
 
     assert_eq!(config.provider.endpoint, "https://test.example.com/v1");
     assert_eq!(config.provider.session_id, "test-session");
     assert_eq!(config.quality.min_score, 90);
+    Ok(())
   }
 
   /// Test config creation when file doesn't exist
   #[test]
-  fn test_creates_default_when_missing() {
-    let temp_dir = TempDir::new().unwrap();
+  fn test_creates_default_when_missing() -> Result<(), Box<dyn Error>> {
+    let temp_dir = TempDir::new()?;
     let config_path = temp_dir.path().join("ai.toml");
 
     // Ensure file doesn't exist
     assert!(!config_path.exists());
 
     // Load should create default
-    let config = load_ai_config_from_path(&config_path).unwrap();
+    let config = load_ai_config_from_path(&config_path)?;
 
     assert_eq!(config.provider.provider, ProviderType::Opencode);
     assert_eq!(config.quality.min_score, 70);
     assert!(config_path.exists());
+    Ok(())
   }
 
   // Helper function to test loading from specific path
-  fn load_ai_config_from_path(path: &PathBuf) -> Result<AiConfig, ConfigError> {
-    match std::fs::read_to_string(path) {
-      Ok(content) => toml::from_str(&content).map_err(|e| ConfigError::ParseError(e.to_string())),
-      Err(_) => create_default_config(path),
-    }
+  fn load_ai_config_from_path(path: &Path) -> Result<AiConfig, ConfigError> {
+    std::fs::read_to_string(path).map_or_else(
+      |_| create_default_config(path),
+      |content| toml::from_str(&content).map_err(|e| ConfigError::ParseError(e.to_string())),
+    )
   }
 
   /// Test quality score boundary
   #[test]
-  fn test_quality_score_range() {
+  fn test_quality_score_range() -> Result<(), Box<dyn Error>> {
     let toml_content = r"
 [quality]
 min_score = 100
 ";
 
-    let config: AiConfig = toml::from_str(toml_content).unwrap();
+    let config: AiConfig = toml::from_str(toml_content)?;
     assert_eq!(config.quality.min_score, 100);
+    Ok(())
   }
 
   /// Test empty session_id handling

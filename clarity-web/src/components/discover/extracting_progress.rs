@@ -8,10 +8,11 @@
 
 use dioxus::prelude::*;
 
-/// Props for ExtractingProgress component
-#[derive(Clone, Copy, PartialEq, Debug)]
+/// Props for `ExtractingProgress` component
+#[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
 pub enum ExtractionStatus {
   /// Extraction has not started
+  #[default]
   Idle,
   /// Extraction is in progress
   Extracting,
@@ -21,14 +22,8 @@ pub enum ExtractionStatus {
   Failed,
 }
 
-impl Default for ExtractionStatus {
-  fn default() -> Self {
-    Self::Idle
-  }
-}
-
-/// Props for ExtractingProgress component
-#[derive(Clone, Props, PartialEq)]
+/// Props for `ExtractingProgress` component
+#[derive(Clone, Props, PartialEq, Eq)]
 pub struct ExtractingProgressProps {
   /// Current extraction status
   #[props(default)]
@@ -43,7 +38,7 @@ pub struct ExtractingProgressProps {
   pub message: Option<String>,
 }
 
-/// ExtractingProgress component
+/// `ExtractingProgress` component
 ///
 /// Displays an animated progress indicator during artifact extraction:
 /// - Animated progress bar with shimmer effect
@@ -73,15 +68,12 @@ pub fn ExtractingProgress(props: ExtractingProgressProps) -> Element {
   );
 
   // Get status text
-  let status_text = match message.as_ref() {
-    Some(msg) => msg.clone(),
-    None => match status {
-      ExtractionStatus::Idle => "Ready to extract".to_string(),
-      ExtractionStatus::Extracting => "Extracting fields...".to_string(),
-      ExtractionStatus::Complete => "Extraction complete!".to_string(),
-      ExtractionStatus::Failed => "Extraction failed".to_string(),
-    },
-  };
+  let status_text = message.unwrap_or_else(|| match status {
+    ExtractionStatus::Idle => "Ready to extract".to_string(),
+    ExtractionStatus::Extracting => "Extracting fields...".to_string(),
+    ExtractionStatus::Complete => "Extraction complete!".to_string(),
+    ExtractionStatus::Failed => "Extraction failed".to_string(),
+  });
 
   // Calculate progress bar width
   let progress_width = format!("{clamped_progress}%");
@@ -217,7 +209,7 @@ mod tests {
   #[test]
   fn test_extraction_status_clone() {
     let status = ExtractionStatus::Extracting;
-    let cloned = status.clone();
+    let cloned = status;
     assert_eq!(status, cloned);
   }
 

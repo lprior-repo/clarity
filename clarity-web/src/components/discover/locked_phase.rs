@@ -6,7 +6,7 @@
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
-//! LockedPhase component for the Progressive Discover flow.
+//! `LockedPhase` component for the Progressive Discover flow.
 //!
 //! This is the final phase in the Progressive Discover workflow, displayed after
 //! KIRK compilation is complete. It shows:
@@ -19,7 +19,7 @@ use dioxus::prelude::*;
 use super::locked_summary::{ArtifactStats, LockedSummary};
 use crate::types::RightTab;
 
-/// Props for LockedPhase component
+/// Props for `LockedPhase` component
 #[derive(Clone, Props, PartialEq)]
 pub struct LockedPhaseProps {
   /// Artifact statistics to display in the summary
@@ -38,7 +38,7 @@ pub struct LockedPhaseProps {
   pub is_exporting: bool,
 }
 
-/// LockedPhase component
+/// `LockedPhase` component
 ///
 /// Displays the final locked state after KIRK compilation is complete.
 /// Shows the completion summary with artifact statistics and provides
@@ -46,7 +46,7 @@ pub struct LockedPhaseProps {
 ///
 /// # Features
 ///
-/// - LockedSummary with bead count, field count, validations
+/// - `LockedSummary` with bead count, field count, validations
 /// - Navigation buttons: View Plan, View Graph, View State
 /// - Export button for downloading KIRK JSON
 /// - Restart button to begin a new session
@@ -109,7 +109,7 @@ pub fn LockedPhase(props: LockedPhaseProps) -> Element {
                                   path { d: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" },
                               }
                           },
-                          on_click: move |_| navigate_callback.call(RightTab::Plan),
+                          on_click: move |()| navigate_callback.call(RightTab::Plan),
                       }
 
                       // View Graph button
@@ -134,7 +134,7 @@ pub fn LockedPhase(props: LockedPhaseProps) -> Element {
                                   line { x1: "12", y1: "16", x2: "18", y2: "16" },
                               }
                           },
-                          on_click: move |_| navigate_callback.call(RightTab::Graph),
+                          on_click: move |()| navigate_callback.call(RightTab::Graph),
                       }
 
                       // View State button
@@ -154,7 +154,7 @@ pub fn LockedPhase(props: LockedPhaseProps) -> Element {
                                   path { d: "M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" },
                               }
                           },
-                          on_click: move |_| navigate_callback.call(RightTab::State),
+                          on_click: move |()| navigate_callback.call(RightTab::State),
                       }
                   }
               }
@@ -169,7 +169,7 @@ pub fn LockedPhase(props: LockedPhaseProps) -> Element {
   }
 }
 
-/// Props for NavButton component
+/// Props for `NavButton` component
 #[derive(Clone, Props, PartialEq)]
 struct NavButtonProps {
   /// Button label

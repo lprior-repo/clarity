@@ -1,0 +1,30 @@
+clarity-web/src/lattice/quality.rs:74:5: replace QualityDimension::description -> &'static str with "xyzzy"
+clarity-web/src/lattice/quality.rs:270:33: replace > with >= in calculate_completeness
+clarity-web/src/lattice/quality.rs:291:38: replace + with * in calculate_consistency
+clarity-web/src/lattice/quality.rs:301:54: replace / with * in calculate_consistency
+clarity-web/src/lattice/quality.rs:403:20: replace > with >= in calculate_clarity
+clarity-web/src/lattice/quality.rs:403:38: replace > with == in calculate_clarity
+clarity-web/src/lattice/quality.rs:403:38: replace > with >= in calculate_clarity
+clarity-web/src/lattice/quality.rs:416:42: replace > with >= in calculate_clarity
+clarity-web/src/lattice/quality.rs:417:31: replace / with * in calculate_clarity
+clarity-web/src/lattice/quality.rs:422:38: replace * with / in calculate_clarity
+clarity-web/src/lattice/quality.rs:439:19: replace > with >= in calculate_clarity
+clarity-web/src/lattice/quality.rs:487:66: replace || with && in calculate_security
+clarity-web/src/lattice/quality.rs:490:67: replace || with && in calculate_security
+clarity-web/src/lattice/quality.rs:493:71: replace || with && in calculate_security
+clarity-web/src/lattice/quality.rs:517:22: delete ! in calculate_security
+clarity-web/src/lattice/quality.rs:74:5: replace QualityDimension::description -> &'static str with "xyzzy"
+clarity-web/src/lattice/quality.rs:270:33: replace > with >= in calculate_completeness
+clarity-web/src/lattice/quality.rs:291:38: replace + with * in calculate_consistency
+clarity-web/src/lattice/quality.rs:301:54: replace / with * in calculate_consistency
+clarity-web/src/lattice/quality.rs:403:20: replace > with >= in calculate_clarity
+clarity-web/src/lattice/quality.rs:403:38: replace > with == in calculate_clarity
+clarity-web/src/lattice/quality.rs:403:38: replace > with >= in calculate_clarity
+clarity-web/src/lattice/quality.rs:416:42: replace > with >= in calculate_clarity
+clarity-web/src/lattice/quality.rs:417:31: replace / with * in calculate_clarity
+clarity-web/src/lattice/quality.rs:422:38: replace * with / in calculate_clarity
+clarity-web/src/lattice/quality.rs:439:19: replace > with >= in calculate_clarity
+clarity-web/src/lattice/quality.rs:487:66: replace || with && in calculate_security
+clarity-web/src/lattice/quality.rs:490:67: replace || with && in calculate_security
+clarity-web/src/lattice/quality.rs:493:71: replace || with && in calculate_security
+clarity-web/src/lattice/quality.rs:517:22: delete ! in calculate_security

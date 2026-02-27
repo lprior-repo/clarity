@@ -101,7 +101,7 @@ impl ProgressiveDiscoverPhase {
   /// Returns `None` if already at the final phase (cannot advance past Locked).
   /// This ensures phase transitions are one-way and sequential.
   #[must_use]
-  pub fn next(&self) -> Option<Self> {
+  pub const fn next(&self) -> Option<Self> {
     match self {
       Self::Prompt => Some(Self::Extracting),
       Self::Extracting => Some(Self::ConfirmingFields),
@@ -117,7 +117,7 @@ impl ProgressiveDiscoverPhase {
   /// Returns `None` if already at the initial phase.
   /// Note: This is primarily for navigation; business logic may restrict backwards transitions.
   #[must_use]
-  pub fn previous(&self) -> Option<Self> {
+  pub const fn previous(&self) -> Option<Self> {
     match self {
       Self::Prompt => None,
       Self::Extracting => Some(Self::Prompt),
@@ -154,7 +154,7 @@ impl fmt::Display for ProgressiveDiscoverPhase {
   }
 }
 
-/// Sub-phases within the ConfirmingFields phase
+/// Sub-phases within the `ConfirmingFields` phase
 ///
 /// Each sub-phase corresponds to a field that requires confirmation
 /// with adversarial coaching:
@@ -249,7 +249,7 @@ impl ConfirmSubPhase {
   /// Returns `None` if already at the last sub-phase (Scenario).
   /// This ensures sequential progression through confirmation steps.
   #[must_use]
-  pub fn next(&self) -> Option<Self> {
+  pub const fn next(&self) -> Option<Self> {
     match self {
       Self::ConfirmProblem => Some(Self::ConfirmPersona),
       Self::ConfirmPersona => Some(Self::ConfirmSolution),
@@ -263,7 +263,7 @@ impl ConfirmSubPhase {
   ///
   /// Returns `None` if already at the first sub-phase (Problem).
   #[must_use]
-  pub fn previous(&self) -> Option<Self> {
+  pub const fn previous(&self) -> Option<Self> {
     match self {
       Self::ConfirmProblem => None,
       Self::ConfirmPersona => Some(Self::ConfirmProblem),
@@ -492,13 +492,13 @@ mod tests {
   }
 
   #[test]
-  fn test_serialize_deserialize_roundtrip() {
+  fn test_serialize_deserialize_roundtrip() -> Result<(), serde_json::Error> {
     for phase in ProgressiveDiscoverPhase::all() {
-      let json = serde_json::to_string(phase).expect("Serialization should succeed");
-      let deserialized: ProgressiveDiscoverPhase =
-        serde_json::from_str(&json).expect("Deserialization should succeed");
+      let json = serde_json::to_string(phase)?;
+      let deserialized: ProgressiveDiscoverPhase = serde_json::from_str(&json)?;
       assert_eq!(*phase, deserialized);
     }
+    Ok(())
   }
 
   #[test]
@@ -556,32 +556,26 @@ mod tests {
   }
 
   #[test]
-  fn test_cannot_skip_phases() {
-    // Verify that the only way to reach Locked is through all intermediate phases
+  fn test_cannot_skip_phases() -> Result<(), &'static str> {
     let mut phase = ProgressiveDiscoverPhase::Prompt;
 
-    // Must go through Extracting
-    phase = phase.next().expect("Should transition to Extracting");
+    phase = phase.next().ok_or("Should transition to Extracting")?;
     assert_eq!(phase, ProgressiveDiscoverPhase::Extracting);
 
-    // Must go through ConfirmingFields
-    phase = phase.next().expect("Should transition to ConfirmingFields");
+    phase = phase.next().ok_or("Should transition to ConfirmingFields")?;
     assert_eq!(phase, ProgressiveDiscoverPhase::ConfirmingFields);
 
-    // Must go through Preview
-    phase = phase.next().expect("Should transition to Preview");
+    phase = phase.next().ok_or("Should transition to Preview")?;
     assert_eq!(phase, ProgressiveDiscoverPhase::Preview);
 
-    // Must go through KirkCompilation
-    phase = phase.next().expect("Should transition to KirkCompilation");
+    phase = phase.next().ok_or("Should transition to KirkCompilation")?;
     assert_eq!(phase, ProgressiveDiscoverPhase::KirkCompilation);
 
-    // Finally reach Locked
-    phase = phase.next().expect("Should transition to Locked");
+    phase = phase.next().ok_or("Should transition to Locked")?;
     assert_eq!(phase, ProgressiveDiscoverPhase::Locked);
 
-    // Cannot go past Locked
     assert_eq!(phase.next(), None);
+    Ok(())
   }
 
   // ===== ConfirmSubPhase Tests =====
@@ -737,13 +731,13 @@ mod tests {
   }
 
   #[test]
-  fn test_subphase_serialize_deserialize_roundtrip() {
+  fn test_subphase_serialize_deserialize_roundtrip() -> Result<(), serde_json::Error> {
     for subphase in ConfirmSubPhase::all() {
-      let json = serde_json::to_string(subphase).expect("Serialization should succeed");
-      let deserialized: ConfirmSubPhase =
-        serde_json::from_str(&json).expect("Deserialization should succeed");
+      let json = serde_json::to_string(subphase)?;
+      let deserialized: ConfirmSubPhase = serde_json::from_str(&json)?;
       assert_eq!(*subphase, deserialized);
     }
+    Ok(())
   }
 
   #[test]
@@ -797,21 +791,22 @@ mod tests {
   }
 
   #[test]
-  fn test_subphase_cannot_skip() {
+  fn test_subphase_cannot_skip() -> Result<(), &'static str> {
     let mut subphase = ConfirmSubPhase::ConfirmProblem;
 
-    subphase = subphase.next().expect("Should transition to Persona");
+    subphase = subphase.next().ok_or("Should transition to Persona")?;
     assert_eq!(subphase, ConfirmSubPhase::ConfirmPersona);
 
-    subphase = subphase.next().expect("Should transition to Solution");
+    subphase = subphase.next().ok_or("Should transition to Solution")?;
     assert_eq!(subphase, ConfirmSubPhase::ConfirmSolution);
 
-    subphase = subphase.next().expect("Should transition to Nonpersona");
+    subphase = subphase.next().ok_or("Should transition to Nonpersona")?;
     assert_eq!(subphase, ConfirmSubPhase::ConfirmNonpersona);
 
-    subphase = subphase.next().expect("Should transition to Scenario");
+    subphase = subphase.next().ok_or("Should transition to Scenario")?;
     assert_eq!(subphase, ConfirmSubPhase::ConfirmScenario);
 
     assert_eq!(subphase.next(), None);
+    Ok(())
   }
 }

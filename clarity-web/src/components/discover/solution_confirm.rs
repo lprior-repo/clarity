@@ -13,7 +13,7 @@ use super::quality_score::{QualityDimension, QualityScore, QualityScoreBar};
 use crate::ui::button::ButtonVariant;
 use crate::ui::{Button, Textarea};
 
-/// VORP (Value Over Replacement Product) justification fields
+/// `VORP` (Value Over Replacement Product) justification fields.
 ///
 /// VORP answers four critical questions:
 /// - Value: What value does this provide?
@@ -33,15 +33,15 @@ pub struct VorpFields {
 }
 
 impl VorpFields {
-  /// Create new empty VORP fields
+  /// Create new empty `VORP` fields.
   #[must_use]
   pub fn new() -> Self {
     Self::default()
   }
 
-  /// Create VORP fields with values
+  /// Create `VORP` fields with values.
   #[must_use]
-  pub fn with_values(value: String, obvious: String, real: String, possible: String) -> Self {
+  pub const fn with_values(value: String, obvious: String, real: String, possible: String) -> Self {
     Self {
       value,
       obvious,
@@ -50,7 +50,7 @@ impl VorpFields {
     }
   }
 
-  /// Check if all VORP fields are filled
+  /// Check if all `VORP` fields are filled.
   #[must_use]
   pub fn is_complete(&self) -> bool {
     !self.value.trim().is_empty()
@@ -59,7 +59,7 @@ impl VorpFields {
       && !self.possible.trim().is_empty()
   }
 
-  /// Get count of filled fields (0-4)
+  /// Get count of filled fields (0-4).
   #[must_use]
   pub fn filled_count(&self) -> usize {
     usize::from(!self.value.trim().is_empty())
@@ -68,11 +68,11 @@ impl VorpFields {
       + usize::from(!self.possible.trim().is_empty())
   }
 
-  /// Calculate overall VORP score (0-100)
+  /// Calculate overall `VORP` score (0-100).
   #[must_use]
   pub fn score(&self) -> u8 {
     if !self.is_complete() {
-      return (self.filled_count() * 15) as u8;
+      return u8::try_from(self.filled_count() * 15).unwrap_or_default();
     }
 
     // Base score for completion
@@ -104,8 +104,8 @@ impl VorpFields {
   }
 }
 
-/// Props for SolutionDisplay component
-#[derive(Clone, Debug, PartialEq, Props)]
+/// Props for `SolutionDisplay` component.
+#[derive(Clone, Debug, PartialEq, Eq, Props)]
 pub struct SolutionDisplayProps {
   /// The solution text to display/edit
   pub solution: Signal<String>,
@@ -117,7 +117,7 @@ pub struct SolutionDisplayProps {
   pub editable: bool,
 }
 
-/// SolutionDisplay component
+/// `SolutionDisplay` component.
 ///
 /// Displays and allows editing of the solution description.
 #[component]
@@ -127,7 +127,6 @@ pub fn SolutionDisplay(props: SolutionDisplayProps) -> Element {
 
   // Sync local solution when external signal changes
   use_effect({
-    let solution = solution.clone();
     move || {
       let external = solution.read().clone();
       let local = local_solution.read().clone();
@@ -138,9 +137,9 @@ pub fn SolutionDisplay(props: SolutionDisplayProps) -> Element {
   });
 
   let on_input = {
-    let mut solution = solution.clone();
+    let mut solution = solution;
     move |value: String| {
-      *local_solution.write() = value.clone();
+      local_solution.write().clone_from(&value);
       *solution.write() = value;
     }
   };
@@ -163,8 +162,8 @@ pub fn SolutionDisplay(props: SolutionDisplayProps) -> Element {
   }
 }
 
-/// Props for VorpInput component
-#[derive(Clone, Debug, PartialEq, Props)]
+/// Props for `VorpInput` component.
+#[derive(Clone, Debug, PartialEq, Eq, Props)]
 pub struct VorpInputProps {
   /// The VORP fields
   pub vorp: Signal<VorpFields>,
@@ -173,7 +172,7 @@ pub struct VorpInputProps {
   pub enabled: bool,
 }
 
-/// VorpInput component
+/// `VorpInput` component.
 ///
 /// Displays four input fields for VORP justification:
 /// - Value: What value does this provide?
@@ -187,7 +186,6 @@ pub fn VorpInput(props: VorpInputProps) -> Element {
 
   // Sync local vorp when external signal changes
   use_effect({
-    let vorp = vorp.clone();
     move || {
       let external = vorp.read().clone();
       let local = local_vorp.read().clone();
@@ -198,7 +196,7 @@ pub fn VorpInput(props: VorpInputProps) -> Element {
   });
 
   let update_field = {
-    let mut vorp = vorp.clone();
+    let mut vorp = vorp;
     move |field: &str, value: String| {
       let current = local_vorp.read().clone();
       let new_vorp = match field {
@@ -217,7 +215,7 @@ pub fn VorpInput(props: VorpInputProps) -> Element {
         },
         _ => current,
       };
-      *local_vorp.write() = new_vorp.clone();
+      local_vorp.write().clone_from(&new_vorp);
       *vorp.write() = new_vorp;
     }
   };
@@ -273,7 +271,7 @@ pub fn VorpInput(props: VorpInputProps) -> Element {
                           placeholder: "{description}",
                           class: "w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
                           oninput: {
-                              let mut update_field = update_field.clone();
+                              let mut update_field = update_field;
                               let field_key = field_key.to_string();
                               move |e: Event<FormData>| {
                                   update_field(&field_key, e.value());
@@ -287,8 +285,8 @@ pub fn VorpInput(props: VorpInputProps) -> Element {
   }
 }
 
-/// Props for VorpQuality component
-#[derive(Clone, Debug, PartialEq, Props)]
+/// Props for `VorpQuality` component.
+#[derive(Clone, Debug, PartialEq, Eq, Props)]
 pub struct VorpQualityProps {
   /// The VORP fields to evaluate
   pub vorp: Signal<VorpFields>,
@@ -297,7 +295,7 @@ pub struct VorpQualityProps {
   pub expanded: bool,
 }
 
-/// VorpQuality component
+/// `VorpQuality` component.
 ///
 /// Displays quality metrics for the VORP justification.
 #[component]
@@ -306,7 +304,6 @@ pub fn VorpQuality(props: VorpQualityProps) -> Element {
 
   // Calculate quality dimensions based on VORP
   let quality_score = use_memo({
-    let vorp = vorp.clone();
     move || {
       let fields = vorp.read();
       let overall = fields.score();
@@ -352,7 +349,7 @@ pub fn VorpQuality(props: VorpQualityProps) -> Element {
   }
 }
 
-/// Calculate score for a VORP field (0-100)
+/// Calculate score for a `VORP` field (0-100).
 fn calculate_field_score(text: &str, min_words: usize) -> u8 {
   let trimmed = text.trim();
   if trimmed.is_empty() {
@@ -369,7 +366,7 @@ fn calculate_field_score(text: &str, min_words: usize) -> u8 {
   }
 }
 
-/// Get issues for a VORP field
+/// Get issues for a `VORP` field.
 fn get_field_issues(text: &str, field_name: &str, min_words: usize) -> Vec<String> {
   let trimmed = text.trim();
   if trimmed.is_empty() {
@@ -386,7 +383,7 @@ fn get_field_issues(text: &str, field_name: &str, min_words: usize) -> Vec<Strin
   Vec::new()
 }
 
-/// Props for SolutionConfirm component
+/// Props for `SolutionConfirm` component.
 #[derive(Clone, Debug, PartialEq, Props)]
 pub struct SolutionConfirmProps {
   /// The solution text
@@ -411,12 +408,12 @@ pub struct SolutionConfirmProps {
   pub back_disabled: bool,
 }
 
-/// SolutionConfirm component
+/// `SolutionConfirm` component.
 ///
 /// Composes:
-/// - SolutionDisplay: Shows the solution text for review/editing
-/// - VorpInput: Four VORP justification fields
-/// - VorpQuality: Quality score indicator
+/// - `SolutionDisplay`: Shows the solution text for review/editing
+/// - `VorpInput`: Four VORP justification fields
+/// - `VorpQuality`: Quality score indicator
 /// - Navigation: Back/Next buttons
 ///
 /// This is the third confirmation step in the Progressive Discover flow.

@@ -11,9 +11,9 @@
 //! This module implements the Preview phase (bd-3fz2) which is the final review
 //! before locking in the plan. It includes:
 //!
-//! - **TranscriptSummary** (bd-3h2v): Displays all 5 confirmed fields
-//! - **BrutalTruthsChecklist** (bd-2k1q): The Four Brutal Truths checklist
-//! - **PreviewPhase** (bd-3fz2): Main component composing summary and navigation
+//! - **`TranscriptSummary`** (bd-3h2v): Displays all 5 confirmed fields
+//! - **`BrutalTruthsChecklist`** (bd-2k1q): The Four Brutal Truths checklist
+//! - **`PreviewPhase`** (bd-3fz2): Main component composing summary and navigation
 
 use dioxus::prelude::*;
 
@@ -28,7 +28,7 @@ use crate::ui::Button;
 // TranscriptSummary Component (bd-3h2v)
 // ============================================================================
 
-/// Props for TranscriptSummary component
+/// Props for `TranscriptSummary` component
 #[derive(Clone, Debug, PartialEq, Props)]
 pub struct TranscriptSummaryProps {
   /// The interrogation transcript to display
@@ -37,7 +37,7 @@ pub struct TranscriptSummaryProps {
   pub on_edit: Option<EventHandler<String>>,
 }
 
-/// TranscriptSummary component (bd-3h2v)
+/// `TranscriptSummary` component (bd-3h2v)
 ///
 /// Displays all 5 confirmed fields from the interrogation transcript
 /// in a clean, readable summary format.
@@ -75,7 +75,7 @@ pub fn TranscriptSummary(props: TranscriptSummaryProps) -> Element {
               label: "Problem",
               value: transcript.problem.content.clone(),
               confidence: transcript.problem.confidence,
-              on_edit: props.on_edit.clone(),
+              on_edit: props.on_edit,
               field_id: "problem",
           }
 
@@ -83,7 +83,7 @@ pub fn TranscriptSummary(props: TranscriptSummaryProps) -> Element {
               label: "Persona",
               value: transcript.persona.content.clone(),
               confidence: transcript.persona.confidence,
-              on_edit: props.on_edit.clone(),
+              on_edit: props.on_edit,
               field_id: "persona",
           }
 
@@ -91,7 +91,7 @@ pub fn TranscriptSummary(props: TranscriptSummaryProps) -> Element {
               label: "Solution",
               value: transcript.solution.content.clone(),
               confidence: transcript.solution.confidence,
-              on_edit: props.on_edit.clone(),
+              on_edit: props.on_edit,
               field_id: "solution",
           }
 
@@ -99,7 +99,7 @@ pub fn TranscriptSummary(props: TranscriptSummaryProps) -> Element {
               label: "Nonpersona",
               value: transcript.nonpersona.content.clone(),
               confidence: transcript.nonpersona.confidence,
-              on_edit: props.on_edit.clone(),
+              on_edit: props.on_edit,
               field_id: "nonpersona",
           }
 
@@ -131,7 +131,7 @@ pub fn TranscriptSummary(props: TranscriptSummaryProps) -> Element {
                       button {
                           class: "text-xs text-primary hover:text-primary/80",
                           onclick: {
-                              let on_edit = props.on_edit.clone();
+                              let on_edit = props.on_edit;
                               move |_| {
                                   if let Some(handler) = on_edit.as_ref() {
                                       handler.call("scenario".to_string());
@@ -147,7 +147,7 @@ pub fn TranscriptSummary(props: TranscriptSummaryProps) -> Element {
   }
 }
 
-/// Props for SummaryField component
+/// Props for `SummaryField` component
 #[derive(Clone, Debug, PartialEq, Props)]
 pub struct SummaryFieldProps {
   /// Field label
@@ -163,7 +163,7 @@ pub struct SummaryFieldProps {
   pub field_id: String,
 }
 
-/// SummaryField component
+/// `SummaryField` component
 ///
 /// Displays a single field in the summary with optional edit capability.
 #[component]
@@ -218,8 +218,8 @@ pub fn SummaryField(props: SummaryFieldProps) -> Element {
                   button {
                       class: "text-xs text-primary hover:text-primary/80",
                       onclick: {
-                          let on_edit = props.on_edit.clone();
-                          let field_id = props.field_id.clone();
+                          let on_edit = props.on_edit;
+                          let field_id = props.field_id;
                           move |_| {
                               if let Some(handler) = on_edit.as_ref() {
                                   handler.call(field_id.clone());
@@ -238,7 +238,7 @@ pub fn SummaryField(props: SummaryFieldProps) -> Element {
 // PreviewPhase Component (bd-3fz2)
 // ============================================================================
 
-/// Props for PreviewPhase component
+/// Props for `PreviewPhase` component
 #[derive(Clone, Props, PartialEq)]
 pub struct PreviewPhaseProps {
   /// State signal
@@ -251,7 +251,7 @@ pub struct PreviewPhaseProps {
   pub on_complete: Option<EventHandler<InterrogationTranscript>>,
 }
 
-/// PreviewPhase component (bd-3fz2)
+/// `PreviewPhase` component (bd-3fz2)
 ///
 /// The Preview phase is the final review before locking in the plan.
 /// Users see all their confirmed data and must acknowledge the Four Brutal Truths.
@@ -279,8 +279,8 @@ pub fn PreviewPhase(props: PreviewPhaseProps) -> Element {
 
   // Handler for refine button
   let on_refine = {
-    let mut actions = props.actions.clone();
-    let on_refine = props.on_refine.clone();
+    let mut actions = props.actions;
+    let on_refine = props.on_refine;
     move |_| {
       // Go back to Prompt phase (3 phases back)
       actions.regress_phase();
@@ -294,9 +294,9 @@ pub fn PreviewPhase(props: PreviewPhaseProps) -> Element {
 
   // Handler for lock in button
   let on_lock_in = {
-    let mut actions = props.actions.clone();
-    let on_complete = props.on_complete.clone();
-    let state = props.state.clone();
+    let mut actions = props.actions;
+    let on_complete = props.on_complete;
+    let state = props.state;
     move |_| {
       // Advance to KirkCompilation
       actions.advance_phase();
@@ -310,7 +310,7 @@ pub fn PreviewPhase(props: PreviewPhaseProps) -> Element {
   // Handler for field edit (returns to confirm phase)
   // This is available for future use when edit functionality is implemented
   let _on_field_edit = {
-    let mut actions = props.actions.clone();
+    let mut actions = props.actions;
     move |_field_id: String| {
       // Navigate to the appropriate confirm sub-phase
       // Future implementation will navigate to specific sub-phases

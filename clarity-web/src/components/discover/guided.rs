@@ -40,7 +40,8 @@ pub struct GuidedFlow {
 
 impl GuidedFlow {
   /// Create a new guided flow with the given number of questions
-  pub fn new(total_questions: usize) -> Self {
+  #[must_use]
+  pub const fn new(total_questions: usize) -> Self {
     Self {
       current_question: 0,
       total_questions,
@@ -49,7 +50,7 @@ impl GuidedFlow {
   }
 
   /// Mark the current question as answered
-  pub fn mark_answered(&mut self) {
+  pub const fn mark_answered(&mut self) {
     self.current_question += 1;
     if self.current_question >= self.total_questions {
       self.complete = true;
@@ -57,11 +58,14 @@ impl GuidedFlow {
   }
 
   /// Check if the flow is complete
-  pub fn is_complete(&self) -> bool {
+  #[must_use]
+  pub const fn is_complete(&self) -> bool {
     self.complete
   }
 
   /// Get the current progress as a fraction
+  #[must_use]
+  #[allow(clippy::cast_precision_loss)]
   pub fn progress(&self) -> f64 {
     if self.total_questions == 0 {
       return 0.0;
@@ -71,16 +75,11 @@ impl GuidedFlow {
 }
 
 /// Test mode toggle for discover phase
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DiscoverMode {
   /// Express mode - user types freely
   Express,
   /// Guided mode - structured questions with AI suggestions
+  #[default]
   Guided,
-}
-
-impl Default for DiscoverMode {
-  fn default() -> Self {
-    Self::Guided
-  }
 }

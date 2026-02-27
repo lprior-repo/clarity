@@ -13,8 +13,8 @@ use dioxus::prelude::*;
 /// Minimum gate threshold for quality score
 pub const MINIMUM_GATE: u8 = 70;
 
-/// Props for QualityScoreBar component
-#[derive(Clone, Debug, PartialEq, Props)]
+/// Props for `QualityScoreBar` component
+#[derive(Clone, Debug, PartialEq, Eq, Props)]
 pub struct QualityScoreBarProps {
   /// Current quality score
   pub score: Signal<Option<QualityScore>>,
@@ -40,15 +40,17 @@ pub fn QualityScoreBar(props: QualityScoreBarProps) -> Element {
   } = props;
 
   let score_read = score.read();
-  let (overall, passes_gate, dimension_scores, issues) = match score_read.as_ref() {
-    Some(s) => (
-      s.overall,
-      s.passes(minimum_gate),
-      s.dimensions.clone(),
-      s.issues.clone(),
-    ),
-    None => (0u8, false, Vec::new(), Vec::new()),
-  };
+  let (overall, passes_gate, dimension_scores, issues) = score_read.as_ref().map_or_else(
+    || (0u8, false, Vec::new(), Vec::new()),
+    |s| {
+      (
+        s.overall,
+        s.passes(minimum_gate),
+        s.dimensions.clone(),
+        s.issues.clone(),
+      )
+    },
+  );
   drop(score_read);
 
   // Calculate color based on score
@@ -85,19 +87,13 @@ pub fn QualityScoreBar(props: QualityScoreBarProps) -> Element {
   let status_message = if overall == 0 {
     "Answer questions to calculate quality".to_string()
   } else if passes_gate {
-    format!("Meets minimum threshold (≥{})", minimum_gate)
+    format!("Meets minimum threshold (≥{minimum_gate})")
   } else {
-    format!(
-      "Improve quality to unlock Develop phase (need ≥{})",
-      minimum_gate
-    )
+    format!("Improve quality to unlock Develop phase (need ≥{minimum_gate})")
   };
 
   // Compute dimensions text outside rsx
-  let dimensions_text = format!(
-    "Dimensions ({} / {} passing)",
-    dimensions_passing, total_dimensions
-  );
+  let dimensions_text = format!("Dimensions ({dimensions_passing} / {total_dimensions} passing)");
 
   rsx! {
       div {
@@ -362,7 +358,7 @@ pub fn QualityScoreBar(props: QualityScoreBarProps) -> Element {
 }
 
 /// Get text color class based on score
-fn get_score_color_class(score: u8) -> &'static str {
+const fn get_score_color_class(score: u8) -> &'static str {
   match score {
     0..=49 => "text-chart-4",
     50..=69 => "text-chart-3",
@@ -373,7 +369,7 @@ fn get_score_color_class(score: u8) -> &'static str {
 }
 
 /// Get background color class based on score
-fn get_score_bg_color_class(score: u8) -> &'static str {
+const fn get_score_bg_color_class(score: u8) -> &'static str {
   match score {
     0..=49 => "bg-chart-4/10",
     50..=69 => "bg-chart-3/10",
@@ -384,7 +380,7 @@ fn get_score_bg_color_class(score: u8) -> &'static str {
 }
 
 /// Get progress bar color class based on score
-fn get_score_bar_color_class(score: u8) -> &'static str {
+const fn get_score_bar_color_class(score: u8) -> &'static str {
   match score {
     0..=49 => "bg-chart-4",
     50..=69 => "bg-chart-3",

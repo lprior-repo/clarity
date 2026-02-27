@@ -33,41 +33,44 @@ pub enum StrawManTrap {
 
 impl StrawManTrap {
   /// All straw man trap variants.
-  pub fn all() -> &'static [StrawManTrap] {
+  #[must_use]
+  pub const fn all() -> &'static [Self] {
     &[
-      StrawManTrap::IrrationalActor,
-      StrawManTrap::ManicPixieDreamUser,
-      StrawManTrap::StoicMonk,
-      StrawManTrap::YourClone,
+      Self::IrrationalActor,
+      Self::ManicPixieDreamUser,
+      Self::StoicMonk,
+      Self::YourClone,
     ]
   }
 
   /// Short label for display in UI.
-  pub fn label(&self) -> &'static str {
+  #[must_use]
+  pub const fn label(&self) -> &'static str {
     match self {
-      StrawManTrap::IrrationalActor => "Irrational Actor",
-      StrawManTrap::ManicPixieDreamUser => "Manic Pixie Dream User",
-      StrawManTrap::StoicMonk => "Stoic Monk",
-      StrawManTrap::YourClone => "Your Clone",
+      Self::IrrationalActor => "Irrational Actor",
+      Self::ManicPixieDreamUser => "Manic Pixie Dream User",
+      Self::StoicMonk => "Stoic Monk",
+      Self::YourClone => "Your Clone",
     }
   }
 
   /// Detailed description of what this trap means.
-  pub fn description(&self) -> &'static str {
+  #[must_use]
+  pub const fn description(&self) -> &'static str {
     match self {
-      StrawManTrap::IrrationalActor => {
+      Self::IrrationalActor => {
         "User acts against their own motivations or self-interest. \
                  Real users optimize for their own goals, not yours."
       }
-      StrawManTrap::ManicPixieDreamUser => {
+      Self::ManicPixieDreamUser => {
         "User magically loves everything without discernment. \
                  Real users have preferences, constraints, and competing priorities."
       }
-      StrawManTrap::StoicMonk => {
+      Self::StoicMonk => {
         "User tolerates immense friction without complaint. \
                  Real users abandon products at the first sign of difficulty."
       }
-      StrawManTrap::YourClone => {
+      Self::YourClone => {
         "User has your system knowledge and mental models. \
                  Real users don't know what you know about how the system works."
       }
@@ -75,12 +78,13 @@ impl StrawManTrap {
   }
 
   /// Checkbox label for the trap check UI.
-  pub fn checkbox_label(&self) -> &'static str {
+  #[must_use]
+  pub const fn checkbox_label(&self) -> &'static str {
     match self {
-      StrawManTrap::IrrationalActor => "acting against own motivations?",
-      StrawManTrap::ManicPixieDreamUser => "magically loves everything?",
-      StrawManTrap::StoicMonk => "tolerating immense friction?",
-      StrawManTrap::YourClone => "has your system knowledge?",
+      Self::IrrationalActor => "acting against own motivations?",
+      Self::ManicPixieDreamUser => "magically loves everything?",
+      Self::StoicMonk => "tolerating immense friction?",
+      Self::YourClone => "has your system knowledge?",
     }
   }
 }
@@ -89,7 +93,7 @@ impl StrawManTrap {
 ///
 /// Tracks which traps were detected and whether the validation passed.
 /// A validation passes only when no traps are detected.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StrawManValidation {
   /// Traps detected in the persona description.
   pub traps_detected: Vec<StrawManTrap>,
@@ -101,7 +105,8 @@ pub struct StrawManValidation {
 
 impl StrawManValidation {
   /// Create a new validation result.
-  pub fn new(traps_detected: Vec<StrawManTrap>) -> Self {
+  #[must_use]
+  pub const fn new(traps_detected: Vec<StrawManTrap>) -> Self {
     let passed = traps_detected.is_empty();
     Self {
       traps_detected,
@@ -110,26 +115,30 @@ impl StrawManValidation {
   }
 
   /// Create a passing validation (no traps detected).
-  pub fn passing() -> Self {
+  #[must_use]
+  pub const fn passing() -> Self {
     Self {
-      traps_detected: vec![],
+      traps_detected: Vec::new(),
       passed: true,
     }
   }
 
   /// Check if a specific trap was detected.
+  #[must_use]
   pub fn has_trap(&self, trap: StrawManTrap) -> bool {
     self.traps_detected.contains(&trap)
   }
 
   /// Get the count of detected traps.
-  pub fn trap_count(&self) -> usize {
+  #[must_use]
+  pub const fn trap_count(&self) -> usize {
     self.traps_detected.len()
   }
 
-  /// Check if validation is valid (passed field matches traps_detected.is_empty()).
-  /// This enforces the invariant that passed is true only when traps_detected is empty.
-  pub fn is_valid(&self) -> bool {
+  /// Check if validation is valid (passed field matches `traps_detected.is_empty()`).
+  /// This enforces the invariant that passed is true only when `traps_detected` is empty.
+  #[must_use]
+  pub const fn is_valid(&self) -> bool {
     self.passed == self.traps_detected.is_empty()
   }
 }
@@ -256,29 +265,26 @@ mod tests {
   }
 
   #[test]
-  fn test_trap_serialization() {
+  fn test_trap_serialization() -> Result<(), serde_json::Error> {
     let trap = StrawManTrap::ManicPixieDreamUser;
-    let json = serde_json::to_string(&trap);
-    assert!(json.is_ok());
+    let json = serde_json::to_string(&trap)?;
 
-    let parsed: Result<StrawManTrap, _> = serde_json::from_str(&json.unwrap());
-    assert!(parsed.is_ok());
-    assert_eq!(parsed.unwrap(), StrawManTrap::ManicPixieDreamUser);
+    let parsed: StrawManTrap = serde_json::from_str(&json)?;
+    assert_eq!(parsed, StrawManTrap::ManicPixieDreamUser);
+    Ok(())
   }
 
   #[test]
-  fn test_validation_serialization() {
+  fn test_validation_serialization() -> Result<(), serde_json::Error> {
     let validation =
       StrawManValidation::new(vec![StrawManTrap::IrrationalActor, StrawManTrap::StoicMonk]);
 
-    let json = serde_json::to_string(&validation);
-    assert!(json.is_ok());
+    let json = serde_json::to_string(&validation)?;
 
-    let parsed: Result<StrawManValidation, _> = serde_json::from_str(&json.unwrap());
-    assert!(parsed.is_ok());
+    let parsed: StrawManValidation = serde_json::from_str(&json)?;
 
-    let parsed = parsed.unwrap();
     assert_eq!(parsed.traps_detected.len(), 2);
     assert!(!parsed.passed);
+    Ok(())
   }
 }

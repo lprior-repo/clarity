@@ -369,40 +369,40 @@ fn build_ears_requirements(answers: &[Answer]) -> Vec<EarsRequirementRef> {
     .map(|(i, req)| {
       let text = match req {
         crate::lattice::ears::EarsRequirement::Ubiquitous { actor, action } => {
-          format!("{} shall {}", actor, action)
+          format!("{actor} shall {action}")
         }
         crate::lattice::ears::EarsRequirement::StateDriven {
           actor,
           trigger,
           action,
         } => {
-          format!("When {}, {} shall {}", trigger, actor, action)
+          format!("When {trigger}, {actor} shall {action}")
         }
         crate::lattice::ears::EarsRequirement::EventDriven {
           actor,
           trigger,
           action,
         } => {
-          format!("During {}, {} shall {}", trigger, actor, action)
+          format!("During {trigger}, {actor} shall {action}")
         }
         crate::lattice::ears::EarsRequirement::Unwanted {
           actor,
           condition,
           action,
         } => {
-          format!("If {}, {} shall NOT {}", condition, actor, action)
+          format!("If {condition}, {actor} shall NOT {action}")
         }
         crate::lattice::ears::EarsRequirement::Optional {
           actor,
           condition,
           action,
         } => {
-          format!("Where {}, {} shall {}", condition, actor, action)
+          format!("Where {condition}, {actor} shall {action}")
         }
       };
 
       EarsRequirementRef {
-        id: format!("req-{}", i),
+        id: format!("req-{i}"),
         text,
         has_acceptance_criteria: false, // Will be detected in real implementation
       }
@@ -472,19 +472,19 @@ fn InvariantCard(
               div { class: "mt-2 space-y-1 border-t border-border/50 pt-2",
                   for issue in relevant_issues.iter() {
                       div { class: "flex items-start gap-2 text-xs",
-                          svg {
+                           svg {
                               width: "12",
                               height: "12",
                               view_box: "0 0 12 12",
                               fill: "none",
-                              class: format!("shrink-0 mt-0.5 {}",
-                                  if issue.severity == crate::lattice::quality::IssueSeverity::Critical {
-                                      "text-chart-4"
-                                  } else if issue.severity == crate::lattice::quality::IssueSeverity::Error {
-                                      "text-chart-4"
-                                  } else {
-                                      "text-chart-3"
-                                  }),
+                               class: format!(
+                                   "shrink-0 mt-0.5 {}",
+                                   match issue.severity {
+                                       crate::lattice::quality::IssueSeverity::Critical
+                                       | crate::lattice::quality::IssueSeverity::Error => "text-chart-4",
+                                       crate::lattice::quality::IssueSeverity::Warning => "text-chart-3",
+                                   }
+                               ),
                               path {
                                   d: "M6 1C3.2 1 1 3.2 1 6C1 8.8 3.2 11 6 11C8.8 11 11 8.8 11 6C11 3.2 8.8 1 6 1ZM6 8.5C5.4 8.5 5 8.1 5 7.5C5 6.9 5.4 6.5 6 6.5C6.6 6.5 7 6.9 7 7.5C7 8.1 6.6 8.5 6 8.5ZM6 5.5C5.4 5.5 5 5.1 5 4.5V3C5 2.4 5.4 2 6 2C6.6 2 7 2.4 7 3V4.5C7 5.1 6.6 5.5 6 5.5Z",
                                   fill: "currentColor"
@@ -499,7 +499,7 @@ fn InvariantCard(
   }
 }
 
-/// StateMachine component - visualizes planning progress as a state machine
+/// `StateMachine` component - visualizes planning progress as a state machine
 #[component]
 pub fn StateMachine(answers: Signal<Vec<Answer>>, active_phase: Signal<String>) -> Element {
   let answers_guard = answers.read();
@@ -518,15 +518,14 @@ pub fn StateMachine(answers: Signal<Vec<Answer>>, active_phase: Signal<String>) 
   let phase_elements: Vec<Element> = phase_render_data.iter().map(render_phase_card).collect();
 
   // Build invariants section
-  let invariants_section = match &quality_invariants {
-    Some(score) => {
+  let invariants_section = quality_invariants.as_ref().map(|score| {
       let overall_score = score.overall;
       let issues = &score.issues;
 
       let invariant_cards: Vec<Element> = QualityDimension::all()
         .iter()
         .map(|dim| {
-          let dim_score = score.get_dimension(*dim).cloned();
+          let dim_score = score.get_dimension(*dim).copied();
           let dim_issues: Vec<QualityIssue> = issues
             .iter()
             .filter(|i| i.dimension == *dim)
@@ -542,7 +541,7 @@ pub fn StateMachine(answers: Signal<Vec<Answer>>, active_phase: Signal<String>) 
         })
         .collect();
 
-      Some(rsx! {
+      rsx! {
           div { class: "space-y-3",
               // Overall quality header
               div { class: "flex items-center justify-between border-b border-border pb-2",
@@ -584,10 +583,8 @@ pub fn StateMachine(answers: Signal<Vec<Answer>>, active_phase: Signal<String>) 
                   }
               }
           }
-      })
-    }
-    None => None,
-  };
+      }
+  });
 
   rsx! {
       div { class: "flex h-full flex-col overflow-y-auto",
