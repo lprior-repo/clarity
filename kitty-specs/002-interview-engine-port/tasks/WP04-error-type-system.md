@@ -1,9 +1,9 @@
 ---
-work_package_id: "WP04"
-title: "Error Type System"
-lane: "planned"
-dependencies: ["WP01"]
-subtasks: ["T015", "T016", "T017", "T018", "T019"]
+work_package_id: WP04
+title: Error Type System
+lane: planned
+dependencies: []
+subtasks: [T015, T016, T017, T018, T019]
 ---
 
 # WP04: Error Type System

@@ -1,9 +1,9 @@
 ---
-work_package_id: "WP03"
-title: "Invariant and AntiPattern Types"
-lane: "planned"
-dependencies: ["WP02"]
-subtasks: ["T010", "T011", "T012", "T013", "T014"]
+work_package_id: WP03
+title: Invariant and AntiPattern Types
+lane: planned
+dependencies: []
+subtasks: [T010, T011, T012, T013, T014]
 ---
 
 # WP03: Invariant and AntiPattern Types

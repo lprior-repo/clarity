@@ -1,9 +1,9 @@
 ---
-work_package_id: "WP02"
-title: "Core Spec Types"
-lane: "planned"
-dependencies: ["WP01"]
-subtasks: ["T005", "T006", "T007", "T008", "T009"]
+work_package_id: WP02
+title: Core Spec Types
+lane: planned
+dependencies: []
+subtasks: [T005, T006, T007, T008, T009]
 ---
 
 # WP02: Core Spec Types

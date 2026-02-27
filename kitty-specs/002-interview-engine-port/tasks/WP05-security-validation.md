@@ -1,9 +1,9 @@
 ---
-work_package_id: "WP05"
-title: "Security Validation"
-lane: "planned"
-dependencies: ["WP01", "WP04"]
-subtasks: ["T020", "T021", "T022", "T023", "T024", "T025"]
+work_package_id: WP05
+title: Security Validation
+lane: planned
+dependencies: []
+subtasks: [T020, T021, T022, T023, T024, T025]
 ---
 
 # WP05: Security Validation
