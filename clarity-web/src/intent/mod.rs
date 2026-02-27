@@ -7,6 +7,7 @@
 //!
 //! - [`types`] - Core spec types (Spec, Feature, Behavior, etc.)
 //! - [`parser`] - JSON parser for Spec parsing (WP17)
+//! - [`loader`] - CUE file loader and validator (WP18)
 //! - [`interview`] - Interview session management, gap/conflict detection
 //! - [`plan`] - Execution planning, dependency resolution
 //! - [`beads`] - Bead (work item) generation
@@ -30,6 +31,7 @@ pub mod cli;
 pub mod documents;
 pub mod formats;
 pub mod interview;
+pub mod loader;
 pub mod parser;
 pub mod plan;
 pub mod quality;
@@ -53,6 +55,20 @@ pub use types::{
 
 // Re-export parser types (WP17)
 pub use parser::{parse_spec, parse_spec_from_value, sanitize_string, validate_spec, ParseError};
+
+// Re-export loader types (WP18)
+pub use loader::{
+    export_cue_to_json, format_loader_error, load_cue_file, validate_cue_file, LoaderError,
+};
+
+// Re-export beads types (WP26)
+pub use beads::{
+    beads_to_enhanced_cue, beads_to_jsonl, generate_beads_from_session, generate_profile_beads,
+    BeadError, BeadTemplate, BeadTemplateStats,
+};
+
+// Re-export templates types (WP32)
+pub use templates::{fill_template, generate_spec_template, SpecTemplateError};
 
 // Error types (WP04)
 pub mod errors;
