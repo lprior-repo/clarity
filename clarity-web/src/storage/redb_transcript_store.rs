@@ -2,13 +2,14 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::suspicious_else_formatting)]
+#![allow(clippy::result_large_err)]
+#![allow(clippy::missing_const_for_fn)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
-//! Redb-based implementation of TranscriptStore.
+//! Redb-based implementation of `TranscriptStore`.
 //!
-//! Provides ACID-compliant persistent storage for InterrogationTranscript
+//! Provides ACID-compliant persistent storage for `InterrogationTranscript`
 //! using the redb embedded database.
 
 #![cfg(not(target_arch = "wasm32"))]
@@ -24,7 +25,7 @@ use crate::storage::{InterrogationTranscript, StorageError, TranscriptResult, Tr
 /// Table name for transcript storage
 const TRANSCRIPTS_TABLE: &str = "transcripts";
 
-/// Redb-based implementation of TranscriptStore.
+/// Redb-based implementation of `TranscriptStore`.
 ///
 /// Provides persistent storage with ACID guarantees:
 /// - **Atomicity**: Each save/delete is a single transaction
@@ -62,7 +63,7 @@ impl RedbTranscriptStore {
   ///
   /// This is useful when sharing a database with other stores.
   #[must_use]
-  pub fn from_db(db: Arc<redb::Database>) -> Self {
+  pub const fn from_db(db: Arc<redb::Database>) -> Self {
     Self { db }
   }
 
@@ -83,7 +84,7 @@ impl TranscriptStore for RedbTranscriptStore {
   /// # Errors
   ///
   /// Returns `StorageError` if:
-  /// - Serialization fails (unlikely with serde_json)
+  /// - Serialization fails (unlikely with `serde_json`)
   /// - Database write fails
   /// - Transaction cannot be committed
   async fn save(
@@ -181,7 +182,7 @@ impl TranscriptStore for RedbTranscriptStore {
 
     let iter = table.iter()?;
     let sessions: Vec<String> = iter
-      .filter_map(|result| result.ok())
+      .filter_map(Result::ok)
       .map(|(key, _value)| key.value().to_string())
       .collect();
 
@@ -193,6 +194,14 @@ impl TranscriptStore for RedbTranscriptStore {
 mod tests {
   use super::*;
   use crate::storage::{AntithesisResponse, ExtractedField, StrawManValidation};
+
+  fn assert_approx_eq(actual: f64, expected: f64) {
+    assert!((actual - expected).abs() < 1e-9);
+  }
+
+  fn require_some<T>(value: Option<T>, context: &str) -> Result<T, StorageError> {
+    value.ok_or_else(|| StorageError::Database(format!("missing value: {context}")))
+  }
 
   /// Create a test transcript with given content.
   fn create_test_transcript(prompt: &str) -> InterrogationTranscript {
@@ -210,122 +219,109 @@ mod tests {
   }
 
   #[tokio::test]
-  async fn test_open_in_memory() {
-    let result = RedbTranscriptStore::open_in_memory();
-    assert!(result.is_ok());
+  async fn test_open_in_memory() -> Result<(), StorageError> {
+    let _store = RedbTranscriptStore::open_in_memory()?;
+    Ok(())
   }
 
   #[tokio::test]
-  async fn test_save_and_load_transcript() {
-    let store = RedbTranscriptStore::open_in_memory().unwrap();
+  async fn test_save_and_load_transcript() -> Result<(), StorageError> {
+    let store = RedbTranscriptStore::open_in_memory()?;
     let transcript = create_test_transcript("I want to build a fitness app");
 
-    // Save
-    let save_result = store.save("session-1", &transcript).await;
-    assert!(save_result.is_ok());
+    store.save("session-1", &transcript).await?;
+    let loaded = store.load("session-1").await?;
+    let loaded_transcript = require_some(loaded, "session-1")?;
 
-    // Load
-    let load_result = store.load("session-1").await;
-    assert!(load_result.is_ok());
-
-    let loaded = load_result.unwrap();
-    assert!(loaded.is_some());
-
-    let loaded_transcript = loaded.unwrap();
     assert_eq!(
       loaded_transcript.original_prompt,
       "I want to build a fitness app"
     );
     assert_eq!(loaded_transcript.problem.content, "Test problem");
-    assert_eq!(loaded_transcript.persona.confidence, 0.9);
+    assert_approx_eq(loaded_transcript.persona.confidence, 0.9);
+    Ok(())
   }
 
   #[tokio::test]
-  async fn test_load_nonexistent_transcript() {
-    let store = RedbTranscriptStore::open_in_memory().unwrap();
+  async fn test_load_nonexistent_transcript() -> Result<(), StorageError> {
+    let store = RedbTranscriptStore::open_in_memory()?;
 
-    let result = store.load("nonexistent").await;
-    assert!(result.is_ok());
-
-    let loaded = result.unwrap();
+    let loaded = store.load("nonexistent").await?;
     assert!(loaded.is_none());
+    Ok(())
   }
 
   #[tokio::test]
-  async fn test_delete_transcript() {
-    let store = RedbTranscriptStore::open_in_memory().unwrap();
+  async fn test_delete_transcript() -> Result<(), StorageError> {
+    let store = RedbTranscriptStore::open_in_memory()?;
     let transcript = create_test_transcript("Test prompt");
 
-    // Save
-    store.save("session-to-delete", &transcript).await.unwrap();
-
-    // Verify exists
-    let loaded = store.load("session-to-delete").await.unwrap();
+    store.save("session-to-delete", &transcript).await?;
+    let loaded = store.load("session-to-delete").await?;
     assert!(loaded.is_some());
 
-    // Delete
-    let delete_result = store.delete("session-to-delete").await;
-    assert!(delete_result.is_ok());
+    store.delete("session-to-delete").await?;
 
-    // Verify deleted
-    let loaded = store.load("session-to-delete").await.unwrap();
+    let loaded = store.load("session-to-delete").await?;
     assert!(loaded.is_none());
+    Ok(())
   }
 
   #[tokio::test]
-  async fn test_delete_nonexistent_is_ok() {
-    let store = RedbTranscriptStore::open_in_memory().unwrap();
-
-    // Deleting non-existent should be Ok
-    let result = store.delete("never-existed").await;
-    assert!(result.is_ok());
+  async fn test_delete_nonexistent_is_ok() -> Result<(), StorageError> {
+    let store = RedbTranscriptStore::open_in_memory()?;
+    store.delete("never-existed").await?;
+    Ok(())
   }
 
   #[tokio::test]
-  async fn test_list_sessions_empty() {
-    let store = RedbTranscriptStore::open_in_memory().unwrap();
+  async fn test_list_sessions_empty() -> Result<(), StorageError> {
+    let store = RedbTranscriptStore::open_in_memory()?;
 
-    let sessions = store.list_sessions().await.unwrap();
+    let sessions = store.list_sessions().await?;
     assert!(sessions.is_empty());
+    Ok(())
   }
 
   #[tokio::test]
-  async fn test_list_sessions_with_data() {
-    let store = RedbTranscriptStore::open_in_memory().unwrap();
+  async fn test_list_sessions_with_data() -> Result<(), StorageError> {
+    let store = RedbTranscriptStore::open_in_memory()?;
 
     let t1 = create_test_transcript("Prompt 1");
     let t2 = create_test_transcript("Prompt 2");
     let t3 = create_test_transcript("Prompt 3");
 
-    store.save("session-a", &t1).await.unwrap();
-    store.save("session-b", &t2).await.unwrap();
-    store.save("session-c", &t3).await.unwrap();
+    store.save("session-a", &t1).await?;
+    store.save("session-b", &t2).await?;
+    store.save("session-c", &t3).await?;
 
-    let sessions = store.list_sessions().await.unwrap();
+    let sessions = store.list_sessions().await?;
 
     assert_eq!(sessions.len(), 3);
-    assert!(sessions.contains(&"session-a".to_string()));
-    assert!(sessions.contains(&"session-b".to_string()));
-    assert!(sessions.contains(&"session-c".to_string()));
+    assert!(sessions.iter().any(|session| session == "session-a"));
+    assert!(sessions.iter().any(|session| session == "session-b"));
+    assert!(sessions.iter().any(|session| session == "session-c"));
+    Ok(())
   }
 
   #[tokio::test]
-  async fn test_overwrite_transcript() {
-    let store = RedbTranscriptStore::open_in_memory().unwrap();
+  async fn test_overwrite_transcript() -> Result<(), StorageError> {
+    let store = RedbTranscriptStore::open_in_memory()?;
 
     let t1 = create_test_transcript("Original prompt");
-    store.save("overwrite-test", &t1).await.unwrap();
+    store.save("overwrite-test", &t1).await?;
 
     let t2 = create_test_transcript("Updated prompt");
-    store.save("overwrite-test", &t2).await.unwrap();
+    store.save("overwrite-test", &t2).await?;
 
-    let loaded = store.load("overwrite-test").await.unwrap().unwrap();
+    let loaded = require_some(store.load("overwrite-test").await?, "overwrite-test")?;
     assert_eq!(loaded.original_prompt, "Updated prompt");
+    Ok(())
   }
 
   #[tokio::test]
-  async fn test_persistence_across_operations() {
-    let store = RedbTranscriptStore::open_in_memory().unwrap();
+  async fn test_persistence_across_operations() -> Result<(), StorageError> {
+    let store = RedbTranscriptStore::open_in_memory()?;
 
     // Create and save a complete transcript
     let mut transcript = InterrogationTranscript::from_prompt("Build a meditation app".to_string());
@@ -352,69 +348,67 @@ mod tests {
     transcript.straw_man_validation =
       StrawManValidation::new(vec![crate::storage::StrawManTrap::ManicPixieDreamUser]);
 
-    store.save("complete-test", &transcript).await.unwrap();
+    store.save("complete-test", &transcript).await?;
 
-    // Load and verify all fields
-    let loaded = store.load("complete-test").await.unwrap().unwrap();
+    let loaded = require_some(store.load("complete-test").await?, "complete-test")?;
 
     assert_eq!(loaded.original_prompt, "Build a meditation app");
     assert_eq!(loaded.problem.content, "Users struggle with stress");
-    assert_eq!(loaded.problem.confidence, 0.95);
+    assert_approx_eq(loaded.problem.confidence, 0.95);
     assert_eq!(loaded.persona.content, "Stressed professionals");
     assert_eq!(loaded.solution.content, "5-minute daily meditation");
     assert_eq!(loaded.nonpersona.content, "People who hate apps");
     assert_eq!(loaded.antithesis.points[0], "Maybe they don't need an app");
-    assert_eq!(loaded.antithesis.quality_score, 0.75);
+    assert_approx_eq(loaded.antithesis.quality_score, 0.75);
     assert!(!loaded.straw_man_validation.passed);
     assert_eq!(loaded.straw_man_validation.traps_detected.len(), 1);
+    Ok(())
   }
 
   #[tokio::test]
-  async fn test_completed_transcript() {
-    let store = RedbTranscriptStore::open_in_memory().unwrap();
+  async fn test_completed_transcript() -> Result<(), StorageError> {
+    let store = RedbTranscriptStore::open_in_memory()?;
 
     let transcript = InterrogationTranscript::from_prompt("Test".to_string()).complete();
 
-    store.save("completed-test", &transcript).await.unwrap();
+    store.save("completed-test", &transcript).await?;
 
-    let loaded = store.load("completed-test").await.unwrap().unwrap();
+    let loaded = require_some(store.load("completed-test").await?, "completed-test")?;
 
     assert!(loaded.is_completed());
     assert!(loaded.completed_at.is_some());
+    Ok(())
   }
 
   #[tokio::test]
-  async fn test_multiple_sessions_isolated() {
-    let store = RedbTranscriptStore::open_in_memory().unwrap();
+  async fn test_multiple_sessions_isolated() -> Result<(), StorageError> {
+    let store = RedbTranscriptStore::open_in_memory()?;
 
     let t1 = create_test_transcript("Session 1 prompt");
     let t2 = create_test_transcript("Session 2 prompt");
     let t3 = create_test_transcript("Session 3 prompt");
 
-    store.save("isolated-1", &t1).await.unwrap();
-    store.save("isolated-2", &t2).await.unwrap();
-    store.save("isolated-3", &t3).await.unwrap();
+    store.save("isolated-1", &t1).await?;
+    store.save("isolated-2", &t2).await?;
+    store.save("isolated-3", &t3).await?;
 
-    // Delete one
-    store.delete("isolated-2").await.unwrap();
+    store.delete("isolated-2").await?;
 
-    // Verify others are intact
-    let l1 = store.load("isolated-1").await.unwrap().unwrap();
-    let l3 = store.load("isolated-3").await.unwrap().unwrap();
+    let l1 = require_some(store.load("isolated-1").await?, "isolated-1")?;
+    let l3 = require_some(store.load("isolated-3").await?, "isolated-3")?;
 
     assert_eq!(l1.original_prompt, "Session 1 prompt");
     assert_eq!(l3.original_prompt, "Session 3 prompt");
 
-    let sessions = store.list_sessions().await.unwrap();
+    let sessions = store.list_sessions().await?;
     assert_eq!(sessions.len(), 2);
+    Ok(())
   }
 
   #[test]
-  fn test_from_db() {
+  fn test_from_db() -> Result<(), redb::DatabaseError> {
     let db = Arc::new(
-      redb::Database::builder()
-        .create_with_backend(redb::backends::InMemoryBackend::new())
-        .unwrap(),
+      redb::Database::builder().create_with_backend(redb::backends::InMemoryBackend::new())?,
     );
 
     let store1 = RedbTranscriptStore::from_db(db.clone());
@@ -422,5 +416,6 @@ mod tests {
 
     // Both stores share the same database
     assert!(Arc::ptr_eq(&store1.db, &store2.db));
+    Ok(())
   }
 }

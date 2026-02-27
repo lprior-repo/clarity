@@ -6,9 +6,6 @@
 //! - State tab shows invariants
 //! - Results are cached and loaded on tab switch
 
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
@@ -49,9 +46,9 @@ fn test_ears_parsing_from_answers() {
   ];
 
   // Extract requirement text from answers
-  let requirement_text: String = answers
+  let requirement_text = answers
     .iter()
-    .map(|a| a.value.as_str())
+    .map(|answer| answer.value.as_str())
     .collect::<Vec<_>>()
     .join("\n");
 
@@ -60,18 +57,16 @@ fn test_ears_parsing_from_answers() {
   assert_eq!(output.requirements.len(), 5);
 
   // Verify ubiquitous pattern
-  let req1 = &output.requirements[0];
-  match req1 {
+  match &output.requirements[0] {
     EarsRequirement::Ubiquitous { actor, action } => {
       assert_eq!(actor, "system");
       assert_eq!(action, "authenticate users");
     }
-    _ => panic!("Expected Ubiquitous requirement"),
+    other => panic!("expected Ubiquitous requirement, got {other:?}"),
   }
 
   // Verify state-driven pattern
-  let req2 = &output.requirements[1];
-  match req2 {
+  match &output.requirements[1] {
     EarsRequirement::StateDriven {
       actor,
       trigger,
@@ -81,10 +76,10 @@ fn test_ears_parsing_from_answers() {
       assert_eq!(trigger, "the user is logged in");
       assert_eq!(action, "display the dashboard");
     }
-    _ => panic!("Expected StateDriven requirement"),
+    other => panic!("expected StateDriven requirement, got {other:?}"),
   }
 
-  assert_eq!(output.errors.len(), 0);
+  assert!(output.errors.is_empty());
 }
 
 #[test]
@@ -109,28 +104,28 @@ Invalid permissions prevents feature access.";
   assert!(!output.edges.is_empty());
 
   // Verify root and leaf detection
-  let root_nodes: Vec<_> = output.nodes.iter().filter(|n| n.is_root).collect();
-  let leaf_nodes: Vec<_> = output.nodes.iter().filter(|n| n.is_leaf).collect();
+  let has_root_nodes = output.nodes.iter().any(|n| n.is_root);
+  let has_leaf_nodes = output.nodes.iter().any(|n| n.is_leaf);
 
-  assert!(!root_nodes.is_empty());
-  assert!(!leaf_nodes.is_empty());
+  assert!(has_root_nodes);
+  assert!(has_leaf_nodes);
 }
 
 #[test]
 fn test_empty_answers_handling() {
-  let answers: Vec<Answer> = vec![];
+  let answers: Vec<Answer> = Vec::new();
 
   // Should handle empty input gracefully
-  let requirement_text: String = answers
+  let requirement_text = answers
     .iter()
-    .map(|a| a.value.as_str())
+    .map(|answer| answer.value.as_str())
     .collect::<Vec<_>>()
     .join("\n");
 
   let output = parse_requirements(&requirement_text);
 
-  assert_eq!(output.requirements.len(), 0);
-  assert_eq!(output.errors.len(), 0);
+  assert!(output.requirements.is_empty());
+  assert!(output.errors.is_empty());
 }
 
 #[test]
@@ -144,9 +139,9 @@ fn test_partial_ars_requirements() {
     ),
   ];
 
-  let requirement_text: String = answers
+  let requirement_text = answers
     .iter()
-    .map(|a| a.value.as_str())
+    .map(|answer| answer.value.as_str())
     .collect::<Vec<_>>()
     .join("\n");
 
@@ -220,9 +215,9 @@ fn test_ars_all_pattern_types() {
     ),
   ];
 
-  let requirement_text: String = answers
+  let requirement_text = answers
     .iter()
-    .map(|a| a.value.as_str())
+    .map(|answer| answer.value.as_str())
     .collect::<Vec<_>>()
     .join("\n");
 
@@ -278,14 +273,10 @@ fn test_serialization_compatibility() {
   let ears_output = parse_requirements(&requirement_text);
 
   // Should serialize to JSON
-  let json = serde_json::to_string(&ears_output);
-  assert!(json.is_ok());
+  let json = serde_json::to_string(&ears_output).expect("EARS output should serialize");
 
   // Should deserialize back
-  let deserialized: Result<clarity_web::lattice::ears::EarsOutput, _> =
-    serde_json::from_str(&json.unwrap());
-  assert!(deserialized.is_ok());
-
-  let parsed = deserialized.unwrap();
+  let parsed: clarity_web::lattice::ears::EarsOutput =
+    serde_json::from_str(&json).expect("EARS output should deserialize");
   assert_eq!(parsed.requirements.len(), ears_output.requirements.len());
 }

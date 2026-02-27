@@ -2,7 +2,6 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
@@ -47,6 +46,7 @@ pub enum FieldType {
 }
 
 /// Individual field extraction result
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FieldExtraction {
   /// Field identifier/name
@@ -62,6 +62,7 @@ pub struct FieldExtraction {
 }
 
 /// Complete extraction result with all fields
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ExtractedFields {
   /// All extracted fields
@@ -73,6 +74,7 @@ pub struct ExtractedFields {
 }
 
 /// Metadata about the extraction process
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ExtractionMetadata {
   /// Provider that performed the extraction
@@ -88,6 +90,7 @@ pub struct ExtractionMetadata {
 }
 
 /// Context information for extraction
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ExtractionContext {
   /// Optional context about the document type
@@ -116,6 +119,7 @@ pub struct SchemaField {
 }
 
 /// Errors that can occur during field extraction
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Debug, Error, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ExtractionError {
   /// API request failed
@@ -178,7 +182,7 @@ pub enum ExtractionError {
   Unknown(String),
 }
 
-/// Trait for extraction providers (OpenAI, Claude, local models, etc.)
+/// Trait for extraction providers (`OpenAI`, `Claude`, local models, etc.)
 ///
 /// This trait defines the interface for extracting structured fields from
 /// unstructured text using various AI providers.
@@ -229,6 +233,8 @@ pub trait ExtractionProvider: Send + Sync {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+
   use super::*;
   use serde_json::json;
 

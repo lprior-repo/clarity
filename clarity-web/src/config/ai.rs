@@ -2,7 +2,6 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
@@ -90,6 +89,12 @@ pub struct ProviderConfig {
 
   #[serde(default)]
   pub session_id: String,
+
+  #[serde(default = "default_model")]
+  pub model: Option<String>,
+
+  #[serde(default)]
+  pub routing_provider: Option<String>,
 }
 
 impl Default for ProviderConfig {
@@ -98,12 +103,18 @@ impl Default for ProviderConfig {
       provider: ProviderType::default(),
       endpoint: default_endpoint(),
       session_id: String::new(),
+      model: default_model(),
+      routing_provider: None,
     }
   }
 }
 
 fn default_endpoint() -> String {
   "https://api.opencode.ai/v1".to_string()
+}
+
+fn default_model() -> Option<String> {
+  Some("zai-coding-plan/glm-5".to_string())
 }
 
 /// Quality scoring configuration
@@ -220,10 +231,15 @@ mod tests {
     assert_eq!(config.provider.provider, ProviderType::Opencode);
     assert_eq!(config.provider.endpoint, "https://api.opencode.ai/v1");
     assert_eq!(config.provider.session_id, "");
+    assert_eq!(
+      config.provider.model.as_deref(),
+      Some("zai-coding-plan/glm-5")
+    );
+    assert_eq!(config.provider.routing_provider, None);
     assert_eq!(config.quality.min_score, 70);
   }
 
-  /// Test ProviderConfig default
+  /// Test `ProviderConfig` default
   #[test]
   fn test_provider_config_default() {
     let provider = ProviderConfig::default();
@@ -231,9 +247,11 @@ mod tests {
     assert_eq!(provider.provider, ProviderType::Opencode);
     assert_eq!(provider.endpoint, "https://api.opencode.ai/v1");
     assert!(provider.session_id.is_empty());
+    assert_eq!(provider.model.as_deref(), Some("zai-coding-plan/glm-5"));
+    assert_eq!(provider.routing_provider, None);
   }
 
-  /// Test QualityConfig default
+  /// Test `QualityConfig` default
   #[test]
   fn test_quality_config_default() {
     let quality = QualityConfig::default();
@@ -241,7 +259,7 @@ mod tests {
     assert_eq!(quality.min_score, 70);
   }
 
-  /// Test ProviderType serialization/deserialization
+  /// Test `ProviderType` serialization/deserialization
   #[test]
   fn test_provider_type_serde() -> Result<(), Box<dyn Error>> {
     // Test deserialization via serde_json (TOML requires key=value)
@@ -282,7 +300,7 @@ endpoint = "https://api.openai.com/v1"
     Ok(())
   }
 
-  /// Test AiConfig serialization/deserialization
+  /// Test `AiConfig` serialization/deserialization
   #[test]
   fn test_ai_config_serde() -> Result<(), Box<dyn Error>> {
     let config = AiConfig::default();
@@ -305,6 +323,8 @@ endpoint = "https://api.openai.com/v1"
 provider = "opencode"
 endpoint = "https://api.example.com/v1"
 session_id = "test-session-123"
+model = "zai-coding-plan/glm-5"
+routing_provider = "zai-coding-plan"
 
 [quality]
 min_score = 85
@@ -315,6 +335,14 @@ min_score = 85
     assert_eq!(config.provider.provider, ProviderType::Opencode);
     assert_eq!(config.provider.endpoint, "https://api.example.com/v1");
     assert_eq!(config.provider.session_id, "test-session-123");
+    assert_eq!(
+      config.provider.model.as_deref(),
+      Some("zai-coding-plan/glm-5")
+    );
+    assert_eq!(
+      config.provider.routing_provider.as_deref(),
+      Some("zai-coding-plan")
+    );
     assert_eq!(config.quality.min_score, 85);
     Ok(())
   }
@@ -334,6 +362,11 @@ provider = "opencode"
       config.provider.endpoint,
       "https://api.opencode.ai/v1" // default
     );
+    assert_eq!(
+      config.provider.model.as_deref(),
+      Some("zai-coding-plan/glm-5")
+    );
+    assert_eq!(config.provider.routing_provider, None);
     assert_eq!(config.quality.min_score, 70); // default
     Ok(())
   }
@@ -382,6 +415,8 @@ provider = "opencode"
 provider = "opencode"
 endpoint = "https://test.example.com/v1"
 session_id = "test-session"
+model = "zai-coding-plan/glm-5"
+routing_provider = "zai-coding-plan"
 
 [quality]
 min_score = 90
@@ -393,6 +428,14 @@ min_score = 90
 
     assert_eq!(config.provider.endpoint, "https://test.example.com/v1");
     assert_eq!(config.provider.session_id, "test-session");
+    assert_eq!(
+      config.provider.model.as_deref(),
+      Some("zai-coding-plan/glm-5")
+    );
+    assert_eq!(
+      config.provider.routing_provider.as_deref(),
+      Some("zai-coding-plan")
+    );
     assert_eq!(config.quality.min_score, 90);
     Ok(())
   }
@@ -436,13 +479,15 @@ min_score = 100
     Ok(())
   }
 
-  /// Test empty session_id handling
+  /// Test empty `session_id` handling
   #[test]
   fn test_empty_session_id() {
     let config = ProviderConfig {
       provider: ProviderType::Opencode,
       endpoint: "https://api.example.com".to_string(),
       session_id: String::new(),
+      model: default_model(),
+      routing_provider: None,
     };
 
     assert!(config.session_id.is_empty());

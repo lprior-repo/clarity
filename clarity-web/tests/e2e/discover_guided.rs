@@ -1,6 +1,3 @@
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
@@ -52,8 +49,6 @@ struct TestState {
   mode: DiscoverMode,
   /// All answers submitted
   answers: Vec<Answer>,
-  /// Question states (answered status)
-  question_states: Vec<QuestionState>,
   /// Progress counter (X/Y format)
   progress_text: String,
   /// Current quality score
@@ -70,7 +65,6 @@ impl Default for TestState {
       current_phase: "discover".to_string(),
       mode: DiscoverMode::Guided,
       answers: Vec::new(),
-      question_states: Vec::new(),
       progress_text: "0/5 answered".to_string(),
       quality_score: None,
       follow_ups_visible: Vec::new(),
@@ -136,10 +130,12 @@ impl TestState {
 /// This is a functional test that validates the entire flow without
 /// requiring a browser or Playwright.
 #[tokio::test]
+#[allow(clippy::too_many_lines)]
 async fn test_discover_guided_complete_flow() {
   // Initialize test state
   let state = Arc::new(Mutex::new(TestState::default()));
-  let _provider = MockSuggestionProvider;
+  let provider = MockSuggestionProvider;
+  assert!(provider.is_available());
 
   // Step 1: Verify app loads in Discover phase
   {
@@ -153,6 +149,7 @@ async fn test_discover_guided_complete_flow() {
       DiscoverMode::Guided,
       "Guided mode should be default"
     );
+    drop(s);
   }
 
   // Step 2: Verify Discover phase has 5 questions
@@ -223,6 +220,7 @@ async fn test_discover_guided_complete_flow() {
       s.follow_ups_visible.contains(&"problem".to_string()),
       "Follow-up for problem should be visible"
     );
+    drop(s);
   }
 
   // Small delay to simulate user interaction
@@ -245,6 +243,7 @@ async fn test_discover_guided_complete_flow() {
   {
     let s = state.lock().unwrap();
     assert_eq!(s.progress_text, "2/5 answered");
+    drop(s);
   }
 
   sleep(Duration::from_millis(100)).await;
@@ -266,6 +265,7 @@ async fn test_discover_guided_complete_flow() {
   {
     let s = state.lock().unwrap();
     assert_eq!(s.progress_text, "3/5 answered");
+    drop(s);
   }
 
   sleep(Duration::from_millis(100)).await;
@@ -287,6 +287,7 @@ async fn test_discover_guided_complete_flow() {
   {
     let s = state.lock().unwrap();
     assert_eq!(s.progress_text, "4/5 answered");
+    drop(s);
   }
 
   sleep(Duration::from_millis(100)).await;
@@ -319,6 +320,7 @@ async fn test_discover_guided_complete_flow() {
       5,
       "All follow-ups should be visible"
     );
+    drop(s);
   }
 
   // Step 11: Verify quality score is visible and reasonable
@@ -329,6 +331,7 @@ async fn test_discover_guided_complete_flow() {
       "Quality score should be calculated after all answers"
     );
     let score = s.quality_score.unwrap();
+    drop(s);
     assert!(
       score > 0,
       "Quality score should be positive with 5 detailed answers"
@@ -347,6 +350,7 @@ async fn test_discover_guided_complete_flow() {
         "Follow-up for {step_id} should be visible"
       );
     }
+    drop(s);
   }
 
   // Step 13: Verify "Continue to Define" button appears
@@ -362,6 +366,7 @@ async fn test_discover_guided_complete_flow() {
       s.continue_visible,
       "Continue to Define button should be visible"
     );
+    drop(s);
   }
 
   // Step 14: Verify phase transition
@@ -372,6 +377,7 @@ async fn test_discover_guided_complete_flow() {
       s.current_phase, "define",
       "Should transition to Define phase"
     );
+    drop(s);
   }
 
   // Test completion
@@ -696,6 +702,7 @@ fn test_provider_availability() {
 
 /// Integration test: Complete flow with all components
 #[tokio::test]
+#[allow(clippy::too_many_lines)]
 async fn test_complete_guided_flow_integration() {
   let state = Arc::new(Mutex::new(TestState::default()));
 
@@ -708,6 +715,7 @@ async fn test_complete_guided_flow_integration() {
     assert_eq!(s.current_phase, "discover");
     assert_eq!(s.mode, DiscoverMode::Guided);
     println!("✓ Phase 1: App loaded in Discover phase with Guided mode");
+    drop(s);
   }
 
   // Phase 2: Display first question
@@ -765,6 +773,7 @@ async fn test_complete_guided_flow_integration() {
     assert_eq!(s.progress_text, "5/5 answered");
     assert!(s.discover_complete());
     println!("✓ Phase 9: All 5 questions answered");
+    drop(s);
   }
 
   // Verify follow-ups
@@ -772,16 +781,16 @@ async fn test_complete_guided_flow_integration() {
     let s = state.lock().unwrap();
     assert_eq!(s.follow_ups_visible.len(), 5);
     println!("✓ Phase 10: Follow-up questions displayed for all answers");
+    drop(s);
   }
 
   // Verify quality score
   {
     let s = state.lock().unwrap();
     assert!(s.quality_score.is_some());
-    println!(
-      "✓ Phase 11: Quality score visible: {}",
-      s.quality_score.unwrap()
-    );
+    let score = s.quality_score.unwrap();
+    drop(s);
+    println!("✓ Phase 11: Quality score visible: {score}");
   }
 
   // Verify continue button
@@ -790,6 +799,7 @@ async fn test_complete_guided_flow_integration() {
     s.continue_visible = true;
     assert!(s.continue_visible);
     println!("✓ Phase 12: Continue to Define button appears");
+    drop(s);
   }
 
   // Simulate transition
@@ -798,6 +808,7 @@ async fn test_complete_guided_flow_integration() {
     s.current_phase = "define".to_string();
     assert_eq!(s.current_phase, "define");
     println!("✓ Phase 13: Successfully transitioned to Define phase");
+    drop(s);
   }
 
   println!("\n=== Integration Test Complete ===\n");

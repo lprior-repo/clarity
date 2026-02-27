@@ -4,6 +4,11 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::doc_markdown)]
+#![allow(clippy::uninlined_format_args)]
+#![allow(clippy::redundant_clone)]
+#![allow(clippy::needless_collect)]
 #![forbid(unsafe_code)]
 
 /// Likelihood of a failure scenario occurring
@@ -20,7 +25,7 @@ pub enum Likelihood {
 impl Likelihood {
   /// Returns the numeric probability threshold for this likelihood
   #[must_use]
-  pub const fn probability_threshold(&self) -> u8 {
+  pub const fn probability_threshold(self) -> u8 {
     match self {
       Self::VeryLikely => 70,
       Self::Possible => 30,
@@ -30,7 +35,7 @@ impl Likelihood {
 
   /// Returns true if this likelihood represents a high-risk scenario
   #[must_use]
-  pub const fn is_high_risk(&self) -> bool {
+  pub const fn is_high_risk(self) -> bool {
     matches!(self, Self::VeryLikely)
   }
 }
@@ -57,7 +62,7 @@ impl FailureCategory {
 }
 
 /// A single failure scenario identified in the premortem
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FailureScenario {
   /// Category of this failure
   pub category: FailureCategory,
@@ -98,7 +103,7 @@ impl FailureScenario {
 }
 
 /// Output from a premortem analysis
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PremortemOutput {
   /// The solution being analyzed
   pub solution: String,
@@ -401,6 +406,9 @@ fn contains_any(text: &str, keywords: &[&str]) -> bool {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+
   use super::*;
 
   #[test]

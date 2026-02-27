@@ -2,7 +2,6 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
@@ -23,6 +22,7 @@
 use dioxus::prelude::*;
 use tracing::info;
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::server::extract_fields_server;
 use crate::ui::button::{Button, ButtonVariant};
 
@@ -196,6 +196,12 @@ pub struct ExtractedFieldsData {
   pub fields: Vec<ExtractedField>,
   /// Overall confidence score (0.0 to 1.0)
   pub confidence: f64,
+  /// Provider ID used for extraction
+  pub provider: String,
+  /// Model ID used for extraction
+  pub model: Option<String>,
+  /// Extraction duration in milliseconds
+  pub processing_duration_ms: u64,
 }
 
 /// A single extracted field
@@ -216,10 +222,12 @@ pub struct ExtractedField {
 /// - Managing loading state
 /// - Error handling
 /// - Success callbacks
+#[cfg(not(target_arch = "wasm32"))]
 #[component]
 pub fn ExtractFieldsButtonWithServer(props: ExtractFieldsButtonWithServerProps) -> Element {
   let mut is_loading = use_signal(|| false);
   let mut error = use_signal(|| None::<String>);
+  let mut last_ai_status = use_signal(|| None::<String>);
 
   let current_error = error.read().clone();
 
@@ -249,6 +257,7 @@ pub fn ExtractFieldsButtonWithServer(props: ExtractFieldsButtonWithServerProps) 
 
                       // Set loading state
                       *is_loading.write() = true;
+                      *last_ai_status.write() = None;
 
                       // Notify start
                       if let Some(handler) = on_start.as_ref() {
@@ -291,9 +300,21 @@ pub fn ExtractFieldsButtonWithServer(props: ExtractFieldsButtonWithServerProps) 
                                                   .unwrap_or_default(),
                                                   confidence: f.confidence,
                                               })
-                                              .collect(),
+                                               .collect(),
                                           confidence: extracted.confidence,
+                                          provider: extracted.metadata.provider.clone(),
+                                          model: extracted.metadata.model.clone(),
+                                          processing_duration_ms: extracted.metadata.processing_duration_ms,
                                       };
+
+                                      let model_label = data
+                                          .model
+                                          .as_deref()
+                                          .unwrap_or("default-model");
+                                      *last_ai_status.write() = Some(format!(
+                                          "AI: {} / {} in {}ms",
+                                          data.provider, model_label, data.processing_duration_ms
+                                      ));
 
                                       if let Some(handler) = on_complete.as_ref() {
                                           handler.call(data);
@@ -303,6 +324,10 @@ pub fn ExtractFieldsButtonWithServer(props: ExtractFieldsButtonWithServerProps) 
                                       let err_msg = e.to_string();
                                       info!(error = %err_msg, "Extraction failed");
                                       *error.write() = Some(err_msg.clone());
+                                      *last_ai_status.write() = Some(
+                                          "AI: extraction request failed - check provider/model settings"
+                                              .to_string(),
+                                      );
 
                                       if let Some(handler) = on_error.as_ref() {
                                           handler.call(err_msg);
@@ -321,6 +346,13 @@ pub fn ExtractFieldsButtonWithServer(props: ExtractFieldsButtonWithServerProps) 
                   class: "rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive",
                   role: "alert",
                   "Extraction failed: {err}"
+              }
+          }
+
+          if let Some(status) = last_ai_status.read().as_ref() {
+              p {
+                  class: "text-xs text-muted-foreground",
+                  "{status}"
               }
           }
       }
@@ -384,6 +416,9 @@ mod tests {
         },
       ],
       confidence: 0.875,
+      provider: "opencode".to_string(),
+      model: Some("zai-coding-plan/glm-5".to_string()),
+      processing_duration_ms: 123,
     };
 
     let json_result = serde_json::to_string(&data);
@@ -408,6 +443,9 @@ mod tests {
     assert_eq!(deserialized.fields.len(), 2);
     assert_eq!(deserialized.fields[0].name, "problem");
     assert!((deserialized.confidence - 0.875).abs() < f64::EPSILON);
+    assert_eq!(deserialized.provider, "opencode");
+    assert_eq!(deserialized.model.as_deref(), Some("zai-coding-plan/glm-5"));
+    assert_eq!(deserialized.processing_duration_ms, 123);
   }
 
   #[test]

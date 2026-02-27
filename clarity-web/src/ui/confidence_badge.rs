@@ -2,15 +2,14 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
 use crate::storage::types::Confidence;
 use dioxus::prelude::*;
 
-/// Props for the ConfidenceBadge component
-#[derive(Clone, Debug, PartialEq, Props)]
+/// Props for the `ConfidenceBadge` component
+#[derive(Clone, Debug, PartialEq, Eq, Props)]
 pub struct ConfidenceBadgeProps {
   /// Confidence level to display
   pub confidence: Confidence,
@@ -20,7 +19,7 @@ pub struct ConfidenceBadgeProps {
 }
 
 /// Get the color classes for a given confidence level
-fn confidence_color_classes(confidence: Confidence) -> &'static str {
+const fn confidence_color_classes(confidence: Confidence) -> &'static str {
   match confidence {
     Confidence::High => "bg-emerald-500/60 text-emerald-400 border-transparent",
     Confidence::Inferred => "bg-amber-500/60 text-amber-400 border-transparent",
@@ -103,7 +102,7 @@ fn confidence_icon(confidence: Confidence) -> Element {
 }
 
 /// Get the label text for a given confidence level
-fn confidence_label(confidence: Confidence) -> &'static str {
+const fn confidence_label(confidence: Confidence) -> &'static str {
   match confidence {
     Confidence::High => "High",
     Confidence::Inferred => "Inferred",

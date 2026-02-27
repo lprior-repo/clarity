@@ -4,6 +4,7 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
+#![allow(clippy::missing_const_for_fn)]
 #![forbid(unsafe_code)]
 
 //! Progressive Discover validation types for KIRK contracts.
@@ -318,9 +319,9 @@ impl VorpValidation {
       .filter(|(_, score)| *score < 0.7)
       .map(|(name, score)| {
         if *score < 0.4 {
-          format!("{} dimension needs significant improvement", name)
+          format!("{name} dimension needs significant improvement")
         } else {
-          format!("{} dimension could be strengthened", name)
+          format!("{name} dimension could be strengthened")
         }
       })
       .collect()
@@ -473,7 +474,7 @@ pub enum EarsPattern {
 impl EarsPattern {
   /// Get the pattern name.
   #[must_use]
-  pub const fn name(&self) -> &'static str {
+  pub const fn name(self) -> &'static str {
     match self {
       Self::Ubiquitous => "Ubiquitous",
       Self::EventDriven => "Event-Driven",
@@ -615,7 +616,8 @@ impl HolePunchingValidation {
   #[must_use]
   pub fn new(results: HolePunchingResults) -> Self {
     let is_complete = results.is_complete();
-    let addressed_count = results.addressed_count() as u8;
+    let addressed_count =
+      u8::try_from(results.addressed_count()).map_or(u8::MAX, std::convert::identity);
 
     Self {
       is_complete,
@@ -643,6 +645,9 @@ impl Default for HolePunchingValidation {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::float_cmp)]
+  #![allow(clippy::uninlined_format_args)]
+
   use super::*;
 
   #[test]

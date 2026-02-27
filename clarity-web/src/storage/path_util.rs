@@ -2,7 +2,6 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
@@ -56,50 +55,58 @@ pub enum StorageError {
 }
 
 // Implement From for all redb error types to enable ? operator
+// Only available on native (non-WASM) targets
+#[cfg(not(target_arch = "wasm32"))]
 impl From<redb::Error> for StorageError {
   fn from(err: redb::Error) -> Self {
     Self::Database(err.to_string())
   }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<redb::TransactionError> for StorageError {
   fn from(err: redb::TransactionError) -> Self {
     Self::Database(err.to_string())
   }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<redb::TableError> for StorageError {
   fn from(err: redb::TableError) -> Self {
     Self::Database(err.to_string())
   }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<redb::StorageError> for StorageError {
   fn from(err: redb::StorageError) -> Self {
     Self::Database(err.to_string())
   }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<redb::CommitError> for StorageError {
   fn from(err: redb::CommitError) -> Self {
     Self::Database(err.to_string())
   }
 }
 
+#[allow(clippy::needless_pass_by_value)]
 impl StorageError {
-  /// Creates a database error from a redb error
+  /// Creates a database error from a redb error (native only)
+  #[cfg(not(target_arch = "wasm32"))]
   #[must_use]
   pub fn database(err: redb::Error) -> Self {
     Self::Database(err.to_string())
   }
 
-  /// Creates a serialization error from a serde_json error
+  /// Creates a serialization error from a `serde_json` error
   #[must_use]
   pub fn serialization(err: serde_json::Error) -> Self {
     Self::Serialization(err.to_string())
   }
 
-  /// Creates a deserialization error from a serde_json error
+  /// Creates a deserialization error from a `serde_json` error
   #[must_use]
   pub fn deserialization(err: serde_json::Error) -> Self {
     Self::Deserialization(err.to_string())
@@ -128,7 +135,7 @@ impl StorageError {
 /// ```
 pub fn validate_project_id(project_id: &str) -> Result<&str, StorageError> {
   match project_id {
-    id if id.is_empty() => Err(StorageError::InvalidProjectId(
+    "" => Err(StorageError::InvalidProjectId(
       "project ID cannot be empty".into(),
     )),
     id if id.contains('/') || id.contains('\\') => Err(StorageError::InvalidProjectId(format!(
@@ -259,8 +266,7 @@ pub fn ensure_project_dir_exists(project_id: &str) -> Result<(), StorageError> {
   #[cfg(unix)]
   {
     use std::os::unix::fs::PermissionsExt;
-    let perms = std::fs::metadata(&project_dir)?.permissions();
-    let mut new_perms = perms.clone();
+    let mut new_perms = std::fs::metadata(&project_dir)?.permissions();
     new_perms.set_mode(DIR_PERMISSIONS);
     std::fs::set_permissions(&project_dir, new_perms)?;
   }
@@ -270,6 +276,8 @@ pub fn ensure_project_dir_exists(project_id: &str) -> Result<(), StorageError> {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::expect_used)]
+
   use super::*;
   use serial_test::serial;
   use tempfile::TempDir;

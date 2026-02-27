@@ -3,6 +3,7 @@
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![allow(clippy::suspicious_else_formatting)]
+#![allow(clippy::significant_drop_tightening)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
@@ -23,9 +24,13 @@ use dioxus::prelude::*;
 use dioxus_fullstack::server;
 use dioxus_fullstack::ServerFnError;
 use serde::{Deserialize, Serialize};
+#[cfg(not(target_arch = "wasm32"))]
 use std::collections::HashMap;
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::{Arc, LazyLock};
+#[cfg(not(target_arch = "wasm32"))]
 use std::time::{Duration, Instant};
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::RwLock;
 #[cfg(feature = "server")]
 use tracing::info;
@@ -35,13 +40,20 @@ use tracing::warn as tracing_warn;
 // Re-export types from lattice and providers
 #[cfg(feature = "server")]
 use crate::components::discover::straw_man::StrawManTrap;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::components::discover::straw_man::StrawManValidation;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::components::discover::types::{HolePunchingResults, ScenarioField};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::config::ai::load_ai_config;
 #[cfg(feature = "server")]
 use crate::lattice::quality::{calculate_quality, InversionControl, QualityError};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::lattice::quality::{Answer as QualityAnswer, EarsRequirementRef, QualityScore};
-use crate::providers::{ExtractedFields, ExtractionContext, FieldType, OpenCodeProvider};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::providers::OpenCodeProvider;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::providers::{ExtractedFields, ExtractionContext, FieldType, OpenCodeProviderOptions};
 #[cfg(feature = "server")]
 use crate::providers::{ExtractionError, ExtractionProvider, SchemaField};
 
@@ -203,6 +215,7 @@ pub async fn get_coach_guidance(
 /// Rate limiter for API calls per session
 ///
 /// Tracks request timestamps per session ID and enforces max requests per minute.
+#[cfg(not(target_arch = "wasm32"))]
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 struct RateLimiter {
@@ -210,6 +223,7 @@ struct RateLimiter {
   requests: Arc<RwLock<HashMap<String, Vec<Instant>>>>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl RateLimiter {
   /// Create a new rate limiter
   fn new(max_requests_per_minute: u32) -> Self {
@@ -226,38 +240,38 @@ impl RateLimiter {
   async fn check_rate_limit(&self, session_id: &str) -> Result<(), u64> {
     let now = Instant::now();
     let one_minute_ago = now.checked_sub(Duration::from_secs(60)).unwrap_or(now);
+    let mut requests = self.requests.write().await;
+    let session_requests = requests
+      .entry(session_id.to_string())
+      .or_insert_with(Vec::new);
 
-    {
-      let mut requests = self.requests.write().await;
-      let session_requests = requests
-        .entry(session_id.to_string())
-        .or_insert_with(Vec::new);
+    // Remove old requests outside the 1-minute window
+    session_requests.retain(|&timestamp| timestamp > one_minute_ago);
 
-      // Remove old requests outside the 1-minute window
-      session_requests.retain(|&timestamp| timestamp > one_minute_ago);
-
-      // Check if under limit
-      if session_requests.len() < self.max_requests_per_minute as usize {
-        session_requests.push(now);
-        Ok(())
-      } else {
-        // Calculate oldest request time to determine retry-after
-        let oldest = session_requests.first().copied().unwrap_or(now);
-        let elapsed = now.duration_since(oldest).as_secs();
-        let retry_after = 60_u64.saturating_sub(elapsed);
-        Err(retry_after)
-      }
+    if session_requests.len() < self.max_requests_per_minute as usize {
+      session_requests.push(now);
+      drop(requests);
+      return Ok(());
     }
+
+    // Calculate oldest request time to determine retry-after
+    let oldest = session_requests.first().copied().unwrap_or(now);
+    let elapsed = now.duration_since(oldest).as_secs();
+    let retry_after = 60_u64.saturating_sub(elapsed);
+    drop(requests);
+    Err(retry_after)
   }
 }
 
 /// Global rate limiter instance
+#[cfg(not(target_arch = "wasm32"))]
 #[allow(dead_code)]
 static RATE_LIMITER: LazyLock<RateLimiter> = LazyLock::new(|| RateLimiter::new(10));
 
 /// Global AI provider singleton
 ///
 /// Initialized once with config from `~/.config/clarity/ai.toml`.
+#[cfg(not(target_arch = "wasm32"))]
 #[allow(dead_code)]
 static AI_PROVIDER: LazyLock<Arc<OpenCodeProvider>> = LazyLock::new(|| {
   let config = load_ai_config()
@@ -273,25 +287,56 @@ static AI_PROVIDER: LazyLock<Arc<OpenCodeProvider>> = LazyLock::new(|| {
     config.provider.session_id.clone()
   };
 
-  OpenCodeProvider::new(config.provider.endpoint, session_id)
-    .map(Arc::new)
-    .map_err(|e| {
-      tracing_warn!(error = %e, "Failed to create OpenCode provider");
-      e
-    })
-    .unwrap_or_else(|_| {
-      match OpenCodeProvider::new(
-        "https://api.opencode.ai/v1".to_string(),
-        uuid::Uuid::new_v4().to_string(),
-      ) {
-        Ok(provider) => Arc::new(provider),
-        Err(error) => {
-          tracing_warn!(error = %error, "Fallback OpenCode provider initialization failed");
-          std::process::abort();
-        }
+  OpenCodeProvider::new_with_options(
+    config.provider.endpoint,
+    session_id,
+    OpenCodeProviderOptions {
+      model: config.provider.model,
+      routing_provider: config.provider.routing_provider,
+    },
+  )
+  .map(Arc::new)
+  .map_err(|e| {
+    tracing_warn!(error = %e, "Failed to create OpenCode provider");
+    e
+  })
+  .unwrap_or_else(|_| {
+    match OpenCodeProvider::new_with_options(
+      "https://api.opencode.ai/v1".to_string(),
+      uuid::Uuid::new_v4().to_string(),
+      OpenCodeProviderOptions {
+        model: Some("zai-coding-plan/glm-5".to_string()),
+        routing_provider: Some("zai-coding-plan".to_string()),
+      },
+    ) {
+      Ok(provider) => Arc::new(provider),
+      Err(error) => {
+        tracing_warn!(error = %error, "Fallback OpenCode provider initialization failed");
+        std::process::abort();
       }
-    })
+    }
+  })
 });
+
+/// Lightweight diagnostics for currently configured AI extraction provider.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AiProviderDiagnostics {
+  pub provider: String,
+  pub endpoint: String,
+  pub model: Option<String>,
+  pub routing_provider: Option<String>,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[server]
+pub async fn get_ai_provider_status_server() -> Result<AiProviderDiagnostics, ServerFnError> {
+  Ok(AiProviderDiagnostics {
+    provider: "opencode".to_string(),
+    endpoint: AI_PROVIDER.endpoint().clone(),
+    model: AI_PROVIDER.model().clone(),
+    routing_provider: AI_PROVIDER.routing_provider().clone(),
+  })
+}
 
 /// Extract structured fields from freeform text input
 ///
@@ -302,6 +347,7 @@ static AI_PROVIDER: LazyLock<Arc<OpenCodeProvider>> = LazyLock::new(|| {
 /// # Returns
 /// * `Ok(ExtractedFields)` - Successfully extracted fields with confidence scores
 /// * `Err(ServerFnError)` - Extraction failed or rate limited
+#[cfg(not(target_arch = "wasm32"))]
 #[server]
 pub async fn extract_fields_server(
   input: String,
@@ -321,7 +367,8 @@ pub async fn extract_fields_server(
     Err(retry_after) => {
       tracing_warn!(
         session,
-        retry_after, "extract_fields_server: Rate limit exceeded"
+        retry_after,
+        "extract_fields_server: Rate limit exceeded"
       );
       return Err(ServerFnError::new(anyhow::anyhow!(
         "Rate limit exceeded. Please retry after {retry_after}s"
@@ -384,6 +431,7 @@ pub async fn extract_fields_server(
 /// # Returns
 /// * `Ok(String)` - Suggested content for the field
 /// * `Err(ServerFnError)` - Suggestion failed or rate limited
+#[cfg(not(target_arch = "wasm32"))]
 #[server]
 pub async fn suggest_field_server(
   field: FieldType,
@@ -400,7 +448,8 @@ pub async fn suggest_field_server(
     Err(retry_after) => {
       tracing_warn!(
         session,
-        retry_after, "suggest_field_server: Rate limit exceeded"
+        retry_after,
+        "suggest_field_server: Rate limit exceeded"
       );
       return Err(ServerFnError::new(anyhow::anyhow!(
         "Rate limit exceeded. Please retry after {retry_after}s"
@@ -485,6 +534,7 @@ pub async fn suggest_field_server(
 /// # Returns
 /// * `Ok(QualityScore)` - Quality assessment with dimensions and issues
 /// * `Err(ServerFnError)` - Calculation failed
+#[cfg(not(target_arch = "wasm32"))]
 #[server]
 pub async fn calculate_quality_server(
   answers: Vec<QualityAnswer>,
@@ -505,7 +555,8 @@ pub async fn calculate_quality_server(
     Err(retry_after) => {
       tracing_warn!(
         session,
-        retry_after, "calculate_quality_server: Rate limit exceeded"
+        retry_after,
+        "calculate_quality_server: Rate limit exceeded"
       );
       return Err(ServerFnError::new(anyhow::anyhow!(
         "Rate limit exceeded. Please retry after {retry_after}s"
@@ -579,6 +630,7 @@ pub async fn calculate_quality_server(
 ///     println!("Detected traps: {:?}", validation.traps_detected);
 /// }
 /// ```
+#[cfg(not(target_arch = "wasm32"))]
 #[server]
 pub async fn validate_straw_man_traps_server(
   persona_text: String,
@@ -598,7 +650,8 @@ pub async fn validate_straw_man_traps_server(
     Err(retry_after) => {
       tracing_warn!(
         session,
-        retry_after, "validate_straw_man_traps_server: Rate limit exceeded"
+        retry_after,
+        "validate_straw_man_traps_server: Rate limit exceeded"
       );
       return Err(ServerFnError::new(anyhow::anyhow!(
         "Rate limit exceeded. Please retry after {retry_after}s"
@@ -807,6 +860,7 @@ pub async fn validate_straw_man_traps_server(
 ///     println!("Missing: {:?}", results.unaddressed_holes());
 /// }
 /// ```
+#[cfg(not(target_arch = "wasm32"))]
 #[server]
 pub async fn validate_hole_punching_server(
   scenario: ScenarioField,
@@ -828,7 +882,8 @@ pub async fn validate_hole_punching_server(
     Err(retry_after) => {
       tracing_warn!(
         session,
-        retry_after, "validate_hole_punching_server: Rate limit exceeded"
+        retry_after,
+        "validate_hole_punching_server: Rate limit exceeded"
       );
       return Err(ServerFnError::new(anyhow::anyhow!(
         "Rate limit exceeded. Please retry after {retry_after}s"
@@ -1032,10 +1087,12 @@ pub async fn validate_hole_punching_server(
 // Progressive Discover Server Functions (WP01)
 // ============================================================================
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::kirk::progressive_discover::{
   AntithesisValidation, EarsExtraction, EarsPattern, ExtractedEarsRequirement,
   HolePunchingValidation, KirkContract16, VorpValidation,
 };
+#[cfg(not(target_arch = "wasm32"))]
 use crate::storage::transcript_store::InterrogationTranscript;
 
 /// Validate antithesis (null hypothesis) points (bd-378l)
@@ -1057,6 +1114,7 @@ use crate::storage::transcript_store::InterrogationTranscript;
 /// - Containing specific details (word count heuristics)
 /// - Using concrete language vs vague abstractions
 /// - Including numbers or specific reasoning
+#[cfg(not(target_arch = "wasm32"))]
 #[server]
 pub async fn validate_antithesis(
   points: [String; 3],
@@ -1076,7 +1134,8 @@ pub async fn validate_antithesis(
     Err(retry_after) => {
       tracing_warn!(
         session,
-        retry_after, "validate_antithesis: Rate limit exceeded"
+        retry_after,
+        "validate_antithesis: Rate limit exceeded"
       );
       return Err(ServerFnError::new(anyhow::anyhow!(
         "Rate limit exceeded. Please retry after {retry_after}s"
@@ -1133,6 +1192,7 @@ pub async fn validate_antithesis(
 }
 
 /// Calculate specificity score for a single antithesis point.
+#[cfg(not(target_arch = "wasm32"))]
 #[allow(dead_code)]
 fn calculate_specificity(text: &str) -> f64 {
   let trimmed = text.trim();
@@ -1181,6 +1241,7 @@ fn calculate_specificity(text: &str) -> f64 {
 /// # Returns
 /// * `Ok(VorpValidation)` - Validation result with scores and suggestions
 /// * `Err(ServerFnError)` - Validation failed or rate limited
+#[cfg(not(target_arch = "wasm32"))]
 #[server]
 pub async fn validate_vorp(
   value: String,
@@ -1224,6 +1285,7 @@ pub async fn validate_vorp(
 }
 
 /// Validate the Value dimension.
+#[cfg(not(target_arch = "wasm32"))]
 #[allow(dead_code)]
 fn validate_v_dimension(text: &str) -> f64 {
   let word_count = text.split_whitespace().count();
@@ -1241,6 +1303,7 @@ fn validate_v_dimension(text: &str) -> f64 {
 }
 
 /// Validate the Obvious dimension.
+#[cfg(not(target_arch = "wasm32"))]
 #[allow(dead_code)]
 fn validate_o_dimension(text: &str) -> f64 {
   let word_count = text.split_whitespace().count();
@@ -1258,6 +1321,7 @@ fn validate_o_dimension(text: &str) -> f64 {
 }
 
 /// Validate the Real dimension.
+#[cfg(not(target_arch = "wasm32"))]
 #[allow(dead_code)]
 fn validate_r_dimension(text: &str) -> f64 {
   let word_count = text.split_whitespace().count();
@@ -1276,6 +1340,7 @@ fn validate_r_dimension(text: &str) -> f64 {
 }
 
 /// Validate the Possible dimension.
+#[cfg(not(target_arch = "wasm32"))]
 #[allow(dead_code)]
 fn validate_p_dimension(text: &str) -> f64 {
   let word_count = text.split_whitespace().count();
@@ -1305,6 +1370,7 @@ fn validate_p_dimension(text: &str) -> f64 {
 /// # Returns
 /// * `Ok(HolePunchingValidation)` - Validation result
 /// * `Err(ServerFnError)` - Validation failed or rate limited
+#[cfg(not(target_arch = "wasm32"))]
 #[server]
 pub async fn validate_hole_punching_v2(
   discovery_hole: Option<String>,
@@ -1322,7 +1388,8 @@ pub async fn validate_hole_punching_v2(
     Err(retry_after) => {
       tracing_warn!(
         session,
-        retry_after, "validate_hole_punching_v2: Rate limit exceeded"
+        retry_after,
+        "validate_hole_punching_v2: Rate limit exceeded"
       );
       return Err(ServerFnError::new(anyhow::anyhow!(
         "Rate limit exceeded. Please retry after {retry_after}s"
@@ -1365,6 +1432,7 @@ pub async fn validate_hole_punching_v2(
 /// # Returns
 /// * `Ok(EarsExtraction)` - Extracted requirements
 /// * `Err(ServerFnError)` - Extraction failed or rate limited
+#[cfg(not(target_arch = "wasm32"))]
 #[server]
 pub async fn extract_ears(
   transcript: InterrogationTranscript,
@@ -1430,6 +1498,7 @@ pub async fn extract_ears(
 }
 
 /// Extract EARS requirements from a text string.
+#[cfg(not(target_arch = "wasm32"))]
 #[allow(dead_code)]
 fn extract_ears_from_text(text: &str, source_section: &str) -> Vec<ExtractedEarsRequirement> {
   let mut requirements = Vec::new();
@@ -1496,6 +1565,7 @@ fn extract_ears_from_text(text: &str, source_section: &str) -> Vec<ExtractedEars
 /// # Returns
 /// * `Ok(KirkContract16)` - Compiled 16-section contract
 /// * `Err(ServerFnError)` - Compilation failed or rate limited
+#[cfg(not(target_arch = "wasm32"))]
 #[server]
 pub async fn compile_to_kirk(
   transcript: InterrogationTranscript,
@@ -1855,6 +1925,28 @@ mod integration_tests {
     assert_eq!(deserialized.value, "Users want to complete tasks quickly");
   }
 
+  /// Test AI provider diagnostics serialization roundtrip
+  #[test]
+  fn test_ai_provider_diagnostics_serialization() {
+    let diagnostics = AiProviderDiagnostics {
+      provider: "opencode".to_string(),
+      endpoint: "https://api.opencode.ai/v1".to_string(),
+      model: Some("zai-coding-plan/glm-5".to_string()),
+      routing_provider: Some("zai-coding-plan".to_string()),
+    };
+
+    let serialized = serde_json::to_string(&diagnostics).unwrap();
+    let deserialized: AiProviderDiagnostics = serde_json::from_str(&serialized).unwrap();
+
+    assert_eq!(deserialized.provider, "opencode");
+    assert_eq!(deserialized.endpoint, "https://api.opencode.ai/v1");
+    assert_eq!(deserialized.model.as_deref(), Some("zai-coding-plan/glm-5"));
+    assert_eq!(
+      deserialized.routing_provider.as_deref(),
+      Some("zai-coding-plan")
+    );
+  }
+
   /// Test inversion control serialization
   #[test]
   fn test_inversion_control_serialization() {
@@ -2074,19 +2166,25 @@ mod integration_tests {
   // ADVERSARIAL INPUT VALIDATION TESTS
   // ============================================
 
-  /// Test that validate_straw_man_traps_server rejects empty input
+  /// Test that `validate_straw_man_traps_server` rejects empty input
   #[tokio::test]
   async fn test_validate_straw_man_rejects_empty() {
     // The server function has validation: input.trim().is_empty() check
     // We verify the validation logic works correctly
     let empty_input = "";
-    assert!(empty_input.trim().is_empty(), "Empty input should be detected");
+    assert!(
+      empty_input.trim().is_empty(),
+      "Empty input should be detected"
+    );
 
     let whitespace_input = "   \t\n";
-    assert!(whitespace_input.trim().is_empty(), "Whitespace-only input should be detected");
+    assert!(
+      whitespace_input.trim().is_empty(),
+      "Whitespace-only input should be detected"
+    );
   }
 
-  /// Test that validate_straw_man_traps_server rejects whitespace-only input
+  /// Test that `validate_straw_man_traps_server` rejects whitespace-only input
   #[tokio::test]
   async fn test_validate_straw_man_rejects_whitespace() {
     let whitespace_variants = vec!["   ", "\t\t", "\n\n", " \t \n "];
@@ -2099,7 +2197,7 @@ mod integration_tests {
     }
   }
 
-  /// Test that validate_hole_punching_server rejects incomplete scenario
+  /// Test that `validate_hole_punching_server` rejects incomplete scenario
   #[tokio::test]
   async fn test_validate_hole_punching_rejects_empty_fields() {
     // Empty trigger
@@ -2109,7 +2207,10 @@ mod integration_tests {
       feeling: "Okay".to_string(),
       hole_punching: HolePunchingResults::default(),
     };
-    assert!(empty_trigger.is_trigger_empty(), "Empty trigger should be detected");
+    assert!(
+      empty_trigger.is_trigger_empty(),
+      "Empty trigger should be detected"
+    );
 
     // All fields empty
     let all_empty = ScenarioField {
@@ -2118,12 +2219,21 @@ mod integration_tests {
       feeling: String::new(),
       hole_punching: HolePunchingResults::default(),
     };
-    assert!(all_empty.is_trigger_empty(), "Empty trigger should be detected");
-    assert!(all_empty.is_value_moment_empty(), "Empty value_moment should be detected");
-    assert!(all_empty.is_feeling_empty(), "Empty feeling should be detected");
+    assert!(
+      all_empty.is_trigger_empty(),
+      "Empty trigger should be detected"
+    );
+    assert!(
+      all_empty.is_value_moment_empty(),
+      "Empty value_moment should be detected"
+    );
+    assert!(
+      all_empty.is_feeling_empty(),
+      "Empty feeling should be detected"
+    );
   }
 
-  /// Test that validate_hole_punching_server rejects whitespace-only fields
+  /// Test that `validate_hole_punching_server` rejects whitespace-only fields
   #[tokio::test]
   async fn test_validate_hole_punching_rejects_whitespace_fields() {
     let whitespace = ScenarioField {
@@ -2132,9 +2242,18 @@ mod integration_tests {
       feeling: "  ".to_string(),
       hole_punching: HolePunchingResults::default(),
     };
-    assert!(whitespace.is_trigger_empty(), "Whitespace trigger should be detected as empty");
-    assert!(whitespace.is_value_moment_empty(), "Whitespace value_moment should be detected as empty");
-    assert!(whitespace.is_feeling_empty(), "Whitespace feeling should be detected as empty");
+    assert!(
+      whitespace.is_trigger_empty(),
+      "Whitespace trigger should be detected as empty"
+    );
+    assert!(
+      whitespace.is_value_moment_empty(),
+      "Whitespace value_moment should be detected as empty"
+    );
+    assert!(
+      whitespace.is_feeling_empty(),
+      "Whitespace feeling should be detected as empty"
+    );
   }
 
   // ============================================
@@ -2160,7 +2279,7 @@ mod integration_tests {
     assert!("\u{2003}\u{3000}".trim().is_empty());
   }
 
-  /// Test ScenarioField empty detection methods
+  /// Test `ScenarioField` empty detection methods
   #[test]
   fn test_scenario_field_empty_detection() {
     // Non-empty fields
@@ -2197,26 +2316,20 @@ mod integration_tests {
     assert!(whitespace.is_feeling_empty());
   }
 
-  /// Test HolePunchingResults empty normalization
+  /// Test `HolePunchingResults` empty normalization
   #[test]
   fn test_hole_punching_empty_normalization() {
     // Empty strings are normalized to None
-    let empty_strings = HolePunchingResults::from_strings(
-      String::new(),
-      String::new(),
-      String::new(),
-    );
+    let empty_strings =
+      HolePunchingResults::from_strings(String::new(), String::new(), String::new());
     assert_eq!(empty_strings.discovery_hole, None);
     assert_eq!(empty_strings.edge_case_hole, None);
     assert_eq!(empty_strings.motivation_dropoff, None);
     assert_eq!(empty_strings.addressed_count(), 0);
 
     // Whitespace strings are normalized to None
-    let whitespace = HolePunchingResults::from_strings(
-      "   ".to_string(),
-      "\t\n".to_string(),
-      "  ".to_string(),
-    );
+    let whitespace =
+      HolePunchingResults::from_strings("   ".to_string(), "\t\n".to_string(), "  ".to_string());
     assert_eq!(whitespace.discovery_hole, None);
     assert_eq!(whitespace.edge_case_hole, None);
     assert_eq!(whitespace.motivation_dropoff, None);
@@ -2228,10 +2341,19 @@ mod integration_tests {
       "  Edge case handled  ".to_string(),
       "Motivated by speed".to_string(),
     );
-    assert_eq!(valid.discovery_hole, Some("Discovery via search".to_string()));
+    assert_eq!(
+      valid.discovery_hole,
+      Some("Discovery via search".to_string())
+    );
     // Note: Whitespace is preserved in non-empty strings
-    assert_eq!(valid.edge_case_hole, Some("  Edge case handled  ".to_string()));
-    assert_eq!(valid.motivation_dropoff, Some("Motivated by speed".to_string()));
+    assert_eq!(
+      valid.edge_case_hole,
+      Some("  Edge case handled  ".to_string())
+    );
+    assert_eq!(
+      valid.motivation_dropoff,
+      Some("Motivated by speed".to_string())
+    );
     assert_eq!(valid.addressed_count(), 3);
   }
 }

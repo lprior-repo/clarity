@@ -2,21 +2,20 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
-// Public API exports - used by library consumers
-#![allow(unused_imports)]
 
 //! Extraction provider trait and implementations
 //!
 //! This module defines the interface for extracting structured fields from
-//! unstructured text using various AI providers (OpenAI, Claude, local models, etc.).
+//! unstructured text using various AI providers (`OpenAI`, `Claude`, local models, etc.).
 
+#[cfg(not(target_arch = "wasm32"))]
 mod opencode;
 mod r#trait;
 
-pub use opencode::OpenCodeProvider;
+#[cfg(not(target_arch = "wasm32"))]
+pub use opencode::{OpenCodeProvider, OpenCodeProviderOptions};
 pub use r#trait::{
   ExtractedFields, ExtractionContext, ExtractionError, ExtractionMetadata, ExtractionProvider,
   FieldExtraction, FieldType, SchemaField,

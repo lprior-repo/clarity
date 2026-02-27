@@ -2,9 +2,9 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(clippy::enum_variant_names)]
 
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -47,7 +47,7 @@ pub enum ProgressiveDiscoverPhase {
 impl ProgressiveDiscoverPhase {
   /// Get a human-readable display name for the phase
   #[must_use]
-  pub const fn display_name(&self) -> &'static str {
+  pub const fn display_name(self) -> &'static str {
     match self {
       Self::Prompt => "Prompt",
       Self::Extracting => "Extracting",
@@ -60,7 +60,7 @@ impl ProgressiveDiscoverPhase {
 
   /// Get a description of the phase for tooltips or help text
   #[must_use]
-  pub const fn description(&self) -> &'static str {
+  pub const fn description(self) -> &'static str {
     match self {
       Self::Prompt => "Describe your idea in freeform text",
       Self::Extracting => "AI is extracting structured fields from your input",
@@ -73,7 +73,7 @@ impl ProgressiveDiscoverPhase {
 
   /// Get the 1-based ordinal position of this phase in the flow
   #[must_use]
-  pub const fn ordinal(&self) -> usize {
+  pub const fn ordinal(self) -> usize {
     match self {
       Self::Prompt => 1,
       Self::Extracting => 2,
@@ -86,13 +86,13 @@ impl ProgressiveDiscoverPhase {
 
   /// Check if this is the final (locked) phase
   #[must_use]
-  pub const fn is_final(&self) -> bool {
+  pub const fn is_final(self) -> bool {
     matches!(self, Self::Locked)
   }
 
   /// Check if this is the initial (prompt) phase
   #[must_use]
-  pub const fn is_initial(&self) -> bool {
+  pub const fn is_initial(self) -> bool {
     matches!(self, Self::Prompt)
   }
 
@@ -101,7 +101,7 @@ impl ProgressiveDiscoverPhase {
   /// Returns `None` if already at the final phase (cannot advance past Locked).
   /// This ensures phase transitions are one-way and sequential.
   #[must_use]
-  pub const fn next(&self) -> Option<Self> {
+  pub const fn next(self) -> Option<Self> {
     match self {
       Self::Prompt => Some(Self::Extracting),
       Self::Extracting => Some(Self::ConfirmingFields),
@@ -117,7 +117,7 @@ impl ProgressiveDiscoverPhase {
   /// Returns `None` if already at the initial phase.
   /// Note: This is primarily for navigation; business logic may restrict backwards transitions.
   #[must_use]
-  pub const fn previous(&self) -> Option<Self> {
+  pub const fn previous(self) -> Option<Self> {
     match self {
       Self::Prompt => None,
       Self::Extracting => Some(Self::Prompt),
@@ -198,7 +198,7 @@ pub enum ConfirmSubPhase {
 impl ConfirmSubPhase {
   /// Get a human-readable display name for the sub-phase
   #[must_use]
-  pub const fn display_name(&self) -> &'static str {
+  pub const fn display_name(self) -> &'static str {
     match self {
       Self::ConfirmProblem => "Problem",
       Self::ConfirmPersona => "Persona",
@@ -210,7 +210,7 @@ impl ConfirmSubPhase {
 
   /// Get a description of what happens in this sub-phase
   #[must_use]
-  pub const fn description(&self) -> &'static str {
+  pub const fn description(self) -> &'static str {
     match self {
       Self::ConfirmProblem => "Confirm the problem and provide antithesis points",
       Self::ConfirmPersona => "Confirm target user and validate against straw man traps",
@@ -222,7 +222,7 @@ impl ConfirmSubPhase {
 
   /// Get the 1-based ordinal position (1-5) for progress display
   #[must_use]
-  pub const fn ordinal(&self) -> usize {
+  pub const fn ordinal(self) -> usize {
     match self {
       Self::ConfirmProblem => 1,
       Self::ConfirmPersona => 2,
@@ -234,13 +234,13 @@ impl ConfirmSubPhase {
 
   /// Check if this is the first sub-phase
   #[must_use]
-  pub const fn is_first(&self) -> bool {
+  pub const fn is_first(self) -> bool {
     matches!(self, Self::ConfirmProblem)
   }
 
   /// Check if this is the last sub-phase
   #[must_use]
-  pub const fn is_last(&self) -> bool {
+  pub const fn is_last(self) -> bool {
     matches!(self, Self::ConfirmScenario)
   }
 
@@ -249,7 +249,7 @@ impl ConfirmSubPhase {
   /// Returns `None` if already at the last sub-phase (Scenario).
   /// This ensures sequential progression through confirmation steps.
   #[must_use]
-  pub const fn next(&self) -> Option<Self> {
+  pub const fn next(self) -> Option<Self> {
     match self {
       Self::ConfirmProblem => Some(Self::ConfirmPersona),
       Self::ConfirmPersona => Some(Self::ConfirmSolution),
@@ -263,7 +263,7 @@ impl ConfirmSubPhase {
   ///
   /// Returns `None` if already at the first sub-phase (Problem).
   #[must_use]
-  pub const fn previous(&self) -> Option<Self> {
+  pub const fn previous(self) -> Option<Self> {
     match self {
       Self::ConfirmProblem => None,
       Self::ConfirmPersona => Some(Self::ConfirmProblem),
@@ -293,7 +293,7 @@ impl ConfirmSubPhase {
 
   /// Get the field name for this sub-phase (used in form data)
   #[must_use]
-  pub const fn field_name(&self) -> &'static str {
+  pub const fn field_name(self) -> &'static str {
     match self {
       Self::ConfirmProblem => "problem",
       Self::ConfirmPersona => "persona",
@@ -468,7 +468,7 @@ mod tests {
   #[test]
   fn test_clone() {
     let phase = ProgressiveDiscoverPhase::Preview;
-    let cloned = phase.clone();
+    let cloned = phase;
     assert_eq!(phase, cloned);
   }
 
@@ -562,7 +562,9 @@ mod tests {
     phase = phase.next().ok_or("Should transition to Extracting")?;
     assert_eq!(phase, ProgressiveDiscoverPhase::Extracting);
 
-    phase = phase.next().ok_or("Should transition to ConfirmingFields")?;
+    phase = phase
+      .next()
+      .ok_or("Should transition to ConfirmingFields")?;
     assert_eq!(phase, ProgressiveDiscoverPhase::ConfirmingFields);
 
     phase = phase.next().ok_or("Should transition to Preview")?;
@@ -707,7 +709,7 @@ mod tests {
   #[test]
   fn test_subphase_clone() {
     let subphase = ConfirmSubPhase::ConfirmSolution;
-    let cloned = subphase.clone();
+    let cloned = subphase;
     assert_eq!(subphase, cloned);
   }
 

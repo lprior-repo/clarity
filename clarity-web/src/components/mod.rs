@@ -2,12 +2,9 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 #![allow(ambiguous_glob_reexports)]
-// Public API exports - used by library consumers
-#![allow(unused_imports)]
 
 // Re-export discover components
 pub mod discover;

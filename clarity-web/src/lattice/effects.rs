@@ -4,6 +4,18 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::doc_markdown)]
+#![allow(clippy::must_use_candidate)]
+#![allow(clippy::unwrap_or_default)]
+#![allow(clippy::implicit_clone)]
+#![allow(clippy::redundant_closure_for_method_calls)]
+#![allow(clippy::unnecessary_map_or)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::implicit_hasher)]
+#![allow(clippy::question_mark)]
+#![allow(clippy::single_char_pattern)]
+#![allow(clippy::useless_vec)]
 #![forbid(unsafe_code)]
 
 //! Effects module for dependency tracing and causal relationship analysis.
@@ -344,6 +356,10 @@ fn dfs_visit(
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+  #![allow(clippy::float_cmp)]
+
   use super::*;
 
   #[test]

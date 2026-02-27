@@ -2,11 +2,8 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
-// These re-exports are part of the public API, used by consumers via explicit import
-#![allow(unused_imports)]
 
 pub mod antithesis;
 pub mod brutal_truths;
@@ -37,9 +34,15 @@ pub use brutal_truths::{
   BrutalTruthsChecklistProps, BrutalTruthsState, BrutalTruthsSummary, BrutalTruthsSummaryProps,
 };
 pub use extract_fields_button::{
-  ExtractFieldsButton, ExtractFieldsButtonProps, ExtractFieldsButtonWithServer,
-  ExtractFieldsButtonWithServerProps, ExtractedField, ExtractedFieldsData, MIN_PROMPT_CHARS,
+  ExtractFieldsButton, ExtractFieldsButtonProps, ExtractedField, ExtractedFieldsData,
+  MIN_PROMPT_CHARS,
 };
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use extract_fields_button::ExtractFieldsButtonWithServer;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use extract_fields_button::ExtractFieldsButtonWithServerProps;
 pub use extracting_progress::{ExtractingProgress, ExtractingProgressProps, ExtractionStatus};
 pub use field_card::{Confidence, FieldCard, FieldCardProps, FieldData};
 pub use guided::{GuidedFlow, QuestionState, SuggestionProvider};

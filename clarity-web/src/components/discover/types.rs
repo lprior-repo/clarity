@@ -2,9 +2,9 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(clippy::struct_field_names)]
 
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -39,7 +39,7 @@ impl HoleType {
 
   /// Get a human-readable label for this hole type
   #[must_use]
-  pub const fn label(&self) -> &'static str {
+  pub const fn label(self) -> &'static str {
     match self {
       Self::DiscoveryHole => "Discovery Hole",
       Self::EdgeCaseHole => "Edge Case Hole",
@@ -49,7 +49,7 @@ impl HoleType {
 
   /// Get a description of what this hole type checks for
   #[must_use]
-  pub const fn description(&self) -> &'static str {
+  pub const fn description(self) -> &'static str {
     match self {
       Self::DiscoveryHole => "How did they find the feature?",
       Self::EdgeCaseHole => "What if internet drops, mistype, etc?",

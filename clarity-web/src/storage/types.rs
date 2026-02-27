@@ -2,7 +2,6 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
@@ -22,7 +21,7 @@ pub enum Confidence {
 
 /// Answer record stored in the database
 /// Extends the core Answer type with additional metadata
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AnswerRecord {
   /// Unique identifier for the prompt step
   pub step_id: String,
@@ -57,7 +56,7 @@ impl AnswerRecord {
 
   /// Create from existing answer with default metadata
   #[must_use]
-  pub fn from_answer(step_id: String, value: String, timestamp: String) -> Self {
+  pub const fn from_answer(step_id: String, value: String, timestamp: String) -> Self {
     Self {
       step_id,
       value,
@@ -70,7 +69,7 @@ impl AnswerRecord {
 
 /// Cache for field extraction results
 /// Maps input hash to extracted fields to avoid redundant processing
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExtractionCache {
   /// Hash of the input text for cache lookup
   pub input_hash: String,
@@ -94,7 +93,7 @@ impl ExtractionCache {
 
 /// Project metadata persisted across sessions
 /// Tracks project state and user preferences
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProjectMetadata {
   /// User's preferred planning mode (e.g., "waterfall", "agile")
   pub mode_preference: String,
@@ -138,7 +137,7 @@ impl ProjectMetadata {
 
 /// Cache for lattice graph computation results
 /// Stores phase-specific lattice outputs to avoid recomputation
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LatticeCache {
   /// Phase identifier (e.g., "discover", "define")
   pub phase: String,
@@ -173,21 +172,23 @@ impl LatticeCache {
 /// Redb table definition constants
 /// These define the table names used in the database
 pub mod tables {
-  /// Table name for AnswerRecord storage
+  /// Table name for `AnswerRecord` storage
   pub const ANSWERS: &str = "answers";
 
-  /// Table name for ExtractionCache storage
+  /// Table name for `ExtractionCache` storage
   pub const EXTRACTIONS: &str = "extractions";
 
-  /// Table name for ProjectMetadata storage
+  /// Table name for `ProjectMetadata` storage
   pub const PROJECT_METADATA: &str = "project_metadata";
 
-  /// Table name for LatticeCache storage
+  /// Table name for `LatticeCache` storage
   pub const LATTICE_CACHE: &str = "lattice_cache";
 }
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::expect_used)]
+
   use super::*;
 
   #[test]

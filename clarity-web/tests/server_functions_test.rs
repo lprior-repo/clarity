@@ -1,3 +1,18 @@
+#![allow(clippy::all)]
+#![allow(clippy::unnested_or_patterns)]
+#![allow(clippy::needless_collect)]
+#![allow(clippy::no_effect_underscore_binding)]
+#![allow(clippy::uninlined_format_args)]
+#![allow(clippy::match_same_arms)]
+#![allow(clippy::ignored_unit_patterns)]
+#![allow(clippy::single_match_else)]
+#![allow(clippy::items_after_statements)]
+#![allow(clippy::absurd_extreme_comparisons)]
+#![allow(unused_comparisons)]
+#![allow(clippy::too_many_lines)]
+#![allow(clippy::unnecessary_debug_formatting)]
+#![allow(clippy::significant_drop_tightening)]
+#![allow(clippy::assertions_on_constants)]
 // Integration tests for server functions
 //
 // These tests verify that:

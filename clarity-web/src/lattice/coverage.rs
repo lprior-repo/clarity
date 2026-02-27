@@ -4,6 +4,18 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::derive_partial_eq_without_eq)]
+#![allow(clippy::must_use_candidate)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::unnecessary_wraps)]
+#![allow(clippy::redundant_closure_for_method_calls)]
+#![allow(clippy::non_std_lazy_statics)]
+#![allow(clippy::manual_let_else)]
+#![allow(clippy::match_wild_err_arm)]
+#![allow(clippy::option_if_let_else)]
+#![allow(clippy::needless_collect)]
+#![allow(clippy::useless_vec)]
 #![forbid(unsafe_code)]
 
 use once_cell::sync::Lazy;
@@ -20,35 +32,33 @@ const ULTIMATE_FALLBACK_PATTERN_STR: &str = r"(.+)";
 
 /// Attempt to create a Regex, returning an Option to avoid panicking
 fn try_create_regex(pattern: &str) -> Option<Regex> {
-    Regex::new(pattern).ok()
+  Regex::new(pattern).ok()
 }
 
 /// Create a Regex with cascading fallbacks, never panicking
 ///
 /// Tries patterns in order: primary -> secondary -> ultimate fallback
 fn create_regex_safe(primary: &str, secondary: &str) -> Regex {
-    try_create_regex(primary)
-        .or_else(|| try_create_regex(secondary))
-        .or_else(|| try_create_regex(ULTIMATE_FALLBACK_PATTERN_STR))
-        .unwrap_or_else(|| {
-            // SAFETY: The pattern "(.+)" is syntactically valid and will always compile.
-            // This branch is unreachable in practice, but required by the type system.
-            #[allow(clippy::expect_used)]
-            Regex::new(ULTIMATE_FALLBACK_PATTERN_STR)
-                .expect("ULTIMATE_FALLBACK_PATTERN_STR must be valid regex syntax")
-        })
+  try_create_regex(primary)
+    .or_else(|| try_create_regex(secondary))
+    .or_else(|| try_create_regex(ULTIMATE_FALLBACK_PATTERN_STR))
+    .unwrap_or_else(|| {
+      // SAFETY: The pattern "(.+)" is syntactically valid and will always compile.
+      // This branch is unreachable in practice, but required by the type system.
+      #[allow(clippy::expect_used)]
+      Regex::new(ULTIMATE_FALLBACK_PATTERN_STR)
+        .expect("ULTIMATE_FALLBACK_PATTERN_STR must be valid regex syntax")
+    })
 }
 
 /// Lazy-initialized regex for capitalized word detection
 /// Uses functional pattern with safe initialization
-static CAPITALIZED_WORD_PATTERN: Lazy<Regex> = Lazy::new(|| {
-    create_regex_safe(CAPITALIZED_WORD_PATTERN_STR, ULTIMATE_FALLBACK_PATTERN_STR)
-});
+static CAPITALIZED_WORD_PATTERN: Lazy<Regex> =
+  Lazy::new(|| create_regex_safe(CAPITALIZED_WORD_PATTERN_STR, ULTIMATE_FALLBACK_PATTERN_STR));
 
 /// Lazy-initialized fallback regex that matches any non-empty content
-static FALLBACK_PATTERN: Lazy<Regex> = Lazy::new(|| {
-    create_regex_safe(ULTIMATE_FALLBACK_PATTERN_STR, r".+")
-});
+static FALLBACK_PATTERN: Lazy<Regex> =
+  Lazy::new(|| create_regex_safe(ULTIMATE_FALLBACK_PATTERN_STR, r".+"));
 
 /// Domain errors for coverage analysis
 #[derive(Debug, Error, PartialEq, Clone)]
@@ -487,35 +497,35 @@ fn generate_coverage_gaps(
 
 /// Extract missing components from use case
 fn extract_missing_components(
-    use_case: &UseCase,
-    covered_components: &[CoveredComponent],
+  use_case: &UseCase,
+  covered_components: &[CoveredComponent],
 ) -> Vec<String> {
-    let covered_names: HashSet<_> = covered_components
-        .iter()
-        .map(|cc| cc.name.as_str())
-        .collect();
+  let covered_names: HashSet<_> = covered_components
+    .iter()
+    .map(|cc| cc.name.as_str())
+    .collect();
 
-    // Try to extract component names from use case
-    let text = format!("{} {}", use_case.name, use_case.description);
+  // Try to extract component names from use case
+  let text = format!("{} {}", use_case.name, use_case.description);
 
-    // Use functional iterator pipeline to extract components
-    let components: Vec<String> = CAPITALIZED_WORD_PATTERN
-        .captures_iter(&text)
-        .filter_map(|cap| cap.get(1))
-        .map(|m| m.as_str())
-        .filter(|name| !is_common_word(name) && !covered_names.contains(*name))
-        .map(|s| s.to_string())
-        .collect();
+  // Use functional iterator pipeline to extract components
+  let components: Vec<String> = CAPITALIZED_WORD_PATTERN
+    .captures_iter(&text)
+    .filter_map(|cap| cap.get(1))
+    .map(|m| m.as_str())
+    .filter(|name| !is_common_word(name) && !covered_names.contains(*name))
+    .map(|s| s.to_string())
+    .collect();
 
-    // If no components found, suggest based on use case
-    if components.is_empty() {
-        vec![
-            format!("{}Handler", use_case.name),
-            format!("{}Service", use_case.name),
-        ]
-    } else {
-        components
-    }
+  // If no components found, suggest based on use case
+  if components.is_empty() {
+    vec![
+      format!("{}Handler", use_case.name),
+      format!("{}Service", use_case.name),
+    ]
+  } else {
+    components
+  }
 }
 
 /// Generate suggestion for covering a use case
@@ -533,6 +543,9 @@ fn generate_suggestion(use_case: &UseCase, missing_components: &[String]) -> Str
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+
   use super::*;
 
   fn create_use_case(id: &str, name: &str, description: &str) -> UseCase {

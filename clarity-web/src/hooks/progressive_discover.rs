@@ -2,7 +2,6 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
@@ -195,8 +194,8 @@ pub fn load_from_local_storage() -> Option<PersistableState> {
     use web_sys::window;
 
     let window = window()?;
-    let storage = window.local_storage().ok()??.ok()?;
-    let json = storage.get_item(SESSION_STORAGE_KEY).ok()??;
+    let storage = window.local_storage().ok().flatten()?;
+    let json = storage.get_item(SESSION_STORAGE_KEY).ok().flatten()?;
 
     serde_json::from_str(&json)
       .map_err(|e| {
@@ -240,9 +239,8 @@ pub fn has_recoverable_session() -> bool {
     use web_sys::window;
 
     window()
-      .and_then(|w| w.local_storage().ok()??.ok())
-      .and_then(|s| s.get_item(SESSION_ID_KEY).ok())
-      .flatten()
+      .and_then(|w| w.local_storage().ok().flatten())
+      .and_then(|s: web_sys::Storage| s.get_item(SESSION_ID_KEY).ok().flatten())
       .is_some()
   }
 
@@ -261,9 +259,8 @@ pub fn get_recoverable_session_id() -> Option<String> {
     use web_sys::window;
 
     window()
-      .and_then(|w| w.local_storage().ok()??.ok())
-      .and_then(|s| s.get_item(SESSION_ID_KEY).ok())
-      .flatten()
+      .and_then(|w| w.local_storage().ok().flatten())
+      .and_then(|s: web_sys::Storage| s.get_item(SESSION_ID_KEY).ok().flatten())
   }
 
   #[cfg(not(target_arch = "wasm32"))]
@@ -1403,7 +1400,7 @@ mod tests {
     };
 
     let new_transcript = InterrogationTranscript::from_prompt("New prompt".to_string());
-    let updated = original.with_transcript(new_transcript.clone());
+    let updated = original.with_transcript(new_transcript);
 
     assert_eq!(updated.phase, ProgressiveDiscoverPhase::Extracting);
     assert_eq!(updated.sub_phase, ConfirmSubPhase::ConfirmSolution);

@@ -134,14 +134,8 @@ mod tests {
   fn test_app_loads_in_discover_phase() {
     let phases = PHASES;
     assert!(!phases.is_empty());
-
-    let discover_phase = phases.first();
-    assert!(discover_phase.is_some());
-
-    if let Some(phase) = discover_phase {
-      assert_eq!(phase.key, "discover");
-      assert_eq!(phase.label, "Discover");
-    }
+    assert_eq!(phases.first().map(|phase| phase.key), Some("discover"));
+    assert_eq!(phases.first().map(|phase| phase.label), Some("Discover"));
   }
 
   // TODO: Update this test for Progressive Discover Phase
@@ -216,13 +210,10 @@ mod tests {
     };
 
     let result = provider.extract_fields("", &context).await;
-    assert!(result.is_err());
-
-    if let Err(ExtractionError::InvalidInput(msg)) = result {
-      assert!(msg.contains("empty"));
-    } else {
-      panic!("Expected InvalidInput error");
-    }
+    assert!(matches!(
+      result,
+      Err(ExtractionError::InvalidInput(msg)) if msg.contains("empty")
+    ));
 
     let result = provider.extract_fields("   \n\t  ", &context).await;
     assert!(result.is_err());
@@ -331,9 +322,7 @@ mod tests {
 
     let result = calculate_quality(&answers, &ears, &inversion);
     assert!(result.is_ok());
-
     if let Ok(score) = result {
-      assert!(score.overall >= 0);
       assert!(score.overall <= 100);
       assert!(!score.dimensions.is_empty());
     }
@@ -435,10 +424,7 @@ mod tests {
 
     assert!(discover_idx.is_some());
     assert!(define_idx.is_some());
-
-    if let (Some(d_idx), Some(def_idx)) = (discover_idx, define_idx) {
-      assert!(def_idx > d_idx);
-    }
+    assert!(matches!((discover_idx, define_idx), (Some(d_idx), Some(def_idx)) if def_idx > d_idx));
   }
 
   #[test]

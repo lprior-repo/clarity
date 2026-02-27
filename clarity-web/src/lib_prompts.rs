@@ -1,37 +1,39 @@
 use serde::{Deserialize, Serialize};
 
 /// A single prompt step in the planning process
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PromptStep {
-    pub id: String,
-    #[serde(rename = "phase")]
-    pub phase_val: String,
-    pub title: String,
-    pub question: String,
-    pub hint: String,
-    pub required: bool,
-    #[serde(rename = "followUp", skip_serializing_if = "Option::is_none")]
-    pub follow_up: Option<String>,
+  pub id: String,
+  #[serde(rename = "phase")]
+  pub phase_val: String,
+  pub title: String,
+  pub question: String,
+  pub hint: String,
+  pub required: bool,
+  #[serde(rename = "followUp", skip_serializing_if = "Option::is_none")]
+  pub follow_up: Option<String>,
 }
 
 impl PromptStep {
-    /// Get the phase as a static string
-    pub fn phase(&self) -> &'static str {
-        match self.phase_val.as_str() {
-            "discover" => "discover",
-            "define" => "define",
-            "develop" => "develop",
-            "deliver" => "deliver",
-            _ => "discover",
-        }
+  /// Get the phase as a static string
+  #[must_use]
+  #[allow(clippy::match_same_arms)]
+  pub fn phase(&self) -> &'static str {
+    match self.phase_val.as_str() {
+      "discover" => "discover",
+      "define" => "define",
+      "develop" => "develop",
+      "deliver" => "deliver",
+      _ => "discover",
     }
+  }
 }
 
 /// Lazy-initialized prompt steps
 pub fn prompt_steps() -> &'static [PromptStep] {
-    use std::sync::OnceLock;
-    static STEPS: OnceLock<Vec<PromptStep>> = OnceLock::new();
-    STEPS.get_or_init(|| {
+  use std::sync::OnceLock;
+  static STEPS: OnceLock<Vec<PromptStep>> = OnceLock::new();
+  STEPS.get_or_init(|| {
         vec![
             // ── Discover ──────────────────────────
             PromptStep {
@@ -126,14 +128,16 @@ pub fn prompt_steps() -> &'static [PromptStep] {
 }
 
 /// Get all steps for a specific phase
+#[must_use]
 pub fn get_steps_for_phase(phase: &str) -> Vec<&'static PromptStep> {
-    prompt_steps()
-        .iter()
-        .filter(|s| s.phase_val == phase)
-        .collect()
+  prompt_steps()
+    .iter()
+    .filter(|s| s.phase_val == phase)
+    .collect()
 }
 
 /// Get a step by its ID
+#[must_use]
 pub fn get_step_by_id(id: &str) -> Option<&'static PromptStep> {
-    prompt_steps().iter().find(|s| s.id == id)
+  prompt_steps().iter().find(|s| s.id == id)
 }

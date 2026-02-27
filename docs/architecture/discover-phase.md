@@ -503,21 +503,14 @@ Location: `~/.config/clarity/ai.toml`
 
 ```toml
 [provider]
-type = "opencode"  # or "claude", "mock"
-endpoint = "http://localhost:3000"
-model = "gpt-4"
-api_key = "optional-key"
-timeout_seconds = 30
+provider = "opencode"
+endpoint = "https://api.opencode.ai/v1"
+session_id = ""
+model = "zai-coding-plan/glm-5"
+routing_provider = "zai-coding-plan"
 
 [quality]
-minimum_score = 70      # Gate threshold
-enable_auto_suggest = true
-cache_extractions = true
-
-[ui]
-default_mode = "guided"  # or "express"
-char_limit = 2000
-auto_extract_delay_ms = 3000
+min_score = 70
 ```
 
 ## Testing Strategy

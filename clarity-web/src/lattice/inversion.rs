@@ -3,7 +3,7 @@
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![allow(clippy::suspicious_else_formatting)]
-#![allow(clippy::unnested_or_patterns)]
+#![allow(clippy::missing_const_for_fn)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
@@ -37,7 +37,7 @@ pub enum Severity {
 impl Severity {
   /// Convert to numeric score (0-100, inverted for quality scoring)
   #[must_use]
-  pub const fn score(&self) -> u8 {
+  pub const fn score(self) -> u8 {
     match self {
       Self::Critical => 100,
       Self::Moderate => 50,
@@ -47,11 +47,11 @@ impl Severity {
 
   /// Convert from numeric score
   #[must_use]
-  pub const fn from_score(score: u8) -> Option<Self> {
+  pub const fn from_score(score: u8) -> Self {
     match score {
-      100 => Some(Self::Critical),
-      80..=99 => Some(Self::Moderate),
-      _ => Some(Self::Low),
+      100 => Self::Critical,
+      80..=99 => Self::Moderate,
+      _ => Self::Low,
     }
   }
 }
@@ -72,7 +72,7 @@ pub struct InversionChallenge {
 impl InversionChallenge {
   /// Create a new inversion challenge
   #[must_use]
-  pub fn new(
+  pub const fn new(
     assumption: String,
     challenge: String,
     pattern: ChallengePattern,
@@ -109,7 +109,7 @@ pub enum ChallengePattern {
 impl ChallengePattern {
   /// Get all pattern variants
   #[must_use]
-  pub fn all() -> [Self; 4] {
+  pub const fn all() -> [Self; 4] {
     [
       Self::Negation,
       Self::Counterexample,
@@ -173,14 +173,15 @@ impl InversionOutput {
     //   - total_impact = 200+ -> quality = 0
     let total_impact = challenges
       .iter()
-      .map(|c| c.quality_impact() as u32)
+      .map(|c| u32::from(c.quality_impact()))
       .sum::<u32>();
 
-    let quality_score = if total_impact <= 100 {
-      (100 - total_impact) as u8
+    let quality_score_u32 = if total_impact <= 100 {
+      100 - total_impact
     } else {
-      (200u32.saturating_sub(total_impact)) as u8
+      200u32.saturating_sub(total_impact)
     };
+    let quality_score = u8::try_from(quality_score_u32).unwrap_or(u8::MAX);
 
     Self {
       challenges,
@@ -333,17 +334,12 @@ pub fn apply_counterexample(assumption: &str) -> Option<InversionChallenge> {
   let exception = exceptions
     .iter()
     .find(|exc| {
-      !matches!(
-        (
-          lower.contains("performance"),
-          lower.contains("scale"),
-          lower.contains("load"),
-          exc.contains(&"scale")
-        ),
-        (true, true, true, _) | (true, _, true, _) | (_, true, _, true) | (_, _, true, _)
-      )
+      let has_scale = lower.contains("scale");
+      let has_load = lower.contains("load");
+      let exception_is_scale = exc.contains("scale");
+      !(has_load || (has_scale && exception_is_scale))
     })
-    .or(exceptions.first());
+    .or_else(|| exceptions.first());
 
   let exception = exception?;
 
@@ -384,16 +380,12 @@ pub fn apply_edge_case(assumption: &str) -> Option<InversionChallenge> {
   let edge_case = edge_cases
     .iter()
     .find(|ec| {
-      matches!(
-        (
-          lower.contains("data"),
-          lower.contains("empty"),
-          ec.contains(&"empty")
-        ),
-        (true, true, true) | (_, true, true) | (true, _, true)
-      )
+      let has_data = lower.contains("data");
+      let has_empty = lower.contains("empty");
+      let edge_is_empty = ec.contains("empty");
+      edge_is_empty && (has_empty || has_data)
     })
-    .or(edge_cases.first());
+    .or_else(|| edge_cases.first());
 
   let edge_case = edge_case?;
 
@@ -415,7 +407,7 @@ pub fn apply_edge_case(assumption: &str) -> Option<InversionChallenge> {
 
 /// Apply reversal pattern to generate challenge
 #[must_use]
-pub fn apply_reversal(assumption: &str) -> Option<InversionChallenge> {
+pub fn apply_reversal(assumption: &str) -> InversionChallenge {
   let trimmed = assumption.trim();
   let lower = trimmed.to_lowercase();
 
@@ -440,22 +432,22 @@ pub fn apply_reversal(assumption: &str) -> Option<InversionChallenge> {
         Severity::Moderate
       };
 
-      return Some(InversionChallenge::new(
+      return InversionChallenge::new(
         trimmed.to_string(),
         format!("What if it actually {challenge}?"),
         ChallengePattern::Reversal,
         severity,
-      ));
+      );
     }
   }
 
   // Generic reversal if no specific pattern matched
-  Some(InversionChallenge::new(
+  InversionChallenge::new(
     trimmed.to_string(),
     format!("What if the opposite is true: {trimmed}?"),
     ChallengePattern::Reversal,
     Severity::Low,
-  ))
+  )
 }
 
 /// Determine severity based on context and pattern
@@ -490,7 +482,7 @@ pub fn generate_challenges(assumption: &str) -> Vec<InversionChallenge> {
       ChallengePattern::Negation => apply_negation(assumption),
       ChallengePattern::Counterexample => apply_counterexample(assumption),
       ChallengePattern::EdgeCase => apply_edge_case(assumption),
-      ChallengePattern::Reversal => apply_reversal(assumption),
+      ChallengePattern::Reversal => Some(apply_reversal(assumption)),
     })
     .collect()
 }
@@ -540,6 +532,10 @@ pub fn invert(problem: &str, solution: &str) -> Result<InversionOutput, Inversio
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+  #![allow(clippy::needless_collect)]
+
   use super::*;
 
   #[test]
@@ -612,8 +608,6 @@ mod tests {
 
     let challenge = apply_reversal(assumption);
 
-    assert!(challenge.is_some());
-    let challenge = challenge.unwrap();
     assert_eq!(challenge.pattern, ChallengePattern::Reversal);
     assert!(challenge.challenge.contains("What if it actually"));
   }
@@ -627,9 +621,9 @@ mod tests {
 
   #[test]
   fn test_severity_from_score() {
-    assert_eq!(Severity::from_score(100), Some(Severity::Critical));
-    assert_eq!(Severity::from_score(80), Some(Severity::Moderate));
-    assert_eq!(Severity::from_score(10), Some(Severity::Low));
+    assert_eq!(Severity::from_score(100), Severity::Critical);
+    assert_eq!(Severity::from_score(80), Severity::Moderate);
+    assert_eq!(Severity::from_score(10), Severity::Low);
   }
 
   #[test]
@@ -660,8 +654,6 @@ mod tests {
 
     let challenge = apply_reversal(assumption);
 
-    assert!(challenge.is_some());
-    let challenge = challenge.unwrap();
     assert_eq!(challenge.severity, Severity::Low);
   }
 

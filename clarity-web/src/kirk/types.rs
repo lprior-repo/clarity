@@ -4,6 +4,7 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
+#![allow(clippy::missing_const_for_fn)]
 #![forbid(unsafe_code)]
 
 //! Core KIRK contract type definitions.
@@ -16,7 +17,7 @@ use std::collections::BTreeSet;
 use thiserror::Error;
 
 /// Domain errors for KIRK contract operations.
-#[derive(Debug, Error, Clone, PartialEq)]
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum KirkContractError {
   /// Type name already exists in the registry
   #[error("duplicate type: {0}")]
@@ -76,7 +77,7 @@ impl ContractVersion {
   /// Check if this version is compatible with another.
   /// Compatible if major versions match and this >= other.
   #[must_use]
-  pub fn is_compatible_with(&self, other: &Self) -> bool {
+  pub const fn is_compatible_with(&self, other: &Self) -> bool {
     self.major == other.major
       && (self.minor > other.minor || (self.minor == other.minor && self.patch >= other.patch))
   }
@@ -473,6 +474,10 @@ impl KirkContract {
   }
 
   /// Validate this contract for completeness and consistency.
+  ///
+  /// # Errors
+  /// Returns [`KirkContractError`] if required fields are missing,
+  /// the schema is invalid, or identifiers are duplicated.
   pub fn validate(&self) -> Result<(), KirkContractError> {
     // Check required fields
     if self.id.is_empty() {
@@ -622,7 +627,11 @@ mod tests {
 
     let json = serde_json::to_string(&req);
     assert!(json.is_ok());
-    let json_str = json.as_ref().unwrap();
+    let json_ref = json.as_ref();
+    assert!(json_ref.is_ok());
+    let Some(json_str) = json_ref.ok() else {
+      return;
+    };
     let deserialized: Result<EarsRequirement, _> = serde_json::from_str(json_str);
     assert!(deserialized.is_ok());
   }
@@ -949,7 +958,11 @@ mod tests {
     let json = serde_json::to_string(&contract);
     assert!(json.is_ok());
 
-    let json_str = json.as_ref().unwrap();
+    let json_ref = json.as_ref();
+    assert!(json_ref.is_ok());
+    let Some(json_str) = json_ref.ok() else {
+      return;
+    };
     let deserialized: Result<KirkContract, _> = serde_json::from_str(json_str);
     assert!(deserialized.is_ok());
     assert_eq!(

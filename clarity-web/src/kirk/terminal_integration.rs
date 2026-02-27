@@ -5,12 +5,15 @@
 #![allow(clippy::suspicious_else_formatting)]
 #![allow(clippy::unnested_or_patterns)]
 #![warn(clippy::nursery)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::option_if_let_else)]
 #![forbid(unsafe_code)]
+#![allow(clippy::trivially_copy_pass_by_ref)]
 
-//! Integration module connecting v2 terminal to real OpenCode server (bd-3us0).
+//! Integration module connecting v2 terminal to real `OpenCode` server (bd-3us0).
 //!
 //! This module provides the connection layer between the Progressive Discover
-//! terminal interface and the OpenCode backend server for AI-powered extraction.
+//! terminal interface and the `OpenCode` backend server for AI-powered extraction.
 //!
 //! # Architecture
 //!
@@ -43,7 +46,7 @@ use crate::storage::transcript_store::InterrogationTranscript;
 // ============================================================================
 
 /// Errors that can occur during terminal-server communication.
-#[derive(Debug, Error, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Error, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TerminalError {
   /// Connection to server failed
   #[error("Connection failed: {message}")]
@@ -116,7 +119,9 @@ impl From<ExtractionError> for TerminalError {
         retry_after_seconds,
       },
       ExtractionError::AuthenticationError(msg) => Self::AuthenticationFailed(msg),
-      ExtractionError::InvalidInput(msg) => Self::InvalidRequest(msg),
+      ExtractionError::InvalidInput(msg) | ExtractionError::ContentPolicy(msg) => {
+        Self::InvalidRequest(msg)
+      }
       ExtractionError::ApiError {
         message,
         status_code,
@@ -128,14 +133,13 @@ impl From<ExtractionError> for TerminalError {
         message: msg,
         retryable: false,
       },
-      ExtractionError::ParseError(msg) => Self::ExtractionFailed(msg),
-      ExtractionError::ProviderError(msg) => Self::ExtractionFailed(msg),
+      ExtractionError::ParseError(msg)
+      | ExtractionError::ProviderError(msg)
+      | ExtractionError::Unknown(msg) => Self::ExtractionFailed(msg),
       ExtractionError::QuotaExceeded(msg) => Self::ServerError {
         message: msg,
         status_code: Some(402),
       },
-      ExtractionError::ContentPolicy(msg) => Self::InvalidRequest(msg),
-      ExtractionError::Unknown(msg) => Self::ExtractionFailed(msg),
     }
   }
 }
@@ -145,9 +149,10 @@ impl From<ExtractionError> for TerminalError {
 // ============================================================================
 
 /// State of the terminal connection.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum ConnectionState {
   /// Not connected to server
+  #[default]
   Disconnected,
   /// Attempting to connect
   Connecting,
@@ -162,39 +167,33 @@ pub enum ConnectionState {
 impl ConnectionState {
   /// Check if the connection is active (can make requests).
   #[must_use]
-  pub const fn is_active(&self) -> bool {
+  pub const fn is_active(self) -> bool {
     matches!(self, Self::Connected)
   }
 
   /// Check if currently connecting or reconnecting.
   #[must_use]
-  pub const fn is_pending(&self) -> bool {
+  pub const fn is_pending(self) -> bool {
     matches!(self, Self::Connecting | Self::Reconnecting)
   }
 
   /// Get the next state on successful connection.
   #[must_use]
-  pub const fn on_success(&self) -> Self {
-    Self::Connected
+  pub const fn on_success(self) -> Self {
+    if self.is_active() {
+      self
+    } else {
+      Self::Connected
+    }
   }
 
   /// Get the next state on connection failure.
   #[must_use]
-  pub const fn on_failure(&self, retryable: bool) -> Self {
+  pub const fn on_failure(self, retryable: bool) -> Self {
     match (self, retryable) {
-      (Self::Connecting | Self::Reconnecting, true) => Self::Reconnecting,
-      (Self::Connecting | Self::Reconnecting, false) => Self::Failed,
-      (Self::Connected, true) => Self::Reconnecting,
-      (Self::Connected, false) => Self::Failed,
-      (Self::Disconnected, _) => Self::Failed,
-      (Self::Failed, _) => Self::Failed,
+      (Self::Connecting | Self::Reconnecting | Self::Connected, true) => Self::Reconnecting,
+      _ => Self::Failed,
     }
-  }
-}
-
-impl Default for ConnectionState {
-  fn default() -> Self {
-    Self::Disconnected
   }
 }
 
@@ -269,7 +268,7 @@ impl TerminalConfig {
 // ============================================================================
 
 /// Status information about the terminal connection.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConnectionStatus {
   /// Current connection state
   pub state: ConnectionState,
@@ -419,9 +418,9 @@ pub trait TerminalClient: Send + Sync {
 // OpenCode Terminal Client (Shell Implementation)
 // ============================================================================
 
-/// Real implementation of TerminalClient using OpenCode provider.
+/// Real implementation of `TerminalClient` using `OpenCode` provider.
 pub struct OpenCodeTerminalClient {
-  /// The underlying OpenCode provider
+  /// The underlying `OpenCode` provider
   provider: Arc<OpenCodeProvider>,
   /// Connection status (shared for interior mutability)
   status: Arc<RwLock<ConnectionStatus>>,
@@ -430,7 +429,7 @@ pub struct OpenCodeTerminalClient {
 }
 
 impl OpenCodeTerminalClient {
-  /// Create a new OpenCode terminal client.
+  /// Create a new `OpenCode` terminal client.
   ///
   /// # Errors
   ///
@@ -552,19 +551,21 @@ impl OpenCodeTerminalClient {
     }
 
     // All retries exhausted
-    match last_error {
-      Some(e) => {
+    last_error.map_or_else(
+      || {
+        Err(TerminalError::ExtractionFailed(
+          "Unknown error after retries".to_string(),
+        ))
+      },
+      |e| {
         warn!(
             attempts = attempts,
             error = %e,
             "All extraction attempts failed"
         );
         Err(e)
-      }
-      None => Err(TerminalError::ExtractionFailed(
-        "Unknown error after retries".to_string(),
-      )),
-    }
+      },
+    )
   }
 
   /// Execute extraction with schema.
@@ -647,19 +648,21 @@ impl OpenCodeTerminalClient {
       }
     }
 
-    match last_error {
-      Some(e) => {
+    last_error.map_or_else(
+      || {
+        Err(TerminalError::ExtractionFailed(
+          "Unknown error after retries".to_string(),
+        ))
+      },
+      |e| {
         warn!(
             attempts = attempts,
             error = %e,
             "All schema extraction attempts failed"
         );
         Err(e)
-      }
-      None => Err(TerminalError::ExtractionFailed(
-        "Unknown error after retries".to_string(),
-      )),
-    }
+      },
+    )
   }
 }
 
@@ -750,12 +753,11 @@ impl TerminalClient for OpenCodeTerminalClient {
   ) -> Result<ExtractedFields, TerminalError> {
     let prompt = format!(
       "Analyze the VORP dimensions for this solution:\n\n\
-             Value: {}\n\
-             Obvious: {}\n\
-             Real: {}\n\
-             Possible: {}\n\n\
+             Value: {value}\n\
+             Obvious: {obvious}\n\
+             Real: {real}\n\
+             Possible: {possible}\n\n\
              Score each dimension from 0.0 to 1.0.",
-      value, obvious, real, possible
     );
 
     let schema = vec![
@@ -835,10 +837,10 @@ impl TerminalClient for OpenCodeTerminalClient {
   fn status(&self) -> ConnectionStatus {
     // Note: This is a synchronous method, so we can't await the lock.
     // We return a snapshot from a try_read or default.
-    match self.status.try_read() {
-      Ok(guard) => guard.clone(),
-      Err(_) => ConnectionStatus::default(),
-    }
+    self
+      .status
+      .try_read()
+      .map_or_else(|_| ConnectionStatus::default(), |guard| guard.clone())
   }
 }
 
@@ -945,6 +947,8 @@ fn extract_field_value(fields: &ExtractedFields, name: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+
   use super::*;
 
   #[test]
@@ -1211,6 +1215,8 @@ mod tests {
 
 #[cfg(test)]
 mod mock_client {
+  #![allow(clippy::unwrap_used)]
+
   use super::*;
 
   /// Mock terminal client for testing.

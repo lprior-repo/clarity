@@ -2,11 +2,8 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
-// These re-exports are part of the public API, used by consumers via explicit import
-#![allow(unused_imports)]
 
 //! Phase components for the Progressive Discover flow.
 //!

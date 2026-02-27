@@ -1,5 +1,9 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
+#![allow(clippy::must_use_candidate)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::use_self)]
+#![allow(clippy::derive_partial_eq_without_eq)]
 
 use dioxus::prelude::*;
 

@@ -2,7 +2,6 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
@@ -45,7 +44,7 @@ impl StrawManTrap {
 
   /// Short label for display in UI.
   #[must_use]
-  pub const fn label(&self) -> &'static str {
+  pub const fn label(self) -> &'static str {
     match self {
       Self::IrrationalActor => "Irrational Actor",
       Self::ManicPixieDreamUser => "Manic Pixie Dream User",
@@ -56,7 +55,7 @@ impl StrawManTrap {
 
   /// Detailed description of what this trap means.
   #[must_use]
-  pub const fn description(&self) -> &'static str {
+  pub const fn description(self) -> &'static str {
     match self {
       Self::IrrationalActor => {
         "User acts against their own motivations or self-interest. \
@@ -79,7 +78,7 @@ impl StrawManTrap {
 
   /// Checkbox label for the trap check UI.
   #[must_use]
-  pub const fn checkbox_label(&self) -> &'static str {
+  pub const fn checkbox_label(self) -> &'static str {
     match self {
       Self::IrrationalActor => "acting against own motivations?",
       Self::ManicPixieDreamUser => "magically loves everything?",

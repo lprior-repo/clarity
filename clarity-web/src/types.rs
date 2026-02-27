@@ -64,7 +64,7 @@ pub const TABS: &[TabDef] = &[
 ];
 
 /// User answer to a prompt step
-#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Answer {
   pub step_id: String,
   pub value: String,

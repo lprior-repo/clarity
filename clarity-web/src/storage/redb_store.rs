@@ -3,6 +3,12 @@
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![allow(clippy::suspicious_else_formatting)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::result_large_err)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::doc_markdown)]
+#![allow(clippy::unnecessary_wraps)]
+#![allow(clippy::while_let_on_iterator)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 #![cfg(not(target_arch = "wasm32"))]
@@ -23,18 +29,29 @@ pub struct RedbStore {
 }
 
 impl RedbStore {
+  /// Open (or create) a redb store at the provided path.
+  ///
+  /// # Errors
+  ///
+  /// Returns any `redb` error encountered while opening/creating the database.
   pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, redb::Error> {
     let db = redb::Database::create(path.as_ref())?;
     Ok(Self { db })
   }
 
+  /// Open an in-memory redb store for tests or ephemeral data.
+  ///
+  /// # Errors
+  ///
+  /// Returns any `redb` error encountered while creating the in-memory database.
   pub fn open_in_memory() -> Result<Self, redb::Error> {
     let db =
       redb::Database::builder().create_with_backend(redb::backends::InMemoryBackend::new())?;
     Ok(Self { db })
   }
 
-  fn ensure_tables(&self) -> StoreResult<()> {
+  #[allow(clippy::unused_self)]
+  const fn ensure_tables(&self) -> StoreResult<()> {
     Ok(())
   }
 
@@ -264,6 +281,8 @@ impl RedbStore {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::expect_used)]
+
   use super::*;
 
   #[test]

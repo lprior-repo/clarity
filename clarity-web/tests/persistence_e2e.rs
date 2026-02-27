@@ -10,9 +10,6 @@
 //! 4. Close and reopen database (simulate app restart)
 //! 5. Verify all data restored without corruption
 
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
@@ -59,7 +56,10 @@ fn create_test_answer_record(
 /// Helper to verify database file exists and is valid
 fn verify_database_file_exists(db_path: &Path) -> Result<(), String> {
   if !db_path.exists() {
-    return Err(format!("Database file does not exist: {db_path:?}"));
+    return Err(format!(
+      "Database file does not exist: {}",
+      db_path.display()
+    ));
   }
 
   let metadata =
@@ -100,6 +100,7 @@ fn count_table_records(db_path: &Path, table_name: &str) -> Result<usize, String
 
 /// Test complete Discover phase persistence and restoration
 #[test]
+#[allow(clippy::too_many_lines)]
 fn test_e2e_persistence_discover_phase_express_mode() {
   let temp_dir = tempfile::tempdir().expect("Failed to create temp directory");
   let db_path = temp_dir.path().join("test_clarity.redb");

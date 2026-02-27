@@ -1,6 +1,8 @@
 //! Checkbox component - shadcn-style checkbox
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
+#![allow(clippy::uninlined_format_args)]
+#![allow(clippy::derive_partial_eq_without_eq)]
 
 use dioxus::prelude::*;
 

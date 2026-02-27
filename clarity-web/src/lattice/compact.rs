@@ -2,7 +2,6 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
@@ -14,6 +13,7 @@
 
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use std::fmt::Write as _;
 use thiserror::Error;
 
 /// Domain errors for compact module
@@ -42,7 +42,7 @@ pub enum Phase {
 impl Phase {
   /// Get priority score (lower = higher priority)
   #[must_use]
-  pub const fn priority(&self) -> u8 {
+  pub const fn priority(self) -> u8 {
     match self {
       Self::Discover => 1,
       Self::Define => 2,
@@ -53,7 +53,7 @@ impl Phase {
 
   /// Parse from string
   #[must_use]
-  pub fn from_str(s: &str) -> Option<Self> {
+  pub fn parse(s: &str) -> Option<Self> {
     match s.to_lowercase().as_str() {
       "discover" => Some(Self::Discover),
       "define" => Some(Self::Define),
@@ -63,19 +63,16 @@ impl Phase {
     }
   }
 
-  /// Extract phase from step_id
+  /// Extract phase from `step_id`
   #[must_use]
   pub fn from_step_id(step_id: &str) -> Option<Self> {
     // Try to extract phase from step_id pattern like "discover-xxx" or "discover_xxx"
-    step_id
-      .split(|c: char| c == '-' || c == '_')
-      .next()
-      .and_then(Self::from_str)
+    step_id.split(['-', '_']).next().and_then(Self::parse)
   }
 }
 
 /// Compact summary of a single phase
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CompactSummary {
   /// Problem statement (from Discover)
   #[serde(default)]
@@ -97,7 +94,7 @@ pub struct CompactSummary {
 impl CompactSummary {
   /// Create a new empty summary
   #[must_use]
-  pub fn new() -> Self {
+  pub const fn new() -> Self {
     Self {
       problem: Vec::new(),
       solution: Vec::new(),
@@ -181,7 +178,7 @@ impl CompactSummary {
 
   /// Count total bullets across all sections
   #[must_use]
-  pub fn total_bullets(&self) -> usize {
+  pub const fn total_bullets(&self) -> usize {
     self.problem.len()
       + self.solution.len()
       + self.requirements.len()
@@ -197,7 +194,7 @@ impl Default for CompactSummary {
 }
 
 /// Output of the compact operation
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CompactOutput {
   /// The compacted summary
   pub summary: CompactSummary,
@@ -208,7 +205,7 @@ pub struct CompactOutput {
 impl CompactOutput {
   /// Create a new compact output
   #[must_use]
-  pub fn new(summary: CompactSummary, artifact_count: usize) -> Self {
+  pub const fn new(summary: CompactSummary, artifact_count: usize) -> Self {
     Self {
       summary,
       artifact_count,
@@ -223,7 +220,7 @@ impl CompactOutput {
     if !self.summary.problem.is_empty() {
       output.push_str("## Problem\n");
       for point in &self.summary.problem {
-        output.push_str(&format!("* {point}\n"));
+        let _ = writeln!(output, "* {point}");
       }
       output.push('\n');
     }
@@ -231,7 +228,7 @@ impl CompactOutput {
     if !self.summary.solution.is_empty() {
       output.push_str("## Solution\n");
       for point in &self.summary.solution {
-        output.push_str(&format!("* {point}\n"));
+        let _ = writeln!(output, "* {point}");
       }
       output.push('\n');
     }
@@ -239,7 +236,7 @@ impl CompactOutput {
     if !self.summary.requirements.is_empty() {
       output.push_str("## Requirements\n");
       for point in &self.summary.requirements {
-        output.push_str(&format!("* {point}\n"));
+        let _ = writeln!(output, "* {point}");
       }
       output.push('\n');
     }
@@ -247,7 +244,7 @@ impl CompactOutput {
     if !self.summary.constraints.is_empty() {
       output.push_str("## Constraints\n");
       for point in &self.summary.constraints {
-        output.push_str(&format!("* {point}\n"));
+        let _ = writeln!(output, "* {point}");
       }
       output.push('\n');
     }
@@ -255,22 +252,23 @@ impl CompactOutput {
     if !self.summary.tasks.is_empty() {
       output.push_str("## Tasks\n");
       for point in &self.summary.tasks {
-        output.push_str(&format!("* {point}\n"));
+        let _ = writeln!(output, "* {point}");
       }
       output.push('\n');
     }
 
-    output.push_str(&format!(
+    let _ = write!(
+      output,
       "---\n**Artifacts processed**: {}",
       self.artifact_count
-    ));
+    );
 
     output
   }
 }
 
 /// Input answer from a prompt step for compact operation
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CompactAnswer {
   /// Step identifier (e.g., "discover-problem", "define-requirements")
   pub step_id: String,
@@ -288,7 +286,7 @@ impl CompactAnswer {
     Phase::from_step_id(&self.step_id)
   }
 
-  /// Check if step_id contains a keyword
+  /// Check if `step_id` contains a keyword
   #[must_use]
   fn step_contains(&self, keyword: &str) -> bool {
     self
@@ -309,14 +307,13 @@ impl CompactAnswer {
 /// # Errors
 /// * `CompactError::NoAnswers` if no answers provided
 pub fn compact_artifacts(all_answers: Vec<CompactAnswer>) -> Result<CompactOutput, CompactError> {
-  match all_answers.is_empty() {
-    true => Err(CompactError::NoAnswers),
-    false => {
-      let artifact_count = all_answers.len();
-      let summary = build_summary(all_answers);
+  if all_answers.is_empty() {
+    Err(CompactError::NoAnswers)
+  } else {
+    let artifact_count = all_answers.len();
+    let summary = build_summary(all_answers);
 
-      Ok(CompactOutput::new(summary.limit_bullets(5), artifact_count))
-    }
+    Ok(CompactOutput::new(summary.limit_bullets(5), artifact_count))
   }
 }
 
@@ -363,9 +360,10 @@ fn build_summary(answers: Vec<CompactAnswer>) -> CompactSummary {
       }
       Phase::Develop => {
         // Tasks and implementation details
-        if answer.step_contains("task") || answer.step_contains("implement") {
-          summary = summary.with_task(value);
-        } else if answer.step_contains("feature") {
+        if answer.step_contains("task")
+          || answer.step_contains("implement")
+          || answer.step_contains("feature")
+        {
           summary = summary.with_task(value);
         } else if answer.step_contains("design") {
           summary = summary.with_solution(value);
@@ -373,9 +371,10 @@ fn build_summary(answers: Vec<CompactAnswer>) -> CompactSummary {
       }
       Phase::Deliver => {
         // Deployment and maintenance tasks
-        if answer.step_contains("deploy") || answer.step_contains("release") {
-          summary = summary.with_task(value);
-        } else if answer.step_contains("maintain") {
+        if answer.step_contains("deploy")
+          || answer.step_contains("release")
+          || answer.step_contains("maintain")
+        {
           summary = summary.with_task(value);
         }
       }
@@ -392,9 +391,10 @@ pub fn clean_text(text: &str) -> String {
     .lines()
     .filter_map(|line| {
       let trimmed = line.trim();
-      match trimmed.is_empty() {
-        true => None,
-        false => Some(trimmed.to_string()),
+      if trimmed.is_empty() {
+        None
+      } else {
+        Some(trimmed.to_string())
       }
     })
     .take(1) // Only first line for bullet points
@@ -421,12 +421,12 @@ mod tests {
 
   #[test]
   fn test_phase_from_str() {
-    assert_eq!(Phase::from_str("discover"), Some(Phase::Discover));
-    assert_eq!(Phase::from_str("DISCOVER"), Some(Phase::Discover));
-    assert_eq!(Phase::from_str("Define"), Some(Phase::Define));
-    assert_eq!(Phase::from_str("develop"), Some(Phase::Develop));
-    assert_eq!(Phase::from_str("Deliver"), Some(Phase::Deliver));
-    assert_eq!(Phase::from_str("invalid"), None);
+    assert_eq!(Phase::parse("discover"), Some(Phase::Discover));
+    assert_eq!(Phase::parse("DISCOVER"), Some(Phase::Discover));
+    assert_eq!(Phase::parse("Define"), Some(Phase::Define));
+    assert_eq!(Phase::parse("develop"), Some(Phase::Develop));
+    assert_eq!(Phase::parse("Deliver"), Some(Phase::Deliver));
+    assert_eq!(Phase::parse("invalid"), None);
   }
 
   #[test]
@@ -486,7 +486,7 @@ mod tests {
   #[test]
   fn test_compact_summary_ignores_empty_points() {
     let summary = CompactSummary::new()
-      .with_problem("".to_string())
+      .with_problem(String::new())
       .with_problem("   ".to_string())
       .with_problem("Valid problem".to_string());
 
@@ -543,7 +543,11 @@ mod tests {
       },
     ];
 
-    let result = compact_artifacts(answers).ok().unwrap();
+    let result = compact_artifacts(answers);
+    assert!(result.is_ok());
+    let Some(result) = result.ok() else {
+      return;
+    };
     assert_eq!(result.summary.problem.len(), 1);
     assert_eq!(result.summary.problem[0], "The system is too slow");
     assert_eq!(result.summary.solution.len(), 1);
@@ -566,7 +570,11 @@ mod tests {
       },
     ];
 
-    let result = compact_artifacts(answers).ok().unwrap();
+    let result = compact_artifacts(answers);
+    assert!(result.is_ok());
+    let Some(result) = result.ok() else {
+      return;
+    };
     assert_eq!(result.summary.requirements.len(), 1);
     assert_eq!(result.summary.requirements[0], "Must support 1000 users");
     assert_eq!(result.summary.constraints.len(), 1);
@@ -588,7 +596,11 @@ mod tests {
       },
     ];
 
-    let result = compact_artifacts(answers).ok().unwrap();
+    let result = compact_artifacts(answers);
+    assert!(result.is_ok());
+    let Some(result) = result.ok() else {
+      return;
+    };
     assert_eq!(result.summary.tasks.len(), 1);
     assert_eq!(result.summary.tasks[0], "Implement authentication");
     assert_eq!(result.summary.solution.len(), 1);
@@ -615,7 +627,11 @@ mod tests {
       },
     ];
 
-    let result = compact_artifacts(answers).ok().unwrap();
+    let result = compact_artifacts(answers);
+    assert!(result.is_ok());
+    let Some(result) = result.ok() else {
+      return;
+    };
     // Should process in priority order, but categorization is what matters
     assert_eq!(result.summary.problem.len(), 1);
     assert_eq!(result.summary.requirements.len(), 1);
@@ -632,7 +648,11 @@ mod tests {
       })
       .collect();
 
-    let result = compact_artifacts(answers).ok().unwrap();
+    let result = compact_artifacts(answers);
+    assert!(result.is_ok());
+    let Some(result) = result.ok() else {
+      return;
+    };
     // Should limit to 5 bullets max
     assert_eq!(result.summary.problem.len(), 5);
     assert_eq!(result.artifact_count, 10);
@@ -643,7 +663,7 @@ mod tests {
     let answers = vec![
       CompactAnswer {
         step_id: "discover-problem".to_string(),
-        value: "".to_string(),
+        value: String::new(),
         timestamp: "2024-01-01T00:00:00Z".to_string(),
       },
       CompactAnswer {
@@ -658,7 +678,11 @@ mod tests {
       },
     ];
 
-    let result = compact_artifacts(answers).ok().unwrap();
+    let result = compact_artifacts(answers);
+    assert!(result.is_ok());
+    let Some(result) = result.ok() else {
+      return;
+    };
     assert_eq!(result.summary.problem.len(), 1);
     assert_eq!(result.summary.problem[0], "Valid problem");
   }
@@ -678,7 +702,11 @@ mod tests {
       },
     ];
 
-    let result = compact_artifacts(answers).ok().unwrap();
+    let result = compact_artifacts(answers);
+    assert!(result.is_ok());
+    let Some(result) = result.ok() else {
+      return;
+    };
     // Invalid phase answers are filtered out
     assert_eq!(result.summary.problem.len(), 1);
     assert_eq!(result.artifact_count, 2); // But still counted in artifact_count
@@ -804,7 +832,11 @@ mod tests {
       },
     ];
 
-    let result = compact_artifacts(answers).ok().unwrap();
+    let result = compact_artifacts(answers);
+    assert!(result.is_ok());
+    let Some(result) = result.ok() else {
+      return;
+    };
 
     assert_eq!(result.summary.problem.len(), 2);
     assert_eq!(result.summary.requirements.len(), 1);
@@ -828,7 +860,11 @@ mod tests {
       },
     ];
 
-    let result = compact_artifacts(answers).ok().unwrap();
+    let result = compact_artifacts(answers);
+    assert!(result.is_ok());
+    let Some(result) = result.ok() else {
+      return;
+    };
 
     assert_eq!(result.summary.tasks.len(), 2);
     assert!(result.summary.tasks[0].contains("production"));
@@ -841,8 +877,16 @@ mod tests {
       .with_problem("Problem 1".to_string())
       .with_solution("Solution 1".to_string());
 
-    let json = serde_json::to_string(&summary).expect("Failed to serialize");
-    let deserialized: CompactSummary = serde_json::from_str(&json).expect("Failed to deserialize");
+    let json = serde_json::to_string(&summary);
+    assert!(json.is_ok());
+    let Some(json) = json.ok() else {
+      return;
+    };
+    let deserialized: Result<CompactSummary, _> = serde_json::from_str(&json);
+    assert!(deserialized.is_ok());
+    let Some(deserialized) = deserialized.ok() else {
+      return;
+    };
 
     assert_eq!(deserialized, summary);
   }
@@ -852,8 +896,16 @@ mod tests {
     let summary = CompactSummary::new().with_problem("Problem 1".to_string());
     let output = CompactOutput::new(summary, 1);
 
-    let json = serde_json::to_string(&output).expect("Failed to serialize");
-    let deserialized: CompactOutput = serde_json::from_str(&json).expect("Failed to deserialize");
+    let json = serde_json::to_string(&output);
+    assert!(json.is_ok());
+    let Some(json) = json.ok() else {
+      return;
+    };
+    let deserialized: Result<CompactOutput, _> = serde_json::from_str(&json);
+    assert!(deserialized.is_ok());
+    let Some(deserialized) = deserialized.ok() else {
+      return;
+    };
 
     assert_eq!(deserialized, output);
   }
@@ -868,8 +920,16 @@ mod tests {
     ];
 
     for phase in phases {
-      let json = serde_json::to_string(&phase).expect("Failed to serialize");
-      let deserialized: Phase = serde_json::from_str(&json).expect("Failed to deserialize");
+      let json = serde_json::to_string(&phase);
+      assert!(json.is_ok());
+      let Some(json) = json.ok() else {
+        return;
+      };
+      let deserialized: Result<Phase, _> = serde_json::from_str(&json);
+      assert!(deserialized.is_ok());
+      let Some(deserialized) = deserialized.ok() else {
+        return;
+      };
 
       assert_eq!(deserialized, phase);
     }

@@ -1,5 +1,14 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
+#![allow(clippy::doc_markdown)]
+#![allow(clippy::derive_partial_eq_without_eq)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::must_use_candidate)]
+#![allow(clippy::use_self)]
+#![allow(clippy::if_not_else)]
+#![allow(clippy::uninlined_format_args)]
+#![allow(clippy::redundant_clone)]
+#![allow(clippy::clone_on_copy)]
 // Public API exports - used by library consumers
 #![allow(unused_imports)]
 

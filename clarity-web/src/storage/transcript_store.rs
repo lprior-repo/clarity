@@ -2,11 +2,12 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::suspicious_else_formatting)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::derive_partial_eq_without_eq)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
-//! TranscriptStore trait for persistence abstraction.
+//! `TranscriptStore` trait for persistence abstraction.
 //!
 //! Provides a trait for storing, retrieving, and managing conversation transcripts
 //! with support for incremental updates and atomic operations.
@@ -24,7 +25,7 @@ pub type TranscriptResult<T> = Result<T, StorageError>;
 /// Trait for transcript persistence operations.
 ///
 /// Abstracts storage backend to allow different implementations
-/// (redb, SQLite, cloud storage, etc.) while maintaining a consistent interface.
+/// (redb, `SQLite`, cloud storage, etc.) while maintaining a consistent interface.
 ///
 /// All implementations must provide ACID guarantees:
 /// - **Atomicity**: Operations complete fully or not at all
@@ -143,7 +144,7 @@ pub struct AntithesisResponse {
 impl AntithesisResponse {
   /// Create a new antithesis response.
   #[must_use]
-  pub fn new(point1: String, point2: String, point3: String, quality_score: f64) -> Self {
+  pub const fn new(point1: String, point2: String, point3: String, quality_score: f64) -> Self {
     Self {
       points: [point1, point2, point3],
       quality_score: quality_score.clamp(0.0, 1.0),
@@ -152,7 +153,7 @@ impl AntithesisResponse {
 
   /// Create an empty/default antithesis response.
   #[must_use]
-  pub fn empty() -> Self {
+  pub const fn empty() -> Self {
     Self {
       points: [String::new(), String::new(), String::new()],
       quality_score: 0.0,
@@ -181,7 +182,7 @@ pub enum StrawManTrap {
 }
 
 /// Validation result for straw man argument detection.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StrawManValidation {
   /// Detected straw man traps
   pub traps_detected: Vec<StrawManTrap>,
@@ -192,7 +193,7 @@ pub struct StrawManValidation {
 impl StrawManValidation {
   /// Create a new straw man validation result.
   #[must_use]
-  pub fn new(traps_detected: Vec<StrawManTrap>) -> Self {
+  pub const fn new(traps_detected: Vec<StrawManTrap>) -> Self {
     let passed = traps_detected.is_empty();
     Self {
       traps_detected,
@@ -202,7 +203,7 @@ impl StrawManValidation {
 
   /// Create a passing validation (no traps detected).
   #[must_use]
-  pub fn passed() -> Self {
+  pub const fn passed() -> Self {
     Self {
       traps_detected: Vec::new(),
       passed: true,
@@ -286,7 +287,7 @@ impl InterrogationTranscript {
 
   /// Check if the transcript is completed.
   #[must_use]
-  pub fn is_completed(&self) -> bool {
+  pub const fn is_completed(&self) -> bool {
     self.completed_at.is_some()
   }
 }
@@ -301,12 +302,16 @@ impl Default for InterrogationTranscript {
 mod tests {
   use super::*;
 
+  fn assert_approx_eq(actual: f64, expected: f64) {
+    assert!((actual - expected).abs() < 1e-9);
+  }
+
   #[test]
   fn test_extracted_field_creation() {
     let field = ExtractedField::new("Test content".to_string(), 0.8, "ai".to_string());
 
     assert_eq!(field.content, "Test content");
-    assert_eq!(field.confidence, 0.8);
+    assert_approx_eq(field.confidence, 0.8);
     assert_eq!(field.source, "ai");
   }
 
@@ -317,21 +322,21 @@ mod tests {
       1.5, // Over max
       "ai".to_string(),
     );
-    assert_eq!(field.confidence, 1.0);
+    assert_approx_eq(field.confidence, 1.0);
 
     let field = ExtractedField::new(
       "content".to_string(),
       -0.5, // Under min
       "ai".to_string(),
     );
-    assert_eq!(field.confidence, 0.0);
+    assert_approx_eq(field.confidence, 0.0);
   }
 
   #[test]
   fn test_extracted_field_default() {
     let field = ExtractedField::default();
     assert!(field.content.is_empty());
-    assert_eq!(field.confidence, 0.0);
+    assert_approx_eq(field.confidence, 0.0);
   }
 
   #[test]
@@ -346,13 +351,13 @@ mod tests {
     assert_eq!(response.points[0], "Point 1");
     assert_eq!(response.points[1], "Point 2");
     assert_eq!(response.points[2], "Point 3");
-    assert_eq!(response.quality_score, 0.75);
+    assert_approx_eq(response.quality_score, 0.75);
   }
 
   #[test]
   fn test_antithesis_response_quality_clamped() {
     let response = AntithesisResponse::new("A".to_string(), "B".to_string(), "C".to_string(), 2.0);
-    assert_eq!(response.quality_score, 1.0);
+    assert_approx_eq(response.quality_score, 1.0);
   }
 
   #[test]
@@ -415,30 +420,26 @@ mod tests {
   }
 
   #[test]
-  fn test_interrogation_transcript_serialization() {
+  fn test_interrogation_transcript_serialization() -> Result<(), serde_json::Error> {
     let transcript = InterrogationTranscript::from_prompt("Build a fitness tracker".to_string());
 
-    let json = serde_json::to_string(&transcript);
-    assert!(json.is_ok());
+    let json = serde_json::to_string(&transcript)?;
+    let deserialized: InterrogationTranscript = serde_json::from_str(&json)?;
 
-    let deserialized: Result<InterrogationTranscript, _> = serde_json::from_str(&json.unwrap());
-    assert!(deserialized.is_ok());
-    assert_eq!(
-      deserialized.unwrap().original_prompt,
-      "Build a fitness tracker"
-    );
+    assert_eq!(deserialized.original_prompt, "Build a fitness tracker");
+    Ok(())
   }
 
   #[test]
-  fn test_straw_man_trap_serialization() {
+  fn test_straw_man_trap_serialization() -> Result<(), serde_json::Error> {
     let trap = StrawManTrap::ManicPixieDreamUser;
-    let json = serde_json::to_string(&trap);
-    assert!(json.is_ok());
-    assert_eq!(json.unwrap(), "\"manic_pixie_dream_user\"");
+    let json = serde_json::to_string(&trap)?;
+    assert_eq!(json, "\"manic_pixie_dream_user\"");
+    Ok(())
   }
 
   #[test]
-  fn test_full_transcript_round_trip() {
+  fn test_full_transcript_round_trip() -> Result<(), serde_json::Error> {
     let mut transcript =
       InterrogationTranscript::from_prompt("I want to build a meditation app".to_string());
 
@@ -458,14 +459,15 @@ mod tests {
       "ai".to_string(),
     );
 
-    let json = serde_json::to_string(&transcript).unwrap();
-    let restored: InterrogationTranscript = serde_json::from_str(&json).unwrap();
+    let json = serde_json::to_string(&transcript)?;
+    let restored: InterrogationTranscript = serde_json::from_str(&json)?;
 
     assert_eq!(
       restored.problem.content,
       "Users struggle to maintain meditation habits"
     );
-    assert_eq!(restored.persona.confidence, 0.85);
+    assert_approx_eq(restored.persona.confidence, 0.85);
     assert_eq!(restored.solution.source, "ai");
+    Ok(())
   }
 }

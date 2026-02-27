@@ -173,8 +173,11 @@ impl AntithesisResponse {
 
   /// Create a new response with updated points.
   #[must_use]
-  pub fn with_points(self, points: Vec<String>) -> Self {
-    Self::new(points)
+  pub fn with_points(mut self, points: Vec<String>) -> Self {
+    self.validated = Self::is_validated(&points);
+    self.quality_score = Self::calculate_quality_score(&points);
+    self.points = points;
+    self
   }
 
   /// Create a new response with a manually set quality score.

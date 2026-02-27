@@ -34,6 +34,7 @@
 //! including the 16-section KIRK contract structure and validation types.
 
 pub mod progressive_discover;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod terminal_integration;
 pub mod types;
 
@@ -41,6 +42,7 @@ pub use progressive_discover::{
   AntithesisValidation, EarsExtraction, EarsPattern, ExtractedEarsRequirement,
   HolePunchingValidation, KirkContract16, KirkSection, VorpValidation,
 };
+#[cfg(not(target_arch = "wasm32"))]
 pub use terminal_integration::{
   ConnectionState, ConnectionStatus, OpenCodeTerminalClient, ProcessedTranscript, TerminalClient,
   TerminalConfig, TerminalError, TranscriptProcessor,

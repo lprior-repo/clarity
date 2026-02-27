@@ -4,6 +4,19 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
+#![allow(clippy::derive_partial_eq_without_eq)]
+#![allow(clippy::must_use_candidate)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::use_self)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::unnecessary_lazy_evaluations)]
+#![allow(clippy::manual_let_else)]
+#![allow(clippy::match_wild_err_arm)]
+#![allow(clippy::option_if_let_else)]
+#![allow(clippy::redundant_clone)]
+#![allow(clippy::single_char_pattern)]
+#![allow(clippy::needless_collect)]
 #![forbid(unsafe_code)]
 
 use itertools::Itertools;
@@ -59,7 +72,7 @@ impl QualityDimension {
   }
 
   /// Display label
-  pub fn label(&self) -> &'static str {
+  pub fn label(self) -> &'static str {
     match self {
       QualityDimension::Completeness => "Completeness",
       QualityDimension::Consistency => "Consistency",
@@ -70,7 +83,7 @@ impl QualityDimension {
   }
 
   /// Description of what this dimension measures
-  pub fn description(&self) -> &'static str {
+  pub fn description(self) -> &'static str {
     match self {
       QualityDimension::Completeness => "Percentage of required fields filled",
       QualityDimension::Consistency => "Absence of contradictory requirements",
@@ -98,7 +111,7 @@ impl DimensionScore {
   }
 
   /// Check if score passes threshold
-  pub fn passes(&self, threshold: u8) -> bool {
+  pub fn passes(self, threshold: u8) -> bool {
     self.score >= threshold
   }
 }
@@ -532,6 +545,9 @@ fn calculate_security(answers: &[Answer], issues: &mut Vec<QualityIssue>) -> Dim
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+
   use super::*;
 
   fn create_answer(step_id: &str, value: &str) -> Answer {
@@ -1126,7 +1142,10 @@ mod tests {
     // 1 contradiction in 2 pairs = (1 * 100) / 2 = 50% penalty, so score = 50
     // If `+` mutates to `*`, contradiction count becomes product (wrong)
     // If `/` mutates to `*`, ratio becomes product (wrong)
-    assert_eq!(score.score, 50, "1 contradiction in 2 pairs should give 50%");
+    assert_eq!(
+      score.score, 50,
+      "1 contradiction in 2 pairs should give 50%"
+    );
     assert_eq!(issues.len(), 1);
     assert!(issues[0].message.contains("1"));
   }
@@ -1150,7 +1169,10 @@ mod tests {
     // score = 100 - 66 = 34
     // If `+` mutates to `*`, contradictions become product (wrong!)
     // If `/` mutates to `*`, ratio becomes product (wrong!)
-    assert_eq!(score.score, 34, "2 contradictions in 3 pairs should give score 34");
+    assert_eq!(
+      score.score, 34,
+      "2 contradictions in 3 pairs should give score 34"
+    );
     assert_eq!(issues.len(), 1);
   }
 
@@ -1323,7 +1345,10 @@ mod tests {
       .iter()
       .filter(|i| i.message.contains("missing") && i.message.contains("authentication"))
       .collect();
-    assert!(missing_auth.is_empty(), "auth keyword should cover authentication");
+    assert!(
+      missing_auth.is_empty(),
+      "auth keyword should cover authentication"
+    );
   }
 
   #[test]
@@ -1350,7 +1375,10 @@ mod tests {
     let score = calculate_security(&answers, &mut issues);
 
     // "password" contains "password", should trigger authentication area
-    assert!(score.score > 0, "password keyword should give positive score");
+    assert!(
+      score.score > 0,
+      "password keyword should give positive score"
+    );
   }
 
   #[test]
@@ -1364,7 +1392,10 @@ mod tests {
 
     // "encrypt" contains "encrypt", should trigger encryption area
     // If `||` mutates to `&&`, all three conditions must be true (wrong!)
-    assert!(score.score > 0, "encrypt keyword should give positive score");
+    assert!(
+      score.score > 0,
+      "encrypt keyword should give positive score"
+    );
   }
 
   #[test]
@@ -1391,7 +1422,10 @@ mod tests {
 
     // "validate" contains "validat", should trigger validation area
     // If `||` mutates to `&&`, all three conditions must be true (wrong!)
-    assert!(score.score > 0, "validate keyword should give positive score");
+    assert!(
+      score.score > 0,
+      "validate keyword should give positive score"
+    );
   }
 
   #[test]
@@ -1404,7 +1438,10 @@ mod tests {
     let score = calculate_security(&answers, &mut issues);
 
     // "sanitize" contains "sanitiz", should trigger validation area
-    assert!(score.score > 0, "sanitize keyword should give positive score");
+    assert!(
+      score.score > 0,
+      "sanitize keyword should give positive score"
+    );
   }
 
   #[test]
@@ -1425,7 +1462,10 @@ mod tests {
     // Catches mutation: delete `!` at line 517
     // Test that missing area detection actually checks for absence
     // With only "authentication" covered, should warn about missing "encryption" and "validation"
-    let answers = vec![create_answer("req1", "Users must authenticate with password")];
+    let answers = vec![create_answer(
+      "req1",
+      "Users must authenticate with password",
+    )];
 
     let mut issues = vec![];
     calculate_security(&answers, &mut issues);
@@ -1458,7 +1498,10 @@ mod tests {
     // Only encryption covered (1 area) = 1 * 30 = 30 points
     // "tls" and "encrypt" both match = 2 mentions * 2 = 4 bonus
     // Total = 30 + 4 = 34
-    assert_eq!(score.score, 34, "Only encryption should give 34% (30 coverage + 4 bonus)");
+    assert_eq!(
+      score.score, 34,
+      "Only encryption should give 34% (30 coverage + 4 bonus)"
+    );
 
     // Should warn about missing areas
     assert!(!issues.is_empty());

@@ -2,7 +2,6 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 
 use dioxus::prelude::*;
@@ -48,7 +47,7 @@ impl BrutalTruth {
 
   /// Get the display label for this truth.
   #[must_use]
-  pub const fn label(&self) -> &'static str {
+  pub const fn label(self) -> &'static str {
     match self {
       Self::Scale => "Scale",
       Self::BackLoadedValue => "Back-loaded Value",
@@ -59,7 +58,7 @@ impl BrutalTruth {
 
   /// Get the checkbox label (question format) for this truth.
   #[must_use]
-  pub const fn checkbox_label(&self) -> &'static str {
+  pub const fn checkbox_label(self) -> &'static str {
     match self {
       Self::Scale => "Survives 10,000 users",
       Self::BackLoadedValue => "Checkbox features included",
@@ -70,7 +69,7 @@ impl BrutalTruth {
 
   /// Get a detailed description of what this truth validates.
   #[must_use]
-  pub const fn description(&self) -> &'static str {
+  pub const fn description(self) -> &'static str {
     match self {
       Self::Scale => {
         "Tests whether the solution can handle real-world load, \
@@ -93,7 +92,7 @@ impl BrutalTruth {
 
   /// Get help text that explains what to consider for this truth.
   #[must_use]
-  pub const fn help_text(&self) -> &'static str {
+  pub const fn help_text(self) -> &'static str {
     match self {
       Self::Scale => {
         "Consider: What happens when 10,000 users hit this simultaneously? \
@@ -116,7 +115,7 @@ impl BrutalTruth {
 
   /// Get the ordinal position (0-3) of this truth.
   #[must_use]
-  pub const fn ordinal(&self) -> usize {
+  pub const fn ordinal(self) -> usize {
     match self {
       Self::Scale => 0,
       Self::BackLoadedValue => 1,
