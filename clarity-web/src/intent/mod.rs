@@ -1,4 +1,4 @@
-//! Intent Module - Ported from intent-cli (Gleam → Rust)
+//! Intent Module - Ported from intent-cli (Gleam -> Rust)
 //!
 //! This module provides the complete intent-cli functionality ported to idiomatic Rust,
 //! enabling single-binary distribution by removing the Gleam/Erlang runtime dependency.
@@ -6,6 +6,7 @@
 //! ## Submodules
 //!
 //! - [`types`] - Core spec types (Spec, Feature, Behavior, etc.)
+//! - [`parser`] - JSON parser for Spec parsing (WP17)
 //! - [`interview`] - Interview session management, gap/conflict detection
 //! - [`plan`] - Execution planning, dependency resolution
 //! - [`beads`] - Bead (work item) generation
@@ -29,6 +30,7 @@ pub mod cli;
 pub mod documents;
 pub mod formats;
 pub mod interview;
+pub mod parser;
 pub mod plan;
 pub mod quality;
 pub mod security;
@@ -48,6 +50,9 @@ pub use types::{
     AIHints, AntiPattern, Behavior, EntityHint, Feature, ImplementationHints, Invariant,
     SecurityHints, Spec, TypeError, Verification,
 };
+
+// Re-export parser types (WP17)
+pub use parser::{parse_spec, parse_spec_from_value, sanitize_string, validate_spec, ParseError};
 
 // Error types (WP04)
 pub mod errors;
