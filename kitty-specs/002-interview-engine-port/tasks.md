@@ -2,8 +2,8 @@
 
 **Feature**: 002-interview-engine-port
 **Generated**: 2026-02-27
-**Total Work Packages**: 32
-**Estimated Total Lines**: ~15,242
+**Total Work Packages**: 33
+**Estimated Total Lines**: ~15,602
 
 ## Setup
 
@@ -866,11 +866,95 @@
 6. Calculate AI readiness: AI hints + verification + examples
 7. Return overall score as weighted average
 
-**Parallel Opportunities**: Can run in parallel with WP29
+**Parallel Opportunities**: Can run in parallel with WP29, WP33
 
 **Risks**:
 - Scoring algorithm correctness
 - Weight calibration
+
+---
+
+### WP33: Spec Linter
+
+**Goal**: Port spec_linter.gleam (383 lines) for spec linting and style checking
+**Priority**: P1 (High)
+**Estimated Prompt Size**: ~360 lines
+**Implementation Command**: `spec-kitty implement WP33`
+
+**Dependencies**: WP02
+
+**Included Subtasks**:
+- [ ] T174: Create `clarity-web/src/intent/quality/linter.rs`
+- [ ] T175: Implement LintRule enum (NamingConvention, RequiredFields, DeprecatedPattern, etc.)
+- [ ] T176: Implement LintResult type with severity levels
+- [ ] T177: Implement lint_spec() function
+- [ ] T178: Implement lint_feature() and lint_behavior() helpers
+- [ ] T179: Implement format_lint_report() function
+
+**Implementation Sketch**:
+1. Define LintRule enum covering all lint rule types
+2. Define LintResult with file, line, rule, message, severity
+3. lint_spec: run all lint rules on spec
+4. Check naming conventions (snake_case for behaviors, etc.)
+5. Check required fields presence
+6. Flag deprecated patterns
+7. Return formatted lint report
+
+**Parallel Opportunities**: Can run in parallel with WP28
+
+**Risks**:
+- Lint rule completeness
+- False positive rate
+
+**Rust Contract Specification**:
+
+### Preconditions
+
+| ID | Precondition |
+|----|--------------|
+| P1 | Spec structure validated (run spec_validator first) |
+| P2 | Lint rules loaded from configuration |
+
+### Postconditions
+
+| ID | Postcondition |
+|----|---------------|
+| Q1 | Result<LintReport, LintError> for all fallible ops |
+| Q2 | No panics on malformed specs |
+
+### Invariants
+
+| ID | Invariant |
+|----|-----------|
+| I1 | Linting is deterministic (same input = same output) |
+| I2 | Lint rules are configurable but have sensible defaults |
+
+## Violation Examples (Rust Contract Requirement)
+
+### WP33 Violation Examples:
+
+| Contract | Violation Call | Expected Error |
+|----------|----------------|----------------|
+| P1 | `lint_spec(spec_that_failed_validation)` | `Err(LintError::InvalidSpecStructure)` |
+| P2 | `lint_spec_with_rules(empty_rules_config)` | `Err(LintError::NoRulesConfigured)` |
+| I1 | Same spec produces different lint results | Test failure |
+| Q1 | `lint_spec(malformed_json_spec)` | `Err(LintError::ParseError)` not panic |
+| Q2 | Code contains `.unwrap()` on rule application | Fails code review |
+
+### Test Parity:
+- `test_invalid_spec_structure_returns_error` covers P1
+- `test_no_rules_configured_returns_error` covers P2
+- `test_linting_is_deterministic` covers I1
+- `test_no_unwrap_in_linter_module` covers Q2
+
+---
+
+## Definition of Done
+
+- [ ] Core functionality implemented
+- [ ] Contract tests pass
+- [ ] No unwrap/expect in production code
+- [ ] Documentation complete
 
 ---
 
@@ -996,9 +1080,9 @@
 | Parsing | 5 | 17 | ~1,860 |
 | Planning | 4 | 17 | ~1,480 |
 | Beads | 2 | 12 | ~800 |
-| Quality | 3 | 17 | ~1,120 |
+| Quality | 4 | 23 | ~1,480 |
 | Remaining | 2 | 9 | ~860 |
-| **Total** | **32** | **173** | **~15,242** |
+| **Total** | **33** | **179** | **~15,602** |
 
 ### Size Distribution
 
