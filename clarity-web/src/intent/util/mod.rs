@@ -5,7 +5,8 @@
 //! - JSON array navigation
 //! - Standard input handling
 
-// Modules will be added in WP07-WP08
-// pub mod case_insensitive;
-// pub mod array_indexing;
-// pub mod stdin;
+pub mod array_indexing;
+pub mod case_insensitive;
+
+pub use array_indexing::{ArrayIndexError, ArraySpec, navigate_path, parse_path_component, split_path};
+pub use case_insensitive::*;
