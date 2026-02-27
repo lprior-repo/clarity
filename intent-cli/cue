@@ -1,0 +1,1 @@
+/home/lewis/.local/share/mise/installs/cue/0.15.3/cue
