@@ -25,3 +25,21 @@ Thumbs.db
 .beads/issues.jsonl.backup
 .zjj/state.db
 erl_crash.dump
+
+# Local scratch and generated artifacts
+*.backup
+*.backup-*
+*.bak*
+*.check
+*.checked
+*.new
+*.lock
+
+# Local session/state data
+.intent/sessions.jsonl
+.interview/sessions.jsonl
+.interview/test-session.jsonl
+
+# Local tool binaries/symlinks
+cue
+meal-planner-api/meal-planner-api
