@@ -127,7 +127,7 @@ impl Default for Perspective {
 
 /// Question priority levels
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum QuestionPriority {
     /// Must be answered for spec to be valid
     Critical,
@@ -145,7 +145,7 @@ impl Default for QuestionPriority {
 
 /// Question category for classification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum QuestionCategory {
     /// Happy path scenarios
     HappyPath,
@@ -483,5 +483,51 @@ mod tests {
             serde_json::from_str(&json).expect("Failed to deserialize");
 
         assert_eq!(session, parsed);
+    }
+
+    #[test]
+    fn test_question_priority_snake_case_serialization() {
+        // Ensure QuestionPriority serializes with snake_case to match schema
+        assert_eq!(
+            serde_json::to_string(&QuestionPriority::Critical).unwrap(),
+            "\"critical\""
+        );
+        assert_eq!(
+            serde_json::to_string(&QuestionPriority::Important).unwrap(),
+            "\"important\""
+        );
+        assert_eq!(
+            serde_json::to_string(&QuestionPriority::NiceToHave).unwrap(),
+            "\"nice_to_have\""
+        );
+
+        // Test roundtrip
+        let parsed: QuestionPriority = serde_json::from_str("\"nice_to_have\"").unwrap();
+        assert_eq!(parsed, QuestionPriority::NiceToHave);
+    }
+
+    #[test]
+    fn test_question_category_snake_case_serialization() {
+        // Ensure QuestionCategory serializes with snake_case to match schema
+        assert_eq!(
+            serde_json::to_string(&QuestionCategory::HappyPath).unwrap(),
+            "\"happy_path\""
+        );
+        assert_eq!(
+            serde_json::to_string(&QuestionCategory::ErrorCase).unwrap(),
+            "\"error_case\""
+        );
+        assert_eq!(
+            serde_json::to_string(&QuestionCategory::EdgeCase).unwrap(),
+            "\"edge_case\""
+        );
+        assert_eq!(
+            serde_json::to_string(&QuestionCategory::NonFunctional).unwrap(),
+            "\"non_functional\""
+        );
+
+        // Test roundtrip
+        let parsed: QuestionCategory = serde_json::from_str("\"happy_path\"").unwrap();
+        assert_eq!(parsed, QuestionCategory::HappyPath);
     }
 }

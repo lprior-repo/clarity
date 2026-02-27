@@ -407,16 +407,23 @@ fn navigate_array(
                 index: i as isize,
                 length: 0,
             }),
-            ArraySpec::NegativeIndex(_) | ArraySpec::All => Ok(Value::Array(vec![])),
+            ArraySpec::NegativeIndex(n) => Err(ArrayIndexError::IndexOutOfBounds {
+                index: -(n as isize),
+                length: 0,
+            }),
+            ArraySpec::All => Ok(Value::Array(vec![])),
             ArraySpec::NoArray => unreachable!("NoArray should not reach here"),
         };
     }
 
     let indices = spec.resolve_indices(length)?;
 
+    // Wildcard [*] should always return an array, even for single elements
+    let is_wildcard = spec == ArraySpec::All;
+
     match indices.len() {
         0 => Ok(Value::Array(vec![])),
-        1 => Ok(array.get(indices[0]).cloned().unwrap_or(Value::Null)),
+        1 if !is_wildcard => Ok(array.get(indices[0]).cloned().unwrap_or(Value::Null)),
         _ => {
             let values: Vec<Value> = indices
                 .into_iter()
@@ -807,5 +814,29 @@ mod tests {
 
         let result = navigate_path(&data, &["items[*]".to_string()]);
         assert_eq!(result, Ok(json!([])));
+    }
+
+    #[test]
+    fn test_navigate_empty_array_with_negative_index_returns_error() {
+        // Negative index on empty array should return IndexOutOfBounds, not Ok([])
+        let data = json!({
+            "items": []
+        });
+
+        let result = navigate_path(&data, &["items[-1]".to_string()]);
+        assert!(matches!(result, Err(ArrayIndexError::IndexOutOfBounds { .. })));
+    }
+
+    #[test]
+    fn test_navigate_wildcard_single_element_returns_array() {
+        // Wildcard [*] should always return an array, even for single-element arrays
+        let data = json!({
+            "items": [42]
+        });
+
+        let result = navigate_path(&data, &["items[*]".to_string()]);
+        // Should be [42] (array), not 42 (bare value)
+        assert_eq!(result, Ok(json!([42])));
+        assert!(result.unwrap().is_array());
     }
 }
