@@ -462,6 +462,7 @@ fn current_timestamp() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     // =========================================================================
     // BeadStatus Tests
@@ -708,6 +709,7 @@ mod tests {
     // =========================================================================
 
     #[test]
+    #[serial]
     fn test_collect_feedback_valid() {
         clear_feedback_store();
         let result = collect_feedback("test-bead-1", BeadStatus::Ready, "Ready to start");
@@ -735,6 +737,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_collect_feedback_with_reviewer() {
         clear_feedback_store();
         let result = collect_feedback_with_reviewer(
@@ -885,6 +888,7 @@ mod tests {
     // =========================================================================
 
     #[test]
+    #[serial]
     fn test_get_bead_feedback_history_empty() {
         clear_feedback_store();
         let history = get_bead_feedback_history("nonexistent-bead");
@@ -892,6 +896,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_get_bead_feedback_history_multiple_entries() {
         clear_feedback_store();
 
@@ -909,6 +914,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_get_bead_feedback_history_different_beads() {
         clear_feedback_store();
 
