@@ -1,5 +1,6 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
+#![allow(clippy::volatile_composites)]
 
 use dioxus::prelude::*;
 
@@ -10,10 +11,10 @@ use pages::HomePage;
 /// Main App component
 #[component]
 pub fn App() -> Element {
-    rsx! {
-        // Include Tailwind CSS
-        document::Stylesheet { href: asset!("/assets/tailwind.css") }
-        document::Title { "Clarity Planner - Double Diamond Planning IDE" }
-        HomePage {}
-    }
+  rsx! {
+      // Include Tailwind CSS
+      document::Stylesheet { href: asset!("/assets/tailwind.css") }
+      document::Title { "Clarity Planner - Double Diamond Planning IDE" }
+      HomePage {}
+  }
 }

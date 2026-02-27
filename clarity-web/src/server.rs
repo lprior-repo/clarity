@@ -2,6 +2,7 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
+#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
@@ -29,17 +30,11 @@ use tokio::sync::RwLock;
 use tracing::warn;
 
 // Re-export types from lattice and providers
-use crate::components::discover::straw_man::{StrawManTrap, StrawManValidation};
+use crate::components::discover::straw_man::StrawManValidation;
 use crate::components::discover::types::{HolePunchingResults, ScenarioField};
 use crate::config::ai::load_ai_config;
-use crate::lattice::quality::{
-  calculate_quality, Answer as QualityAnswer, EarsRequirementRef, InversionControl, QualityError,
-  QualityScore,
-};
-use crate::providers::{
-  ExtractedFields, ExtractionContext, FieldType,
-  OpenCodeProvider,
-};
+use crate::lattice::quality::{Answer as QualityAnswer, EarsRequirementRef, QualityScore};
+use crate::providers::{ExtractedFields, ExtractionContext, FieldType, OpenCodeProvider};
 
 /// A planning bead (atomic work unit)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

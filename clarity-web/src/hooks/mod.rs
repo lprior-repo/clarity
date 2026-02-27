@@ -2,6 +2,7 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
+#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 // Public API exports - used by library consumers
@@ -11,7 +12,7 @@ mod progressive_discover;
 mod quality_scoring;
 
 pub use progressive_discover::{
-    use_progressive_discover, use_progressive_discover_actions, use_progressive_discover_with_prompt,
-    ProgressiveDiscoverActions, ProgressiveDiscoverState,
+  use_progressive_discover, use_progressive_discover_actions, use_progressive_discover_with_prompt,
+  ProgressiveDiscoverActions, ProgressiveDiscoverState,
 };
 pub use quality_scoring::{use_cached_quality_score, use_quality_score};

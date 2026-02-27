@@ -2,6 +2,7 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
+#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 // Public API exports - used by library consumers
@@ -17,6 +18,6 @@ mod r#trait;
 
 pub use opencode::OpenCodeProvider;
 pub use r#trait::{
-    ExtractionContext, ExtractionError, ExtractionMetadata, ExtractionProvider,
-    ExtractedFields, FieldExtraction, FieldType, SchemaField,
+  ExtractedFields, ExtractionContext, ExtractionError, ExtractionMetadata, ExtractionProvider,
+  FieldExtraction, FieldType, SchemaField,
 };

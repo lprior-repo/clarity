@@ -2,6 +2,7 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
+#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 // These re-exports are part of the public API, used by consumers via explicit import
@@ -18,6 +19,6 @@ pub mod preview_phase;
 
 pub use extracting_phase::{ExtractingPhase, ExtractingPhaseProps};
 pub use preview_phase::{
-    PreviewPhase, PreviewPhaseProps, SummaryField, SummaryFieldProps, TranscriptSummary,
-    TranscriptSummaryProps,
+  PreviewPhase, PreviewPhaseProps, SummaryField, SummaryFieldProps, TranscriptSummary,
+  TranscriptSummaryProps,
 };

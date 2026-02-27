@@ -2,6 +2,7 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
+#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
@@ -362,7 +363,9 @@ fn test_clear_all_answers() {
 
   // Clear all by deleting each answer
   for answer in &loaded {
-    store.delete_answer(&answer.step_id).expect("Failed to delete answer");
+    store
+      .delete_answer(&answer.step_id)
+      .expect("Failed to delete answer");
   }
 
   let loaded = store.get_all_answers().expect("Failed to load answers");

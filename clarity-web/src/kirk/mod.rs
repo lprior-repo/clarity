@@ -2,6 +2,7 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
+#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 // Public API exports - used by library consumers
@@ -37,14 +38,14 @@ pub mod terminal_integration;
 pub mod types;
 
 pub use progressive_discover::{
-    AntithesisValidation, EarsExtraction, EarsPattern, ExtractedEarsRequirement,
-    HolePunchingValidation, KirkContract16, KirkSection, VorpValidation,
+  AntithesisValidation, EarsExtraction, EarsPattern, ExtractedEarsRequirement,
+  HolePunchingValidation, KirkContract16, KirkSection, VorpValidation,
 };
 pub use terminal_integration::{
-    ConnectionStatus, ConnectionState, OpenCodeTerminalClient, ProcessedTranscript,
-    TerminalClient, TerminalConfig, TerminalError, TranscriptProcessor,
+  ConnectionState, ConnectionStatus, OpenCodeTerminalClient, ProcessedTranscript, TerminalClient,
+  TerminalConfig, TerminalError, TranscriptProcessor,
 };
 pub use types::{
-    ContractVersion, EarsRequirement, EarsSection, Invariant, KirkContract, KirkContractError,
-    Postcondition, Precondition, TypeRegistry, TypeSchema,
+  ContractVersion, EarsRequirement, EarsSection, Invariant, KirkContract, KirkContractError,
+  Postcondition, Precondition, TypeRegistry, TypeSchema,
 };

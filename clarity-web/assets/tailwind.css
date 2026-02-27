@@ -803,10 +803,6 @@ body {
   margin-bottom: 1.5rem;
 }
 
-.mb-8 {
-  margin-bottom: 2rem;
-}
-
 .ml-1 {
   margin-left: 0.25rem;
 }
@@ -821,6 +817,14 @@ body {
 
 .ml-6 {
   margin-left: 1.5rem;
+}
+
+.ml-7 {
+  margin-left: 1.75rem;
+}
+
+.ml-8 {
+  margin-left: 2rem;
 }
 
 .ml-auto {
@@ -915,6 +919,10 @@ body {
   height: 2.75rem;
 }
 
+.h-12 {
+  height: 3rem;
+}
+
 .h-14 {
   height: 3.5rem;
 }
@@ -983,12 +991,16 @@ body {
   height: 100vh;
 }
 
-.h-12 {
-  height: 3rem;
-}
-
 .max-h-60 {
   max-height: 15rem;
+}
+
+.max-h-\[400px\] {
+  max-height: 400px;
+}
+
+.min-h-\[120px\] {
+  min-height: 120px;
 }
 
 .min-h-\[400px\] {
@@ -1091,6 +1103,14 @@ body {
   width: 6px;
 }
 
+.w-\[calc\(100\%-1\.75rem\)\] {
+  width: calc(100% - 1.75rem);
+}
+
+.w-\[calc\(100\%-2rem\)\] {
+  width: calc(100% - 2rem);
+}
+
 .w-full {
   width: 100%;
 }
@@ -1123,16 +1143,16 @@ body {
   max-width: 28rem;
 }
 
+.max-w-sm {
+  max-width: 24rem;
+}
+
 .max-w-xl {
   max-width: 36rem;
 }
 
 .max-w-xs {
   max-width: 20rem;
-}
-
-.max-w-sm {
-  max-width: 24rem;
 }
 
 .flex-1 {
@@ -1257,6 +1277,10 @@ body {
   resize: none;
 }
 
+.resize-y {
+  resize: vertical;
+}
+
 .list-inside {
   list-style-position: inside;
 }
@@ -1295,6 +1319,10 @@ body {
 
 .items-start {
   align-items: flex-start;
+}
+
+.items-end {
+  align-items: flex-end;
 }
 
 .items-center {
@@ -1497,6 +1525,10 @@ body {
   border-color: hsl(var(--border));
 }
 
+.border-border\/30 {
+  border-color: hsl(var(--border) / 0.3);
+}
+
 .border-border\/50 {
   border-color: hsl(var(--border) / 0.5);
 }
@@ -1537,8 +1569,16 @@ body {
   border-color: currentColor;
 }
 
+.border-destructive {
+  border-color: hsl(var(--destructive));
+}
+
 .border-destructive\/20 {
   border-color: hsl(var(--destructive) / 0.2);
+}
+
+.border-destructive\/50 {
+  border-color: hsl(var(--destructive) / 0.5);
 }
 
 .border-emerald-500\/20 {
@@ -1586,8 +1626,8 @@ body {
   border-color: rgb(255 255 255 / 0.08);
 }
 
-.border-destructive\/50 {
-  border-color: hsl(var(--destructive) / 0.5);
+.border-yellow-500\/50 {
+  border-color: rgb(234 179 8 / 0.5);
 }
 
 .bg-\[hsl\(0\2c 0\%\2c 2\%\)\] {
@@ -1612,6 +1652,11 @@ body {
 .bg-amber-100 {
   --tw-bg-opacity: 1;
   background-color: rgb(254 243 199 / var(--tw-bg-opacity, 1));
+}
+
+.bg-amber-500 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(245 158 11 / var(--tw-bg-opacity, 1));
 }
 
 .bg-amber-500\/10 {
@@ -1640,6 +1685,11 @@ body {
 
 .bg-black\/80 {
   background-color: rgb(0 0 0 / 0.8);
+}
+
+.bg-blue-500 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(59 130 246 / var(--tw-bg-opacity, 1));
 }
 
 .bg-blue-500\/20 {
@@ -1822,6 +1872,11 @@ body {
   background-color: hsl(var(--primary) / 0.05);
 }
 
+.bg-red-500 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(239 68 68 / var(--tw-bg-opacity, 1));
+}
+
 .bg-red-500\/60 {
   background-color: rgb(239 68 68 / 0.6);
 }
@@ -1840,6 +1895,11 @@ body {
 
 .bg-secondary\/50 {
   background-color: hsl(var(--secondary) / 0.5);
+}
+
+.bg-slate-500 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(100 116 139 / var(--tw-bg-opacity, 1));
 }
 
 .bg-transparent {
@@ -1945,6 +2005,11 @@ body {
   padding-bottom: 0.375rem;
 }
 
+.py-12 {
+  padding-top: 3rem;
+  padding-bottom: 3rem;
+}
+
 .py-2 {
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
@@ -1978,11 +2043,6 @@ body {
 .py-px {
   padding-top: 1px;
   padding-bottom: 1px;
-}
-
-.py-12 {
-  padding-top: 3rem;
-  padding-bottom: 3rem;
 }
 
 .pb-1 {
@@ -2069,6 +2129,11 @@ body {
 
 .text-\[9px\] {
   font-size: 9px;
+}
+
+.text-base {
+  font-size: 1rem;
+  line-height: 1.5rem;
 }
 
 .text-lg {
@@ -2175,6 +2240,11 @@ body {
   color: rgb(245 158 11 / var(--tw-text-opacity, 1));
 }
 
+.text-amber-600 {
+  --tw-text-opacity: 1;
+  color: rgb(217 119 6 / var(--tw-text-opacity, 1));
+}
+
 .text-amber-700 {
   --tw-text-opacity: 1;
   color: rgb(180 83 9 / var(--tw-text-opacity, 1));
@@ -2228,6 +2298,11 @@ body {
 
 .text-emerald-400\/80 {
   color: rgb(52 211 153 / 0.8);
+}
+
+.text-emerald-500 {
+  --tw-text-opacity: 1;
+  color: rgb(16 185 129 / var(--tw-text-opacity, 1));
 }
 
 .text-emerald-500\/80 {
@@ -2336,9 +2411,9 @@ body {
   color: rgb(255 255 255 / 0.9);
 }
 
-.text-emerald-500 {
+.text-yellow-600 {
   --tw-text-opacity: 1;
-  color: rgb(16 185 129 / var(--tw-text-opacity, 1));
+  color: rgb(202 138 4 / var(--tw-text-opacity, 1));
 }
 
 .line-through {
@@ -2462,6 +2537,10 @@ body {
   --tw-ring-color: rgb(107 114 128 / 0.3);
 }
 
+.ring-primary {
+  --tw-ring-color: hsl(var(--primary));
+}
+
 .ring-primary\/30 {
   --tw-ring-color: hsl(var(--primary) / 0.3);
 }
@@ -2480,10 +2559,6 @@ body {
 
 .ring-white\/\[0\.06\] {
   --tw-ring-color: rgb(255 255 255 / 0.06);
-}
-
-.ring-primary {
-  --tw-ring-color: hsl(var(--primary));
 }
 
 .ring-offset-2 {
@@ -2814,6 +2889,10 @@ body {
   background-color: hsl(var(--muted) / 0.3);
 }
 
+.hover\:bg-muted\/50:hover {
+  background-color: hsl(var(--muted) / 0.5);
+}
+
 .hover\:bg-primary\/80:hover {
   background-color: hsl(var(--primary) / 0.8);
 }
@@ -2848,6 +2927,10 @@ body {
 
 .hover\:text-foreground\/70:hover {
   color: hsl(var(--foreground) / 0.7);
+}
+
+.hover\:text-primary\/80:hover {
+  color: hsl(var(--primary) / 0.8);
 }
 
 .hover\:text-white:hover {
@@ -3018,5 +3101,10 @@ body {
   .dark\:text-green-400 {
     --tw-text-opacity: 1;
     color: rgb(74 222 128 / var(--tw-text-opacity, 1));
+  }
+
+  .dark\:text-yellow-400 {
+    --tw-text-opacity: 1;
+    color: rgb(250 204 21 / var(--tw-text-opacity, 1));
   }
 }

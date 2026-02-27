@@ -6,6 +6,5 @@ versionConstraint: ">=1.0.0"
 
 # Define the projects in the workspace
 projects:
-  - "clarity-core"
-  - "clarity-server"
-  - "clarity-client"
+  clarity-web: "clarity-web"
+  e2e-tests: "e2e-tests"

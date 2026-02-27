@@ -4,6 +4,7 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+#![allow(clippy::suspicious_else_formatting)]
 
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};

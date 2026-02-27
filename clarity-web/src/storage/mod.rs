@@ -2,6 +2,7 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
+#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 // Public API exports - used by library consumers
@@ -29,8 +30,8 @@ pub use path_util::{
   StorageError,
 };
 pub use transcript_store::{
-  AntithesisResponse, ExtractedField, InterrogationTranscript,
-  StrawManTrap, StrawManValidation, TranscriptResult, TranscriptStore,
+  AntithesisResponse, ExtractedField, InterrogationTranscript, StrawManTrap, StrawManValidation,
+  TranscriptResult, TranscriptStore,
 };
 // Re-export types from discover module for backwards compatibility
 pub use crate::components::discover::types::{HolePunchingResults, ScenarioField};

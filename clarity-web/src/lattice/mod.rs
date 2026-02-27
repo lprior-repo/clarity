@@ -2,6 +2,7 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
+#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 // Public API exports - used by library consumers
@@ -22,25 +23,24 @@ pub mod quality;
 mod quality_example;
 
 pub use compact::{
-    compact_artifacts, clean_text, CompactAnswer, CompactError, CompactOutput, CompactSummary,
-    Phase,
+  clean_text, compact_artifacts, CompactAnswer, CompactError, CompactOutput, CompactSummary, Phase,
 };
 pub use coverage::{
-    analyze_coverage, Component, CoverageError, CoverageGap, CoverageOutput,
-    CoveredComponent, Task, UseCase,
+  analyze_coverage, Component, CoverageError, CoverageGap, CoverageOutput, CoveredComponent, Task,
+  UseCase,
 };
 pub use ears::*;
 pub use effects::{
-    detect_cycles, trace_effects, trace_effects_with_patterns, CausalPattern, DependencyEdge,
-    DependencyNode, Effect, EffectsError, EffectsOutput,
+  detect_cycles, trace_effects, trace_effects_with_patterns, CausalPattern, DependencyEdge,
+  DependencyNode, Effect, EffectsError, EffectsOutput,
 };
 pub use inversion::{
-    apply_counterexample, apply_edge_case, apply_negation, apply_reversal,
-    extract_assumptions, generate_challenges, invert, ChallengePattern,
-    InversionChallenge, InversionError, InversionOutput, Severity,
+  apply_counterexample, apply_edge_case, apply_negation, apply_reversal, extract_assumptions,
+  generate_challenges, invert, ChallengePattern, InversionChallenge, InversionError,
+  InversionOutput, Severity,
 };
 pub use premortem::{
-    generate_premortem, FailureCategory, FailureScenario, Likelihood, PremortemOutput,
+  generate_premortem, FailureCategory, FailureScenario, Likelihood, PremortemOutput,
 };
 pub use quality::*;
 

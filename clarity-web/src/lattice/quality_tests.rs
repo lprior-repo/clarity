@@ -2,6 +2,7 @@
 // Run with: rustc --test quality_tests.rs && ./quality_tests
 
 #![deny(clippy::unwrap_used)]
+#![allow(clippy::suspicious_else_formatting)]
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]

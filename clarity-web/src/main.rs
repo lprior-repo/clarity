@@ -21,9 +21,9 @@ use app::App;
 use dioxus::prelude::*;
 
 fn main() {
-    // Init logger
-    dioxus_logger::init(dioxus_logger::tracing::Level::INFO).expect("Failed to init logger");
+  // Init logger
+  dioxus_logger::init(dioxus_logger::tracing::Level::INFO).expect("Failed to init logger");
 
-    // Launch the fullstack app
-    dioxus::launch(App);
+  // Launch the fullstack app
+  dioxus::launch(App);
 }

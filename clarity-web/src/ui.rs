@@ -27,16 +27,16 @@ pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardT
 pub use checkbox::Checkbox;
 pub use confidence_badge::ConfidenceBadge;
 pub use dialog::{
-    Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-    DialogTrigger,
+  Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+  DialogTrigger,
 };
 pub use input::Input;
 pub use label::Label;
 pub use progress::Progress;
 pub use scroll_area::ScrollArea;
 pub use select::{
-    Select, SelectContent, SelectGroup, SelectIcon, SelectItem, SelectItemIndicator, SelectLabel,
-    SelectScrollDownButton, SelectScrollUpButton, SelectSeparator, SelectTrigger, SelectValue,
+  Select, SelectContent, SelectGroup, SelectIcon, SelectItem, SelectItemIndicator, SelectLabel,
+  SelectScrollDownButton, SelectScrollUpButton, SelectSeparator, SelectTrigger, SelectValue,
 };
 pub use separator::Separator;
 pub use skeleton::Skeleton;

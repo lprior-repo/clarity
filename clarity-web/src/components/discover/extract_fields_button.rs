@@ -2,6 +2,7 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
+#![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
@@ -31,19 +32,19 @@ pub const MIN_PROMPT_CHARS: usize = 50;
 /// Props for ExtractFieldsButton component
 #[derive(Clone, Props, PartialEq)]
 pub struct ExtractFieldsButtonProps {
-    /// The prompt text to extract fields from
-    pub prompt: String,
-    /// Whether an extraction is currently in progress
-    #[props(default)]
-    pub is_loading: bool,
-    /// Callback when extraction is triggered with the prompt
-    pub on_click: EventHandler<String>,
-    /// Optional additional CSS classes
-    #[props(default)]
-    pub class: String,
-    /// Optional disabled state override (in addition to character minimum)
-    #[props(default)]
-    pub disabled: bool,
+  /// The prompt text to extract fields from
+  pub prompt: String,
+  /// Whether an extraction is currently in progress
+  #[props(default)]
+  pub is_loading: bool,
+  /// Callback when extraction is triggered with the prompt
+  pub on_click: EventHandler<String>,
+  /// Optional additional CSS classes
+  #[props(default)]
+  pub class: String,
+  /// Optional disabled state override (in addition to character minimum)
+  #[props(default)]
+  pub disabled: bool,
 }
 
 /// ExtractFieldsButton component
@@ -70,93 +71,91 @@ pub struct ExtractFieldsButtonProps {
 /// ```
 #[component]
 pub fn ExtractFieldsButton(props: ExtractFieldsButtonProps) -> Element {
-    let prompt_len = props.prompt.trim().len();
-    let is_disabled = props.disabled
-        || prompt_len < MIN_PROMPT_CHARS
-        || props.is_loading;
+  let prompt_len = props.prompt.trim().len();
+  let is_disabled = props.disabled || prompt_len < MIN_PROMPT_CHARS || props.is_loading;
 
-    let tooltip_text = if props.disabled {
-        "Button is disabled"
-    } else if props.is_loading {
-        "Extraction in progress..."
-    } else if prompt_len < MIN_PROMPT_CHARS {
-        &format!(
-            "Enter at least {} characters ({} more needed)",
-            MIN_PROMPT_CHARS,
-            MIN_PROMPT_CHARS.saturating_sub(prompt_len)
-        )
-    } else {
-        "Extract structured fields from your description"
-    };
+  let tooltip_text = if props.disabled {
+    "Button is disabled"
+  } else if props.is_loading {
+    "Extraction in progress..."
+  } else if prompt_len < MIN_PROMPT_CHARS {
+    &format!(
+      "Enter at least {} characters ({} more needed)",
+      MIN_PROMPT_CHARS,
+      MIN_PROMPT_CHARS.saturating_sub(prompt_len)
+    )
+  } else {
+    "Extract structured fields from your description"
+  };
 
-    rsx! {
-        div {
-            class: format!("flex flex-col items-end gap-1 {}", props.class),
+  rsx! {
+      div {
+          class: format!("flex flex-col items-end gap-1 {}", props.class),
 
-            Button {
-                variant: ButtonVariant::Primary,
-                disabled: is_disabled,
-                onclick: {
-                    let on_click = props.on_click.clone();
-                    let prompt = props.prompt.clone();
-                    move |_| {
-                        if !prompt.trim().is_empty() {
-                            info!(prompt_len = prompt.len(), "ExtractFieldsButton clicked");
-                            on_click.call(prompt.clone());
-                        }
-                    }
-                },
+          Button {
+              variant: ButtonVariant::Primary,
+              disabled: is_disabled,
+              onclick: {
+                  let on_click = props.on_click.clone();
+                  let prompt = props.prompt.clone();
+                  move |_| {
+                      if !prompt.trim().is_empty() {
+                          info!(prompt_len = prompt.len(), "ExtractFieldsButton clicked");
+                          on_click.call(prompt.clone());
+                      }
+                  }
+              },
 
-                // Loading spinner or icon
-                if props.is_loading {
-                    svg {
-                        class: "mr-2 h-4 w-4 animate-spin",
-                        xmlns: "http://www.w3.org/2000/svg",
-                        fill: "none",
-                        view_box: "0 0 24 24",
-                        circle {
-                            class: "opacity-25",
-                            cx: "12",
-                            cy: "12",
-                            r: "10",
-                            stroke: "currentColor",
-                            stroke_width: "4",
-                        }
-                        path {
-                            class: "opacity-75",
-                            fill: "currentColor",
-                            d: "M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z",
-                        }
-                    }
-                    "Extracting..."
-                } else {
-                    "Extract Fields"
-                    svg {
-                        xmlns: "http://www.w3.org/2000/svg",
-                        width: "16",
-                        height: "16",
-                        view_box: "0 0 24 24",
-                        fill: "none",
-                        stroke: "currentColor",
-                        stroke_width: "2",
-                        stroke_linecap: "round",
-                        stroke_linejoin: "round",
-                        class: "ml-2",
-                        path { d: "m9 18 6-6-6-6" }
-                    }
-                }
-            }
+              // Loading spinner or icon
+              if props.is_loading {
+                  svg {
+                      class: "mr-2 h-4 w-4 animate-spin",
+                      xmlns: "http://www.w3.org/2000/svg",
+                      fill: "none",
+                      view_box: "0 0 24 24",
+                      circle {
+                          class: "opacity-25",
+                          cx: "12",
+                          cy: "12",
+                          r: "10",
+                          stroke: "currentColor",
+                          stroke_width: "4",
+                      }
+                      path {
+                          class: "opacity-75",
+                          fill: "currentColor",
+                          d: "M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z",
+                      }
+                  }
+                  "Extracting..."
+              } else {
+                  "Extract Fields"
+                  svg {
+                      xmlns: "http://www.w3.org/2000/svg",
+                      width: "16",
+                      height: "16",
+                      view_box: "0 0 24 24",
+                      fill: "none",
+                      stroke: "currentColor",
+                      stroke_width: "2",
+                      stroke_linecap: "round",
+                      stroke_linejoin: "round",
+                      class: "ml-2",
+                      path { d: "m9 18 6-6-6-6" }
+                  }
+              }
+          }
 
-            // Helper text showing character count
-            if !props.is_loading && prompt_len < MIN_PROMPT_CHARS {
-                span {
-                    class: "text-xs text-muted-foreground",
-                    title: tooltip_text,
-                    "{prompt_len}/{MIN_PROMPT_CHARS} characters"
-                }
-            }
-        }
-    }
+          // Helper text showing character count
+          if !props.is_loading && prompt_len < MIN_PROMPT_CHARS {
+              span {
+                  class: "text-xs text-muted-foreground",
+                  title: tooltip_text,
+                  "{prompt_len}/{MIN_PROMPT_CHARS} characters"
+              }
+          }
+      }
+  }
 }
 
 /// Props for ExtractFieldsButtonWithServer component
@@ -164,50 +163,50 @@ pub fn ExtractFieldsButton(props: ExtractFieldsButtonProps) -> Element {
 /// This variant includes server function integration for actual extraction.
 #[derive(Clone, Props)]
 pub struct ExtractFieldsButtonWithServerProps {
-    /// The prompt text to extract fields from
-    pub prompt: String,
-    /// Optional session ID for rate limiting
-    #[props(default)]
-    pub session_id: Option<String>,
-    /// Callback when extraction starts
-    #[props(default)]
-    pub on_extraction_start: Option<EventHandler<()>>,
-    /// Callback when extraction completes successfully
-    #[props(default)]
-    pub on_extraction_complete: Option<EventHandler<ExtractedFieldsData>>,
-    /// Callback when extraction fails
-    #[props(default)]
-    pub on_extraction_error: Option<EventHandler<String>>,
-    /// Optional additional CSS classes
-    #[props(default)]
-    pub class: String,
+  /// The prompt text to extract fields from
+  pub prompt: String,
+  /// Optional session ID for rate limiting
+  #[props(default)]
+  pub session_id: Option<String>,
+  /// Callback when extraction starts
+  #[props(default)]
+  pub on_extraction_start: Option<EventHandler<()>>,
+  /// Callback when extraction completes successfully
+  #[props(default)]
+  pub on_extraction_complete: Option<EventHandler<ExtractedFieldsData>>,
+  /// Callback when extraction fails
+  #[props(default)]
+  pub on_extraction_error: Option<EventHandler<String>>,
+  /// Optional additional CSS classes
+  #[props(default)]
+  pub class: String,
 }
 
 impl PartialEq for ExtractFieldsButtonWithServerProps {
-    fn eq(&self, _other: &Self) -> bool {
-        // Props with EventHandlers cannot be meaningfully compared
-        false
-    }
+  fn eq(&self, _other: &Self) -> bool {
+    // Props with EventHandlers cannot be meaningfully compared
+    false
+  }
 }
 
 /// Extracted fields data returned from the server
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ExtractedFieldsData {
-    /// The extracted field values
-    pub fields: Vec<ExtractedField>,
-    /// Overall confidence score (0.0 to 1.0)
-    pub confidence: f64,
+  /// The extracted field values
+  pub fields: Vec<ExtractedField>,
+  /// Overall confidence score (0.0 to 1.0)
+  pub confidence: f64,
 }
 
 /// A single extracted field
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ExtractedField {
-    /// Field name (e.g., "problem", "persona", "solution")
-    pub name: String,
-    /// Field value
-    pub value: String,
-    /// Confidence for this specific field (0.0 to 1.0)
-    pub confidence: f64,
+  /// Field name (e.g., "problem", "persona", "solution")
+  pub name: String,
+  /// Field value
+  pub value: String,
+  /// Confidence for this specific field (0.0 to 1.0)
+  pub confidence: f64,
 }
 
 /// ExtractFieldsButton with server integration
@@ -219,194 +218,195 @@ pub struct ExtractedField {
 /// - Success callbacks
 #[component]
 pub fn ExtractFieldsButtonWithServer(props: ExtractFieldsButtonWithServerProps) -> Element {
-    let mut is_loading = use_signal(|| false);
-    let mut error = use_signal(|| None::<String>);
+  let mut is_loading = use_signal(|| false);
+  let mut error = use_signal(|| None::<String>);
 
-    let current_error = error.read().clone();
+  let current_error = error.read().clone();
 
-    rsx! {
-        div {
-            class: format!("flex flex-col items-end gap-2 {}", props.class),
+  rsx! {
+      div {
+          class: format!("flex flex-col items-end gap-2 {}", props.class),
 
-            ExtractFieldsButton {
-                prompt: props.prompt.clone(),
-                is_loading: *is_loading.read(),
-                disabled: false,
-                on_click: {
-                    let prompt = props.prompt.clone();
-                    let session_id = props.session_id.clone();
-                    let on_start = props.on_extraction_start.clone();
-                    let on_complete = props.on_extraction_complete.clone();
-                    let on_error = props.on_extraction_error.clone();
+          ExtractFieldsButton {
+              prompt: props.prompt.clone(),
+              is_loading: *is_loading.read(),
+              disabled: false,
+              on_click: {
+                  let prompt = props.prompt.clone();
+                  let session_id = props.session_id.clone();
+                  let on_start = props.on_extraction_start.clone();
+                  let on_complete = props.on_extraction_complete.clone();
+                  let on_error = props.on_extraction_error.clone();
 
-                    move |_prompt_text: String| {
-                        // Prevent double-clicks
-                        if *is_loading.read() {
-                            return;
-                        }
+                  move |_prompt_text: String| {
+                      // Prevent double-clicks
+                      if *is_loading.read() {
+                          return;
+                      }
 
-                        // Clear previous error
-                        *error.write() = None;
+                      // Clear previous error
+                      *error.write() = None;
 
-                        // Set loading state
-                        *is_loading.write() = true;
+                      // Set loading state
+                      *is_loading.write() = true;
 
-                        // Notify start
-                        if let Some(handler) = on_start.as_ref() {
-                            handler.call(());
-                        }
+                      // Notify start
+                      if let Some(handler) = on_start.as_ref() {
+                          handler.call(());
+                      }
 
-                        let prompt_text = prompt.clone();
-                        let session = session_id.clone();
+                      let prompt_text = prompt.clone();
+                      let session = session_id.clone();
 
-                        // Spawn async task for server call
-                        spawn({
-                            let mut is_loading = is_loading.clone();
-                            let mut error = error.clone();
-                            let on_complete = on_complete.clone();
-                            let on_error = on_error.clone();
+                      // Spawn async task for server call
+                      spawn({
+                          let mut is_loading = is_loading.clone();
+                          let mut error = error.clone();
+                          let on_complete = on_complete.clone();
+                          let on_error = on_error.clone();
 
-                            async move {
-                                let result = extract_fields_server(prompt_text, session).await;
+                          async move {
+                              let result = extract_fields_server(prompt_text, session).await;
 
-                                *is_loading.write() = false;
+                              *is_loading.write() = false;
 
-                                match result {
-                                    Ok(extracted) => {
-                                        info!(
-                                            field_count = extracted.fields.len(),
-                                            confidence = extracted.confidence,
-                                            "Extraction completed successfully"
-                                        );
+                              match result {
+                                  Ok(extracted) => {
+                                      info!(
+                                          field_count = extracted.fields.len(),
+                                          confidence = extracted.confidence,
+                                          "Extraction completed successfully"
+                                      );
 
-                                        // Convert to our data type
-                                        let data = ExtractedFieldsData {
-                                            fields: extracted
-                                                .fields
-                                                .into_iter()
-                                                .map(|f| ExtractedField {
-                                                    name: f.name,
-                                                    value: serde_json::to_string(&f.value)
-                                                        .map(|s| s.trim_matches('"').to_string())
-                                                        .ok()
-                                                    .unwrap_or_default(),
-                                                    confidence: f.confidence,
-                                                })
-                                                .collect(),
-                                            confidence: extracted.confidence,
-                                        };
+                                      // Convert to our data type
+                                      let data = ExtractedFieldsData {
+                                          fields: extracted
+                                              .fields
+                                              .into_iter()
+                                              .map(|f| ExtractedField {
+                                                  name: f.name,
+                                                  value: serde_json::to_string(&f.value)
+                                                      .map(|s| s.trim_matches('"').to_string())
+                                                      .ok()
+                                                  .unwrap_or_default(),
+                                                  confidence: f.confidence,
+                                              })
+                                              .collect(),
+                                          confidence: extracted.confidence,
+                                      };
 
-                                        if let Some(handler) = on_complete.as_ref() {
-                                            handler.call(data);
-                                        }
-                                    }
-                                    Err(e) => {
-                                        let err_msg = e.to_string();
-                                        info!(error = %err_msg, "Extraction failed");
-                                        *error.write() = Some(err_msg.clone());
+                                      if let Some(handler) = on_complete.as_ref() {
+                                          handler.call(data);
+                                      }
+                                  }
+                                  Err(e) => {
+                                      let err_msg = e.to_string();
+                                      info!(error = %err_msg, "Extraction failed");
+                                      *error.write() = Some(err_msg.clone());
 
-                                        if let Some(handler) = on_error.as_ref() {
-                                            handler.call(err_msg);
-                                        }
-                                    }
-                                }
-                            }
-                        });
-                    }
-                },
-            }
+                                      if let Some(handler) = on_error.as_ref() {
+                                          handler.call(err_msg);
+                                      }
+                                  }
+                              }
+                          }
+                      });
+                  }
+              },
+          }
 
-            // Error display
-            if let Some(err) = current_error.as_ref() {
-                div {
-                    class: "rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive",
-                    role: "alert",
-                    "Extraction failed: {err}"
-                }
-            }
-        }
-    }
+          // Error display
+          if let Some(err) = current_error.as_ref() {
+              div {
+                  class: "rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive",
+                  role: "alert",
+                  "Extraction failed: {err}"
+              }
+          }
+      }
+  }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    #[test]
-    fn test_min_prompt_chars_constant() {
-        assert_eq!(MIN_PROMPT_CHARS, 50);
-    }
+  #[test]
+  fn test_min_prompt_chars_constant() {
+    assert_eq!(MIN_PROMPT_CHARS, 50);
+  }
 
-    #[test]
-    fn test_extracted_field_serialization() {
-        let field = ExtractedField {
-            name: "problem".to_string(),
-            value: "Users struggle with complex workflows".to_string(),
-            confidence: 0.95,
-        };
+  #[test]
+  fn test_extracted_field_serialization() {
+    let field = ExtractedField {
+      name: "problem".to_string(),
+      value: "Users struggle with complex workflows".to_string(),
+      confidence: 0.95,
+    };
 
-        let json = serde_json::to_string(&field).expect("Serialization should succeed");
-        let deserialized: ExtractedField =
-            serde_json::from_str(&json).expect("Deserialization should succeed");
+    let json = serde_json::to_string(&field).expect("Serialization should succeed");
+    let deserialized: ExtractedField =
+      serde_json::from_str(&json).expect("Deserialization should succeed");
 
-        assert_eq!(deserialized.name, field.name);
-        assert_eq!(deserialized.value, field.value);
-        assert!((deserialized.confidence - field.confidence).abs() < f64::EPSILON);
-    }
+    assert_eq!(deserialized.name, field.name);
+    assert_eq!(deserialized.value, field.value);
+    assert!((deserialized.confidence - field.confidence).abs() < f64::EPSILON);
+  }
 
-    #[test]
-    fn test_extracted_fields_data_serialization() {
-        let data = ExtractedFieldsData {
-            fields: vec![
-                ExtractedField {
-                    name: "problem".to_string(),
-                    value: "Test problem".to_string(),
-                    confidence: 0.9,
-                },
-                ExtractedField {
-                    name: "persona".to_string(),
-                    value: "Test persona".to_string(),
-                    confidence: 0.85,
-                },
-            ],
-            confidence: 0.875,
-        };
+  #[test]
+  fn test_extracted_fields_data_serialization() {
+    let data = ExtractedFieldsData {
+      fields: vec![
+        ExtractedField {
+          name: "problem".to_string(),
+          value: "Test problem".to_string(),
+          confidence: 0.9,
+        },
+        ExtractedField {
+          name: "persona".to_string(),
+          value: "Test persona".to_string(),
+          confidence: 0.85,
+        },
+      ],
+      confidence: 0.875,
+    };
 
-        let json = serde_json::to_string(&data).expect("Serialization should succeed");
-        let deserialized: ExtractedFieldsData =
-            serde_json::from_str(&json).expect("Deserialization should succeed");
+    let json = serde_json::to_string(&data).expect("Serialization should succeed");
+    let deserialized: ExtractedFieldsData =
+      serde_json::from_str(&json).expect("Deserialization should succeed");
 
-        assert_eq!(deserialized.fields.len(), 2);
-        assert_eq!(deserialized.fields[0].name, "problem");
-        assert!((deserialized.confidence - 0.875).abs() < f64::EPSILON);
-    }
+    assert_eq!(deserialized.fields.len(), 2);
+    assert_eq!(deserialized.fields[0].name, "problem");
+    assert!((deserialized.confidence - 0.875).abs() < f64::EPSILON);
+  }
 
-    #[test]
-    fn test_button_disabled_for_short_prompt() {
-        // A prompt with fewer than 50 characters should be disabled
-        let short_prompt = "This is a short prompt".to_string();
-        assert!(short_prompt.len() < MIN_PROMPT_CHARS);
-    }
+  #[test]
+  fn test_button_disabled_for_short_prompt() {
+    // A prompt with fewer than 50 characters should be disabled
+    let short_prompt = "This is a short prompt".to_string();
+    assert!(short_prompt.len() < MIN_PROMPT_CHARS);
+  }
 
-    #[test]
-    fn test_button_enabled_for_long_prompt() {
-        // A prompt with 50+ characters should be enabled
-        let long_prompt = "This is a longer prompt that has at least fifty characters in it".to_string();
-        assert!(long_prompt.len() >= MIN_PROMPT_CHARS);
-    }
+  #[test]
+  fn test_button_enabled_for_long_prompt() {
+    // A prompt with 50+ characters should be enabled
+    let long_prompt =
+      "This is a longer prompt that has at least fifty characters in it".to_string();
+    assert!(long_prompt.len() >= MIN_PROMPT_CHARS);
+  }
 
-    #[test]
-    fn test_whitespace_only_prompt_is_short() {
-        let whitespace_prompt = "   ".to_string();
-        assert!(whitespace_prompt.trim().len() < MIN_PROMPT_CHARS);
-    }
+  #[test]
+  fn test_whitespace_only_prompt_is_short() {
+    let whitespace_prompt = "   ".to_string();
+    assert!(whitespace_prompt.trim().len() < MIN_PROMPT_CHARS);
+  }
 
-    #[test]
-    fn test_trimmed_length_used_for_check() {
-        // Prompt with leading/trailing whitespace should use trimmed length
-        let prompt = "   This is a prompt with exactly fifty chars in it!!!   ".to_string();
-        let trimmed_len = prompt.trim().len();
-        // The component should use trimmed length for the check
-        assert!(trimmed_len >= MIN_PROMPT_CHARS || trimmed_len < MIN_PROMPT_CHARS);
-    }
+  #[test]
+  fn test_trimmed_length_used_for_check() {
+    // Prompt with leading/trailing whitespace should use trimmed length
+    let prompt = "   This is a prompt with exactly fifty chars in it!!!   ".to_string();
+    let trimmed_len = prompt.trim().len();
+    // The component should use trimmed length for the check
+    assert!(trimmed_len >= MIN_PROMPT_CHARS || trimmed_len < MIN_PROMPT_CHARS);
+  }
 }

@@ -5,48 +5,45 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 
-use clarity_web::ui::ConfidenceBadge;
 use clarity_web::storage::types::Confidence;
 use clarity_web::ui::confidence_badge::ConfidenceBadgeProps;
 
 #[test]
 fn test_confidence_badge_exports() {
-    // Test that ConfidenceBadge is accessible from the ui module
-    // This verifies the module is properly structured
-    let _ = ConfidenceBadge {
-        confidence: Confidence::High,
-        class: String::new(),
-    };
+  // Test that ConfidenceBadgeProps is accessible from the ui module
+  // This verifies the module is properly structured
+  let _badge = ConfidenceBadgeProps {
+    confidence: Confidence::High,
+    class: String::new(),
+  };
 }
 
 #[test]
 fn test_confidence_badge_with_custom_class() {
-    let badge = ConfidenceBadge {
-        confidence: Confidence::Inferred,
-        class: "custom-class".to_string(),
-    };
-    assert_eq!(badge.confidence, Confidence::Inferred);
-    assert_eq!(badge.class, "custom-class");
+  let badge = ConfidenceBadgeProps {
+    confidence: Confidence::Inferred,
+    class: "custom-class".to_string(),
+  };
+  assert_eq!(badge.confidence, Confidence::Inferred);
+  assert_eq!(badge.class, "custom-class");
 }
 
 #[test]
 fn test_confidence_levels() {
-    // Verify all confidence levels are accessible
-    let _high = Confidence::High;
-    let _inferred = Confidence::Inferred;
-    let _uncertain = Confidence::Uncertain;
+  // Verify all confidence levels are accessible
+  let _high = Confidence::High;
+  let _inferred = Confidence::Inferred;
+  let _uncertain = Confidence::Uncertain;
 }
 
 #[test]
 fn test_confidence_badge_props() {
-    // Test props structure
-    use dioxus::prelude::Props;
+  // Test props structure
+  let props = ConfidenceBadgeProps {
+    confidence: Confidence::Uncertain,
+    class: "test".to_string(),
+  };
 
-    let props = ConfidenceBadgeProps {
-        confidence: Confidence::Uncertain,
-        class: "test".to_string(),
-    };
-
-    assert_eq!(props.confidence, Confidence::Uncertain);
-    assert_eq!(props.class, "test");
+  assert_eq!(props.confidence, Confidence::Uncertain);
+  assert_eq!(props.class, "test");
 }

@@ -441,6 +441,7 @@ dependencies = [
  "toml",
  "tracing",
  "uuid",
+ "web-sys",
 ]
 
 [[package]]
@@ -901,12 +902,15 @@ dependencies = [
  "http",
  "infer",
  "jni",
+ "js-sys",
  "ndk",
  "ndk-context",
  "ndk-sys",
  "percent-encoding",
  "thiserror 2.0.18",
  "tokio",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]
@@ -1141,6 +1145,7 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasm-streams",
+ "web-sys",
  "xxhash-rust",
 ]
 
