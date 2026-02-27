@@ -568,35 +568,42 @@ pub fn validate_iso8601(input: &str) -> Result<(), FormatError> {
 
 /// Validates an ISO 8601 date (YYYY-MM-DD).
 fn validate_iso8601_date(input: &str) -> Result<(), Iso8601Error> {
-    if input.len() < 10 {
+    // Date must be exactly 10 characters (YYYY-MM-DD)
+    if input.len() != 10 {
         return Err(Iso8601Error::InvalidFormat);
     }
 
-    // Parse year
-    let year_str = &input[0..4];
-    let year: i32 =
-        parse_int(year_str).map_err(|()| Iso8601Error::InvalidYear(year_str.to_string()))?;
+    // Use safe char-based parsing instead of byte slicing
+    let chars: Vec<char> = input.chars().collect();
+    if chars.len() != 10 {
+        return Err(Iso8601Error::InvalidFormat);
+    }
 
-    // Check separator
-    if input.chars().nth(4) != Some('-') {
+    // Parse year (chars 0-3)
+    let year_str: String = chars[0..4].iter().collect();
+    let year: i32 =
+        parse_int(&year_str).map_err(|()| Iso8601Error::InvalidYear(year_str.clone()))?;
+
+    // Check separator (char 4)
+    if chars[4] != '-' {
         return Err(Iso8601Error::InvalidDateSeparator);
     }
 
-    // Parse month
-    let month_str = &input[5..7];
-    let month: u8 = parse_int(month_str).map_err(|()| Iso8601Error::InvalidMonth(0))?;
+    // Parse month (chars 5-6)
+    let month_str: String = chars[5..7].iter().collect();
+    let month: u8 = parse_int(&month_str).map_err(|()| Iso8601Error::InvalidMonth(0))?;
     if !(1..=12).contains(&month) {
         return Err(Iso8601Error::InvalidMonth(month));
     }
 
-    // Check separator
-    if input.chars().nth(7) != Some('-') {
+    // Check separator (char 7)
+    if chars[7] != '-' {
         return Err(Iso8601Error::InvalidDateSeparator);
     }
 
-    // Parse day
-    let day_str = &input[8..10];
-    let day: u8 = parse_int(day_str).map_err(|()| Iso8601Error::InvalidDay(0, 31))?;
+    // Parse day (chars 8-9)
+    let day_str: String = chars[8..10].iter().collect();
+    let day: u8 = parse_int(&day_str).map_err(|()| Iso8601Error::InvalidDay(0, 31))?;
 
     let is_leap = is_leap_year(year);
     let max_days = get_days_in_month(month, is_leap);
@@ -610,51 +617,56 @@ fn validate_iso8601_date(input: &str) -> Result<(), Iso8601Error> {
 
 /// Validates an ISO 8601 time (HH:MM:SS with optional timezone).
 fn validate_iso8601_time(input: &str) -> Result<(), Iso8601Error> {
-    if input.len() < 8 {
+    // Use safe char-based parsing
+    let chars: Vec<char> = input.chars().collect();
+    if chars.len() < 8 {
         return Err(Iso8601Error::InvalidFormat);
     }
 
-    // Parse hour
-    let hour_str = &input[0..2];
-    let hour: u8 = parse_int(hour_str).map_err(|()| Iso8601Error::InvalidHour(0))?;
+    // Parse hour (chars 0-1)
+    let hour_str: String = chars[0..2].iter().collect();
+    let hour: u8 = parse_int(&hour_str).map_err(|()| Iso8601Error::InvalidHour(0))?;
     if hour > 23 {
         return Err(Iso8601Error::InvalidHour(hour));
     }
 
-    // Check separator
-    if input.chars().nth(2) != Some(':') {
+    // Check separator (char 2)
+    if chars[2] != ':' {
         return Err(Iso8601Error::InvalidTimeSeparator);
     }
 
-    // Parse minute
-    let minute_str = &input[3..5];
-    let minute: u8 = parse_int(minute_str).map_err(|()| Iso8601Error::InvalidMinute(0))?;
+    // Parse minute (chars 3-4)
+    let minute_str: String = chars[3..5].iter().collect();
+    let minute: u8 = parse_int(&minute_str).map_err(|()| Iso8601Error::InvalidMinute(0))?;
     if minute > 59 {
         return Err(Iso8601Error::InvalidMinute(minute));
     }
 
-    // Check if seconds are present
-    if input.len() > 5 && input.chars().nth(5) == Some(':') {
-        // Parse second
-        let second_str = &input[6..8];
-        let second: u8 = parse_int(second_str).map_err(|()| Iso8601Error::InvalidSecond(0))?;
+    // Check if seconds are present (char 5 is ':')
+    if chars.len() > 5 && chars[5] == ':' {
+        // Parse second (chars 6-7)
+        if chars.len() < 8 {
+            return Err(Iso8601Error::InvalidFormat);
+        }
+        let second_str: String = chars[6..8].iter().collect();
+        let second: u8 = parse_int(&second_str).map_err(|()| Iso8601Error::InvalidSecond(0))?;
         if second > 60 {
             // 60 allowed for leap second
             return Err(Iso8601Error::InvalidSecond(second));
         }
 
         // Check for timezone
-        if input.len() > 8 {
-            let tz_part = &input[8..];
-            validate_iso8601_timezone(tz_part)?;
+        if chars.len() > 8 {
+            let tz_part: String = chars[8..].iter().collect();
+            validate_iso8601_timezone(&tz_part)?;
         }
-    } else if input.len() > 5 {
+    } else if chars.len() > 5 {
         // No seconds but has more chars - check for timezone without seconds
-        let remaining = &input[5..];
+        let remaining: String = chars[5..].iter().collect();
         if !remaining.starts_with('Z') && !remaining.starts_with('+') && !remaining.starts_with('-') {
             return Err(Iso8601Error::InvalidFormat);
         }
-        validate_iso8601_timezone(remaining)?;
+        validate_iso8601_timezone(&remaining)?;
     }
 
     Ok(())
@@ -1030,6 +1042,9 @@ mod tests {
             ("2024-01-00", Iso8601Error::InvalidDay(0, 31)),
             ("2023-02-29", Iso8601Error::InvalidDay(29, 28)), // Non-leap year
             ("1900-02-29", Iso8601Error::InvalidDay(29, 28)), // Non-leap century
+            ("2024-01-01junk", Iso8601Error::InvalidFormat), // Trailing data rejected
+            ("2024-01-01T", Iso8601Error::InvalidFormat),    // Trailing T without time
+            ("2024-01-01 ", Iso8601Error::InvalidFormat),    // Trailing space
         ];
 
         for (date, expected_error) in invalid_dates {
@@ -1085,6 +1100,25 @@ mod tests {
                     "Expected Iso8601Error::{:?} for '{}', got {:?}",
                     expected_error, time, result
                 );
+            }
+        }
+    }
+
+    #[test]
+    fn test_non_ascii_time_does_not_panic() {
+        // Non-ASCII characters should return error, not panic
+        let non_ascii_times = vec![
+            "１２:３０:４５", // Full-width digits
+            "12:30:45™",     // Trademark symbol
+            "১২:৩০:৪৫",      // Bengali digits
+        ];
+
+        for time in non_ascii_times {
+            // Should return error, not panic
+            let result = std::panic::catch_unwind(|| validate_iso8601(time));
+            assert!(result.is_ok(), "validate_iso8601 should not panic for '{}'", time);
+            if let Ok(Ok(res)) = result {
+                panic!("Expected error for non-ASCII time '{}', got {:?}", time, res);
             }
         }
     }

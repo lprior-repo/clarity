@@ -166,23 +166,38 @@ impl Spec {
 
     /// Detect circular dependencies in feature dependency graph
     fn detect_circular_dependencies(&self) -> Result<(), TypeError> {
+        use std::collections::HashMap;
+
         let feature_names: HashSet<&str> =
             self.features.iter().map(|f| f.name.as_str()).collect();
 
-        // Build adjacency list of dependencies
-        let mut visiting: HashSet<&str> = HashSet::new();
-        let mut visited: HashSet<&str> = HashSet::new();
+        // Build adjacency map: feature name -> its dependencies
+        let dep_map: HashMap<&str, &Vec<String>> = self
+            .features
+            .iter()
+            .map(|f| (f.name.as_str(), &f.depends_on))
+            .collect();
 
+        // Validate dependencies reference known features
         for feature in &self.features {
-            // Validate dependencies reference known features
             for dep in &feature.depends_on {
                 if !feature_names.contains(dep.as_str()) {
                     return Err(TypeError::UnknownFeatureDependency(dep.clone()));
                 }
             }
+        }
 
-            // DFS for cycle detection
-            Self::dfs_visit(feature.name.as_str(), &feature.depends_on, &mut visiting, &mut visited, &feature_names)?;
+        // DFS for cycle detection
+        let mut visiting: HashSet<&str> = HashSet::new();
+        let mut visited: HashSet<&str> = HashSet::new();
+
+        for feature in &self.features {
+            Self::dfs_visit(
+                feature.name.as_str(),
+                &dep_map,
+                &mut visiting,
+                &mut visited,
+            )?;
         }
 
         Ok(())
@@ -191,32 +206,30 @@ impl Spec {
     /// DFS helper for cycle detection
     fn dfs_visit<'a>(
         node: &'a str,
-        dependencies: &[String],
+        dep_map: &std::collections::HashMap<&'a str, &'a Vec<String>>,
         visiting: &mut HashSet<&'a str>,
         visited: &mut HashSet<&'a str>,
-        all_features: &HashSet<&'a str>,
     ) -> Result<(), TypeError> {
         if visited.contains(node) {
             return Ok(());
         }
 
         if visiting.contains(node) {
-            // This shouldn't happen at the top level, but indicates a cycle
+            // Found a cycle back to this node
             return Err(TypeError::CircularDependency(node.to_string(), node.to_string()));
         }
 
         visiting.insert(node);
 
-        for dep in dependencies {
-            if !all_features.contains(dep.as_str()) {
-                continue; // Already validated above
+        // Get this node's dependencies and recursively visit them
+        if let Some(deps) = dep_map.get(node) {
+            for dep in *deps {
+                if visiting.contains(dep.as_str()) {
+                    return Err(TypeError::CircularDependency(node.to_string(), dep.clone()));
+                }
+                // Recursively visit the dependency
+                Self::dfs_visit(dep.as_str(), dep_map, visiting, visited)?;
             }
-            if visiting.contains(dep.as_str()) {
-                return Err(TypeError::CircularDependency(node.to_string(), dep.clone()));
-            }
-            // Find the dependency's dependencies recursively
-            // Note: We'd need access to all features here for full traversal
-            // For now, this handles direct cycles
         }
 
         visiting.remove(node);
@@ -836,5 +849,82 @@ mod tests {
 
         let err = TypeError::DuplicateFeature("auth".to_string());
         assert!(format!("{err}").contains("auth"));
+    }
+
+    #[test]
+    fn test_spec_validate_direct_cycle() {
+        // A -> B -> A (direct cycle)
+        let mut spec = Spec::new("test-spec".to_string()).expect("valid spec");
+
+        let mut feature_a = Feature::new("feature_a".to_string()).expect("valid feature");
+        feature_a.add_dependency("feature_b".to_string());
+        let behavior = Behavior::new("do_a".to_string()).expect("valid behavior");
+        feature_a.add_behavior(behavior).expect("should add behavior");
+
+        let mut feature_b = Feature::new("feature_b".to_string()).expect("valid feature");
+        feature_b.add_dependency("feature_a".to_string()); // Creates cycle
+        let behavior = Behavior::new("do_b".to_string()).expect("valid behavior");
+        feature_b.add_behavior(behavior).expect("should add behavior");
+
+        spec.add_feature(feature_a).expect("should add feature");
+        spec.add_feature(feature_b).expect("should add feature");
+
+        let result = spec.validate();
+        assert!(matches!(result, Err(TypeError::CircularDependency { .. })));
+    }
+
+    #[test]
+    fn test_spec_validate_multi_hop_cycle() {
+        // A -> B -> C -> A (multi-hop cycle)
+        let mut spec = Spec::new("test-spec".to_string()).expect("valid spec");
+
+        let mut feature_a = Feature::new("feature_a".to_string()).expect("valid feature");
+        feature_a.add_dependency("feature_b".to_string());
+        let behavior = Behavior::new("do_a".to_string()).expect("valid behavior");
+        feature_a.add_behavior(behavior).expect("should add behavior");
+
+        let mut feature_b = Feature::new("feature_b".to_string()).expect("valid feature");
+        feature_b.add_dependency("feature_c".to_string());
+        let behavior = Behavior::new("do_b".to_string()).expect("valid behavior");
+        feature_b.add_behavior(behavior).expect("should add behavior");
+
+        let mut feature_c = Feature::new("feature_c".to_string()).expect("valid feature");
+        feature_c.add_dependency("feature_a".to_string()); // Creates cycle back to A
+        let behavior = Behavior::new("do_c".to_string()).expect("valid behavior");
+        feature_c.add_behavior(behavior).expect("should add behavior");
+
+        spec.add_feature(feature_a).expect("should add feature");
+        spec.add_feature(feature_b).expect("should add feature");
+        spec.add_feature(feature_c).expect("should add feature");
+
+        let result = spec.validate();
+        assert!(matches!(result, Err(TypeError::CircularDependency { .. })));
+    }
+
+    #[test]
+    fn test_spec_validate_no_cycle_dag() {
+        // A -> B -> C (DAG, no cycle)
+        let mut spec = Spec::new("test-spec".to_string()).expect("valid spec");
+
+        let mut feature_a = Feature::new("feature_a".to_string()).expect("valid feature");
+        let behavior = Behavior::new("do_a".to_string()).expect("valid behavior");
+        feature_a.add_behavior(behavior).expect("should add behavior");
+
+        let mut feature_b = Feature::new("feature_b".to_string()).expect("valid feature");
+        feature_b.add_dependency("feature_a".to_string());
+        let behavior = Behavior::new("do_b".to_string()).expect("valid behavior");
+        feature_b.add_behavior(behavior).expect("should add behavior");
+
+        let mut feature_c = Feature::new("feature_c".to_string()).expect("valid feature");
+        feature_c.add_dependency("feature_b".to_string());
+        let behavior = Behavior::new("do_c".to_string()).expect("valid behavior");
+        feature_c.add_behavior(behavior).expect("should add behavior");
+
+        spec.add_feature(feature_a).expect("should add feature");
+        spec.add_feature(feature_b).expect("should add feature");
+        spec.add_feature(feature_c).expect("should add feature");
+
+        let result = spec.validate();
+        assert!(result.is_ok());
     }
 }
