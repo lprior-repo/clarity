@@ -9,7 +9,7 @@
 
 ## Overview
 
-Port the intent-cli interview engine from Gleam to Rust, creating a new `clarity-web/src/interview/` module. This enables single-binary distribution by removing the Gleam/Erlang runtime dependency from Clarity Progressive Discover.
+Port the intent-cli interview engine from Gleam to Rust, creating a new `clarity-web/src/intent/` module. This enables single-binary distribution by removing the Gleam/Erlang runtime dependency from Clarity Progressive Discover.
 
 ### Problem Statement
 
@@ -17,7 +17,7 @@ The current Clarity Progressive Discover workflow depends on intent-cli, which i
 
 ### Proposed Solution
 
-Port the core interview engine (~3,200 lines of Gleam logic) to idiomatic Rust, maintaining API compatibility while leveraging Rust's type system for additional safety. The ported code will live in `clarity-web/src/interview/` module.
+Port the core interview engine (~3,200 lines of Gleam logic) to idiomatic Rust, maintaining API compatibility while leveraging Rust's type system for additional safety. The ported code will live in the `clarity-web/src/intent/` module (named "intent" to match the original intent-cli naming and to encompass broader functionality including planning, beads, and quality analysis).
 
 ---
 
@@ -107,7 +107,7 @@ Port the core interview engine (~3,200 lines of Gleam logic) to idiomatic Rust, 
 
 **Priority**: Critical
 
-The system SHALL provide a `clarity-web/src/interview/types.rs` module containing:
+The system SHALL provide a `clarity-web/src/intent/types.rs` module containing:
 
 - `Profile` enum with variants: `Api`, `Cli`, `Event`, `Data`, `Workflow`, `Ui`
 - `InterviewStage` enum with variants: `Discovery`, `Refinement`, `Validation`, `Complete`, `Paused`
@@ -127,7 +127,7 @@ All types SHALL derive `Debug`, `Clone`, `PartialEq`, `Serialize`, `Deserialize`
 
 **Priority**: Critical
 
-The system SHALL provide a `clarity-web/src/interview/engine.rs` module implementing:
+The system SHALL provide a `clarity-web/src/intent/engine.rs` module implementing:
 
 - `InterviewSession::new(id: String, profile: Profile, timestamp: String) -> Self`
 - `InterviewSession::add_answer(&mut self, answer: Answer) -> &mut Self`
@@ -193,7 +193,7 @@ Each conflict SHALL include at least 2 resolution options with tradeoffs.
 
 **Priority**: High
 
-The system SHALL provide a `clarity-web/src/interview/bead_templates.rs` module implementing:
+The system SHALL provide a `clarity-web/src/intent/bead_templates.rs` module implementing:
 
 - `BeadRecord` struct with fields: `title`, `description`, `profile_type`, `priority`, `issue_type`, `labels`, `ai_hints`, `acceptance_criteria`, `dependencies`
 - `BeadStats` struct with fields: `total`, `by_type`, `by_priority`
@@ -211,7 +211,7 @@ The system SHALL provide a `clarity-web/src/interview/bead_templates.rs` module 
 
 **Priority**: High
 
-The system SHALL provide a `clarity-web/src/interview/quality_analyzer.rs` module implementing:
+The system SHALL provide a `clarity-web/src/intent/quality_analyzer.rs` module implementing:
 
 - `QualityReport` struct with fields: `coverage_score`, `clarity_score`, `testability_score`, `ai_readiness_score`, `overall_score`, `issues`, `suggestions`
 - `QualityIssue` enum with variants: `MissingErrorTests`, `MissingAuthenticationTest`, `MissingEdgeCases`, `VagueRules`, `NoExamples`, `MissingExplanations`, `UntestedInvariants`, `MissingAiHints`, `MissingPreconditions`, `MissingPostconditions`
@@ -227,7 +227,7 @@ The system SHALL provide a `clarity-web/src/interview/quality_analyzer.rs` modul
 
 **Priority**: High
 
-The system SHALL provide a `clarity-web/src/interview/storage.rs` module implementing:
+The system SHALL provide a `clarity-web/src/intent/storage.rs` module implementing:
 
 - `SessionRecord` struct for simplified storage representation
 - `AnswerVersion` struct for historical answer tracking
@@ -250,7 +250,7 @@ The system SHALL provide a `clarity-web/src/interview/storage.rs` module impleme
 
 **Priority**: Critical
 
-The system SHALL organize code in `clarity-web/src/interview/` with:
+The system SHALL organize code in `clarity-web/src/intent/` with:
 
 - `mod.rs` - Public API exports and module documentation
 - `types.rs` - Core type definitions
