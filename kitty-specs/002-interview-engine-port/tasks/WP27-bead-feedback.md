@@ -41,6 +41,24 @@ Feedback collection and status tracking.
 
 ---
 
+## Violation Examples (Rust Contract Requirement)
+
+### WP27 Violation Examples:
+
+| Contract | Violation Call | Expected Error |
+|----------|----------------|----------------|
+| P1: Input validated | `collect_feedback(BeadFeedback { bead_id: "".to_string(), ... })` | `Err(FeedbackError::EmptyBeadId)` |
+| P1: Input validated | `collect_feedback(BeadFeedback { status: "invalid_status".to_string(), ... })` | `Err(FeedbackError::InvalidStatus)` |
+| Q1: Result<T, E> | Any function that could fail returns Result, never panics | Compile-time check |
+| Q2: No panics | Code contains `.unwrap()` or `.expect()` | Fails code review |
+
+### Test Parity:
+- `test_empty_bead_id_returns_error` covers P1 violation
+- `test_invalid_status_returns_error` covers P1 violation
+- `test_no_unwrap_in_feedback_module` covers Q2
+
+---
+
 ## Definition of Done
 
 - [ ] Core functionality implemented
