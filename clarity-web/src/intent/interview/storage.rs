@@ -186,19 +186,22 @@ pub fn append_session_to_jsonl(
         Vec::new()
     };
 
-    // Create or truncate the file and write all sessions
-    let file = OpenOptions::new()
+    // Use atomic write: write to temp file first, then rename
+    let temp_path = jsonl_path.with_extension("tmp");
+
+    // Create temp file and write all sessions
+    let temp_file = OpenOptions::new()
         .create(true)
         .write(true)
         .truncate(true)
-        .open(jsonl_path)
+        .open(&temp_path)
         .map_err(|e| StorageError::IoError(e.to_string()))?;
 
-    let mut writer = BufWriter::new(file);
+    let mut writer = BufWriter::new(temp_file);
 
     // Write existing sessions
-    for existing_session in existing_sessions {
-        let line = session_to_jsonl_line(&existing_session)?;
+    for existing_session in &existing_sessions {
+        let line = session_to_jsonl_line(existing_session)?;
         writeln!(writer, "{line}").map_err(|e| StorageError::IoError(e.to_string()))?;
     }
 
@@ -206,8 +209,20 @@ pub fn append_session_to_jsonl(
     let line = session_to_jsonl_line(session)?;
     writeln!(writer, "{line}").map_err(|e| StorageError::IoError(e.to_string()))?;
 
+    // Ensure all data is flushed to disk
     writer
         .flush()
+        .map_err(|e| StorageError::IoError(e.to_string()))?;
+
+    // Get underlying file and sync to disk
+    let file = writer
+        .into_inner()
+        .map_err(|e| StorageError::IoError(e.to_string()))?;
+    file.sync_all()
+        .map_err(|e| StorageError::IoError(e.to_string()))?;
+
+    // Atomic rename - only succeeds if temp file was fully written
+    std::fs::rename(&temp_path, jsonl_path)
         .map_err(|e| StorageError::IoError(e.to_string()))?;
 
     Ok(())
@@ -420,7 +435,9 @@ pub fn list_session_history(
 /// ```
 #[must_use]
 pub fn diff_sessions(from: &InterviewSession, to: &InterviewSession) -> SessionDiff {
-    // Build lookup maps for answers by question_id
+    // Build lookup maps for answers by question_id, keeping only the latest response per question.
+    // This prevents duplicate entries when the same question is answered in multiple rounds.
+    // Later answers (higher index = later round) override earlier ones.
     let from_answers: HashMap<&str, &str> = from
         .answers
         .iter()
@@ -433,47 +450,57 @@ pub fn diff_sessions(from: &InterviewSession, to: &InterviewSession) -> SessionD
         .map(|a| (a.question_id.as_str(), a.response.as_str()))
         .collect();
 
-    // Find Added: in "to" but not "from"
-    let answers_added: Vec<AnswerDiff> = to
+    // Also build a map for question_text lookup (use latest)
+    let to_question_texts: HashMap<&str, &str> = to
         .answers
         .iter()
-        .filter(|a| !from_answers.contains_key(a.question_id.as_str()))
-        .map(|a| AnswerDiff {
-            question_id: a.question_id.clone(),
-            question_text: a.question_text.clone(),
+        .map(|a| (a.question_id.as_str(), a.question_text.as_str()))
+        .collect();
+
+    let from_question_texts: HashMap<&str, &str> = from
+        .answers
+        .iter()
+        .map(|a| (a.question_id.as_str(), a.question_text.as_str()))
+        .collect();
+
+    // Find Added: in "to" but not "from" - iterate over deduplicated keys
+    let answers_added: Vec<AnswerDiff> = to_answers
+        .keys()
+        .filter(|qid| !from_answers.contains_key(*qid))
+        .map(|qid| AnswerDiff {
+            question_id: (*qid).to_string(),
+            question_text: to_question_texts.get(qid).map_or_else(|| (*qid).to_string(), |s| (*s).to_string()),
             old_response: None,
-            new_response: Some(a.response.clone()),
+            new_response: to_answers.get(qid).map(|s| (*s).to_string()),
             change_type: AnswerChangeType::Added,
         })
         .collect();
 
-    // Find Modified: in both but response differs
-    let answers_modified: Vec<AnswerDiff> = to
-        .answers
-        .iter()
-        .filter(|a| {
+    // Find Modified: in both but response differs - iterate over deduplicated keys
+    let answers_modified: Vec<AnswerDiff> = to_answers
+        .keys()
+        .filter(|qid| {
             from_answers
-                .get(a.question_id.as_str())
-                .map_or(false, |&old| old != a.response)
+                .get(*qid)
+                .map_or(false, |&old| old != *to_answers.get(*qid).unwrap_or(&""))
         })
-        .map(|a| AnswerDiff {
-            question_id: a.question_id.clone(),
-            question_text: a.question_text.clone(),
-            old_response: from_answers.get(a.question_id.as_str()).map(|s| (*s).to_string()),
-            new_response: Some(a.response.clone()),
+        .map(|qid| AnswerDiff {
+            question_id: (*qid).to_string(),
+            question_text: to_question_texts.get(qid).map_or_else(|| (*qid).to_string(), |s| (*s).to_string()),
+            old_response: from_answers.get(qid).map(|s| (*s).to_string()),
+            new_response: to_answers.get(qid).map(|s| (*s).to_string()),
             change_type: AnswerChangeType::Modified,
         })
         .collect();
 
-    // Find Removed: in "from" but not "to"
-    let answers_removed: Vec<AnswerDiff> = from
-        .answers
-        .iter()
-        .filter(|a| !to_answers.contains_key(a.question_id.as_str()))
-        .map(|a| AnswerDiff {
-            question_id: a.question_id.clone(),
-            question_text: a.question_text.clone(),
-            old_response: Some(a.response.clone()),
+    // Find Removed: in "from" but not "to" - iterate over deduplicated keys
+    let answers_removed: Vec<AnswerDiff> = from_answers
+        .keys()
+        .filter(|qid| !to_answers.contains_key(*qid))
+        .map(|qid| AnswerDiff {
+            question_id: (*qid).to_string(),
+            question_text: from_question_texts.get(qid).map_or_else(|| (*qid).to_string(), |s| (*s).to_string()),
+            old_response: from_answers.get(qid).map(|s| (*s).to_string()),
             new_response: None,
             change_type: AnswerChangeType::Removed,
         })
@@ -897,6 +924,62 @@ mod tests {
         // Verify others still exist
         assert!(sessions.iter().any(|s| s.id == "session-1"));
         assert!(sessions.iter().any(|s| s.id == "session-3"));
+    }
+
+    #[test]
+    fn test_append_session_to_jsonl_atomic_write_no_temp_file_left() {
+        // Verify that temp files are cleaned up after atomic write
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let jsonl_path = temp_dir.path().join("sessions.jsonl");
+        let temp_path = jsonl_path.with_extension("tmp");
+
+        let session = create_test_session("atomic-test");
+        let result = append_session_to_jsonl(&session, &jsonl_path);
+
+        assert!(result.is_ok());
+        assert!(jsonl_path.exists(), "Final file should exist");
+        assert!(!temp_path.exists(), "Temp file should be cleaned up after atomic rename");
+    }
+
+    #[test]
+    fn test_append_session_to_jsonl_atomic_write_preserves_data() {
+        // Verify atomic write preserves all data correctly
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let jsonl_path = temp_dir.path().join("sessions.jsonl");
+
+        let session = create_test_session_with_answers("atomic-preserve");
+        let result = append_session_to_jsonl(&session, &jsonl_path);
+
+        assert!(result.is_ok());
+
+        // Read back and verify all data is preserved
+        let sessions = list_sessions_from_jsonl(&jsonl_path).expect("should list");
+        assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions[0].id, "atomic-preserve");
+        assert_eq!(sessions[0].answers.len(), 2);
+    }
+
+    #[test]
+    fn test_append_session_to_jsonl_atomic_write_overwrites_cleanly() {
+        // Verify atomic write properly replaces file on update
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let jsonl_path = temp_dir.path().join("sessions.jsonl");
+
+        // Create initial session
+        let mut session = create_test_session("atomic-overwrite");
+        session.raw_notes = "Initial".to_string();
+        append_session_to_jsonl(&session, &jsonl_path).expect("should create");
+
+        // Update the session
+        session.raw_notes = "Updated".to_string();
+        let result = append_session_to_jsonl(&session, &jsonl_path);
+
+        assert!(result.is_ok());
+
+        // Verify only one session exists with updated data
+        let sessions = list_sessions_from_jsonl(&jsonl_path).expect("should list");
+        assert_eq!(sessions.len(), 1, "Should still have exactly 1 session");
+        assert_eq!(sessions[0].raw_notes, "Updated");
     }
 
     // ==================== list_sessions_from_jsonl tests ====================
@@ -1445,6 +1528,94 @@ mod tests {
         assert_eq!(diff.answers_removed.len(), 1);
         assert!(diff.stage_changed);
         assert_eq!(diff.gaps_added, 1);
+    }
+
+    #[test]
+    fn test_diff_sessions_duplicate_question_id_collapsed() {
+        // Regression test: same question_id in multiple rounds should produce only one diff entry
+        let mut session1 = create_test_session("sess-1");
+        let mut session2 = create_test_session("sess-1");
+
+        // Add same question_id with different responses in round 1 and round 2
+        // The latest (round 2) should be used for diffing
+        session1.answers.push(Answer {
+            question_id: "q1".to_string(),
+            question_text: "What is the API?".to_string(),
+            response: "REST v1".to_string(),
+            round: 1,
+            ..Answer::default()
+        });
+        session1.answers.push(Answer {
+            question_id: "q1".to_string(),
+            question_text: "What is the API?".to_string(),
+            response: "REST v2".to_string(), // Latest answer for q1
+            round: 2,
+            ..Answer::default()
+        });
+
+        // In session2, the answer is modified
+        session2.answers.push(Answer {
+            question_id: "q1".to_string(),
+            question_text: "What is the API?".to_string(),
+            response: "GraphQL".to_string(),
+            round: 1,
+            ..Answer::default()
+        });
+        session2.answers.push(Answer {
+            question_id: "q1".to_string(),
+            question_text: "What is the API?".to_string(),
+            response: "GraphQL v2".to_string(), // Latest answer for q1
+            round: 2,
+            ..Answer::default()
+        });
+
+        let diff = diff_sessions(&session1, &session2);
+
+        // Should have exactly 1 modified entry (not 2 or more)
+        assert_eq!(diff.answers_modified.len(), 1);
+        assert!(diff.answers_added.is_empty());
+        assert!(diff.answers_removed.is_empty());
+
+        // Should use the latest responses
+        let modified = &diff.answers_modified[0];
+        assert_eq!(modified.question_id, "q1");
+        // The HashMap keeps the last value, so round 2 values
+        assert_eq!(modified.old_response, Some("REST v2".to_string()));
+        assert_eq!(modified.new_response, Some("GraphQL v2".to_string()));
+    }
+
+    #[test]
+    fn test_diff_sessions_multiple_same_question_added_only_once() {
+        // When a question appears multiple times in "to" but not in "from",
+        // it should appear as added only once
+        let session1 = create_test_session("sess-1");
+        let mut session2 = create_test_session("sess-1");
+
+        // Add same question_id multiple times in session2
+        session2.answers.push(Answer {
+            question_id: "q1".to_string(),
+            question_text: "What is the API?".to_string(),
+            response: "REST v1".to_string(),
+            round: 1,
+            ..Answer::default()
+        });
+        session2.answers.push(Answer {
+            question_id: "q1".to_string(),
+            question_text: "What is the API?".to_string(),
+            response: "REST v2".to_string(),
+            round: 2,
+            ..Answer::default()
+        });
+
+        let diff = diff_sessions(&session1, &session2);
+
+        // Should have exactly 1 added entry (not 2)
+        assert_eq!(diff.answers_added.len(), 1);
+        assert!(diff.answers_modified.is_empty());
+        assert!(diff.answers_removed.is_empty());
+
+        // Should use the latest response
+        assert_eq!(diff.answers_added[0].new_response, Some("REST v2".to_string()));
     }
 
     // ==================== format_diff tests (WP16) ====================
