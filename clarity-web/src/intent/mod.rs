@@ -5,6 +5,7 @@
 //!
 //! ## Submodules
 //!
+//! - [`types`] - Core spec types (Spec, Feature, Behavior, etc.)
 //! - [`interview`] - Interview session management, gap/conflict detection
 //! - [`plan`] - Execution planning, dependency resolution
 //! - [`beads`] - Bead (work item) generation
@@ -13,6 +14,7 @@
 //! - [`batch`] - Multi-spec batch processing
 //! - [`documents`] - Document generation (vision, ready, etc.)
 //! - [`templates`] - Spec template generation
+//! - [`formats`] - Format validators (email, UUID, URI, ISO 8601)
 //! - [`cli`] - CLI support utilities
 //! - [`util`] - Shared utilities
 //!
@@ -25,10 +27,13 @@
 pub mod beads;
 pub mod cli;
 pub mod documents;
+pub mod formats;
 pub mod interview;
 pub mod plan;
 pub mod quality;
+pub mod security;
 pub mod templates;
+pub mod types;
 pub mod util;
 pub mod validation;
 
@@ -38,6 +43,15 @@ pub use interview::types::{
     Profile, Question, QuestionCategory, QuestionPriority,
 };
 
-// Error types will be added in WP04
-// pub mod errors;
-// pub use errors::IntentError;
+// Re-export spec types
+pub use types::{
+    AIHints, AntiPattern, Behavior, EntityHint, Feature, ImplementationHints, Invariant,
+    SecurityHints, Spec, TypeError, Verification,
+};
+
+// Error types (WP04)
+pub mod errors;
+pub use errors::{
+    extract_available_fields, format_error, levenshtein, suggest_field_names, ContextualError,
+    FieldFailure, IntentError, Suggestion, ValidationError,
+};
