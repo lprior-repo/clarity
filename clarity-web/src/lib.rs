@@ -12,6 +12,7 @@ pub mod app;
 pub mod components;
 pub mod config;
 pub mod hooks;
+pub mod intent;
 pub mod kirk;
 pub mod lattice;
 pub mod providers;
