@@ -527,8 +527,11 @@ pub async fn suggest_field_server(
       .unwrap_or("")
   );
 
+  // Resolve provider with optional model override
+  let provider = resolve_provider_with_model_override(model_override.as_ref())?;
+
   // Call provider
-  let result = AI_PROVIDER
+  let result = provider
     .extract_fields_with_schema(&prompt_text, &schema, &context)
     .await
     .map_err(|e| match e {
