@@ -15,10 +15,10 @@
 **Implementation Command**: `spec-kitty implement WP01`
 
 **Included Subtasks**:
-- [ ] T001: Create `clarity-web/src/intent/` directory structure with mod.rs
-- [ ] T002: Add serde, serde_json, chrono, regex, thiserror, anyhow, uuid dependencies
-- [ ] T003: Create `clarity-web/tests/intent/` test directory
-- [ ] T004: Copy CUE schemas from `/tmp/intent-cli/schema/` to `clarity-web/schemas/`
+- [x] T001: Create `clarity-web/src/intent/` directory structure with mod.rs
+- [x] T002: Add serde, serde_json, chrono, regex, thiserror, anyhow, uuid dependencies
+- [x] T003: Create `clarity-web/tests/intent/` test directory
+- [x] T004: Copy CUE schemas from `/tmp/intent-cli/schema/` to `clarity-web/schemas/`
 
 **Implementation Sketch**:
 1. Create directory structure: `src/intent/{interview,plan,beads,quality,validation,batch,documents,templates,cli,util}/mod.rs`
