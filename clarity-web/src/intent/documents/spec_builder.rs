@@ -131,8 +131,10 @@ pub fn extract_security_requirements(answers: &[Answer]) -> String {
 
   if security_answers.is_empty() {
     r#"security: {
-  authentication: "todo"
-  authorization: "todo"
+  password_hashing: "todo"
+  jwt_algorithm: "todo"
+  jwt_expiry: "todo"
+  rate_limiting: "todo"
 }"#
       .to_string()
   } else {
@@ -265,10 +267,10 @@ pub fn create_test_spec(behavior_count: usize) -> Spec {
       },
       entities: Vec::new(),
       security: SecurityHints {
-        authentication: String::new(),
-        authorization: String::new(),
-        data_sensitivity: String::new(),
-        concerns: Vec::new(),
+        password_hashing: String::new(),
+        jwt_algorithm: String::new(),
+        jwt_expiry: String::new(),
+        rate_limiting: String::new(),
       },
       preferred_libraries: Vec::new(),
       style_hints: Vec::new(),
@@ -355,7 +357,7 @@ mod tests {
     let answers = vec![make_test_answer("What is your name?", "John")];
 
     let security = extract_security_requirements(&answers);
-    assert!(security.contains("authentication: \"todo\""));
+    assert!(security.contains("password_hashing: \"todo\""));
   }
 
   #[test]

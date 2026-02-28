@@ -83,10 +83,10 @@ pub fn calculate_ai_readiness_score(spec: &Spec) -> u8 {
   let has_impl_hints = !ai_hints.implementation.architecture.is_empty()
     || !ai_hints.implementation.performance_notes.is_empty()
     || !ai_hints.implementation.error_handling.is_empty();
-  let has_security_hints = !ai_hints.security.authentication.is_empty()
-    || !ai_hints.security.authorization.is_empty()
-    || !ai_hints.security.data_sensitivity.is_empty()
-    || !ai_hints.security.concerns.is_empty();
+  let has_security_hints = !ai_hints.security.password_hashing.is_empty()
+    || !ai_hints.security.jwt_algorithm.is_empty()
+    || !ai_hints.security.jwt_expiry.is_empty()
+    || !ai_hints.security.rate_limiting.is_empty();
   let has_entity_hints = !ai_hints.entities.is_empty();
   let has_lib_hints = !ai_hints.preferred_libraries.is_empty();
   let has_style_hints = !ai_hints.style_hints.is_empty();
@@ -158,8 +158,10 @@ pub(super) fn check_has_auth_tests(spec: &Spec) -> bool {
       })
   });
   in_behavior
-    || !spec.ai_hints.security.authentication.is_empty()
-    || !spec.ai_hints.security.authorization.is_empty()
+    || !spec.ai_hints.security.password_hashing.is_empty()
+    || !spec.ai_hints.security.jwt_algorithm.is_empty()
+    || !spec.ai_hints.security.jwt_expiry.is_empty()
+    || !spec.ai_hints.security.rate_limiting.is_empty()
 }
 
 pub(super) fn check_has_edge_cases(spec: &Spec) -> bool {

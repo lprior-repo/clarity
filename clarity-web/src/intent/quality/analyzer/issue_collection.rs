@@ -69,8 +69,10 @@ pub(super) fn collect_ai_readiness_issues(spec: &Spec, report: &mut QualityRepor
     || !ai_hints.entities.is_empty()
     || !ai_hints.preferred_libraries.is_empty()
     || !ai_hints.style_hints.is_empty()
-    || !ai_hints.security.authentication.is_empty()
-    || !ai_hints.security.authorization.is_empty();
+    || !ai_hints.security.password_hashing.is_empty()
+    || !ai_hints.security.jwt_algorithm.is_empty()
+    || !ai_hints.security.jwt_expiry.is_empty()
+    || !ai_hints.security.rate_limiting.is_empty();
 
   if !has_any_hints {
     report.add_issue(QualityIssue::MissingAiHints);

@@ -219,32 +219,38 @@ fn generate_technical_considerations(spec: &Spec) -> String {
     format!("### Data Entities\n\n{entity_list}\n\n")
   };
 
-  let security = if hints.security.authentication.is_empty()
-    && hints.security.authorization.is_empty()
-    && hints.security.concerns.is_empty()
+  let security = if hints.security.password_hashing.is_empty()
+    && hints.security.jwt_algorithm.is_empty()
+    && hints.security.jwt_expiry.is_empty()
+    && hints.security.rate_limiting.is_empty()
   {
     String::new()
   } else {
-    let auth = if hints.security.authentication.is_empty() {
+    let password_hashing = if hints.security.password_hashing.is_empty() {
       String::new()
     } else {
-      format!("- **Authentication:** {}\n", hints.security.authentication)
+      format!("- **Password Hashing:** {}\n", hints.security.password_hashing)
     };
 
-    let authz = if hints.security.authorization.is_empty() {
+    let jwt_algorithm = if hints.security.jwt_algorithm.is_empty() {
       String::new()
     } else {
-      format!("- **Authorization:** {}\n", hints.security.authorization)
+      format!("- **JWT Algorithm:** {}\n", hints.security.jwt_algorithm)
     };
 
-    let concerns = if hints.security.concerns.is_empty() {
+    let jwt_expiry = if hints.security.jwt_expiry.is_empty() {
       String::new()
     } else {
-      let concern_list = hints.security.concerns.iter().map(|c| format!("  - {c}")).join("\n");
-      format!("- **Concerns:**\n{concern_list}\n")
+      format!("- **JWT Expiry:** {}\n", hints.security.jwt_expiry)
     };
 
-    format!("### Security Considerations\n\n{auth}{authz}{concerns}\n")
+    let rate_limiting = if hints.security.rate_limiting.is_empty() {
+      String::new()
+    } else {
+      format!("- **Rate Limiting:** {}\n", hints.security.rate_limiting)
+    };
+
+    format!("### Security Considerations\n\n{password_hashing}{jwt_algorithm}{jwt_expiry}{rate_limiting}\n")
   };
 
   let libraries = if hints.preferred_libraries.is_empty() {
@@ -311,10 +317,10 @@ mod tests {
         },
         entities: vec![],
         security: SecurityHints {
-          authentication: "JWT".to_string(),
-          authorization: "RBAC".to_string(),
-          data_sensitivity: String::new(),
-          concerns: vec!["SQL injection".to_string()],
+          password_hashing: "bcrypt".to_string(),
+          jwt_algorithm: "RS256".to_string(),
+          jwt_expiry: "24h".to_string(),
+          rate_limiting: "100 req/min".to_string(),
         },
         preferred_libraries: vec!["Rust".to_string()],
         style_hints: Vec::new(),

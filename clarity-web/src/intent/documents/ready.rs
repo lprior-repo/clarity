@@ -285,29 +285,34 @@ fn generate_library_hints(libraries: &[String]) -> String {
 fn generate_security_guidelines(spec: &Spec) -> String {
   let security = &spec.ai_hints.security;
 
-  let auth = if security.authentication.is_empty() {
+  let password_hashing = if security.password_hashing.is_empty() {
     String::new()
   } else {
-    format!("### Authentication\n\n{}\n\n", security.authentication)
+    format!("### Password Hashing\n\n{}\n\n", security.password_hashing)
   };
 
-  let authz = if security.authorization.is_empty() {
+  let jwt_algorithm = if security.jwt_algorithm.is_empty() {
     String::new()
   } else {
-    format!("### Authorization\n\n{}\n\n", security.authorization)
+    format!("### JWT Algorithm\n\n{}\n\n", security.jwt_algorithm)
   };
 
-  let concerns = if security.concerns.is_empty() {
+  let jwt_expiry = if security.jwt_expiry.is_empty() {
     String::new()
   } else {
-    let concern_list = security.concerns.iter().map(|c| format!("- {c}")).join("\n");
-    format!("### Security Concerns\n\n{concern_list}\n")
+    format!("### JWT Expiry\n\n{}\n\n", security.jwt_expiry)
   };
 
-  if auth.is_empty() && authz.is_empty() && concerns.is_empty() {
+  let rate_limiting = if security.rate_limiting.is_empty() {
     String::new()
   } else {
-    format!("## Security Guidelines\n\n{auth}{authz}{concerns}")
+    format!("### Rate Limiting\n\n{}\n\n", security.rate_limiting)
+  };
+
+  if password_hashing.is_empty() && jwt_algorithm.is_empty() && jwt_expiry.is_empty() && rate_limiting.is_empty() {
+    String::new()
+  } else {
+    format!("## Security Guidelines\n\n{password_hashing}{jwt_algorithm}{jwt_expiry}{rate_limiting}")
   }
 }
 
@@ -369,10 +374,10 @@ mod tests {
         },
         entities: vec![],
         security: SecurityHints {
-          authentication: "JWT".to_string(),
-          authorization: "RBAC".to_string(),
-          data_sensitivity: String::new(),
-          concerns: vec!["SQL injection".to_string()],
+          password_hashing: "bcrypt".to_string(),
+          jwt_algorithm: "RS256".to_string(),
+          jwt_expiry: "24h".to_string(),
+          rate_limiting: "100 req/min".to_string(),
         },
         preferred_libraries: vec!["Rust".to_string()],
         style_hints: Vec::new(),
@@ -468,8 +473,8 @@ mod tests {
     let spec = make_test_spec();
     let doc = generate_ready_document(&spec);
     assert!(doc.contains("## Security Guidelines"));
-    assert!(doc.contains("### Authentication"));
-    assert!(doc.contains("JWT"));
+    assert!(doc.contains("### Password Hashing"));
+    assert!(doc.contains("bcrypt"));
   }
 
   #[test]

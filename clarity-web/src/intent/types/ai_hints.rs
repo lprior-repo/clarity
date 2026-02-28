@@ -59,18 +59,18 @@ pub struct EntityHint {
 /// `SecurityHints` - security-related considerations
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct SecurityHints {
-  /// Authentication requirements
+  /// Password hashing algorithm recommendation
   #[serde(default)]
-  pub authentication: String,
-  /// Authorization model
+  pub password_hashing: String,
+  /// JWT algorithm recommendation
   #[serde(default)]
-  pub authorization: String,
-  /// Data sensitivity classification
+  pub jwt_algorithm: String,
+  /// JWT expiry configuration
   #[serde(default)]
-  pub data_sensitivity: String,
-  /// Security concerns to address
+  pub jwt_expiry: String,
+  /// Rate limiting configuration
   #[serde(default)]
-  pub concerns: Vec<String>,
+  pub rate_limiting: String,
 }
 
 #[cfg(test)]
