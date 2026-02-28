@@ -1,9 +1,13 @@
 ---
-work_package_id: "WP01"
-title: "Project Foundation"
-lane: "planned"
+work_package_id: WP01
+title: Project Foundation
+lane: "doing"
 dependencies: []
-subtasks: ["T001", "T002", "T003", "T004"]
+base_branch: main
+base_commit: 9f57391125901350eb491008e73430470040e47b
+created_at: '2026-02-28T04:03:22.048311+00:00'
+subtasks: [T001, T002, T003, T004]
+shell_pid: "277957"
 ---
 
 # WP01: Project Foundation
