@@ -10,6 +10,8 @@ mod errors;
 mod interpolate;
 mod placeholders;
 mod resolve;
+#[cfg(test)]
+mod tests;
 
 pub use context::Context;
 pub use errors::InterpolationError;

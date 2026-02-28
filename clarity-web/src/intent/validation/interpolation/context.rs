@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Context {
-  pub variables: HashMap<String, String>,
+  pub variables: HashMap<String, Value>,
   pub request_body: Option<Value>,
   pub response_body: Option<Value>,
 }
@@ -23,7 +23,7 @@ impl Context {
   where
     I: IntoIterator<Item = (K, V)>,
     K: Into<String>,
-    V: Into<String>,
+    V: Into<Value>,
   {
     Self {
       variables: vars
@@ -36,7 +36,7 @@ impl Context {
   }
 
   #[must_use]
-  pub fn with_variable(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+  pub fn with_variable(mut self, key: impl Into<String>, value: impl Into<Value>) -> Self {
     self.variables.insert(key.into(), value.into());
     self
   }
