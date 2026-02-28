@@ -13,9 +13,21 @@ use super::{BehaviorName, BehaviorReference, TypeError, Verification};
 pub struct Behavior {
   /// Behavior name in `snake_case`
   pub name: String,
-  /// Human-readable description of the behavior
+  /// Plain English description of what this behavior demonstrates
+  #[serde(default)]
+  pub intent: String,
+  /// Human-readable description of the behavior (deprecated, use intent)
   #[serde(default)]
   pub description: String,
+  /// Additional context and notes
+  #[serde(default)]
+  pub notes: String,
+  /// Behavior dependencies (references to other behaviors)
+  #[serde(default)]
+  pub requires: Vec<String>,
+  /// Classification tags
+  #[serde(default)]
+  pub tags: Vec<String>,
   /// How to verify this behavior
   #[serde(default)]
   pub verification: Option<Verification>,
@@ -40,7 +52,11 @@ impl Behavior {
       .map_err(|_| TypeError::InvalidBehaviorName(name))?;
     Ok(Self {
       name: validated_name.into(),
+      intent: String::new(),
       description: String::new(),
+      notes: String::new(),
+      requires: Vec::new(),
+      tags: Vec::new(),
       verification: None,
       preconditions: Vec::new(),
       postconditions: Vec::new(),
@@ -54,7 +70,11 @@ impl Behavior {
   pub fn from_validated_name(name: BehaviorName) -> Self {
     Self {
       name: name.into(),
+      intent: String::new(),
       description: String::new(),
+      notes: String::new(),
+      requires: Vec::new(),
+      tags: Vec::new(),
       verification: None,
       preconditions: Vec::new(),
       postconditions: Vec::new(),
@@ -76,6 +96,30 @@ impl Behavior {
       description: desc,
       ..self
     }
+  }
+
+  /// Builder method to set intent
+  #[must_use]
+  pub fn with_intent(self, intent: String) -> Self {
+    Self { intent, ..self }
+  }
+
+  /// Builder method to set notes
+  #[must_use]
+  pub fn with_notes(self, notes: String) -> Self {
+    Self { notes, ..self }
+  }
+
+  /// Add a requirement (behavior dependency)
+  pub fn add_require(&mut self, requirement: String) -> &mut Self {
+    self.requires.push(requirement);
+    self
+  }
+
+  /// Add a tag
+  pub fn add_tag(&mut self, tag: String) -> &mut Self {
+    self.tags.push(tag);
+    self
   }
 
   /// Builder method to set verification
@@ -306,5 +350,82 @@ mod tests {
     };
 
     assert_eq!(behavior, parsed);
+  }
+
+  #[test]
+  fn test_behavior_with_intent() {
+    let behavior = match Behavior::new("create_user".to_string()) {
+      Ok(b) => b.with_intent("Create a new user account".to_string()),
+      Err(_) => return,
+    };
+    assert_eq!(behavior.intent, "Create a new user account");
+  }
+
+  #[test]
+  fn test_behavior_with_notes() {
+    let behavior = match Behavior::new("create_user".to_string()) {
+      Ok(b) => b.with_notes("Admin only operation".to_string()),
+      Err(_) => return,
+    };
+    assert_eq!(behavior.notes, "Admin only operation");
+  }
+
+  #[test]
+  fn test_behavior_add_require() {
+    let mut behavior = match Behavior::new("create_user".to_string()) {
+      Ok(b) => b,
+      Err(_) => return,
+    };
+    behavior.add_require("auth.login".to_string());
+    assert_eq!(behavior.requires.len(), 1);
+    assert_eq!(behavior.requires[0], "auth.login");
+  }
+
+  #[test]
+  fn test_behavior_add_tag() {
+    let mut behavior = match Behavior::new("create_user".to_string()) {
+      Ok(b) => b,
+      Err(_) => return,
+    };
+    behavior.add_tag("auth".to_string());
+    behavior.add_tag("admin".to_string());
+    assert_eq!(behavior.tags.len(), 2);
+    assert_eq!(behavior.tags[0], "auth");
+    assert_eq!(behavior.tags[1], "admin");
+  }
+
+  #[test]
+  fn test_behavior_all_new_fields_serde() {
+    let mut behavior = match Behavior::new("login".to_string()) {
+      Ok(b) => b,
+      Err(_) => return,
+    };
+    behavior.add_require("user.exists".to_string());
+    behavior.add_tag("auth".to_string());
+
+    let behavior = behavior
+      .with_intent("User authenticates with credentials".to_string())
+      .with_notes("Rate limited to 5 attempts per minute".to_string());
+
+    let json_result = serde_json::to_string(&behavior);
+    assert!(json_result.is_ok());
+
+    let json = match json_result {
+      Ok(value) => value,
+      Err(_) => return,
+    };
+
+    let parsed_result: Result<Behavior, _> = serde_json::from_str(&json);
+    assert!(parsed_result.is_ok());
+
+    let parsed = match parsed_result {
+      Ok(value) => value,
+      Err(_) => return,
+    };
+
+    assert_eq!(parsed.intent, "User authenticates with credentials");
+    assert_eq!(parsed.notes, "Rate limited to 5 attempts per minute");
+    assert_eq!(parsed.requires, vec!["user.exists".to_string()]);
+    assert_eq!(parsed.tags, vec!["auth".to_string()]);
   }
 }

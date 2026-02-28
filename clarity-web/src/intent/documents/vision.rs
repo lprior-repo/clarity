@@ -281,7 +281,11 @@ mod tests {
         description: "User authentication feature".to_string(),
         behaviors: vec![Behavior {
           name: "login".to_string(),
+          intent: "User can log in".to_string(),
           description: "User can log in".to_string(),
+          notes: String::new(),
+          requires: Vec::new(),
+          tags: Vec::new(),
           verification: None,
           preconditions: vec!["User exists".to_string()],
           postconditions: vec!["Session created".to_string()],

@@ -335,7 +335,11 @@ mod tests {
         description: "Authentication".to_string(),
         behaviors: vec![Behavior {
           name: "login".to_string(),
+          intent: "User logs in".to_string(),
           description: "User logs in".to_string(),
+          notes: String::new(),
+          requires: Vec::new(),
+          tags: Vec::new(),
           verification: Some(Verification {
             verification_type: "unit_test".to_string(),
             description: "Test login returns token".to_string(),
