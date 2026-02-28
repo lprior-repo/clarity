@@ -274,6 +274,7 @@ pub fn create_test_spec(behavior_count: usize) -> Spec {
       },
       preferred_libraries: Vec::new(),
       style_hints: Vec::new(),
+      pitfalls: Vec::new(),
     },
   }
 }

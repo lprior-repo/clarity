@@ -381,6 +381,7 @@ mod tests {
         },
         preferred_libraries: vec!["Rust".to_string()],
         style_hints: Vec::new(),
+        pitfalls: Vec::new(),
       },
     }
   }
