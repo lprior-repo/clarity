@@ -318,6 +318,48 @@ static AI_PROVIDER: LazyLock<Arc<OpenCodeProvider>> = LazyLock::new(|| {
   })
 });
 
+/// Resolve an extraction provider with optional model override.
+///
+/// When `model_override` is provided, creates a new provider with the specified model.
+/// When `model_override` is None, returns the global AI_PROVIDER.
+///
+/// # Arguments
+/// * `model_override` - Optional model override (format: "provider_id/model_id" or just "model_id")
+///
+/// # Returns
+/// * `Ok(Arc<OpenCodeProvider>)` - Resolved provider
+/// * `Err(ServerFnError)` - Failed to create provider with override
+#[cfg(not(target_arch = "wasm32"))]
+fn resolve_provider_with_model_override(
+  model_override: &Option<String>,
+) -> Result<Arc<OpenCodeProvider>, ServerFnError> {
+  match model_override {
+    None => Ok(Arc::clone(&AI_PROVIDER)),
+    Some(model) => {
+      // Parse model override: either "provider_id/model_id" or just "model_id"
+      let (routing_provider, model_id) = model
+        .split_once('/')
+        .map(|(p, m)| (Some(p.to_string()), m.to_string()))
+        .unwrap_or_else(|| (AI_PROVIDER.routing_provider().clone(), model.clone()));
+
+      OpenCodeProvider::new_with_options(
+        AI_PROVIDER.endpoint().clone(),
+        AI_PROVIDER.session_id().clone(),
+        OpenCodeProviderOptions {
+          model: Some(model_id),
+          routing_provider,
+        },
+      )
+      .map(Arc::new)
+      .map_err(|e| {
+        ServerFnError::new(anyhow::anyhow!(
+          "Failed to create provider with model override: {e}"
+        ))
+      })
+    }
+  }
+}
+
 /// Lightweight diagnostics for currently configured AI extraction provider.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AiProviderDiagnostics {
@@ -343,6 +385,7 @@ pub async fn get_ai_provider_status_server() -> Result<AiProviderDiagnostics, Se
 /// # Arguments
 /// * `input` - Freeform text to extract fields from
 /// * `session_id` - Optional session identifier for rate limiting
+/// * `model_override` - Optional model override (format: "provider_id/model_id" or just "model_id")
 ///
 /// # Returns
 /// * `Ok(ExtractedFields)` - Successfully extracted fields with confidence scores
@@ -352,6 +395,7 @@ pub async fn get_ai_provider_status_server() -> Result<AiProviderDiagnostics, Se
 pub async fn extract_fields_server(
   input: String,
   session_id: Option<String>,
+  model_override: Option<String>,
 ) -> Result<ExtractedFields, ServerFnError> {
   let session = session_id.as_deref().unwrap_or("default");
 
@@ -391,8 +435,11 @@ pub async fn extract_fields_server(
     extra: serde_json::json!({}),
   };
 
+  // Resolve provider with optional model override
+  let provider = resolve_provider_with_model_override(&model_override)?;
+
   // Call provider
-  let result = AI_PROVIDER
+  let result = provider
     .extract_fields(&input, &context)
     .await
     .map_err(|e| match e {
@@ -427,6 +474,7 @@ pub async fn extract_fields_server(
 /// * `field` - The type of field to suggest
 /// * `context` - Extraction context with prior answers
 /// * `session_id` - Optional session identifier for rate limiting
+/// * `model_override` - Optional model override (format: "provider_id/model_id" or just "model_id")
 ///
 /// # Returns
 /// * `Ok(String)` - Suggested content for the field
@@ -437,6 +485,7 @@ pub async fn suggest_field_server(
   field: FieldType,
   context: ExtractionContext,
   session_id: Option<String>,
+  model_override: Option<String>,
 ) -> Result<String, ServerFnError> {
   let session = session_id.as_deref().unwrap_or("default");
 

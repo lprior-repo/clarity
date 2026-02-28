@@ -17,6 +17,15 @@ pub struct Spec {
   /// Human-readable description
   #[serde(default)]
   pub description: String,
+  /// Target audience for this specification
+  #[serde(default)]
+  pub audience: String,
+  /// Version string for this specification
+  #[serde(default)]
+  pub version: String,
+  /// Success criteria for this specification
+  #[serde(default)]
+  pub success_criteria: Vec<String>,
   /// Features that make up this specification
   #[serde(default)]
   pub features: Vec<Feature>,
@@ -37,11 +46,13 @@ impl Spec {
   /// # Errors
   /// Returns `TypeError::EmptyName` if name is empty or whitespace-only
   pub fn new(name: String) -> Result<Self, TypeError> {
-    let validated_name = SpecName::parse(name.clone())
-      .map_err(|_| TypeError::EmptyName)?;
+    let validated_name = SpecName::parse(name.clone()).map_err(|_| TypeError::EmptyName)?;
     Ok(Self {
       name: validated_name.into(),
       description: String::new(),
+      audience: String::new(),
+      version: String::new(),
+      success_criteria: Vec::new(),
       features: Vec::new(),
       invariants: Vec::new(),
       anti_patterns: Vec::new(),

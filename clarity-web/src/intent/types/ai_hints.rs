@@ -24,6 +24,9 @@ pub struct AIHints {
   /// Code style preferences
   #[serde(default)]
   pub style_hints: Vec<String>,
+  /// Common pitfalls to avoid
+  #[serde(default)]
+  pub pitfalls: Vec<String>,
 }
 
 /// `ImplementationHints` - hints for implementation approach
