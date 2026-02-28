@@ -31,6 +31,10 @@ const ALLOWED_LOCAL_SPECIAL: &[char] = &[
   '.', '"',
 ];
 
+/// Validates an email address according to basic RFC-compatible rules.
+///
+/// # Errors
+/// Returns `FormatError::Email` when the input is empty or violates local/domain constraints.
 pub fn validate_email(input: &str) -> Result<(), FormatError> {
   if input.is_empty() {
     return Err(EmailError::Empty.into());

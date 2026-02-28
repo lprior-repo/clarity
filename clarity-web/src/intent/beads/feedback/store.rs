@@ -3,7 +3,11 @@ use std::sync::{Arc, RwLock};
 
 use super::domain::{BeadFeedback, FeedbackError};
 
-static FEEDBACK_STORE: std::sync::LazyLock<Arc<RwLock<HashMap<String, VecDeque<BeadFeedback>>>>> =
+type FeedbackHistory = VecDeque<BeadFeedback>;
+type FeedbackStore = HashMap<String, FeedbackHistory>;
+type SharedFeedbackStore = Arc<RwLock<FeedbackStore>>;
+
+static FEEDBACK_STORE: std::sync::LazyLock<SharedFeedbackStore> =
   std::sync::LazyLock::new(|| Arc::new(RwLock::new(HashMap::new())));
 
 pub(super) fn store_feedback(feedback: &BeadFeedback) -> Result<(), FeedbackError> {

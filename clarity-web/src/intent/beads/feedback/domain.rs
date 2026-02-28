@@ -45,52 +45,18 @@ pub enum BeadStatus {
 impl BeadStatus {
   #[must_use]
   pub fn can_transition_to(&self, to: &Self) -> bool {
-    match (self, to) {
-      // No-op transitions (staying in same state) - always valid
-      (Self::Pending, Self::Pending) => true,
-      (Self::Ready, Self::Ready) => true,
-      (Self::InProgress, Self::InProgress) => true,
-      (Self::Blocked, Self::Blocked) => true,
-      (Self::Failed, Self::Failed) => true,
-      (Self::Complete, Self::Complete) => true,
-      // Pending can go to Ready or Blocked
-      (Self::Pending, Self::Ready) => true,
-      (Self::Pending, Self::Blocked) => true,
-      // Ready can go to InProgress or Blocked
-      (Self::Ready, Self::InProgress) => true,
-      (Self::Ready, Self::Blocked) => true,
-      // InProgress can go to Complete, Failed, or Blocked
-      (Self::InProgress, Self::Complete) => true,
-      (Self::InProgress, Self::Failed) => true,
-      (Self::InProgress, Self::Blocked) => true,
-      // Blocked can go to Ready, Pending, or InProgress
-      (Self::Blocked, Self::Ready) => true,
-      (Self::Blocked, Self::Pending) => true,
-      (Self::Blocked, Self::InProgress) => true,
-      // Failed can go to Ready or Pending
-      (Self::Failed, Self::Ready) => true,
-      (Self::Failed, Self::Pending) => true,
-      // Complete is terminal - no transitions out
-      (Self::Complete, Self::Pending) => false,
-      (Self::Complete, Self::Ready) => false,
-      (Self::Complete, Self::InProgress) => false,
-      (Self::Complete, Self::Blocked) => false,
-      (Self::Complete, Self::Failed) => false,
-      // All remaining invalid transitions (explicitly listed for exhaustiveness)
-      (Self::Pending, Self::InProgress) => false,
-      (Self::Pending, Self::Complete) => false,
-      (Self::Pending, Self::Failed) => false,
-      (Self::Ready, Self::Pending) => false,
-      (Self::Ready, Self::Complete) => false,
-      (Self::Ready, Self::Failed) => false,
-      (Self::InProgress, Self::Pending) => false,
-      (Self::InProgress, Self::Ready) => false,
-      (Self::Blocked, Self::Complete) => false,
-      (Self::Blocked, Self::Failed) => false,
-      (Self::Failed, Self::InProgress) => false,
-      (Self::Failed, Self::Blocked) => false,
-      (Self::Failed, Self::Complete) => false,
-    }
+    self == to
+      || matches!(
+        (self, to),
+        (Self::Pending | Self::Failed | Self::Blocked, Self::Ready)
+          | (
+            Self::Pending | Self::Ready | Self::InProgress,
+            Self::Blocked
+          )
+          | (Self::Ready | Self::Blocked, Self::InProgress)
+          | (Self::InProgress, Self::Complete | Self::Failed)
+          | (Self::Blocked | Self::Failed, Self::Pending)
+      )
   }
 
   /// Transition to a new state with exhaustive pattern matching.
@@ -99,89 +65,21 @@ impl BeadStatus {
   /// Returns `FeedbackError::InvalidTransition` if the transition is not allowed.
   /// Returns `FeedbackError::AlreadyComplete` if the bead is already complete.
   pub fn transition_to(self, next: Self) -> Result<Self, FeedbackError> {
+    if self == next {
+      return Ok(next);
+    }
     match (self, next) {
-      // No-op transitions (staying in same state) - always valid
-      (Self::Pending, Self::Pending) => Ok(Self::Pending),
-      (Self::Ready, Self::Ready) => Ok(Self::Ready),
-      (Self::InProgress, Self::InProgress) => Ok(Self::InProgress),
-      (Self::Blocked, Self::Blocked) => Ok(Self::Blocked),
-      (Self::Failed, Self::Failed) => Ok(Self::Failed),
-      (Self::Complete, Self::Complete) => Ok(Self::Complete),
-      // Pending can go to Ready or Blocked
-      (Self::Pending, Self::Ready) => Ok(Self::Ready),
-      (Self::Pending, Self::Blocked) => Ok(Self::Blocked),
-      // Ready can go to InProgress or Blocked
-      (Self::Ready, Self::InProgress) => Ok(Self::InProgress),
-      (Self::Ready, Self::Blocked) => Ok(Self::Blocked),
-      // InProgress can go to Complete, Failed, or Blocked
-      (Self::InProgress, Self::Complete) => Ok(Self::Complete),
-      (Self::InProgress, Self::Failed) => Ok(Self::Failed),
-      (Self::InProgress, Self::Blocked) => Ok(Self::Blocked),
-      // Blocked can go to Ready, Pending, or InProgress
-      (Self::Blocked, Self::Ready) => Ok(Self::Ready),
-      (Self::Blocked, Self::Pending) => Ok(Self::Pending),
-      (Self::Blocked, Self::InProgress) => Ok(Self::InProgress),
-      // Failed can go to Ready or Pending
-      (Self::Failed, Self::Ready) => Ok(Self::Ready),
-      (Self::Failed, Self::Pending) => Ok(Self::Pending),
+      (Self::Pending, Self::Ready | Self::Blocked)
+      | (Self::Ready, Self::InProgress | Self::Blocked)
+      | (Self::InProgress, Self::Complete | Self::Failed | Self::Blocked)
+      | (Self::Blocked, Self::Ready | Self::Pending | Self::InProgress)
+      | (Self::Failed, Self::Ready | Self::Pending) => Ok(next),
       // Complete is terminal - no transitions out
-      (Self::Complete, Self::Pending) => Err(FeedbackError::AlreadyComplete),
-      (Self::Complete, Self::Ready) => Err(FeedbackError::AlreadyComplete),
-      (Self::Complete, Self::InProgress) => Err(FeedbackError::AlreadyComplete),
-      (Self::Complete, Self::Blocked) => Err(FeedbackError::AlreadyComplete),
-      (Self::Complete, Self::Failed) => Err(FeedbackError::AlreadyComplete),
-      // All remaining invalid transitions (explicitly listed for exhaustiveness)
-      (Self::Pending, Self::InProgress) => Err(FeedbackError::InvalidTransition {
-        from: Self::Pending,
-        to: Self::InProgress,
-      }),
-      (Self::Pending, Self::Complete) => Err(FeedbackError::InvalidTransition {
-        from: Self::Pending,
-        to: Self::Complete,
-      }),
-      (Self::Pending, Self::Failed) => Err(FeedbackError::InvalidTransition {
-        from: Self::Pending,
-        to: Self::Failed,
-      }),
-      (Self::Ready, Self::Pending) => Err(FeedbackError::InvalidTransition {
-        from: Self::Ready,
-        to: Self::Pending,
-      }),
-      (Self::Ready, Self::Complete) => Err(FeedbackError::InvalidTransition {
-        from: Self::Ready,
-        to: Self::Complete,
-      }),
-      (Self::Ready, Self::Failed) => Err(FeedbackError::InvalidTransition {
-        from: Self::Ready,
-        to: Self::Failed,
-      }),
-      (Self::InProgress, Self::Pending) => Err(FeedbackError::InvalidTransition {
-        from: Self::InProgress,
-        to: Self::Pending,
-      }),
-      (Self::InProgress, Self::Ready) => Err(FeedbackError::InvalidTransition {
-        from: Self::InProgress,
-        to: Self::Ready,
-      }),
-      (Self::Blocked, Self::Complete) => Err(FeedbackError::InvalidTransition {
-        from: Self::Blocked,
-        to: Self::Complete,
-      }),
-      (Self::Blocked, Self::Failed) => Err(FeedbackError::InvalidTransition {
-        from: Self::Blocked,
-        to: Self::Failed,
-      }),
-      (Self::Failed, Self::InProgress) => Err(FeedbackError::InvalidTransition {
-        from: Self::Failed,
-        to: Self::InProgress,
-      }),
-      (Self::Failed, Self::Blocked) => Err(FeedbackError::InvalidTransition {
-        from: Self::Failed,
-        to: Self::Blocked,
-      }),
-      (Self::Failed, Self::Complete) => Err(FeedbackError::InvalidTransition {
-        from: Self::Failed,
-        to: Self::Complete,
+      (Self::Complete, _) => Err(FeedbackError::AlreadyComplete),
+      // All remaining invalid transitions
+      _ => Err(FeedbackError::InvalidTransition {
+        from: self,
+        to: next,
       }),
     }
   }
@@ -447,8 +345,12 @@ mod tests {
     );
 
     // Invalid transitions
-    assert!(BeadStatus::Complete.transition_to(BeadStatus::Pending).is_err());
-    assert!(BeadStatus::Pending.transition_to(BeadStatus::Complete).is_err());
+    assert!(BeadStatus::Complete
+      .transition_to(BeadStatus::Pending)
+      .is_err());
+    assert!(BeadStatus::Pending
+      .transition_to(BeadStatus::Complete)
+      .is_err());
   }
 
   #[test]
@@ -470,22 +372,43 @@ mod tests {
   fn bead_status_complete_transitions_return_already_complete() {
     let complete = BeadStatus::Complete;
 
-    assert_eq!(complete.transition_to(BeadStatus::Pending), Err(FeedbackError::AlreadyComplete));
-    assert_eq!(complete.transition_to(BeadStatus::Ready), Err(FeedbackError::AlreadyComplete));
-    assert_eq!(complete.transition_to(BeadStatus::InProgress), Err(FeedbackError::AlreadyComplete));
-    assert_eq!(complete.transition_to(BeadStatus::Blocked), Err(FeedbackError::AlreadyComplete));
-    assert_eq!(complete.transition_to(BeadStatus::Failed), Err(FeedbackError::AlreadyComplete));
+    assert_eq!(
+      complete.transition_to(BeadStatus::Pending),
+      Err(FeedbackError::AlreadyComplete)
+    );
+    assert_eq!(
+      complete.transition_to(BeadStatus::Ready),
+      Err(FeedbackError::AlreadyComplete)
+    );
+    assert_eq!(
+      complete.transition_to(BeadStatus::InProgress),
+      Err(FeedbackError::AlreadyComplete)
+    );
+    assert_eq!(
+      complete.transition_to(BeadStatus::Blocked),
+      Err(FeedbackError::AlreadyComplete)
+    );
+    assert_eq!(
+      complete.transition_to(BeadStatus::Failed),
+      Err(FeedbackError::AlreadyComplete)
+    );
   }
 
   #[test]
   fn bead_status_invalid_transitions_return_correct_error() {
     assert!(matches!(
       BeadStatus::Pending.transition_to(BeadStatus::InProgress),
-      Err(FeedbackError::InvalidTransition { from: BeadStatus::Pending, to: BeadStatus::InProgress })
+      Err(FeedbackError::InvalidTransition {
+        from: BeadStatus::Pending,
+        to: BeadStatus::InProgress
+      })
     ));
     assert!(matches!(
       BeadStatus::Ready.transition_to(BeadStatus::Pending),
-      Err(FeedbackError::InvalidTransition { from: BeadStatus::Ready, to: BeadStatus::Pending })
+      Err(FeedbackError::InvalidTransition {
+        from: BeadStatus::Ready,
+        to: BeadStatus::Pending
+      })
     ));
   }
 

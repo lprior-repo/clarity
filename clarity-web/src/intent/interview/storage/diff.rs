@@ -1,6 +1,7 @@
 use super::models::{AnswerChangeType, AnswerDiff, SessionDiff, SessionSnapshot};
 use crate::intent::interview::types::{InterviewSession, InterviewStage};
 use std::collections::HashMap;
+use std::fmt::Write;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum ParsedStage {
@@ -113,120 +114,131 @@ pub fn diff_sessions(from: &InterviewSession, to: &InterviewSession) -> SessionD
 /// Format a session diff as human-readable text.
 #[must_use]
 pub fn format_diff(diff: &SessionDiff) -> String {
-  const MAX_RESPONSE_LEN: usize = 50;
-
-  fn truncate(value: &str) -> String {
-    if value.chars().count() > MAX_RESPONSE_LEN {
-      format!(
-        "{}...",
-        value.chars().take(MAX_RESPONSE_LEN).collect::<String>()
-      )
-    } else {
-      value.to_string()
-    }
-  }
-
-  let format_response = |response: &Option<String>| {
-    response
-      .as_ref()
-      .map_or_else(|| "(none)".to_string(), |value| truncate(value))
-  };
-
   let mut output = String::new();
-  output.push_str(&format!(
-    "Session Diff: {} -> {}\n",
+  let _ = writeln!(
+    output,
+    "Session Diff: {} -> {}",
     diff.from_session_id, diff.to_session_id
-  ));
-  output.push_str(&format!(
-    "Timestamps: {} -> {}\n\n",
+  );
+  let _ = writeln!(
+    output,
+    "Timestamps: {} -> {}\n",
     diff.from_timestamp, diff.to_timestamp
-  ));
+  );
 
   if diff.stage_changed {
-    output.push_str(&format!(
-      "Stage: {} -> {}\n\n",
-      diff.old_stage.as_deref().map_or("(none)", |value| value),
-      diff.new_stage.as_deref().map_or("(none)", |value| value)
-    ));
+    let _ = writeln!(
+      output,
+      "Stage: {} -> {}\n",
+      diff.old_stage.as_deref().unwrap_or("(none)"),
+      diff.new_stage.as_deref().unwrap_or("(none)")
+    );
   }
 
-  if !diff.answers_added.is_empty() {
-    output.push_str(&format!("Answers Added ({}):\n", diff.answers_added.len()));
-    for answer in &diff.answers_added {
-      output.push_str(&format!(
-        "  + [{}] {}: {}\n",
-        answer.question_id,
-        truncate(&answer.question_text),
-        format_response(&answer.new_response)
-      ));
-    }
-    output.push('\n');
-  }
-
-  if !diff.answers_modified.is_empty() {
-    output.push_str(&format!(
-      "Answers Modified ({}):\n",
-      diff.answers_modified.len()
-    ));
-    for answer in &diff.answers_modified {
-      output.push_str(&format!(
-        "  ~ [{}] {}:\n    {} -> {}\n",
-        answer.question_id,
-        truncate(&answer.question_text),
-        format_response(&answer.old_response),
-        format_response(&answer.new_response)
-      ));
-    }
-    output.push('\n');
-  }
-
-  if !diff.answers_removed.is_empty() {
-    output.push_str(&format!(
-      "Answers Removed ({}):\n",
-      diff.answers_removed.len()
-    ));
-    for answer in &diff.answers_removed {
-      output.push_str(&format!(
-        "  - [{}] {}: {}\n",
-        answer.question_id,
-        truncate(&answer.question_text),
-        format_response(&answer.old_response)
-      ));
-    }
-    output.push('\n');
-  }
-
-  match diff.gaps_added.cmp(&0) {
-    std::cmp::Ordering::Greater => {
-      output.push_str(&format!("Gaps: +{} new gap(s)\n", diff.gaps_added));
-    }
-    std::cmp::Ordering::Less => {
-      output.push_str(&format!("Gaps: {} gap(s) resolved\n", -diff.gaps_added));
-    }
-    std::cmp::Ordering::Equal => {
-      output.push_str("Gaps: No change\n");
-    }
-  }
-
-  match diff.conflicts_added.cmp(&0) {
-    std::cmp::Ordering::Greater => {
-      output.push_str(&format!(
-        "Conflicts: +{} new conflict(s)\n",
-        diff.conflicts_added
-      ));
-    }
-    std::cmp::Ordering::Less => {
-      output.push_str(&format!(
-        "Conflicts: {} conflict(s) resolved\n",
-        -diff.conflicts_added
-      ));
-    }
-    std::cmp::Ordering::Equal => {
-      output.push_str("Conflicts: No change\n");
-    }
-  }
+  write_added_answers(&mut output, &diff.answers_added);
+  write_modified_answers(&mut output, &diff.answers_modified);
+  write_removed_answers(&mut output, &diff.answers_removed);
+  write_delta_line(
+    &mut output,
+    "Gaps",
+    diff.gaps_added,
+    "new gap(s)",
+    "gap(s) resolved",
+  );
+  write_delta_line(
+    &mut output,
+    "Conflicts",
+    diff.conflicts_added,
+    "new conflict(s)",
+    "conflict(s) resolved",
+  );
 
   output
+}
+
+fn truncate(value: &str) -> String {
+  const MAX_RESPONSE_LEN: usize = 50;
+  if value.chars().count() > MAX_RESPONSE_LEN {
+    format!(
+      "{}...",
+      value.chars().take(MAX_RESPONSE_LEN).collect::<String>()
+    )
+  } else {
+    value.to_string()
+  }
+}
+
+fn format_response(response: Option<&String>) -> String {
+  response.map_or_else(|| "(none)".to_string(), |value| truncate(value))
+}
+
+fn write_added_answers(output: &mut String, answers: &[AnswerDiff]) {
+  if answers.is_empty() {
+    return;
+  }
+
+  let _ = writeln!(output, "Answers Added ({}):", answers.len());
+  for answer in answers {
+    let _ = writeln!(
+      output,
+      "  + [{}] {}: {}",
+      answer.question_id,
+      truncate(&answer.question_text),
+      format_response(answer.new_response.as_ref())
+    );
+  }
+  output.push('\n');
+}
+
+fn write_modified_answers(output: &mut String, answers: &[AnswerDiff]) {
+  if answers.is_empty() {
+    return;
+  }
+
+  let _ = writeln!(output, "Answers Modified ({}):", answers.len());
+  for answer in answers {
+    let _ = writeln!(
+      output,
+      "  ~ [{}] {}:\n    {} -> {}",
+      answer.question_id,
+      truncate(&answer.question_text),
+      format_response(answer.old_response.as_ref()),
+      format_response(answer.new_response.as_ref())
+    );
+  }
+  output.push('\n');
+}
+
+fn write_removed_answers(output: &mut String, answers: &[AnswerDiff]) {
+  if answers.is_empty() {
+    return;
+  }
+
+  let _ = writeln!(output, "Answers Removed ({}):", answers.len());
+  for answer in answers {
+    let _ = writeln!(
+      output,
+      "  - [{}] {}: {}",
+      answer.question_id,
+      truncate(&answer.question_text),
+      format_response(answer.old_response.as_ref())
+    );
+  }
+  output.push('\n');
+}
+
+fn write_delta_line(
+  output: &mut String,
+  label: &str,
+  delta: i32,
+  positive_suffix: &str,
+  negative_suffix: &str,
+) {
+  let _ = match delta.cmp(&0) {
+    std::cmp::Ordering::Greater => writeln!(output, "{label}: +{delta} {positive_suffix}"),
+    std::cmp::Ordering::Less => writeln!(output, "{label}: {} {negative_suffix}", -delta),
+    std::cmp::Ordering::Equal => writeln!(output, "{label}: No change"),
+  };
 }
 
 /// Compute the difference between two session snapshots.

@@ -1,4 +1,5 @@
 use super::{ContextualError, IntentError};
+use std::fmt::Write as _;
 
 #[must_use]
 pub fn format_error(error: &ContextualError) -> String {
@@ -20,30 +21,31 @@ pub fn format_error(error: &ContextualError) -> String {
     IntentError::Internal { .. } => "Internal Error",
   };
 
-  output.push_str(&format!("Error: {error_type}\n"));
-  output.push_str(&format!("  Message: {}\n", error.message));
+  let _ = writeln!(output, "Error: {error_type}");
+  let _ = writeln!(output, "  Message: {}", error.message);
 
   if let Some(location) = error.location_string() {
-    output.push_str(&format!("  Location: {location}\n"));
+    let _ = writeln!(output, "  Location: {location}");
   }
   if let Some(json_path) = &error.json_path {
-    output.push_str(&format!("  JSON Path: {json_path}\n"));
+    let _ = writeln!(output, "  JSON Path: {json_path}");
   }
 
   if !error.suggestions.is_empty() {
     output.push_str("  Suggestions:\n");
     for suggestion in &error.suggestions {
-      output.push_str(&format!(
-        "    - {} (edit distance: {})\n",
+      let _ = writeln!(
+        output,
+        "    - {} (edit distance: {})",
         suggestion.text, suggestion.distance
-      ));
+      );
     }
   }
 
   if !error.context.is_empty() {
     output.push_str("  Context:\n");
     for (key, value) in &error.context {
-      output.push_str(&format!("    {key}: {value}\n"));
+      let _ = writeln!(output, "    {key}: {value}");
     }
   }
 

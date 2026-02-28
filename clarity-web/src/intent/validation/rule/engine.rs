@@ -1,17 +1,21 @@
 use super::errors::RuleError;
 use super::types::{Comparison, Rule, RuleResult};
 
+/// Applies one validation rule to a value.
+///
+/// # Errors
+/// Returns `RuleError` when rule evaluation requires parsing/regex processing that fails.
 pub fn apply_rule(rule: &Rule, value: &str) -> Result<RuleResult, RuleError> {
   match rule {
-    Rule::Required => validate_required(value),
+    Rule::Required => Ok(validate_required(value)),
     Rule::Pattern { pattern } => validate_pattern(value, pattern),
     Rule::Range { min, max } => validate_range(value, *min, *max),
     Rule::Custom { name, check } => validate_custom(value, name, check),
   }
 }
 
-fn validate_required(value: &str) -> Result<RuleResult, RuleError> {
-  Ok(if value.trim().is_empty() {
+fn validate_required(value: &str) -> RuleResult {
+  if value.trim().is_empty() {
     RuleResult::failed(
       "required",
       "value is required but was empty",
@@ -19,7 +23,7 @@ fn validate_required(value: &str) -> Result<RuleResult, RuleError> {
     )
   } else {
     RuleResult::passed("required", Some(value.to_string()))
-  })
+  }
 }
 
 fn validate_pattern(value: &str, pattern: &str) -> Result<RuleResult, RuleError> {
@@ -155,23 +159,35 @@ fn evaluate_one_of(value: &str, list: &str) -> Result<bool, RuleError> {
   Ok(values.iter().any(|candidate| candidate == value))
 }
 
+/// Evaluates all rules for a value.
+///
+/// # Errors
+/// Returns the first `RuleError` encountered while applying rules.
 pub fn validate_with_rules(value: &str, rules: &[Rule]) -> Result<Vec<RuleResult>, RuleError> {
   rules.iter().map(|rule| apply_rule(rule, value)).collect()
 }
 
+/// Returns whether all rules pass for a value.
+///
+/// # Errors
+/// Returns `RuleError` when any individual rule evaluation fails.
 pub fn all_rules_pass(value: &str, rules: &[Rule]) -> Result<bool, RuleError> {
   Ok(
     validate_with_rules(value, rules)?
       .iter()
-      .all(|result| result.is_pass()),
+      .all(super::types::RuleResult::is_pass),
   )
 }
 
+/// Returns only the failing rule results for a value.
+///
+/// # Errors
+/// Returns `RuleError` when any individual rule evaluation fails.
 pub fn failing_rules(value: &str, rules: &[Rule]) -> Result<Vec<RuleResult>, RuleError> {
   Ok(
     validate_with_rules(value, rules)?
       .into_iter()
-      .filter(|result| result.is_fail())
+      .filter(super::types::RuleResult::is_fail)
       .collect(),
   )
 }

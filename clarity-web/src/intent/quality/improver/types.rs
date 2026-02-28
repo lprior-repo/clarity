@@ -23,6 +23,10 @@ pub struct ImprovementSuggestion {
 }
 
 impl ImprovementSuggestion {
+  /// Creates a new improvement suggestion with validated priority.
+  ///
+  /// # Errors
+  /// Returns `ImproverError::InvalidPriority` when `priority` is outside `1..=10`.
   pub fn new(
     category: impl Into<String>,
     description: impl Into<String>,

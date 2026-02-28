@@ -18,7 +18,7 @@ use std::collections::HashSet;
 use crate::intent::util::contains_any_ignore_case;
 
 /// Synthesis context for generating acceptance tests
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SynthesisContext {
   pub session_id: String,
   pub bead_id: String,
@@ -42,7 +42,7 @@ impl Default for SynthesisContext {
 }
 
 /// Test strategy for generating different types of acceptance tests
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TestStrategy {
   /// Verify behavior X works when Y
   BehaviorVerification,
@@ -55,13 +55,8 @@ pub enum TestStrategy {
   /// Validate performance meets threshold T
   PerformanceMetric,
   /// Automatically infer from context
+  #[default]
   Auto,
-}
-
-impl Default for TestStrategy {
-  fn default() -> Self {
-    Self::Auto
-  }
 }
 
 /// Synthesize acceptance tests from AI planning content
@@ -77,17 +72,13 @@ pub fn synthesize_acceptance_tests(
 
   let testable_elements = extract_testable_elements(&context.ai_answer);
 
-  let base_tests: Vec<String> = testable_elements
-    .iter()
-    .map(|element| format_acceptance_test(element, effective_strategy, context))
-    .collect();
-
   let dependency_tests = generate_dependency_tests(context);
   let phase_tests = generate_phase_tests(context, effective_strategy);
 
   // Combine and deduplicate while maintaining order
-  let combined: Vec<String> = base_tests
-    .into_iter()
+  let combined: Vec<String> = testable_elements
+    .iter()
+    .map(|element| format_acceptance_test(element, effective_strategy, context))
     .chain(dependency_tests)
     .chain(phase_tests)
     .collect();
@@ -100,8 +91,20 @@ pub fn synthesize_acceptance_tests(
 #[must_use]
 pub fn extract_testable_elements(ai_answer: &str) -> Vec<String> {
   let keywords = [
-    "implement", "create", "build", "add", "verify", "validate", "check", "ensure", "test",
-    "handle", "support", "generate", "parse", "process",
+    "implement",
+    "create",
+    "build",
+    "add",
+    "verify",
+    "validate",
+    "check",
+    "ensure",
+    "test",
+    "handle",
+    "support",
+    "generate",
+    "parse",
+    "process",
   ];
 
   let testable_lines: Vec<String> = ai_answer
@@ -137,12 +140,11 @@ pub fn format_acceptance_test(
     .to_string();
 
   let prefix = match strategy {
-    TestStrategy::BehaviorVerification => "Verify",
+    TestStrategy::BehaviorVerification | TestStrategy::Auto => "Verify",
     TestStrategy::OutputValidation => "Confirm",
     TestStrategy::IntegrationCheck => "Ensure",
     TestStrategy::ErrorHandling => "Test error handling for",
     TestStrategy::PerformanceMetric => "Validate performance of",
-    TestStrategy::Auto => "Verify",
   };
 
   let test_body = format_test_body(&cleaned_element, strategy, context);
@@ -267,7 +269,10 @@ fn ensure_minimum_tests(tests: Vec<String>, context: &SynthesisContext) -> Vec<S
 /// Generate fallback tests to meet minimum requirements
 fn generate_fallback_tests(context: &SynthesisContext, count: usize) -> Vec<String> {
   let fallback_templates = [
-    format!("Verify {} meets specification requirements", context.bead_title),
+    format!(
+      "Verify {} meets specification requirements",
+      context.bead_title
+    ),
     format!("Test {} with valid inputs", context.bead_title),
     format!("Verify {} handles edge cases correctly", context.bead_title),
     format!("Confirm {} produces expected outputs", context.bead_title),
@@ -289,8 +294,7 @@ mod tests {
       session_id: "test-session".to_string(),
       bead_id: "bead-1".to_string(),
       bead_title: "User Authentication".to_string(),
-      ai_answer: "Implement user login with email validation. Create session tokens."
-        .to_string(),
+      ai_answer: "Implement user login with email validation. Create session tokens.".to_string(),
       phase: 1,
       dependencies: vec!["Database".to_string(), "Email Service".to_string()],
     }
@@ -320,11 +324,7 @@ mod tests {
   #[test]
   fn test_format_acceptance_test_behavior_verification() {
     let context = make_test_context();
-    let test = format_acceptance_test(
-      "user login",
-      TestStrategy::BehaviorVerification,
-      &context,
-    );
+    let test = format_acceptance_test("user login", TestStrategy::BehaviorVerification, &context);
     assert!(test.starts_with("Verify"));
     assert!(test.contains("works as expected"));
   }
@@ -332,11 +332,7 @@ mod tests {
   #[test]
   fn test_format_acceptance_test_error_handling() {
     let context = make_test_context();
-    let test = format_acceptance_test(
-      "network timeout",
-      TestStrategy::ErrorHandling,
-      &context,
-    );
+    let test = format_acceptance_test("network timeout", TestStrategy::ErrorHandling, &context);
     assert!(test.starts_with("Test error handling for"));
     assert!(test.contains("handled gracefully"));
   }

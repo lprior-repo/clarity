@@ -1,6 +1,7 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fmt::Write as _;
 use thiserror::Error;
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
@@ -47,6 +48,10 @@ impl Default for BeadTemplate {
 }
 
 impl BeadTemplate {
+  /// Creates a validated bead template.
+  ///
+  /// # Errors
+  /// Returns `BeadError` when title, description, profile type, or priority are invalid.
   pub fn new(
     title: String,
     description: String,
@@ -159,5 +164,141 @@ impl BeadTemplateStats {
       by_type: beads.iter().map(|bead| bead.issue_type.clone()).counts(),
       by_profile: beads.iter().map(|bead| bead.profile_type.clone()).counts(),
     }
+  }
+}
+
+#[must_use]
+pub fn bead_id_for_index(index: usize) -> String {
+  format!("bd-{:04x}", index + 1)
+}
+
+#[must_use]
+pub fn enhanced_bead_entry(bead: &BeadTemplate, index: usize) -> String {
+  let id = bead_id_for_index(index);
+  format!(
+    r#"{{ id: "{}", title: "{}", description: "{}", type: "{}", priority: {} }}"#,
+    id, bead.title, bead.description, bead.issue_type, bead.priority
+  )
+}
+
+#[must_use]
+pub fn with_validation_header(beads: &[BeadTemplate]) -> String {
+  let mut output = String::from("# Validation Header\n");
+  let _ = writeln!(output, "Total beads: {}", beads.len());
+
+  let stats = BeadTemplateStats::from_beads(beads);
+  let _ = writeln!(output, "By priority: {:?}", stats.by_priority);
+  let _ = writeln!(output, "By type: {:?}", stats.by_type);
+
+  output.push_str("\n# Beads\n");
+  output
+}
+
+#[must_use]
+pub fn filter_beads_by_type<'a>(
+  beads: &'a [BeadTemplate],
+  issue_type: &str,
+) -> Vec<&'a BeadTemplate> {
+  beads
+    .iter()
+    .filter(|b| b.issue_type == issue_type)
+    .collect()
+}
+
+pub fn sort_beads_by_priority(beads: &mut [BeadTemplate]) {
+  beads.sort_by_key(|b| b.priority);
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_bead_id_for_index() {
+    assert_eq!(bead_id_for_index(0), "bd-0001");
+    assert_eq!(bead_id_for_index(15), "bd-0010");
+    assert_eq!(bead_id_for_index(255), "bd-0100");
+  }
+
+  #[test]
+  fn test_enhanced_bead_entry() {
+    let bead = BeadTemplate {
+      title: "Test Bead".to_string(),
+      description: "Test description".to_string(),
+      issue_type: "feature".to_string(),
+      priority: 2,
+      ..Default::default()
+    };
+
+    let entry = enhanced_bead_entry(&bead, 0);
+    assert!(entry.contains("bd-0001"));
+    assert!(entry.contains("Test Bead"));
+  }
+
+  #[test]
+  fn test_filter_beads_by_type() {
+    let beads = vec![
+      BeadTemplate {
+        issue_type: "feature".to_string(),
+        ..Default::default()
+      },
+      BeadTemplate {
+        issue_type: "bug".to_string(),
+        ..Default::default()
+      },
+      BeadTemplate {
+        issue_type: "feature".to_string(),
+        ..Default::default()
+      },
+    ];
+
+    let features = filter_beads_by_type(&beads, "feature");
+    assert_eq!(features.len(), 2);
+
+    let bugs = filter_beads_by_type(&beads, "bug");
+    assert_eq!(bugs.len(), 1);
+  }
+
+  #[test]
+  fn test_sort_beads_by_priority() {
+    let mut beads = vec![
+      BeadTemplate {
+        priority: 3,
+        ..Default::default()
+      },
+      BeadTemplate {
+        priority: 1,
+        ..Default::default()
+      },
+      BeadTemplate {
+        priority: 2,
+        ..Default::default()
+      },
+    ];
+
+    sort_beads_by_priority(&mut beads);
+    assert_eq!(beads[0].priority, 1);
+    assert_eq!(beads[1].priority, 2);
+    assert_eq!(beads[2].priority, 3);
+  }
+
+  #[test]
+  fn test_with_validation_header() {
+    let beads = vec![
+      BeadTemplate {
+        priority: 1,
+        issue_type: "feature".to_string(),
+        ..Default::default()
+      },
+      BeadTemplate {
+        priority: 2,
+        issue_type: "bug".to_string(),
+        ..Default::default()
+      },
+    ];
+
+    let header = with_validation_header(&beads);
+    assert!(header.contains("Total beads: 2"));
+    assert!(header.contains("By priority:"));
   }
 }

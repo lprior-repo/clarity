@@ -68,6 +68,10 @@ const MIN_TIMEZONE_OFFSET_MINUTES: i32 = -12 * 60;
 /// Maximum valid timezone offset in minutes (+14:00).
 const MAX_TIMEZONE_OFFSET_MINUTES: i32 = 14 * 60;
 
+/// Validates an ISO 8601 date, time, or datetime string.
+///
+/// # Errors
+/// Returns `FormatError::Iso8601` when the value is empty or fails structural/value checks.
 pub fn validate_iso8601(input: &str) -> Result<(), FormatError> {
   if input.is_empty() {
     return Err(Iso8601Error::Empty.into());
@@ -144,7 +148,7 @@ fn validate_iso8601_time(input: &str) -> Result<(), Iso8601Error> {
     return Err(Iso8601Error::InvalidTimeSeparator);
   }
 
-  let minute_str: String = chars[TIME_HOUR_COLON_POSITION + 1..TIME_SECOND_COLON_POSITION + 1]
+  let minute_str: String = chars[(TIME_HOUR_COLON_POSITION + 1)..=TIME_SECOND_COLON_POSITION]
     .iter()
     .collect();
   let minute: u8 = parse_int(&minute_str).map_err(|()| Iso8601Error::InvalidMinute(0))?;
@@ -184,9 +188,7 @@ fn validate_iso8601_datetime(input: &str) -> Result<(), FormatError> {
   let Some(sep_pos) = chars
     .iter()
     .enumerate()
-    .find(|(index, ch)| {
-      *index == DATETIME_SEPARATOR_POSITION && (**ch == 'T' || **ch == ' ')
-    })
+    .find(|(index, ch)| *index == DATETIME_SEPARATOR_POSITION && (**ch == 'T' || **ch == ' '))
     .map(|(index, _)| index)
   else {
     return Err(Iso8601Error::InvalidDateTimeSeparator.into());
@@ -214,24 +216,23 @@ fn validate_iso8601_timezone(input: &str) -> Result<(), Iso8601Error> {
   };
 
   let tz_chars = &chars[1..];
-  let (hour_str, minute_str) =
-    if tz_chars.len() == TIMEZONE_LENGTH_WITH_COLON
-      && tz_chars.get(TIMEZONE_COLON_POSITION).copied() == Some(':')
-    {
-      let hour: String = tz_chars[0..TIMEZONE_COLON_POSITION].iter().collect();
-      let minute: String = tz_chars[TIMEZONE_COLON_POSITION + 1..TIMEZONE_LENGTH_WITH_COLON]
-        .iter()
-        .collect();
-      (hour, minute)
-    } else if tz_chars.len() == TIMEZONE_LENGTH_WITHOUT_COLON {
-      let hour: String = tz_chars[0..TIMEZONE_COLON_POSITION].iter().collect();
-      let minute: String = tz_chars[TIMEZONE_COLON_POSITION..TIMEZONE_LENGTH_WITHOUT_COLON]
-        .iter()
-        .collect();
-      (hour, minute)
-    } else {
-      return Err(Iso8601Error::InvalidTimezone);
-    };
+  let (hour_str, minute_str) = if tz_chars.len() == TIMEZONE_LENGTH_WITH_COLON
+    && tz_chars.get(TIMEZONE_COLON_POSITION).copied() == Some(':')
+  {
+    let hour: String = tz_chars[0..TIMEZONE_COLON_POSITION].iter().collect();
+    let minute: String = tz_chars[TIMEZONE_COLON_POSITION + 1..TIMEZONE_LENGTH_WITH_COLON]
+      .iter()
+      .collect();
+    (hour, minute)
+  } else if tz_chars.len() == TIMEZONE_LENGTH_WITHOUT_COLON {
+    let hour: String = tz_chars[0..TIMEZONE_COLON_POSITION].iter().collect();
+    let minute: String = tz_chars[TIMEZONE_COLON_POSITION..TIMEZONE_LENGTH_WITHOUT_COLON]
+      .iter()
+      .collect();
+    (hour, minute)
+  } else {
+    return Err(Iso8601Error::InvalidTimezone);
+  };
 
   let hour: u8 = parse_int(&hour_str).map_err(|()| Iso8601Error::InvalidTimezoneHour(0))?;
   if hour > MAX_HOUR {

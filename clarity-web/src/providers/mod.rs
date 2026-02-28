@@ -17,8 +17,10 @@ mod r#trait;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use opencode::{OpenCodeProvider, OpenCodeProviderOptions};
-pub use resolution::{resolve_from_provider_config, resolve_provider_config, ResolvedProviderConfig};
 pub use r#trait::{
   ExtractedFields, ExtractionContext, ExtractionError, ExtractionMetadata, ExtractionProvider,
   FieldExtraction, FieldType, SchemaField,
+};
+pub use resolution::{
+  resolve_from_provider_config, resolve_provider_config, ResolvedProviderConfig,
 };

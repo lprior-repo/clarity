@@ -59,52 +59,27 @@ impl BeadState {
   /// - Completed -> Pending (no going back)
   /// - Completed -> Ready (no going back)
   #[must_use]
-  pub fn can_transition_to(&self, next: Self) -> bool {
-    match (*self, next) {
-      // No-op transitions (staying in same state) - always valid
-      (Self::Pending, Self::Pending) => true,
-      (Self::Ready, Self::Ready) => true,
-      (Self::Completed, Self::Completed) => true,
-      // Pending can go to Ready or Completed (if skipped)
-      (Self::Pending, Self::Ready) => true,
-      (Self::Pending, Self::Completed) => true,
-      // Ready can go to Completed
-      (Self::Ready, Self::Completed) => true,
-      // All invalid transitions explicitly listed
-      (Self::Ready, Self::Pending) => false,
-      (Self::Completed, Self::Pending) => false,
-      (Self::Completed, Self::Ready) => false,
-    }
+  pub const fn can_transition_to(&self, next: Self) -> bool {
+    matches!(
+      (*self, next),
+      (Self::Pending, Self::Pending | Self::Ready | Self::Completed)
+        | (Self::Ready, Self::Ready | Self::Completed)
+        | (Self::Completed, Self::Completed)
+    )
   }
 
   /// Transition to a new state with exhaustive pattern matching.
   ///
   /// # Errors
   /// Returns `BeadStateError::InvalidTransition` if the transition is not allowed.
-  pub fn transition_to(self, next: Self) -> Result<Self, BeadStateError> {
-    match (self, next) {
-      // No-op transitions (staying in same state) - always valid
-      (Self::Pending, Self::Pending) => Ok(Self::Pending),
-      (Self::Ready, Self::Ready) => Ok(Self::Ready),
-      (Self::Completed, Self::Completed) => Ok(Self::Completed),
-      // Pending can go to Ready or Completed (if skipped)
-      (Self::Pending, Self::Ready) => Ok(Self::Ready),
-      (Self::Pending, Self::Completed) => Ok(Self::Completed),
-      // Ready can go to Completed
-      (Self::Ready, Self::Completed) => Ok(Self::Completed),
-      // All invalid transitions explicitly rejected
-      (Self::Ready, Self::Pending) => Err(BeadStateError::InvalidTransition {
-        from: "ready",
-        to: "pending",
-      }),
-      (Self::Completed, Self::Pending) => Err(BeadStateError::InvalidTransition {
-        from: "completed",
-        to: "pending",
-      }),
-      (Self::Completed, Self::Ready) => Err(BeadStateError::InvalidTransition {
-        from: "completed",
-        to: "ready",
-      }),
+  pub const fn transition_to(self, next: Self) -> Result<Self, BeadStateError> {
+    if self.can_transition_to(next) {
+      Ok(next)
+    } else {
+      Err(BeadStateError::InvalidTransition {
+        from: self.as_str(),
+        to: next.as_str(),
+      })
     }
   }
 
@@ -138,7 +113,10 @@ impl BeadState {
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum BeadStateError {
   #[error("invalid bead state transition from '{from}' to '{to}'")]
-  InvalidTransition { from: &'static str, to: &'static str },
+  InvalidTransition {
+    from: &'static str,
+    to: &'static str,
+  },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -178,6 +156,10 @@ impl Default for PlanBead {
 }
 
 impl PlanBead {
+  /// Creates a new bead with mandatory identity fields.
+  ///
+  /// # Errors
+  /// Returns `PlanError::EmptyBeadId` or `PlanError::EmptyBeadTitle` when required fields are blank.
   pub fn new(id: String, title: String, phase: u32) -> Result<Self, PlanError> {
     if id.trim().is_empty() {
       return Err(PlanError::EmptyBeadId);
@@ -252,17 +234,21 @@ impl PlanBead {
     let from_str = self.state.as_str().to_string();
     let to_str = next.as_str().to_string();
 
-    match self.state.transition_to(next) {
-      Ok(new_state) => Ok(Self {
-        state: new_state,
-        ..self
-      }),
-      Err(_) => Err(PlanError::InvalidStateTransition {
-        bead_id: id,
-        from: from_str,
-        to: to_str,
-      }),
-    }
+    self.state.transition_to(next).map_or_else(
+      |_| {
+        Err(PlanError::InvalidStateTransition {
+          bead_id: id,
+          from: from_str,
+          to: to_str,
+        })
+      },
+      |new_state| {
+        Ok(Self {
+          state: new_state,
+          ..self
+        })
+      },
+    )
   }
 
   /// Mark the bead as ready (builder pattern).

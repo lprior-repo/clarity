@@ -1,4 +1,4 @@
-use super::{format_error, InternalErrorDetails, IntentError, Suggestion};
+use super::{format_error, IntentError, InternalErrorDetails, Suggestion};
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -14,6 +14,10 @@ pub struct ContextualError {
 }
 
 impl ContextualError {
+  /// Creates a contextual error with a validated, non-empty message.
+  ///
+  /// # Errors
+  /// Returns `IntentError::Internal` when `message` is empty.
   pub fn new(error: IntentError, message: impl Into<String>) -> Result<Self, IntentError> {
     let message = message.into();
     if message.is_empty() {

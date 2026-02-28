@@ -66,17 +66,16 @@ pub fn load_from_file(path: &str) -> Result<HashMap<String, String>, AnswerLoade
 
 /// Parse answers from file contents
 fn parse_answers(path: &str, contents: &str) -> Result<HashMap<String, String>, AnswerLoaderError> {
-  if path_ends_with_cue(path) {
-    // For CUE files, try to parse as JSON first (fallback)
-    // In a real implementation, we would shell out to `cue export`
-    parse_answers_json(path, contents)
-  } else {
-    parse_answers_json(path, contents)
-  }
+  let _is_cue_path = path_ends_with_cue(path);
+  // For CUE files, we currently parse JSON-compatible content directly.
+  parse_answers_json(path, contents)
 }
 
 /// Parse JSON content into a flat answer map
-fn parse_answers_json(path: &str, json_str: &str) -> Result<HashMap<String, String>, AnswerLoaderError> {
+fn parse_answers_json(
+  path: &str,
+  json_str: &str,
+) -> Result<HashMap<String, String>, AnswerLoaderError> {
   let value: Value = serde_json::from_str(json_str).map_err(|e| AnswerLoaderError::ParseError {
     path: path.to_string(),
     message: format!("Failed to decode answers JSON: {e}"),
@@ -102,29 +101,24 @@ fn flatten_answers(entries: serde_json::Map<String, Value>) -> HashMap<String, S
 
 /// Recursively flatten a value into the result map
 fn flatten_value(key_path: &str, value: &Value, result: &mut HashMap<String, String>) {
-  match value {
-    Value::Object(nested) => {
-      // Insert JSON representation of nested object
-      let json_repr = value_to_string(value);
-      result.insert(key_path.to_string(), json_repr);
+  if let Value::Object(nested) = value {
+    // Insert JSON representation of nested object
+    let json_repr = value_to_string(value);
+    result.insert(key_path.to_string(), json_repr);
 
-      // Recursively flatten nested properties
-      for (nested_key, nested_value) in nested {
-        let new_path = format!("{key_path}.{nested_key}");
-        flatten_value(&new_path, nested_value, result);
-      }
+    // Recursively flatten nested properties
+    for (nested_key, nested_value) in nested {
+      let new_path = format!("{key_path}.{nested_key}");
+      flatten_value(&new_path, nested_value, result);
     }
-    _ => {
-      // Leaf value: insert full path
-      let value_as_text = value_to_string(value);
-      result.insert(key_path.to_string(), value_as_text.clone());
+  } else {
+    // Leaf value: insert full path
+    let value_as_text = value_to_string(value);
+    result.insert(key_path.to_string(), value_as_text.clone());
 
-      // Also insert short key (last segment) if it doesn't exist
-      if let Some(short_key) = last_key_segment(key_path) {
-        if !result.contains_key(&short_key) {
-          result.insert(short_key, value_as_text);
-        }
-      }
+    // Also insert short key (last segment) if it doesn't exist
+    if let Some(short_key) = last_key_segment(key_path) {
+      result.entry(short_key).or_insert(value_as_text);
     }
   }
 }
@@ -165,14 +159,13 @@ pub fn parse_answers_json_for_test(
   path: &str,
   json_str: &str,
 ) -> Result<HashMap<String, String>, ParseErrorWithDetails> {
-  let value: Value = serde_json::from_str(json_str).map_err(|_| {
-    ParseErrorWithDetails::DecodeError {
+  let value: Value =
+    serde_json::from_str(json_str).map_err(|_| ParseErrorWithDetails::DecodeError {
       path: path.to_string(),
       expected: "JSON".to_string(),
       actual: "invalid".to_string(),
       message: "Failed to decode JSON".to_string(),
-    }
-  })?;
+    })?;
 
   match value {
     Value::Object(map) => Ok(flatten_answers(map)),
@@ -226,7 +219,10 @@ mod tests {
     assert!(result.is_ok());
     let answers = result.unwrap();
     assert_eq!(answers.get("user.name"), Some(&"Alice".to_string()));
-    assert_eq!(answers.get("user.email"), Some(&"alice@example.com".to_string()));
+    assert_eq!(
+      answers.get("user.email"),
+      Some(&"alice@example.com".to_string())
+    );
     // Short keys should also exist
     assert_eq!(answers.get("name"), Some(&"Alice".to_string()));
   }
@@ -335,6 +331,9 @@ mod tests {
     );
     assert_eq!(value_type_name(&Value::String("s".to_string())), "String");
     assert_eq!(value_type_name(&Value::Array(vec![])), "Array");
-    assert_eq!(value_type_name(&Value::Object(serde_json::Map::new())), "Object");
+    assert_eq!(
+      value_type_name(&Value::Object(serde_json::Map::new())),
+      "Object"
+    );
   }
 }

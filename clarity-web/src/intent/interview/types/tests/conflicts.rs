@@ -1,7 +1,7 @@
+use crate::intent::interview::types::models::{ConflictState, ConflictStateError};
 use crate::intent::interview::types::{
   Answer, Conflict, ConflictDetectionError, ConflictResolution, InterviewSession, Profile,
 };
-use crate::intent::interview::types::models::{ConflictState, ConflictStateError};
 
 fn make_session() -> InterviewSession {
   InterviewSession::new(
@@ -315,11 +315,17 @@ fn conflict_state_validate_bounds_full_check() {
 
   // Empty options
   let resolved2 = ConflictState::Resolved { chosen_index: 0 };
-  assert_eq!(resolved2.validate_bounds(0), Err(ConflictStateError::EmptyOptions));
+  assert_eq!(
+    resolved2.validate_bounds(0),
+    Err(ConflictStateError::EmptyOptions)
+  );
 
   // Negative index
   let invalid = ConflictState::Resolved { chosen_index: -5 };
-  assert_eq!(invalid.validate_bounds(10), Err(ConflictStateError::NegativeIndex(-5)));
+  assert_eq!(
+    invalid.validate_bounds(10),
+    Err(ConflictStateError::NegativeIndex(-5))
+  );
 
   // Pending is always valid
   assert!(ConflictState::Pending.validate_bounds(0).is_ok());

@@ -8,6 +8,9 @@ mod domain;
 mod generator;
 mod render;
 
-pub use domain::{BeadError, BeadTemplate, BeadTemplateStats};
+pub use domain::{
+  bead_id_for_index, enhanced_bead_entry, filter_beads_by_type, sort_beads_by_priority,
+  with_validation_header, BeadError, BeadTemplate, BeadTemplateStats,
+};
 pub use generator::{generate_beads_from_session, generate_profile_beads};
 pub use render::{beads_to_enhanced_cue, beads_to_jsonl};

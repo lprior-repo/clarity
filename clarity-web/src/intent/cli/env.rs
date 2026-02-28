@@ -5,12 +5,12 @@
 //! over config file defaults but are overridden by CLI flags.
 //!
 //! Supported environment variables:
-//! - INTENT_DEFAULT_PROFILE: Default profile for interviews (api|cli|event|data|workflow|ui)
-//! - INTENT_DEFAULT_FORMAT: Default format for bead output (json|jsonl|markdown)
-//! - INTENT_DEFAULT_STRATEGY: Default strategy for plan-next (page_rank|critical_path|shortest|risk_first)
-//! - INTENT_CONFIG_FILE: Path to configuration file
-//! - INTENT_NO_COLOR: Disable colored output (true|false)
-//! - INTENT_QUIET: Reduce output verbosity (true|false)
+//! - `INTENT_DEFAULT_PROFILE`: Default profile for interviews (api|cli|event|data|workflow|ui)
+//! - `INTENT_DEFAULT_FORMAT`: Default format for bead output (json|jsonl|markdown)
+//! - `INTENT_DEFAULT_STRATEGY`: Default strategy for plan-next (`page_rank|critical_path|shortest|risk_first`)
+//! - `INTENT_CONFIG_FILE`: Path to configuration file
+//! - `INTENT_NO_COLOR`: Disable colored output (true|false)
+//! - `INTENT_QUIET`: Reduce output verbosity (true|false)
 //!
 //! Ported from intent-cli/src/intent/env.gleam
 
@@ -22,7 +22,7 @@
 #![forbid(unsafe_code)]
 
 /// Configuration type for all environment variables
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EnvConfig {
   pub default_profile: String,
   pub default_format: String,
@@ -61,27 +61,24 @@ pub fn load_env_config() -> EnvConfig {
 /// Get a string environment variable with a default value
 #[must_use]
 pub fn get_env_default(key: &str, default: &str) -> String {
-  match std::env::var(key) {
-    Ok(value) => {
+  std::env::var(key).map_or_else(
+    |_| default.to_string(),
+    |value| {
       let trimmed = value.trim();
       if trimmed.is_empty() {
         default.to_string()
       } else {
         trimmed.to_string()
       }
-    }
-    Err(_) => default.to_string(),
-  }
+    },
+  )
 }
 
 /// Get a boolean environment variable with a default value
 /// Accepts: "true", "1", "yes" (case-insensitive) as true
 #[must_use]
 pub fn get_env_bool(key: &str, default: bool) -> bool {
-  match std::env::var(key) {
-    Ok(value) => parse_bool(&value, default),
-    Err(_) => default,
-  }
+  std::env::var(key).map_or(default, |value| parse_bool(&value, default))
 }
 
 /// Parse a string as a boolean
@@ -94,17 +91,14 @@ fn parse_bool(value: &str, default: bool) -> bool {
   }
 }
 
-/// Check if environment variables should be loaded
-/// Returns false if INTENT_NO_CONFIG is set to true
+/// Check if environment variables should be `load_config`
+/// Returns false if `INTENT_NO_CONFIG` is set to true
 #[must_use]
 pub fn should_load_config() -> bool {
-  match std::env::var("INTENT_NO_CONFIG") {
-    Ok(value) => {
-      let normalized = value.trim().to_lowercase();
-      !matches!(normalized.as_str(), "true" | "1" | "yes" | "on")
-    }
-    Err(_) => true,
-  }
+  std::env::var("INTENT_NO_CONFIG").map_or(true, |value| {
+    let normalized = value.trim().to_lowercase();
+    !matches!(normalized.as_str(), "true" | "1" | "yes" | "on")
+  })
 }
 
 /// Get the profile from environment or default

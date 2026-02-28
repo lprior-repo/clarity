@@ -40,7 +40,7 @@ impl Profile {
 
   /// # Errors
   /// Returns `ProfileParseError` when input is not a known profile.
-  pub fn from_str(s: &str) -> Result<Self, ProfileParseError> {
+  pub fn parse(s: &str) -> Result<Self, ProfileParseError> {
     let normalized = s.trim().to_ascii_lowercase();
     match normalized.as_str() {
       "api" => Ok(Self::Api),
@@ -78,7 +78,7 @@ impl FromStr for Profile {
   type Err = ProfileParseError;
 
   fn from_str(s: &str) -> Result<Self, Self::Err> {
-    Self::from_str(s)
+    Self::parse(s)
   }
 }
 
@@ -115,41 +115,20 @@ impl InterviewStage {
   /// - Paused -> Discovery, Refinement, Validation (resume to any active stage)
   /// - Complete -> Complete (terminal state, no transitions out)
   #[must_use]
-  pub fn can_transition_to(&self, next: Self) -> bool {
-    match (*self, next) {
-      // No-op transitions (staying in same state) - always valid
-      (Self::Discovery, Self::Discovery) => true,
-      (Self::Refinement, Self::Refinement) => true,
-      (Self::Validation, Self::Validation) => true,
-      (Self::Complete, Self::Complete) => true,
-      (Self::Paused, Self::Paused) => true,
-      // Discovery can go to Refinement, Validation, or Paused
-      (Self::Discovery, Self::Refinement) => true,
-      (Self::Discovery, Self::Validation) => true,
-      (Self::Discovery, Self::Paused) => true,
-      // Refinement can go to Validation, Complete, or Paused
-      (Self::Refinement, Self::Validation) => true,
-      (Self::Refinement, Self::Complete) => true,
-      (Self::Refinement, Self::Paused) => true,
-      // Validation can go to Complete or Paused
-      (Self::Validation, Self::Complete) => true,
-      (Self::Validation, Self::Paused) => true,
-      // Paused can resume to any active stage
-      (Self::Paused, Self::Discovery) => true,
-      (Self::Paused, Self::Refinement) => true,
-      (Self::Paused, Self::Validation) => true,
-      // Complete is terminal - no transitions out
-      (Self::Complete, Self::Discovery) => false,
-      (Self::Complete, Self::Refinement) => false,
-      (Self::Complete, Self::Validation) => false,
-      (Self::Complete, Self::Paused) => false,
-      // All remaining invalid transitions (explicitly listed for exhaustiveness)
-      (Self::Discovery, Self::Complete) => false,
-      (Self::Refinement, Self::Discovery) => false,
-      (Self::Validation, Self::Discovery) => false,
-      (Self::Validation, Self::Refinement) => false,
-      (Self::Paused, Self::Complete) => false,
-    }
+  pub const fn can_transition_to(&self, next: Self) -> bool {
+    matches!(
+      (*self, next),
+      (
+        Self::Discovery | Self::Paused,
+        Self::Discovery | Self::Refinement | Self::Validation | Self::Paused
+      ) | (
+        Self::Refinement,
+        Self::Refinement | Self::Validation | Self::Complete | Self::Paused
+      ) | (
+        Self::Validation,
+        Self::Validation | Self::Complete | Self::Paused
+      ) | (Self::Complete, Self::Complete)
+    )
   }
 
   /// Transition to the next stage with exhaustive pattern matching.
@@ -157,65 +136,13 @@ impl InterviewStage {
   /// # Errors
   /// Returns `InterviewStageError::InvalidTransition` if the transition is not allowed.
   pub fn transition_to(self, next: Self) -> Result<Self, InterviewStageError> {
-    match (self, next) {
-      // No-op transitions (staying in same state) - always valid
-      (Self::Discovery, Self::Discovery) => Ok(Self::Discovery),
-      (Self::Refinement, Self::Refinement) => Ok(Self::Refinement),
-      (Self::Validation, Self::Validation) => Ok(Self::Validation),
-      (Self::Complete, Self::Complete) => Ok(Self::Complete),
-      (Self::Paused, Self::Paused) => Ok(Self::Paused),
-      // Discovery can go to Refinement, Validation, or Paused
-      (Self::Discovery, Self::Refinement) => Ok(Self::Refinement),
-      (Self::Discovery, Self::Validation) => Ok(Self::Validation),
-      (Self::Discovery, Self::Paused) => Ok(Self::Paused),
-      // Refinement can go to Validation, Complete, or Paused
-      (Self::Refinement, Self::Validation) => Ok(Self::Validation),
-      (Self::Refinement, Self::Complete) => Ok(Self::Complete),
-      (Self::Refinement, Self::Paused) => Ok(Self::Paused),
-      // Validation can go to Complete or Paused
-      (Self::Validation, Self::Complete) => Ok(Self::Complete),
-      (Self::Validation, Self::Paused) => Ok(Self::Paused),
-      // Paused can resume to any active stage
-      (Self::Paused, Self::Discovery) => Ok(Self::Discovery),
-      (Self::Paused, Self::Refinement) => Ok(Self::Refinement),
-      (Self::Paused, Self::Validation) => Ok(Self::Validation),
-      // All invalid transitions explicitly rejected
-      (Self::Complete, Self::Discovery) => Err(InterviewStageError::InvalidTransition {
-        from: "complete".to_string(),
-        to: "discovery".to_string(),
-      }),
-      (Self::Complete, Self::Refinement) => Err(InterviewStageError::InvalidTransition {
-        from: "complete".to_string(),
-        to: "refinement".to_string(),
-      }),
-      (Self::Complete, Self::Validation) => Err(InterviewStageError::InvalidTransition {
-        from: "complete".to_string(),
-        to: "validation".to_string(),
-      }),
-      (Self::Complete, Self::Paused) => Err(InterviewStageError::InvalidTransition {
-        from: "complete".to_string(),
-        to: "paused".to_string(),
-      }),
-      (Self::Discovery, Self::Complete) => Err(InterviewStageError::InvalidTransition {
-        from: "discovery".to_string(),
-        to: "complete".to_string(),
-      }),
-      (Self::Refinement, Self::Discovery) => Err(InterviewStageError::InvalidTransition {
-        from: "refinement".to_string(),
-        to: "discovery".to_string(),
-      }),
-      (Self::Validation, Self::Discovery) => Err(InterviewStageError::InvalidTransition {
-        from: "validation".to_string(),
-        to: "discovery".to_string(),
-      }),
-      (Self::Validation, Self::Refinement) => Err(InterviewStageError::InvalidTransition {
-        from: "validation".to_string(),
-        to: "refinement".to_string(),
-      }),
-      (Self::Paused, Self::Complete) => Err(InterviewStageError::InvalidTransition {
-        from: "paused".to_string(),
-        to: "complete".to_string(),
-      }),
+    if self.can_transition_to(next) {
+      Ok(next)
+    } else {
+      Err(InterviewStageError::InvalidTransition {
+        from: self.as_str().to_string(),
+        to: next.as_str().to_string(),
+      })
     }
   }
 
@@ -379,9 +306,15 @@ mod tests {
     );
 
     // Invalid transitions
-    assert!(InterviewStage::Complete.transition_to(InterviewStage::Discovery).is_err());
-    assert!(InterviewStage::Discovery.transition_to(InterviewStage::Complete).is_err());
-    assert!(InterviewStage::Validation.transition_to(InterviewStage::Discovery).is_err());
+    assert!(InterviewStage::Complete
+      .transition_to(InterviewStage::Discovery)
+      .is_err());
+    assert!(InterviewStage::Discovery
+      .transition_to(InterviewStage::Complete)
+      .is_err());
+    assert!(InterviewStage::Validation
+      .transition_to(InterviewStage::Discovery)
+      .is_err());
   }
 
   #[test]

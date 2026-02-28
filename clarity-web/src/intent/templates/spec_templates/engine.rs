@@ -10,6 +10,10 @@ const PLACEHOLDER_START: &str = "{{";
 const PLACEHOLDER_END: &str = "}}";
 const TEMPLATE_NAME: &str = "spec_template";
 
+/// Returns the base spec template for a profile.
+///
+/// # Errors
+/// Returns `SpecTemplateError::EmptyTemplate` when the selected profile template is blank.
 pub fn generate_spec_template(profile: Profile) -> Result<String, SpecTemplateError> {
   let template = template_for_profile(profile);
   if template.trim().is_empty() {
@@ -19,6 +23,10 @@ pub fn generate_spec_template(profile: Profile) -> Result<String, SpecTemplateEr
   }
 }
 
+/// Fills a template with values extracted from an interview session.
+///
+/// # Errors
+/// Returns `SpecTemplateError` when the template is empty, session has no answers, or placeholders remain unresolved.
 pub fn fill_template(
   template: &str,
   session: &InterviewSession,
@@ -43,7 +51,10 @@ pub fn fill_template(
   if unresolved.is_empty() {
     Ok(rendered)
   } else {
-    Err(SpecTemplateError::unresolved_placeholders(TEMPLATE_NAME, unresolved))
+    Err(SpecTemplateError::unresolved_placeholders(
+      TEMPLATE_NAME,
+      unresolved,
+    ))
   }
 }
 

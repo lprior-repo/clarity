@@ -27,17 +27,12 @@ pub fn validate_spec(spec: &Spec) -> ValidationResult {
 
 #[must_use]
 pub fn has_circular_dependencies(spec: &Spec) -> bool {
-  let validator = SpecValidator::new();
-  validator
-    .build_feature_dependency_graph(spec)
+  SpecValidator::build_feature_dependency_graph(spec)
     .detect_cycles()
     .is_some()
 }
 
 #[must_use]
 pub fn feature_execution_order(spec: &Spec) -> Option<Vec<String>> {
-  let validator = SpecValidator::new();
-  validator
-    .build_feature_dependency_graph(spec)
-    .topological_sort()
+  SpecValidator::build_feature_dependency_graph(spec).topological_sort()
 }

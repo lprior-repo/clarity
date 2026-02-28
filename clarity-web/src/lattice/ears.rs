@@ -104,6 +104,9 @@ impl Default for EarsOutput {
 }
 
 /// Parse a single requirement line into an `EarsRequirement`.
+///
+/// # Errors
+/// Returns `EarsError` when the input is empty or does not match a valid EARS pattern.
 pub fn parse_requirement(input: &str) -> Result<EarsRequirement, EarsError> {
   let trimmed = input.trim();
 

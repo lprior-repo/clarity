@@ -46,17 +46,13 @@ impl Default for Answer {
 /// This makes illegal states unrepresentable (e.g., "resolved but no resolution text").
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "status", rename_all = "snake_case")]
+#[derive(Default)]
 pub enum GapState {
   /// Gap is open and needs resolution
+  #[default]
   Open,
   /// Gap has been resolved with the given resolution text
   Resolved { resolution: String },
-}
-
-impl Default for GapState {
-  fn default() -> Self {
-    Self::Open
-  }
 }
 
 impl GapState {
@@ -83,19 +79,11 @@ impl GapState {
 
   /// Check if transition to another state is valid.
   ///
-  /// GapState is a one-way state machine: Open -> Resolved.
+  /// `GapState` is a one-way state machine: Open -> Resolved.
   /// Once resolved, no further transitions are allowed.
   #[must_use]
   pub const fn can_transition_to(&self, next: &Self) -> bool {
-    match (self, next) {
-      // Open can transition to Resolved
-      (Self::Open, Self::Resolved { .. }) => true,
-      // Same state is valid (no-op)
-      (Self::Open, Self::Open) => true,
-      (Self::Resolved { .. }, Self::Resolved { .. }) => true,
-      // All other transitions are invalid (exhaustive)
-      (Self::Resolved { .. }, Self::Open) => false,
-    }
+    !matches!((self, next), (Self::Resolved { .. }, Self::Open))
   }
 
   /// Transition to a new state with exhaustive pattern matching.
@@ -104,21 +92,17 @@ impl GapState {
   /// Returns `GapStateError::AlreadyResolved` if the gap is already resolved.
   /// Returns `GapStateError::EmptyResolution` if the resolution text is empty.
   pub fn transition_to(self, next: Self) -> Result<Self, GapStateError> {
-    match (&self, &next) {
-      // Same state is valid (no-op)
-      (Self::Open, Self::Open) => Ok(self),
-      (Self::Resolved { .. }, Self::Resolved { .. }) => Ok(self),
-      // Open can transition to Resolved
-      (Self::Open, Self::Resolved { resolution }) => {
-        if resolution.trim().is_empty() {
-          Err(GapStateError::EmptyResolution)
-        } else {
-          Ok(next)
-        }
-      }
-      // Resolved cannot go back to Open (one-way transition)
-      (Self::Resolved { .. }, Self::Open) => Err(GapStateError::AlreadyResolved),
+    if matches!((&self, &next), (Self::Resolved { .. }, Self::Open)) {
+      return Err(GapStateError::AlreadyResolved);
     }
+
+    if let Self::Resolved { resolution } = &next {
+      if resolution.trim().is_empty() {
+        return Err(GapStateError::EmptyResolution);
+      }
+    }
+
+    Ok(next)
   }
 
   /// Resolve the gap with the given resolution text.
@@ -201,7 +185,7 @@ impl Default for Gap {
 impl Gap {
   /// Check if this gap is resolved.
   #[must_use]
-  pub fn is_resolved(&self) -> bool {
+  pub const fn is_resolved(&self) -> bool {
     self.state.is_resolved()
   }
 
@@ -217,17 +201,13 @@ impl Gap {
 /// A conflict transitions from Pending -> Resolved when an option is chosen.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "status", rename_all = "snake_case")]
+#[derive(Default)]
 pub enum ConflictState {
   /// Conflict is pending resolution
+  #[default]
   Pending,
   /// Conflict has been resolved by choosing an option
   Resolved { chosen_index: i32 },
-}
-
-impl Default for ConflictState {
-  fn default() -> Self {
-    Self::Pending
-  }
 }
 
 impl ConflictState {
@@ -245,7 +225,7 @@ impl ConflictState {
 
   /// Get the chosen option index if resolved.
   #[must_use]
-  pub fn chosen_index(&self) -> Option<i32> {
+  pub const fn chosen_index(&self) -> Option<i32> {
     match self {
       Self::Pending => None,
       Self::Resolved { chosen_index } => Some(*chosen_index),
@@ -254,19 +234,11 @@ impl ConflictState {
 
   /// Check if transition to another state is valid.
   ///
-  /// ConflictState is a one-way state machine: Pending -> Resolved.
+  /// `ConflictState` is a one-way state machine: Pending -> Resolved.
   /// Once resolved, no further transitions are allowed.
   #[must_use]
   pub const fn can_transition_to(&self, next: &Self) -> bool {
-    match (self, next) {
-      // Pending can transition to Resolved
-      (Self::Pending, Self::Resolved { .. }) => true,
-      // Same state is valid (no-op)
-      (Self::Pending, Self::Pending) => true,
-      (Self::Resolved { .. }, Self::Resolved { .. }) => true,
-      // All other transitions are invalid (exhaustive)
-      (Self::Resolved { .. }, Self::Pending) => false,
-    }
+    !matches!((self, next), (Self::Resolved { .. }, Self::Pending))
   }
 
   /// Transition to a new state with exhaustive pattern matching.
@@ -276,34 +248,35 @@ impl ConflictState {
   /// Returns `ConflictStateError::NegativeIndex` if the index is negative.
   /// Returns `ConflictStateError::InvalidIndex` if the index is out of bounds.
   pub fn transition_to(self, next: Self, option_count: usize) -> Result<Self, ConflictStateError> {
-    match (&self, &next) {
-      // Same state is valid (no-op)
-      (Self::Pending, Self::Pending) => Ok(self),
-      (Self::Resolved { .. }, Self::Resolved { .. }) => Ok(self),
-      // Pending can transition to Resolved
-      (Self::Pending, Self::Resolved { chosen_index }) => {
-        // P1: Options must exist when choosing
-        if option_count == 0 {
-          return Err(ConflictStateError::EmptyOptions);
-        }
-        // P0: Index must be non-negative
-        if *chosen_index < 0 {
-          return Err(ConflictStateError::NegativeIndex(*chosen_index));
-        }
-        // P0: Index must be within bounds
-        let index = usize::try_from(*chosen_index)
-          .map_err(|_| ConflictStateError::NegativeIndex(*chosen_index))?;
-        if index >= option_count {
-          return Err(ConflictStateError::InvalidIndex {
-            index: *chosen_index,
-            option_count,
-          });
-        }
-        Ok(next)
-      }
-      // Resolved cannot go back to Pending (one-way transition)
-      (Self::Resolved { .. }, Self::Pending) => Err(ConflictStateError::AlreadyResolved),
+    if matches!(
+      (&self, &next),
+      (Self::Pending, Self::Pending) | (Self::Resolved { .. }, Self::Resolved { .. })
+    ) {
+      return Ok(self);
     }
+
+    if matches!((&self, &next), (Self::Resolved { .. }, Self::Pending)) {
+      return Err(ConflictStateError::AlreadyResolved);
+    }
+
+    if let Self::Resolved { chosen_index } = &next {
+      if option_count == 0 {
+        return Err(ConflictStateError::EmptyOptions);
+      }
+      if *chosen_index < 0 {
+        return Err(ConflictStateError::NegativeIndex(*chosen_index));
+      }
+      let index = usize::try_from(*chosen_index)
+        .map_err(|_| ConflictStateError::NegativeIndex(*chosen_index))?;
+      if index >= option_count {
+        return Err(ConflictStateError::InvalidIndex {
+          index: *chosen_index,
+          option_count,
+        });
+      }
+    }
+
+    Ok(next)
   }
 
   /// Resolve the conflict by choosing an option.
@@ -314,7 +287,11 @@ impl ConflictState {
   /// - The index is out of bounds (P0: bounds checking)
   /// - There are no options to choose from (P1: empty options check)
   /// - The conflict is already resolved (P0: one-way transition)
-  pub fn resolve(&self, chosen_index: i32, option_count: usize) -> Result<Self, ConflictStateError> {
+  pub fn resolve(
+    &self,
+    chosen_index: i32,
+    option_count: usize,
+  ) -> Result<Self, ConflictStateError> {
     // P0: Enforce one-way transition
     if self.is_resolved() {
       return Err(ConflictStateError::AlreadyResolved);
@@ -328,8 +305,8 @@ impl ConflictState {
       return Err(ConflictStateError::NegativeIndex(chosen_index));
     }
     // P0: Index must be within bounds
-    let index = usize::try_from(chosen_index)
-      .map_err(|_| ConflictStateError::NegativeIndex(chosen_index))?;
+    let index =
+      usize::try_from(chosen_index).map_err(|_| ConflictStateError::NegativeIndex(chosen_index))?;
     if index >= option_count {
       return Err(ConflictStateError::InvalidIndex {
         index: chosen_index,
@@ -343,8 +320,8 @@ impl ConflictState {
   ///
   /// # Errors
   /// Returns an error if the state violates invariants.
-  /// Note: Cannot fully validate chosen_index without knowing option_count.
-  pub fn validate(&self) -> Result<(), ConflictStateError> {
+  /// Note: Cannot fully validate `chosen_index` without knowing `option_count`.
+  pub const fn validate(&self) -> Result<(), ConflictStateError> {
     match self {
       Self::Pending => Ok(()),
       Self::Resolved { chosen_index } => {
@@ -429,13 +406,13 @@ impl Default for Conflict {
 impl Conflict {
   /// Check if this conflict is resolved.
   #[must_use]
-  pub fn is_resolved(&self) -> bool {
+  pub const fn is_resolved(&self) -> bool {
     self.state.is_resolved()
   }
 
   /// Get the chosen option index if resolved.
   #[must_use]
-  pub fn chosen_index(&self) -> Option<i32> {
+  pub const fn chosen_index(&self) -> Option<i32> {
     self.state.chosen_index()
   }
 }
@@ -562,9 +539,12 @@ mod tests {
 
     let result = open.transition_to(resolved.clone());
     assert!(result.is_ok());
-    assert_eq!(result, Ok(GapState::Resolved {
-      resolution: "fixed".to_string()
-    }));
+    assert_eq!(
+      result,
+      Ok(GapState::Resolved {
+        resolution: "fixed".to_string()
+      })
+    );
   }
 
   #[test]
@@ -662,7 +642,10 @@ mod tests {
     let resolved_empty = GapState::Resolved {
       resolution: "".to_string(),
     };
-    assert_eq!(resolved_empty.validate(), Err(GapStateError::EmptyResolution));
+    assert_eq!(
+      resolved_empty.validate(),
+      Err(GapStateError::EmptyResolution)
+    );
   }
 
   #[test]

@@ -2,6 +2,13 @@ use super::ResolutionResult;
 use crate::intent::plan::types::{PlanBead, PlanError};
 use std::collections::{HashMap, HashSet};
 
+#[derive(Default)]
+struct CycleSearchState {
+  visited: HashSet<String>,
+  stack: HashSet<String>,
+  cycles: Vec<Vec<String>>,
+}
+
 pub fn resolve_dependencies(beads: &[PlanBead]) -> Result<ResolutionResult, PlanError> {
   if beads.is_empty() {
     return Err(PlanError::NoBeads);
@@ -46,30 +53,24 @@ pub fn detect_cycles(beads: &[PlanBead]) -> Vec<Vec<String>> {
 
   beads
     .iter()
-    .fold(
-      (HashSet::new(), HashSet::new(), Vec::new()),
-      |state, bead| {
-        let (visited, stack, cycles) = state;
-        if visited.contains(&bead.id) {
-          (visited, stack, cycles)
-        } else {
-          dfs_collect_cycles(&bead.id, &adjacency, visited, stack, Vec::new(), cycles)
-        }
-      },
-    )
-    .2
+    .fold(CycleSearchState::default(), |state, bead| {
+      if state.visited.contains(&bead.id) {
+        state
+      } else {
+        dfs_collect_cycles(&bead.id, &adjacency, Vec::new(), state)
+      }
+    })
+    .cycles
 }
 
 fn dfs_collect_cycles(
   node: &str,
   adjacency: &HashMap<String, Vec<String>>,
-  mut visited: HashSet<String>,
-  mut stack: HashSet<String>,
   path: Vec<String>,
-  cycles: Vec<Vec<String>>,
-) -> (HashSet<String>, HashSet<String>, Vec<Vec<String>>) {
-  visited.insert(node.to_string());
-  stack.insert(node.to_string());
+  mut state: CycleSearchState,
+) -> CycleSearchState {
+  state.visited.insert(node.to_string());
+  state.stack.insert(node.to_string());
 
   let path_now = path
     .into_iter()
@@ -77,44 +78,50 @@ fn dfs_collect_cycles(
     .collect::<Vec<_>>();
 
   let result = if let Some(neighbors) = adjacency.get(node) {
-    neighbors
-      .iter()
-      .fold((visited, stack, cycles), |state, neighbor| {
-        let (visited_next, stack_next, cycles_list) = state;
-        if !visited_next.contains(neighbor) {
-          dfs_collect_cycles(
-            neighbor,
-            adjacency,
-            visited_next,
-            stack_next,
-            path_now.clone(),
-            cycles_list,
-          )
-        } else if stack_next.contains(neighbor) {
-          let cycle = path_now
-            .iter()
-            .position(|item| item == neighbor)
-            .map_or_else(Vec::new, |index| path_now[index..].to_vec());
-          let cycles_added = (!cycle.is_empty())
-            .then_some(cycle)
-            .into_iter()
-            .chain(cycles_list)
-            .collect::<Vec<_>>();
-          (visited_next, stack_next, cycles_added)
+    neighbors.iter().fold(state, |current, neighbor| {
+      if !current.visited.contains(neighbor) {
+        dfs_collect_cycles(neighbor, adjacency, path_now.clone(), current)
+      } else if current.stack.contains(neighbor) {
+        let cycle = path_now
+          .iter()
+          .position(|item| item == neighbor)
+          .map_or_else(Vec::new, |index| path_now[index..].to_vec());
+        if cycle.is_empty() {
+          current
         } else {
-          (visited_next, stack_next, cycles_list)
+          let CycleSearchState {
+            visited,
+            stack,
+            cycles,
+          } = current;
+          CycleSearchState {
+            visited,
+            stack,
+            cycles: std::iter::once(cycle).chain(cycles).collect(),
+          }
         }
-      })
+      } else {
+        current
+      }
+    })
   } else {
-    (visited, stack, cycles)
+    state
   };
 
-  let (visited_final, stack_final, cycles_final) = result;
-  let stack_without = stack_final
+  let CycleSearchState {
+    visited,
+    stack,
+    cycles,
+  } = result;
+  let stack_without = stack
     .into_iter()
     .filter(|candidate| candidate != node)
     .collect();
-  (visited_final, stack_without, cycles_final)
+  CycleSearchState {
+    visited,
+    stack: stack_without,
+    cycles,
+  }
 }
 
 pub fn topological_sort(beads: &[PlanBead]) -> Result<Vec<String>, PlanError> {

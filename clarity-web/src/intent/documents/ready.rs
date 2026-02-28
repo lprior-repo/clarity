@@ -95,7 +95,10 @@ fn generate_behaviors(spec: &Spec) -> String {
 }
 
 fn generate_behavior_details(behavior: &Behavior) -> String {
-  let header = format!("#### {}\n\n**Description:** {}\n", behavior.name, behavior.description);
+  let header = format!(
+    "#### {}\n\n**Description:** {}\n",
+    behavior.name, behavior.description
+  );
 
   let preconditions = if behavior.preconditions.is_empty() {
     String::new()
@@ -119,16 +122,19 @@ fn generate_behavior_details(behavior: &Behavior) -> String {
     format!("\n**Postconditions:**\n{post_list}")
   };
 
-  let verification = match &behavior.verification {
-    Some(v) => {
+  let verification = behavior
+    .verification
+    .as_ref()
+    .map_or_else(String::new, |v| {
       if v.description.is_empty() {
         String::new()
       } else {
-        format!("\n**Verification:** {}", v.description)
+        format!(
+          "\n**Verification:** {description}",
+          description = v.description
+        )
       }
-    }
-    None => String::new(),
-  };
+    });
 
   format!("{header}{preconditions}{postconditions}{verification}")
 }
@@ -159,7 +165,7 @@ fn generate_invariants(spec: &Spec) -> String {
 }
 
 fn generate_verification_criteria() -> String {
-  r#"## Verification Criteria
+  "## Verification Criteria
 
 Each behavior should be verified against:
 
@@ -176,7 +182,7 @@ All behaviors should have automated tests that:
 - Execute the behavior
 - Validate postconditions
 - Check all verification criteria
-- Test error conditions explicitly"#
+- Test error conditions explicitly"
     .to_string()
 }
 
@@ -201,7 +207,10 @@ fn generate_anti_patterns(spec: &Spec) -> String {
         format!("\n\n**Alternative:** {}", ap.alternative)
       };
 
-      format!("### {}\n\n{}{}{}", ap.name, ap.description, why, alternative)
+      format!(
+        "### {}\n\n{}{}{}",
+        ap.name, ap.description, why, alternative
+      )
     })
     .join("\n\n");
 
@@ -214,7 +223,10 @@ fn generate_implementation_hints(spec: &Spec) -> String {
   let architecture = if hints.implementation.architecture.is_empty() {
     String::new()
   } else {
-    format!("### Architecture\n\n{}\n\n", hints.implementation.architecture)
+    format!(
+      "### Architecture\n\n{}\n\n",
+      hints.implementation.architecture
+    )
   };
 
   let performance = if hints.implementation.performance_notes.is_empty() {
@@ -261,11 +273,18 @@ fn generate_entity_hints(entities: &[crate::intent::types::EntityHint]) -> Strin
       let relationships = if entity.relationships.is_empty() {
         String::new()
       } else {
-        let rel_list = entity.relationships.iter().map(|r| format!("- {r}")).join("\n");
+        let rel_list = entity
+          .relationships
+          .iter()
+          .map(|r| format!("- {r}"))
+          .join("\n");
         format!("\n\n**Relationships:**\n{rel_list}")
       };
 
-      format!("**{}**\n\n{}{}{}", entity.name, entity.description, fields, relationships)
+      format!(
+        "**{}**\n\n{}{}{}",
+        entity.name, entity.description, fields, relationships
+      )
     })
     .join("\n\n");
 
@@ -309,10 +328,16 @@ fn generate_security_guidelines(spec: &Spec) -> String {
     format!("### Rate Limiting\n\n{}\n\n", security.rate_limiting)
   };
 
-  if password_hashing.is_empty() && jwt_algorithm.is_empty() && jwt_expiry.is_empty() && rate_limiting.is_empty() {
+  if password_hashing.is_empty()
+    && jwt_algorithm.is_empty()
+    && jwt_expiry.is_empty()
+    && rate_limiting.is_empty()
+  {
     String::new()
   } else {
-    format!("## Security Guidelines\n\n{password_hashing}{jwt_algorithm}{jwt_expiry}{rate_limiting}")
+    format!(
+      "## Security Guidelines\n\n{password_hashing}{jwt_algorithm}{jwt_expiry}{rate_limiting}"
+    )
   }
 }
 

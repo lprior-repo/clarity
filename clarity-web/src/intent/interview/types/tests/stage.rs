@@ -1,5 +1,5 @@
-use crate::intent::interview::types::InterviewStage;
 use crate::intent::interview::types::enums::InterviewStageError;
+use crate::intent::interview::types::InterviewStage;
 
 #[test]
 fn interview_stage_default_is_discovery() {
@@ -143,13 +143,19 @@ fn interview_stage_normal_workflow() {
   // Simulate a normal workflow: Discovery -> Refinement -> Validation -> Complete
   let stage = InterviewStage::Discovery;
 
-  let stage = stage.transition_to(InterviewStage::Refinement).expect("discovery -> refinement");
+  let stage = stage
+    .transition_to(InterviewStage::Refinement)
+    .expect("discovery -> refinement");
   assert_eq!(stage, InterviewStage::Refinement);
 
-  let stage = stage.transition_to(InterviewStage::Validation).expect("refinement -> validation");
+  let stage = stage
+    .transition_to(InterviewStage::Validation)
+    .expect("refinement -> validation");
   assert_eq!(stage, InterviewStage::Validation);
 
-  let stage = stage.transition_to(InterviewStage::Complete).expect("validation -> complete");
+  let stage = stage
+    .transition_to(InterviewStage::Complete)
+    .expect("validation -> complete");
   assert_eq!(stage, InterviewStage::Complete);
 
   // Cannot leave Complete
@@ -162,22 +168,32 @@ fn interview_stage_pause_resume_workflow() {
   let stage = InterviewStage::Discovery;
 
   // Pause
-  let stage = stage.transition_to(InterviewStage::Paused).expect("discovery -> paused");
+  let stage = stage
+    .transition_to(InterviewStage::Paused)
+    .expect("discovery -> paused");
   assert!(stage.is_paused());
 
   // Resume to Refinement
-  let stage = stage.transition_to(InterviewStage::Refinement).expect("paused -> refinement");
+  let stage = stage
+    .transition_to(InterviewStage::Refinement)
+    .expect("paused -> refinement");
   assert_eq!(stage, InterviewStage::Refinement);
 
   // Pause again
-  let stage = stage.transition_to(InterviewStage::Paused).expect("refinement -> paused");
+  let stage = stage
+    .transition_to(InterviewStage::Paused)
+    .expect("refinement -> paused");
   assert!(stage.is_paused());
 
   // Resume to Validation
-  let stage = stage.transition_to(InterviewStage::Validation).expect("paused -> validation");
+  let stage = stage
+    .transition_to(InterviewStage::Validation)
+    .expect("paused -> validation");
   assert_eq!(stage, InterviewStage::Validation);
 
   // Complete
-  let stage = stage.transition_to(InterviewStage::Complete).expect("validation -> complete");
+  let stage = stage
+    .transition_to(InterviewStage::Complete)
+    .expect("validation -> complete");
   assert!(stage.is_terminal());
 }

@@ -24,13 +24,13 @@ pub fn emit_beads(
     .collect::<Vec<_>>();
 
   if mode.should_persist() {
-    emitted_beads
-      .iter()
-      .for_each(|bead| match plan.add_bead(bead.clone()) {
+    for bead in &emitted_beads {
+      match plan.add_bead(bead.clone()) {
         Ok(()) => {}
         Err(PlanError::DuplicateBeadId(_)) => result.add_skipped(1),
         Err(error) => result.add_error(format!("Failed to add bead '{}': {}", bead.id, error)),
-      });
+      }
+    }
     update_plan_phases(plan);
   }
 
@@ -225,13 +225,10 @@ fn update_plan_phases(plan: &mut ExecutionPlan) {
         .beads
         .iter()
         .filter(|bead| bead.phase == phase_number)
-        .map(|bead| bead.id.clone())
-        .collect::<Vec<_>>();
+        .map(|bead| bead.id.clone());
 
       let mut phase = PlanPhase::new(phase_number, format!("Phase {phase_number}"));
-      bead_ids
-        .into_iter()
-        .for_each(|bead_id| phase.add_bead(bead_id));
+      bead_ids.for_each(|bead_id| phase.add_bead(bead_id));
       phase
     })
     .collect();

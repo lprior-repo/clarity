@@ -10,7 +10,7 @@ use std::collections::{HashMap, HashSet};
 use super::{AIHints, AntiPattern, Feature, Invariant, SpecName, TypeError};
 
 /// Top-level specification container
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Spec {
   /// Unique specification name
   pub name: String,
@@ -46,7 +46,7 @@ impl Spec {
   /// # Errors
   /// Returns `TypeError::EmptyName` if name is empty or whitespace-only
   pub fn new(name: String) -> Result<Self, TypeError> {
-    let validated_name = SpecName::parse(name.clone()).map_err(|_| TypeError::EmptyName)?;
+    let validated_name = SpecName::parse(name).map_err(|_| TypeError::EmptyName)?;
     Ok(Self {
       name: validated_name.into(),
       description: String::new(),
@@ -68,6 +68,9 @@ impl Spec {
     Self {
       name: name.into(),
       description: String::new(),
+      audience: String::new(),
+      version: String::new(),
+      success_criteria: Vec::new(),
       features: Vec::new(),
       invariants: Vec::new(),
       anti_patterns: Vec::new(),

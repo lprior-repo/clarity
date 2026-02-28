@@ -48,8 +48,8 @@ impl Behavior {
   /// # Errors
   /// Returns `TypeError::InvalidBehaviorName` if name doesn't match pattern
   pub fn new(name: String) -> Result<Self, TypeError> {
-    let validated_name = BehaviorName::parse(name.clone())
-      .map_err(|_| TypeError::InvalidBehaviorName(name))?;
+    let validated_name =
+      BehaviorName::parse(name.clone()).map_err(|_| TypeError::InvalidBehaviorName(name))?;
     Ok(Self {
       name: validated_name.into(),
       intent: String::new(),
@@ -142,10 +142,7 @@ impl Behavior {
   /// # Errors
   ///
   /// Returns an error if the reference format is invalid.
-  pub fn add_precondition_reference(
-    &mut self,
-    reference: BehaviorReference,
-  ) -> &mut Self {
+  pub fn add_precondition_reference(&mut self, reference: BehaviorReference) -> &mut Self {
     self.preconditions.push(reference.into());
     self
   }
@@ -161,10 +158,7 @@ impl Behavior {
   /// # Errors
   ///
   /// Returns an error if the reference format is invalid.
-  pub fn add_postcondition_reference(
-    &mut self,
-    reference: BehaviorReference,
-  ) -> &mut Self {
+  pub fn add_postcondition_reference(&mut self, reference: BehaviorReference) -> &mut Self {
     self.postconditions.push(reference.into());
     self
   }

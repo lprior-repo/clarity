@@ -321,26 +321,33 @@ static AI_PROVIDER: LazyLock<Arc<OpenCodeProvider>> = LazyLock::new(|| {
 /// Resolve an extraction provider with optional model override.
 ///
 /// When `model_override` is provided, creates a new provider with the specified model.
-/// When `model_override` is None, returns the global AI_PROVIDER.
+/// When `model_override` is None, returns the global `AI_PROVIDER`.
 ///
 /// # Arguments
-/// * `model_override` - Optional model override (format: "provider_id/model_id" or just "model_id")
+/// * `model_override` - Optional model override (format: "`provider_id/model_id`" or just "`model_id`")
 ///
 /// # Returns
 /// * `Ok(Arc<OpenCodeProvider>)` - Resolved provider
 /// * `Err(ServerFnError)` - Failed to create provider with override
 #[cfg(not(target_arch = "wasm32"))]
 fn resolve_provider_with_model_override(
-  model_override: &Option<String>,
+  model_override: Option<&String>,
 ) -> Result<Arc<OpenCodeProvider>, ServerFnError> {
-  match model_override {
-    None => Ok(Arc::clone(&AI_PROVIDER)),
-    Some(model) => {
+  model_override.map_or_else(
+    || Ok(Arc::clone(&AI_PROVIDER)),
+    |model| {
       // Parse model override: either "provider_id/model_id" or just "model_id"
-      let (routing_provider, model_id) = model
-        .split_once('/')
-        .map(|(p, m)| (Some(p.to_string()), m.to_string()))
-        .unwrap_or_else(|| (AI_PROVIDER.routing_provider().clone(), model.clone()));
+      let (routing_provider, model_id) = model.split_once('/').map_or_else(
+        || {
+          (
+            AI_PROVIDER
+              .routing_provider()
+              .map(std::borrow::ToOwned::to_owned),
+            model.clone(),
+          )
+        },
+        |(p, m)| (Some(p.to_string()), m.to_string()),
+      );
 
       OpenCodeProvider::new_with_options(
         AI_PROVIDER.endpoint().clone(),
@@ -356,8 +363,8 @@ fn resolve_provider_with_model_override(
           "Failed to create provider with model override: {e}"
         ))
       })
-    }
-  }
+    },
+  )
 }
 
 /// Lightweight diagnostics for currently configured AI extraction provider.
@@ -372,11 +379,17 @@ pub struct AiProviderDiagnostics {
 #[cfg(not(target_arch = "wasm32"))]
 #[server]
 pub async fn get_ai_provider_status_server() -> Result<AiProviderDiagnostics, ServerFnError> {
+  use crate::config::ai::load_ai_config;
+  use crate::providers::resolution::resolve_provider_config;
+
+  let config = load_ai_config().map_err(|e| ServerFnError::new("config", e.to_string()))?;
+  let resolved = resolve_provider_config(&config);
+
   Ok(AiProviderDiagnostics {
-    provider: "opencode".to_string(),
-    endpoint: AI_PROVIDER.endpoint().clone(),
-    model: AI_PROVIDER.model().clone(),
-    routing_provider: AI_PROVIDER.routing_provider().clone(),
+    provider: resolved.provider_type,
+    endpoint: resolved.endpoint,
+    model: resolved.model,
+    routing_provider: resolved.routing_provider,
   })
 }
 
@@ -385,7 +398,7 @@ pub async fn get_ai_provider_status_server() -> Result<AiProviderDiagnostics, Se
 /// # Arguments
 /// * `input` - Freeform text to extract fields from
 /// * `session_id` - Optional session identifier for rate limiting
-/// * `model_override` - Optional model override (format: "provider_id/model_id" or just "model_id")
+/// * `model_override` - Optional model override (format: "`provider_id/model_id`" or just "`model_id`")
 ///
 /// # Returns
 /// * `Ok(ExtractedFields)` - Successfully extracted fields with confidence scores
@@ -436,7 +449,7 @@ pub async fn extract_fields_server(
   };
 
   // Resolve provider with optional model override
-  let provider = resolve_provider_with_model_override(&model_override)?;
+  let provider = resolve_provider_with_model_override(model_override.as_ref())?;
 
   // Call provider
   let result = provider
@@ -474,7 +487,7 @@ pub async fn extract_fields_server(
 /// * `field` - The type of field to suggest
 /// * `context` - Extraction context with prior answers
 /// * `session_id` - Optional session identifier for rate limiting
-/// * `model_override` - Optional model override (format: "provider_id/model_id" or just "model_id")
+/// * `model_override` - Optional model override (format: "`provider_id/model_id`" or just "`model_id`")
 ///
 /// # Returns
 /// * `Ok(String)` - Suggested content for the field

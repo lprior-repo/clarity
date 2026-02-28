@@ -74,7 +74,7 @@ const MIN_DESCRIPTION_LENGTH: usize = 10;
 /// Behavior descriptions at this threshold are considered "very short" and
 /// receive a Hint-level lint result (informational, not a warning).
 ///
-/// This is lower than MIN_DESCRIPTION_LENGTH because behaviors are more granular
+/// This is lower than `MIN_DESCRIPTION_LENGTH` because behaviors are more granular
 /// and may have shorter but still meaningful descriptions like "Log out" (7 chars).
 const MIN_BEHAVIOR_DESCRIPTION_LENGTH: usize = 5;
 use thiserror::Error;
@@ -385,16 +385,20 @@ impl LintResult {
     let emoji = self.severity.emoji();
     let rule_name = self.rule.as_str();
 
-    match &self.suggestion {
-      Some(suggestion) => format!(
-        "{} {}: {}: {} - Suggestion: {}",
-        emoji, severity_str, rule_name, self.message, suggestion
-      ),
-      None => format!(
-        "{} {}: {}: {}",
-        emoji, severity_str, rule_name, self.message
-      ),
-    }
+    self.suggestion.as_ref().map_or_else(
+      || {
+        format!(
+          "{} {}: {}: {}",
+          emoji, severity_str, rule_name, self.message
+        )
+      },
+      |suggestion| {
+        format!(
+          "{} {}: {}: {} - Suggestion: {}",
+          emoji, severity_str, rule_name, self.message, suggestion
+        )
+      },
+    )
   }
 }
 
@@ -1113,12 +1117,11 @@ pub fn format_lint_report(report: &LintReport) -> String {
 
   // Summary
   output.push_str("=== Lint Report ===\n");
-  writeln!(
+  let _ = writeln!(
     output,
     "Errors: {}, Warnings: {}, Info: {}, Hints: {}\n\n",
     report.error_count, report.warning_count, report.info_count, report.hint_count
-  )
-  .expect("writing to String should not fail");
+  );
 
   // Results by severity
   for severity in [
@@ -1129,12 +1132,11 @@ pub fn format_lint_report(report: &LintReport) -> String {
   ] {
     let results = report.by_severity(severity);
     if !results.is_empty() {
-      writeln!(output, "--- {} ---", severity.as_str().to_uppercase())
-        .expect("writing to String should not fail");
+      let _ = writeln!(output, "--- {} ---", severity.as_str().to_uppercase());
       for result in results {
-        writeln!(output, "  {}", result.format()).expect("writing to String should not fail");
+        let _ = writeln!(output, "  {}", result.format());
       }
-      writeln!(output).expect("writing to String should not fail");
+      let _ = writeln!(output);
     }
   }
 

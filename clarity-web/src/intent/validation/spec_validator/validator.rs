@@ -163,23 +163,23 @@ impl SpecValidator {
     let mut result = ValidationResult::new();
 
     if self.checks.check_required_fields {
-      self.validate_required_fields(spec, &mut result);
+      Self::validate_required_fields(spec, &mut result);
     }
-    self.validate_unique_features(spec, &mut result);
+    Self::validate_unique_features(spec, &mut result);
     for feature in &spec.features {
-      self.validate_feature(feature, &mut result);
+      Self::validate_feature(feature, &mut result);
     }
     if self.checks.check_duplicates {
-      self.detect_duplicate_behaviors(spec, &mut result);
+      Self::detect_duplicate_behaviors(spec, &mut result);
     }
     if self.checks.check_cycles {
-      self.detect_circular_dependencies(spec, &mut result);
+      Self::detect_circular_dependencies(spec, &mut result);
     }
 
     result
   }
 
-  fn validate_required_fields(&self, spec: &Spec, result: &mut ValidationResult) {
+  fn validate_required_fields(spec: &Spec, result: &mut ValidationResult) {
     if spec.name.trim().is_empty() {
       result.add_error(SpecValidationError::MissingRequiredField(
         "spec.name".to_string(),
@@ -187,7 +187,7 @@ impl SpecValidator {
     }
   }
 
-  fn validate_unique_features(&self, spec: &Spec, result: &mut ValidationResult) {
+  fn validate_unique_features(spec: &Spec, result: &mut ValidationResult) {
     let mut seen: HashMap<&str, usize> = HashMap::new();
     for (index, feature) in spec.features.iter().enumerate() {
       if let Some(&first_index) = seen.get(feature.name.as_str()) {
@@ -206,7 +206,7 @@ impl SpecValidator {
     }
   }
 
-  fn validate_feature(&self, feature: &Feature, result: &mut ValidationResult) {
+  fn validate_feature(feature: &Feature, result: &mut ValidationResult) {
     if feature.name.trim().is_empty() {
       result.add_error(SpecValidationError::MissingRequiredField(format!(
         "feature '{}' .name",
@@ -232,7 +232,7 @@ impl SpecValidator {
     }
   }
 
-  fn detect_duplicate_behaviors(&self, spec: &Spec, result: &mut ValidationResult) {
+  fn detect_duplicate_behaviors(spec: &Spec, result: &mut ValidationResult) {
     let all_behaviors: Vec<(String, &Behavior)> = spec
       .features
       .iter()
@@ -270,21 +270,21 @@ impl SpecValidator {
     }
   }
 
-  fn detect_circular_dependencies(&self, spec: &Spec, result: &mut ValidationResult) {
-    if let Some(path) = self.build_dependency_graph(spec).detect_cycles() {
+  fn detect_circular_dependencies(spec: &Spec, result: &mut ValidationResult) {
+    if let Some(path) = Self::build_dependency_graph(spec).detect_cycles() {
       if path.len() >= 2 {
         result.add_error(SpecValidationError::CircularDependencyPath { path });
       }
     }
 
-    if let Some(path) = self.build_feature_dependency_graph(spec).detect_cycles() {
+    if let Some(path) = Self::build_feature_dependency_graph(spec).detect_cycles() {
       if path.len() >= 2 {
         result.add_error(SpecValidationError::CircularDependencyPath { path });
       }
     }
   }
 
-  fn build_dependency_graph(&self, spec: &Spec) -> DependencyGraph {
+  fn build_dependency_graph(spec: &Spec) -> DependencyGraph {
     let mut graph = DependencyGraph::new();
 
     let behavior_paths: HashMap<String, String> = spec
@@ -319,7 +319,7 @@ impl SpecValidator {
   }
 
   #[must_use]
-  pub fn build_feature_dependency_graph(&self, spec: &Spec) -> DependencyGraph {
+  pub fn build_feature_dependency_graph(spec: &Spec) -> DependencyGraph {
     let mut graph = DependencyGraph::new();
 
     for feature in &spec.features {
@@ -335,7 +335,7 @@ impl SpecValidator {
   }
 
   #[must_use]
-  pub fn sort_behaviors_by_priority(&self, spec: &Spec) -> Vec<(String, BehaviorPriority)> {
+  pub fn sort_behaviors_by_priority(spec: &Spec) -> Vec<(String, BehaviorPriority)> {
     let behavior_paths: HashMap<String, String> = spec
       .features
       .iter()
@@ -371,14 +371,8 @@ impl SpecValidator {
       .flat_map(|feature| {
         feature.behaviors.iter().map(|behavior| {
           let path = format!("{}.{}", feature.name, behavior.name);
-          let dependent_count_for_path = match dependent_count.get(&path) {
-            Some(value) => *value,
-            None => 0,
-          };
-          let precondition_count_for_path = match precondition_count.get(&path) {
-            Some(value) => *value,
-            None => 0,
-          };
+          let dependent_count_for_path = dependent_count.get(&path).map_or(0, |value| *value);
+          let precondition_count_for_path = precondition_count.get(&path).map_or(0, |value| *value);
           let priority = BehaviorPriority {
             path: path.clone(),
             dependent_count: dependent_count_for_path,

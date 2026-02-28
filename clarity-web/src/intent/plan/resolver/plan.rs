@@ -4,19 +4,20 @@ use std::collections::HashSet;
 
 pub fn validate_plan_dependencies(plan: &ExecutionPlan) -> Result<(), PlanError> {
   let bead_ids: HashSet<&str> = plan.beads.iter().map(|bead| bead.id.as_str()).collect();
-  match plan.beads.iter().find_map(|bead| {
-    bead
-      .dependencies
-      .iter()
-      .find(|dependency| !bead_ids.contains(dependency.as_str()))
-      .map(|dependency| PlanError::InvalidDependency {
-        bead_id: bead.id.clone(),
-        dependency: dependency.clone(),
-      })
-  }) {
-    Some(error) => Err(error),
-    None => Ok(()),
-  }
+  plan
+    .beads
+    .iter()
+    .find_map(|bead| {
+      bead
+        .dependencies
+        .iter()
+        .find(|dependency| !bead_ids.contains(dependency.as_str()))
+        .map(|dependency| PlanError::InvalidDependency {
+          bead_id: bead.id.clone(),
+          dependency: dependency.clone(),
+        })
+    })
+    .map_or(Ok(()), Err)
 }
 
 #[must_use]

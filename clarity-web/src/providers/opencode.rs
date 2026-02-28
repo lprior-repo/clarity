@@ -111,13 +111,13 @@ impl OpenCodeProvider {
   }
 
   #[must_use]
-  pub const fn model(&self) -> &Option<String> {
-    &self.model
+  pub fn model(&self) -> Option<&str> {
+    self.model.as_deref()
   }
 
   #[must_use]
-  pub const fn routing_provider(&self) -> &Option<String> {
-    &self.routing_provider
+  pub fn routing_provider(&self) -> Option<&str> {
+    self.routing_provider.as_deref()
   }
 
   /// Build the full URL for an API endpoint
@@ -416,11 +416,9 @@ Input:\n{text}"
 
     let candidate = fenced
       .map(|part| {
-        if let Some(stripped) = part.strip_prefix("json\n") {
-          stripped.trim().to_string()
-        } else {
-          part.to_string()
-        }
+        part
+          .strip_prefix("json\n")
+          .map_or_else(|| part.to_string(), |stripped| stripped.trim().to_string())
       })
       .or_else(|| {
         let start = text.find('{')?;
@@ -605,11 +603,8 @@ mod tests {
 
     assert!(provider.is_ok());
     let provider = provider.unwrap();
-    assert_eq!(provider.model(), &Some("zai-coding-plan/glm-5".to_string()));
-    assert_eq!(
-      provider.routing_provider(),
-      &Some("zai-coding-plan".to_string())
-    );
+    assert_eq!(provider.model(), Some("zai-coding-plan/glm-5"));
+    assert_eq!(provider.routing_provider(), Some("zai-coding-plan"));
   }
 
   #[test]

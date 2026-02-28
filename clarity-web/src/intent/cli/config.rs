@@ -17,7 +17,7 @@ use thiserror::Error;
 const CONFIG_FILE_PATH: &str = ".intentrc.yaml";
 
 /// Intent CLI configuration from .intentrc.yaml
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Config {
   pub default_profile: String,
   pub default_output_format: String,
@@ -71,8 +71,8 @@ pub fn load_config() -> Result<Config, ConfigError> {
     return Ok(Config::default());
   }
 
-  let contents = std::fs::read_to_string(path)
-    .map_err(|e| ConfigError::ReadError(e.to_string()))?;
+  let contents =
+    std::fs::read_to_string(path).map_err(|e| ConfigError::ReadError(e.to_string()))?;
 
   parse_yaml_config(&contents)
 }
@@ -347,7 +347,10 @@ default_profile: cli
   #[test]
   fn test_get_strategy_uses_cli_arg() {
     let config = Config::default();
-    assert_eq!(get_strategy(&config, "dependency_order"), "dependency_order");
+    assert_eq!(
+      get_strategy(&config, "dependency_order"),
+      "dependency_order"
+    );
   }
 
   #[test]

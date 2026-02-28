@@ -3,6 +3,10 @@ use super::errors::InterpolationError;
 use super::placeholders::{extract_variables, find_placeholders};
 use super::resolve::resolve_variable;
 
+/// Interpolates `${...}` placeholders in a string using the provided context.
+///
+/// # Errors
+/// Returns `InterpolationError` when any referenced variable/path cannot be resolved.
 pub fn interpolate_string(input: &str, context: &Context) -> Result<String, InterpolationError> {
   let placeholders = find_placeholders(input);
   if placeholders.is_empty() {

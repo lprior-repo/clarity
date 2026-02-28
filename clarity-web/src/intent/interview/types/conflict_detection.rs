@@ -1,5 +1,5 @@
-use super::{Answer, Conflict, ConflictResolution};
 use super::models::ConflictState;
+use super::{Answer, Conflict, ConflictResolution};
 
 const FAST_KEYWORDS: [&str; 5] = ["fast", "latency", "speed", "quick", "low-latency"];
 const CONSISTENT_KEYWORDS: [&str; 5] = ["consistent", "accurate", "correct", "reliable", "precise"];

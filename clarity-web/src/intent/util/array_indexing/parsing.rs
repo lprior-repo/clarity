@@ -38,6 +38,10 @@ pub fn split_path(path: &str) -> Vec<String> {
   result
 }
 
+/// Parses a single path component, including optional array index syntax.
+///
+/// # Errors
+/// Returns `ArrayIndexError::InvalidPath` when bracket/index syntax is malformed.
 pub fn parse_path_component(component: &str) -> Result<(String, ArraySpec), ArrayIndexError> {
   let trimmed = component.trim();
   if trimmed.is_empty() {

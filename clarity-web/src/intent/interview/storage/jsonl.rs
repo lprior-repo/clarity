@@ -19,7 +19,7 @@
 //! The shell handles:
 //! - File system operations (read, write, create directories)
 //! - Buffer management
-//! - Error conversion to StorageError
+//! - Error conversion to `StorageError`
 //!
 //! The core handles:
 //! - JSON serialization/deserialization
@@ -42,7 +42,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::path::Path;
 
-pub use jsonl_core::{HasId, JsonlLineParseResult};
+pub use jsonl_core::HasId;
 
 // Implement HasId for InterviewSession
 impl jsonl_core::HasId for InterviewSession {
@@ -78,7 +78,7 @@ fn ensure_parent_dir(path: &Path) -> Result<(), StorageError> {
 /// Returns `StorageError::JsonError` if serialization fails.
 pub fn session_to_jsonl_line(session: &InterviewSession) -> Result<String, StorageError> {
   // Core: Pure serialization
-  jsonl_core::serialize_to_jsonl(session).map_err(|error| StorageError::JsonError(error))
+  jsonl_core::serialize_to_jsonl(session).map_err(StorageError::JsonError)
 }
 
 /// Append or update a session in a JSONL file.

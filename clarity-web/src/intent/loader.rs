@@ -18,6 +18,10 @@ pub use answer_loader::{load_from_file, AnswerLoaderError, ParseErrorWithDetails
 pub use cue::{export_cue_to_json, validate_cue_file};
 pub use error::{format_loader_error, LoaderError};
 
+/// Loads, validates, and parses a CUE spec file.
+///
+/// # Errors
+/// Returns `LoaderError` when path validation fails, the file cannot be read or validated, or JSON/spec parsing fails.
 pub fn load_cue_file(path: &Path) -> Result<Spec, LoaderError> {
   let path_str = path.to_string_lossy();
   let validated_path = validate_file_path(&path_str)?;

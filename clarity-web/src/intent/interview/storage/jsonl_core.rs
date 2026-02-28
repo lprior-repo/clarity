@@ -134,16 +134,19 @@ pub fn parse_jsonl_lines<T: serde::de::DeserializeOwned + Clone>(
     .iter()
     .enumerate()
     .map(|(idx, line)| parse_jsonl_line(line, idx + 1))
-    .fold((Vec::new(), Vec::new()), |(mut sessions, mut errors), result| {
-      match result {
-        JsonlLineParseResult::Success(session) => sessions.push(session),
-        JsonlLineParseResult::EmptyLine => {}
-        JsonlLineParseResult::ParseError { line_number, error } => {
-          errors.push((line_number, error));
+    .fold(
+      (Vec::new(), Vec::new()),
+      |(mut sessions, mut errors), result| {
+        match result {
+          JsonlLineParseResult::Success(session) => sessions.push(session),
+          JsonlLineParseResult::EmptyLine => {}
+          JsonlLineParseResult::ParseError { line_number, error } => {
+            errors.push((line_number, error));
+          }
         }
-      }
-      (sessions, errors)
-    })
+        (sessions, errors)
+      },
+    )
 }
 
 /// Filter sessions by ID (exclude matching).
@@ -159,9 +162,9 @@ pub fn parse_jsonl_lines<T: serde::de::DeserializeOwned + Clone>(
 ///
 /// A new vector with sessions that don't match the exclude ID
 #[must_use]
-pub fn filter_sessions_by_id<T: HasId>(sessions: &[T], exclude_id: &str) -> Vec<T>
+pub fn filter_sessions_by_id<T>(sessions: &[T], exclude_id: &str) -> Vec<T>
 where
-  T: Clone,
+  T: HasId + Clone,
 {
   sessions
     .iter()
@@ -183,9 +186,9 @@ where
 ///
 /// `Some(session)` if found, `None` otherwise
 #[must_use]
-pub fn find_session_by_id<T: HasId>(sessions: &[T], id: &str) -> Option<T>
+pub fn find_session_by_id<T>(sessions: &[T], id: &str) -> Option<T>
 where
-  T: Clone,
+  T: HasId + Clone,
 {
   sessions.iter().find(|session| session.id() == id).cloned()
 }
@@ -309,9 +312,18 @@ mod tests {
   #[test]
   fn filter_sessions_by_id_works() {
     let sessions = vec![
-      TestSession { id: "1".to_string(), name: "A".to_string() },
-      TestSession { id: "2".to_string(), name: "B".to_string() },
-      TestSession { id: "3".to_string(), name: "C".to_string() },
+      TestSession {
+        id: "1".to_string(),
+        name: "A".to_string(),
+      },
+      TestSession {
+        id: "2".to_string(),
+        name: "B".to_string(),
+      },
+      TestSession {
+        id: "3".to_string(),
+        name: "C".to_string(),
+      },
     ];
     let filtered = filter_sessions_by_id(&sessions, "2");
     assert_eq!(filtered.len(), 2);
@@ -321,8 +333,14 @@ mod tests {
   #[test]
   fn find_session_by_id_found() {
     let sessions = vec![
-      TestSession { id: "1".to_string(), name: "A".to_string() },
-      TestSession { id: "2".to_string(), name: "B".to_string() },
+      TestSession {
+        id: "1".to_string(),
+        name: "A".to_string(),
+      },
+      TestSession {
+        id: "2".to_string(),
+        name: "B".to_string(),
+      },
     ];
     let found = find_session_by_id(&sessions, "2");
     assert!(found.is_some());
@@ -331,9 +349,10 @@ mod tests {
 
   #[test]
   fn find_session_by_id_not_found() {
-    let sessions = vec![
-      TestSession { id: "1".to_string(), name: "A".to_string() },
-    ];
+    let sessions = vec![TestSession {
+      id: "1".to_string(),
+      name: "A".to_string(),
+    }];
     let found = find_session_by_id(&sessions, "999");
     assert!(found.is_none());
   }
@@ -341,8 +360,14 @@ mod tests {
   #[test]
   fn build_jsonl_content_works() {
     let sessions = vec![
-      TestSession { id: "1".to_string(), name: "A".to_string() },
-      TestSession { id: "2".to_string(), name: "B".to_string() },
+      TestSession {
+        id: "1".to_string(),
+        name: "A".to_string(),
+      },
+      TestSession {
+        id: "2".to_string(),
+        name: "B".to_string(),
+      },
     ];
     let content = build_jsonl_content(&sessions).unwrap();
     assert!(content.contains("1"));
@@ -369,8 +394,10 @@ not valid json"#;
 
   #[test]
   fn jsonl_line_parse_result_is_success() {
-    let success: JsonlLineParseResult<TestSession> =
-      JsonlLineParseResult::Success(TestSession { id: "1".to_string(), name: "A".to_string() });
+    let success: JsonlLineParseResult<TestSession> = JsonlLineParseResult::Success(TestSession {
+      id: "1".to_string(),
+      name: "A".to_string(),
+    });
     let empty: JsonlLineParseResult<TestSession> = JsonlLineParseResult::EmptyLine;
     let error: JsonlLineParseResult<TestSession> = JsonlLineParseResult::ParseError {
       line_number: 1,
@@ -384,7 +411,10 @@ not valid json"#;
 
   #[test]
   fn jsonl_line_parse_result_success_value() {
-    let session = TestSession { id: "1".to_string(), name: "A".to_string() };
+    let session = TestSession {
+      id: "1".to_string(),
+      name: "A".to_string(),
+    };
     let success: JsonlLineParseResult<TestSession> = JsonlLineParseResult::Success(session.clone());
     let empty: JsonlLineParseResult<TestSession> = JsonlLineParseResult::EmptyLine;
 

@@ -161,7 +161,11 @@ pub enum InvalidValueReason {
   /// Value is empty when it should not be
   Empty,
   /// Value is out of allowed range
-  OutOfRange { min: String, max: String, actual: String },
+  OutOfRange {
+    min: String,
+    max: String,
+    actual: String,
+  },
   /// Value format is incorrect
   InvalidFormat { expected: String },
   /// Value does not match required pattern
@@ -194,7 +198,10 @@ pub enum ValidationFailureReason {
   /// Invariant violated
   InvariantViolation { invariant: String },
   /// Cross-field validation failed
-  CrossFieldValidation { fields: Vec<String>, message: String },
+  CrossFieldValidation {
+    fields: Vec<String>,
+    message: String,
+  },
 }
 
 impl std::fmt::Display for ValidationFailureReason {
@@ -206,7 +213,11 @@ impl std::fmt::Display for ValidationFailureReason {
       Self::BusinessRule { rule, message } => write!(f, "rule '{rule}': {message}"),
       Self::InvariantViolation { invariant } => write!(f, "invariant violated: {invariant}"),
       Self::CrossFieldValidation { fields, message } => {
-        write!(f, "fields [{}] validation failed: {message}", fields.join(", "))
+        write!(
+          f,
+          "fields [{}] validation failed: {message}",
+          fields.join(", ")
+        )
       }
     }
   }
@@ -258,7 +269,11 @@ impl std::fmt::Display for PathInvalidReason {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
       Self::InvalidCharacters { chars } => {
-        write!(f, "invalid characters: {}", chars.iter().collect::<String>())
+        write!(
+          f,
+          "invalid characters: {}",
+          chars.iter().collect::<String>()
+        )
       }
       Self::NotAbsolute => write!(f, "path must be absolute"),
       Self::TooLong { length, max } => write!(f, "path too long ({length} > {max})"),
@@ -277,14 +292,19 @@ pub struct DependencyChain {
 
 impl std::fmt::Display for DependencyChain {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    write!(f, "{} -> {}", self.items.join(" -> "), self.items.first().map_or("", |s| s))
+    write!(
+      f,
+      "{} -> {}",
+      self.items.join(" -> "),
+      self.items.first().map_or("", |s| s)
+    )
   }
 }
 
 impl DependencyChain {
   /// Create a new dependency chain
   #[must_use]
-  pub fn new(items: Vec<String>) -> Self {
+  pub const fn new(items: Vec<String>) -> Self {
     Self { items }
   }
 
@@ -305,7 +325,11 @@ pub enum ConstraintType {
   /// Referential integrity constraint
   ReferentialIntegrity { from: String, to: String },
   /// Cardinality constraint
-  Cardinality { min: usize, max: usize, actual: usize },
+  Cardinality {
+    min: usize,
+    max: usize,
+    actual: usize,
+  },
   /// Custom constraint
   Custom { name: String, description: String },
 }
@@ -329,7 +353,11 @@ pub enum ConfigurationErrorReason {
   /// Required configuration is missing
   MissingConfig { key: String },
   /// Configuration value is invalid
-  InvalidValue { key: String, value: String, expected: String },
+  InvalidValue {
+    key: String,
+    value: String,
+    expected: String,
+  },
   /// Configuration file could not be loaded
   LoadFailed { path: String, error: String },
   /// Environment variable error
@@ -340,7 +368,11 @@ impl std::fmt::Display for ConfigurationErrorReason {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
       Self::MissingConfig { key } => write!(f, "missing configuration: {key}"),
-      Self::InvalidValue { key, value, expected } => {
+      Self::InvalidValue {
+        key,
+        value,
+        expected,
+      } => {
         write!(f, "invalid {key}={value}, expected {expected}")
       }
       Self::LoadFailed { path, error } => write!(f, "failed to load {path}: {error}"),

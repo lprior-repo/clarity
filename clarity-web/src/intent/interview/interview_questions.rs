@@ -13,17 +13,17 @@
 #![forbid(unsafe_code)]
 
 use super::question_loader::{get_questions, load_default_questions, QuestionsDatabase};
-use super::types::{Question, QuestionCategory, QuestionPriority, Perspective};
+use super::types::{Perspective, Question, QuestionCategory, QuestionPriority};
 
 /// Get all questions for a specific profile and round
 /// Loads questions from CUE file on each call - for repeated calls,
-/// use get_questions_for_round_with_db with a cached database
+/// use `get_questions_for_round_with_db` with a cached database
 #[must_use]
 pub fn get_questions_for_round(profile: &str, round: u32) -> Vec<Question> {
-  match load_default_questions() {
-    Ok(db) => get_questions(&db, profile, round),
-    Err(_) => fallback_questions(profile, round),
-  }
+  load_default_questions().map_or_else(
+    |_| fallback_questions(profile, round),
+    |db| get_questions(&db, profile, round),
+  )
 }
 
 /// Get questions with explicit database (for testing or to avoid reloading)
@@ -38,11 +38,7 @@ pub fn get_questions_for_round_with_db(
 
 /// Get the next unasked question in the current round
 #[must_use]
-pub fn get_next_question(
-  profile: &str,
-  round: u32,
-  answered_ids: &[String],
-) -> Option<Question> {
+pub fn get_next_question(profile: &str, round: u32, answered_ids: &[String]) -> Option<Question> {
   let questions = get_questions_for_round(profile, round);
   find_first_unanswered(&questions, answered_ids)
 }

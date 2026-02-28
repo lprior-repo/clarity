@@ -17,8 +17,6 @@
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
-use itertools::Itertools;
-
 /// Default maximum edit distance for suggestions
 /// Flags within this distance will be suggested as corrections
 const DEFAULT_MAX_DISTANCE: usize = 2;
@@ -104,7 +102,7 @@ pub fn levenshtein(a: &str, b: &str) -> usize {
     curr_row[0] = i + 1;
 
     for (j, b_char) in b_chars.iter().enumerate() {
-      let cost = if a_char == b_char { 0 } else { 1 };
+      let cost = usize::from(a_char != b_char);
 
       curr_row[j + 1] = (prev_row[j + 1] + 1) // deletion
         .min(curr_row[j] + 1) // insertion
@@ -174,11 +172,7 @@ fn is_flag(arg: &str) -> bool {
 
 /// Extract flag name from argument (removes -- prefix)
 fn extract_flag_name(arg: &str) -> &str {
-  if arg.starts_with("--") {
-    &arg[2..]
-  } else {
-    ""
-  }
+  arg.strip_prefix("--").unwrap_or("")
 }
 
 /// Validate all flags in the argument list

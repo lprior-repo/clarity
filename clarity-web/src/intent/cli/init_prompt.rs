@@ -119,7 +119,10 @@ pub fn validate_spec_name(name: &str) -> Result<String, InitPromptError> {
 ///
 /// # Errors
 /// Returns `InitPromptError` if the selection is invalid.
-pub fn validate_template_selection(selection: usize, templates: &[Template]) -> Result<TemplateType, InitPromptError> {
+pub fn validate_template_selection(
+  selection: usize,
+  templates: &[Template],
+) -> Result<TemplateType, InitPromptError> {
   if selection == 0 || selection > templates.len() {
     Err(InitPromptError::InvalidTemplateSelection)
   } else {
@@ -181,7 +184,10 @@ mod tests {
 
   #[test]
   fn test_template_type_description() {
-    assert_eq!(TemplateType::Api.description(), "REST or GraphQL API service");
+    assert_eq!(
+      TemplateType::Api.description(),
+      "REST or GraphQL API service"
+    );
   }
 
   #[test]
@@ -225,14 +231,20 @@ mod tests {
   fn test_validate_template_selection_zero() {
     let templates = get_all_templates();
     let result = validate_template_selection(0, &templates);
-    assert!(matches!(result, Err(InitPromptError::InvalidTemplateSelection)));
+    assert!(matches!(
+      result,
+      Err(InitPromptError::InvalidTemplateSelection)
+    ));
   }
 
   #[test]
   fn test_validate_template_selection_too_high() {
     let templates = get_all_templates();
     let result = validate_template_selection(100, &templates);
-    assert!(matches!(result, Err(InitPromptError::InvalidTemplateSelection)));
+    assert!(matches!(
+      result,
+      Err(InitPromptError::InvalidTemplateSelection)
+    ));
   }
 
   #[test]
@@ -276,7 +288,10 @@ mod tests {
   fn test_generate_default_filename() {
     assert_eq!(generate_default_filename("My API"), "my-api.cue");
     assert_eq!(generate_default_filename("Test Spec"), "test-spec.cue");
-    assert_eq!(generate_default_filename("  Multiple   Spaces  "), "multiple-spaces.cue");
+    assert_eq!(
+      generate_default_filename("  Multiple   Spaces  "),
+      "multiple-spaces.cue"
+    );
   }
 
   #[test]

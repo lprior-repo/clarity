@@ -26,7 +26,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
-use crate::components::discover::state::{AiStatus, ConfirmSubPhase, ProgressiveDiscoverPhase};
+use crate::components::discover::state::{ConfirmSubPhase, ProgressiveDiscoverPhase};
 use crate::components::discover::straw_man::StrawManTrap;
 use crate::components::discover::types::HolePunchingResults;
 use crate::kirk::progressive_discover::VorpValidation;

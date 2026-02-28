@@ -2,6 +2,10 @@ use itertools::Itertools;
 
 use super::domain::{BeadError, BeadTemplate};
 
+/// Renders bead templates as JSONL.
+///
+/// # Errors
+/// Returns `BeadError::JsonError` if any bead fails to serialize.
 pub fn beads_to_jsonl(beads: &[BeadTemplate]) -> Result<String, BeadError> {
   beads
     .iter()
@@ -10,6 +14,10 @@ pub fn beads_to_jsonl(beads: &[BeadTemplate]) -> Result<String, BeadError> {
     .map(|lines| lines.join("\n"))
 }
 
+/// Renders bead templates as an enhanced CUE document.
+///
+/// # Errors
+/// Returns `BeadError::EmptyTitle` when any bead has an empty title.
 pub fn beads_to_enhanced_cue(beads: &[BeadTemplate]) -> Result<String, BeadError> {
   if beads.is_empty() {
     return Ok(String::new());

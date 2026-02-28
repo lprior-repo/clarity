@@ -80,6 +80,10 @@ impl EmissionResult {
   }
 }
 
+/// Emits plan beads from interview artifacts.
+///
+/// # Errors
+/// Returns `PlanError` when session validation fails or emitted beads cannot be added to the plan.
 pub fn emit_beads(
   session: &InterviewSession,
   plan: &mut ExecutionPlan,

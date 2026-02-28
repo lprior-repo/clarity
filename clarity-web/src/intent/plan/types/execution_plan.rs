@@ -41,6 +41,10 @@ impl ExecutionPlan {
     }
   }
 
+  /// Adds a bead to the plan if its id is unique.
+  ///
+  /// # Errors
+  /// Returns `PlanError::DuplicateBeadId` when another bead already has the same id.
   pub fn add_bead(&mut self, bead: PlanBead) -> Result<(), PlanError> {
     if self.beads.iter().any(|existing| existing.id == bead.id) {
       return Err(PlanError::DuplicateBeadId(bead.id));
@@ -88,6 +92,10 @@ impl ExecutionPlan {
       .collect()
   }
 
+  /// Marks an existing bead as completed.
+  ///
+  /// # Errors
+  /// Returns `PlanError::EmptyBeadId` for blank ids, or `PlanError::InvalidDependency` when the bead id is not found.
   pub fn complete_bead(&mut self, id: &str) -> Result<(), PlanError> {
     if id.trim().is_empty() {
       return Err(PlanError::EmptyBeadId);
@@ -125,6 +133,8 @@ impl ExecutionPlan {
       return 0.0;
     }
     let completed = self.beads.iter().filter(|bead| bead.is_completed()).count();
-    (completed as f64 / self.beads.len() as f64) * 100.0
+    let completed_u32 = u32::try_from(completed).unwrap_or(u32::MAX);
+    let total_u32 = u32::try_from(self.beads.len()).unwrap_or(u32::MAX);
+    (f64::from(completed_u32) / f64::from(total_u32)) * 100.0
   }
 }

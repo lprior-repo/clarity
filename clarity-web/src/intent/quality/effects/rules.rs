@@ -48,9 +48,8 @@ pub(super) fn estimate_severity(text: &str, effect_type: EffectType) -> EffectSe
         }
       }
       EffectType::Notification => EffectSeverity::Low,
-      EffectType::Cascade => EffectSeverity::Medium,
       EffectType::RaceCondition => EffectSeverity::High,
-      EffectType::RollbackRequired => EffectSeverity::Medium,
+      EffectType::Cascade | EffectType::RollbackRequired => EffectSeverity::Medium,
     }
   }
 }
@@ -87,7 +86,7 @@ pub(super) fn suggestion_for(
 pub(super) fn create_effect(
   effect_type: EffectType,
   behavior_name: &str,
-  description: String,
+  description: &str,
   context_text: &str,
 ) -> Effect {
   let severity = estimate_severity(context_text, effect_type);
@@ -116,7 +115,7 @@ pub(super) fn detect_by_keywords(
     vec![create_effect(
       effect_type,
       &behavior.name,
-      description,
+      &description,
       &text,
     )]
   } else {

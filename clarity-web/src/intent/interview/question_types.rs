@@ -1,7 +1,7 @@
 //! Question Types
 //!
 //! Core types for interview questions.
-//! Used by both interview_questions and question_loader modules.
+//! Used by both `interview_questions` and `question_loader` modules.
 //!
 //! Ported from intent-cli/src/intent/question_types.gleam
 
@@ -13,6 +13,7 @@
 #![forbid(unsafe_code)]
 
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 /// Perspective from which a question is asked
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
@@ -43,7 +44,7 @@ impl QuestionPerspective {
   ///
   /// # Errors
   /// Returns `QuestionParseError` if the input is not a valid perspective.
-  pub fn from_str(s: &str) -> Result<Self, QuestionParseError> {
+  pub fn parse(s: &str) -> Result<Self, QuestionParseError> {
     match s.to_lowercase().as_str() {
       "user" => Ok(Self::User),
       "developer" => Ok(Self::Developer),
@@ -86,7 +87,7 @@ impl QuestionCategoryType {
   ///
   /// # Errors
   /// Returns `QuestionParseError` if the input is not a valid category.
-  pub fn from_str(s: &str) -> Result<Self, QuestionParseError> {
+  pub fn parse(s: &str) -> Result<Self, QuestionParseError> {
     match s.to_lowercase().as_str() {
       "happy_path" => Ok(Self::HappyPath),
       "error_case" => Ok(Self::ErrorCase),
@@ -124,7 +125,7 @@ impl QuestionPriorityType {
   ///
   /// # Errors
   /// Returns `QuestionParseError` if the input is not a valid priority.
-  pub fn from_str(s: &str) -> Result<Self, QuestionParseError> {
+  pub fn parse(s: &str) -> Result<Self, QuestionParseError> {
     match s.to_lowercase().as_str() {
       "critical" => Ok(Self::Critical),
       "important" => Ok(Self::Important),
@@ -147,6 +148,30 @@ pub enum QuestionParseError {
   InvalidPriority(String),
 }
 
+impl FromStr for QuestionPerspective {
+  type Err = QuestionParseError;
+
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    Self::parse(s)
+  }
+}
+
+impl FromStr for QuestionCategoryType {
+  type Err = QuestionParseError;
+
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    Self::parse(s)
+  }
+}
+
+impl FromStr for QuestionPriorityType {
+  type Err = QuestionParseError;
+
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    Self::parse(s)
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -163,14 +188,14 @@ mod tests {
   #[test]
   fn test_perspective_from_str() {
     assert_eq!(
-      QuestionPerspective::from_str("user"),
+      QuestionPerspective::parse("user"),
       Ok(QuestionPerspective::User)
     );
     assert_eq!(
-      QuestionPerspective::from_str("DEVELOPER"),
+      QuestionPerspective::parse("DEVELOPER"),
       Ok(QuestionPerspective::Developer)
     );
-    assert!(QuestionPerspective::from_str("invalid").is_err());
+    assert!(QuestionPerspective::parse("invalid").is_err());
   }
 
   #[test]
@@ -189,18 +214,18 @@ mod tests {
   #[test]
   fn test_category_from_str() {
     assert_eq!(
-      QuestionCategoryType::from_str("happy_path"),
+      QuestionCategoryType::parse("happy_path"),
       Ok(QuestionCategoryType::HappyPath)
     );
     assert_eq!(
-      QuestionCategoryType::from_str("ERROR_CASE"),
+      QuestionCategoryType::parse("ERROR_CASE"),
       Ok(QuestionCategoryType::ErrorCase)
     );
     assert_eq!(
-      QuestionCategoryType::from_str("nonfunctional"),
+      QuestionCategoryType::parse("nonfunctional"),
       Ok(QuestionCategoryType::NonFunctional)
     );
-    assert!(QuestionCategoryType::from_str("invalid").is_err());
+    assert!(QuestionCategoryType::parse("invalid").is_err());
   }
 
   #[test]
@@ -213,22 +238,22 @@ mod tests {
   #[test]
   fn test_priority_from_str() {
     assert_eq!(
-      QuestionPriorityType::from_str("critical"),
+      QuestionPriorityType::parse("critical"),
       Ok(QuestionPriorityType::Critical)
     );
     assert_eq!(
-      QuestionPriorityType::from_str("IMPORTANT"),
+      QuestionPriorityType::parse("IMPORTANT"),
       Ok(QuestionPriorityType::Important)
     );
     assert_eq!(
-      QuestionPriorityType::from_str("nice_to_have"),
+      QuestionPriorityType::parse("nice_to_have"),
       Ok(QuestionPriorityType::NiceToHave)
     );
     assert_eq!(
-      QuestionPriorityType::from_str("nicetohave"),
+      QuestionPriorityType::parse("nicetohave"),
       Ok(QuestionPriorityType::NiceToHave)
     );
-    assert!(QuestionPriorityType::from_str("invalid").is_err());
+    assert!(QuestionPriorityType::parse("invalid").is_err());
   }
 
   #[test]

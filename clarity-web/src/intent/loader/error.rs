@@ -202,9 +202,17 @@ pub enum ValidationErrorReason {
   /// Required field is missing
   MissingRequired { field: String },
   /// Field value is out of allowed range
-  OutOfRange { field: String, min: String, max: String, actual: String },
+  OutOfRange {
+    field: String,
+    min: String,
+    max: String,
+    actual: String,
+  },
   /// Field format is invalid
-  InvalidFormat { field: String, expected_format: String },
+  InvalidFormat {
+    field: String,
+    expected_format: String,
+  },
   /// Value does not match constraint
   ConstraintViolation { constraint: String },
   /// Custom validation rule failed
@@ -215,10 +223,18 @@ impl std::fmt::Display for ValidationErrorReason {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
       Self::MissingRequired { field } => write!(f, "missing required field: {field}"),
-      Self::OutOfRange { field, min, max, actual } => {
+      Self::OutOfRange {
+        field,
+        min,
+        max,
+        actual,
+      } => {
         write!(f, "{field} value {actual} out of range [{min}, {max}]")
       }
-      Self::InvalidFormat { field, expected_format } => {
+      Self::InvalidFormat {
+        field,
+        expected_format,
+      } => {
         write!(f, "{field} has invalid format, expected {expected_format}")
       }
       Self::ConstraintViolation { constraint } => write!(f, "constraint violated: {constraint}"),
@@ -265,7 +281,10 @@ pub enum CueBinaryError {
 impl std::fmt::Display for CueBinaryError {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
-      Self::NotInPath => write!(f, "cue command not found in PATH. Install from https://cuelang.org/docs/install/"),
+      Self::NotInPath => write!(
+        f,
+        "cue command not found in PATH. Install from https://cuelang.org/docs/install/"
+      ),
       Self::ExecutionError { message } => write!(f, "{message}"),
       Self::VersionMismatch { required, actual } => {
         write!(f, "version mismatch: required {required}, got {actual}")
@@ -283,7 +302,7 @@ pub enum SecurityViolation {
   EncodedPathTraversal { encoding_type: String },
   /// Shell metacharacter detected
   ShellMetacharacter { category: String, character: char },
-  /// ReDoS vulnerability detected
+  /// `ReDoS` vulnerability detected
   ReDoSVulnerability { pattern: String },
   /// Session ID validation failed
   SessionIdValidation { error: String },
@@ -302,7 +321,10 @@ impl std::fmt::Display for SecurityViolation {
       Self::EncodedPathTraversal { encoding_type } => {
         write!(f, "encoded path traversal: {encoding_type}")
       }
-      Self::ShellMetacharacter { category, character } => {
+      Self::ShellMetacharacter {
+        category,
+        character,
+      } => {
         write!(f, "shell metacharacter '{character}' ({category})")
       }
       Self::ReDoSVulnerability { pattern } => write!(f, "ReDoS vulnerability: {pattern}"),
@@ -449,9 +471,7 @@ impl LoaderError {
   /// Create a file not found error
   #[must_use]
   pub fn file_not_found(path: impl Into<String>) -> Self {
-    Self::FileNotFound {
-      path: path.into(),
-    }
+    Self::FileNotFound { path: path.into() }
   }
 
   /// Create a session not found error
@@ -495,7 +515,9 @@ impl From<ParseError> for LoaderError {
 
 impl From<SecurityError> for LoaderError {
   fn from(err: SecurityError) -> Self {
-    use crate::intent::security::{MetacharCategory, PathEncodingType, RegexVulnerability, SessionIdError};
+    use crate::intent::security::{
+      MetacharCategory, PathEncodingType, RegexVulnerability, SessionIdError,
+    };
 
     let violation = match err {
       SecurityError::PathTraversal { details } => SecurityViolation::PathTraversal { details },
@@ -554,7 +576,11 @@ impl From<SecurityError> for LoaderError {
 #[must_use]
 pub fn format_loader_error(error: &LoaderError) -> String {
   match error {
-    LoaderError::Io { operation, path, reason } => {
+    LoaderError::Io {
+      operation,
+      path,
+      reason,
+    } => {
       format!("I/O Error: {operation} failed for '{path}': {reason}")
     }
     LoaderError::Json { location, reason } => {
@@ -569,7 +595,11 @@ pub fn format_loader_error(error: &LoaderError) -> String {
     LoaderError::SessionNotFound { session_id } => {
       format!("Session Not Found: {session_id}")
     }
-    LoaderError::InvalidSpec { field, expected, actual } => {
+    LoaderError::InvalidSpec {
+      field,
+      expected,
+      actual,
+    } => {
       format!("Invalid Spec: field '{field}' expected {expected}, got {actual}")
     }
     LoaderError::EmptyField { field } => {

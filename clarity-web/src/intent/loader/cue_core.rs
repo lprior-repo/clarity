@@ -63,7 +63,7 @@ impl CommandOutput {
 
   /// Create from raw exit code and output.
   #[must_use]
-  pub fn from_raw(exit_code: i32, stdout: String, stderr: String) -> Self {
+  pub const fn from_raw(exit_code: i32, stdout: String, stderr: String) -> Self {
     Self {
       success: exit_code == 0,
       exit_code: Some(exit_code),
@@ -163,15 +163,11 @@ pub fn build_export_args(path_str: &str) -> Vec<String> {
 /// # Returns
 ///
 /// `Ok(())` if successful, `Err(exit_code, stderr)` if failed
-#[must_use]
 pub fn validate_command_output(output: &CommandOutput) -> Result<(), (i32, String)> {
   if output.success {
     Ok(())
   } else {
-    Err((
-      output.exit_code.unwrap_or(-1),
-      output.stderr.clone(),
-    ))
+    Err((output.exit_code.unwrap_or(-1), output.stderr.clone()))
   }
 }
 
@@ -186,7 +182,6 @@ pub fn validate_command_output(output: &CommandOutput) -> Result<(), (i32, Strin
 /// # Returns
 ///
 /// `Ok(String)` if valid UTF-8, `Err(error_message)` otherwise
-#[must_use]
 pub fn parse_utf8_output(bytes: &[u8]) -> Result<String, String> {
   String::from_utf8(bytes.to_vec()).map_err(|e| e.to_string())
 }
@@ -225,7 +220,6 @@ pub fn check_version_output(output: &CommandOutput) -> BinaryCheck {
 /// # Returns
 ///
 /// `Ok(())` if valid JSON, `Err(error_message)` otherwise
-#[must_use]
 pub fn validate_json_content(content: &str) -> Result<(), String> {
   if content.trim().is_empty() {
     return Err("output is empty".to_string());
@@ -375,7 +369,10 @@ mod tests {
   #[test]
   fn extract_path_components_works_for_valid_paths() {
     let result = extract_path_components("/path/to/file.cue");
-    assert_eq!(result, Some(("/path/to".to_string(), "file.cue".to_string())));
+    assert_eq!(
+      result,
+      Some(("/path/to".to_string(), "file.cue".to_string()))
+    );
   }
 
   #[test]
@@ -392,6 +389,9 @@ mod tests {
   fn binary_check_is_available_works() {
     assert!(BinaryCheck::Available.is_available());
     assert!(!BinaryCheck::NotFound.is_available());
-    assert!(!BinaryCheck::ExecutionError { message: String::new() }.is_available());
+    assert!(!BinaryCheck::ExecutionError {
+      message: String::new()
+    }
+    .is_available());
   }
 }

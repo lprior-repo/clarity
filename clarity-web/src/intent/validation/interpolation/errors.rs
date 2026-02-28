@@ -24,7 +24,7 @@ impl From<ArrayIndexError> for InterpolationError {
     match err {
       ArrayIndexError::InvalidPath(path) => Self::InvalidPath(path),
       ArrayIndexError::IndexOutOfBounds { index, length } => Self::IndexOutOfBounds {
-        index: index.max(0) as usize,
+        index: usize::try_from(index.max(0)).unwrap_or(usize::MAX),
         length,
       },
       ArrayIndexError::NotAnArray { field, .. } => Self::NotAnArray(field),

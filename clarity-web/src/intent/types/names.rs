@@ -109,7 +109,7 @@ impl BehaviorName {
     &self.0
   }
 
-  /// Create a BehaviorName without validation.
+  /// Create a `BehaviorName` without validation.
   ///
   /// # Safety
   ///
@@ -206,7 +206,7 @@ impl FeatureName {
     &self.0
   }
 
-  /// Create a FeatureName without validation.
+  /// Create a `FeatureName` without validation.
   ///
   /// # Safety
   ///
@@ -292,7 +292,7 @@ impl SpecName {
     &self.0
   }
 
-  /// Create a SpecName without validation.
+  /// Create a `SpecName` without validation.
   ///
   /// # Safety
   ///
@@ -419,7 +419,7 @@ impl BehaviorReference {
     &self.full
   }
 
-  /// Create a BehaviorReference from validated parts.
+  /// Create a `BehaviorReference` from validated parts.
   ///
   /// # Safety
   ///
@@ -511,7 +511,7 @@ impl FeatureDependency {
     &self.0
   }
 
-  /// Create a FeatureDependency without validation.
+  /// Create a `FeatureDependency` without validation.
   ///
   /// # Safety
   ///

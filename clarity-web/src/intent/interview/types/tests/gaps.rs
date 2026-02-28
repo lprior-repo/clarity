@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
+use crate::intent::interview::types::models::{GapState, GapStateError};
 use crate::intent::interview::types::{
   Answer, Gap, InterviewError, InterviewSession, InterviewSessionError, Perspective, Profile,
 };
-use crate::intent::interview::types::models::{GapState, GapStateError};
 
 fn make_session(profile: Profile) -> InterviewSession {
   InterviewSession::new(
@@ -260,12 +260,18 @@ fn gap_state_validate_catches_empty_resolution() {
   let invalid_resolved = GapState::Resolved {
     resolution: String::new(),
   };
-  assert_eq!(invalid_resolved.validate(), Err(GapStateError::EmptyResolution));
+  assert_eq!(
+    invalid_resolved.validate(),
+    Err(GapStateError::EmptyResolution)
+  );
 
   let whitespace_resolved = GapState::Resolved {
     resolution: "   ".to_string(),
   };
-  assert_eq!(whitespace_resolved.validate(), Err(GapStateError::EmptyResolution));
+  assert_eq!(
+    whitespace_resolved.validate(),
+    Err(GapStateError::EmptyResolution)
+  );
 
   // Valid state
   let valid_resolved = GapState::Resolved {
@@ -280,5 +286,8 @@ fn gap_state_validate_catches_empty_resolution() {
 #[test]
 fn gap_state_is_open_predicate() {
   assert!(GapState::Open.is_open());
-  assert!(!GapState::Resolved { resolution: "x".to_string() }.is_open());
+  assert!(!GapState::Resolved {
+    resolution: "x".to_string()
+  }
+  .is_open());
 }

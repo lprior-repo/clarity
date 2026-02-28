@@ -1,5 +1,9 @@
 use super::{FormatError, UriError};
 
+/// Validates a URI with required scheme separator and authority.
+///
+/// # Errors
+/// Returns `FormatError::Uri` when the URI is empty or contains invalid scheme/authority parts.
 pub fn validate_uri(input: &str) -> Result<(), FormatError> {
   if input.is_empty() {
     return Err(UriError::Empty.into());

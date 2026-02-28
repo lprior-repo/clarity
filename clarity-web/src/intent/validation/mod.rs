@@ -30,7 +30,8 @@ pub use interpolation::{
 
 // Re-export rule types (WP21)
 pub use rule::{
-  all_rules_pass, apply_rule, failing_rules, validate_with_rules, Rule, RuleError, RuleResult,
+  all_rules_pass, apply_rule, failing_rules, parse, validate_with_rules, Rule, RuleError, RuleExpr,
+  RuleParseError, RuleResult,
 };
 
 // Re-export semantic validator types (WP31)

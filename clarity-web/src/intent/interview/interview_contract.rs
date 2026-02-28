@@ -11,7 +11,6 @@
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 /// Errors during contract validation
@@ -117,7 +116,9 @@ fn validate_session(obj: &serde_json::Map<String, serde_json::Value>) -> Result<
   Ok(())
 }
 
-fn validate_progress(obj: &serde_json::Map<String, serde_json::Value>) -> Result<(), ContractError> {
+fn validate_progress(
+  obj: &serde_json::Map<String, serde_json::Value>,
+) -> Result<(), ContractError> {
   let progress = obj
     .get("progress")
     .and_then(|v| v.as_object())
@@ -155,14 +156,18 @@ fn validate_agent_protocol(
   let required_fields = ["contract_version", "goal"];
   for field in required_fields {
     if !protocol.contains_key(field) {
-      return Err(ContractError::MissingField(format!("agent_protocol.{field}")));
+      return Err(ContractError::MissingField(format!(
+        "agent_protocol.{field}"
+      )));
     }
   }
 
   Ok(())
 }
 
-fn validate_guidance(obj: &serde_json::Map<String, serde_json::Value>) -> Result<(), ContractError> {
+fn validate_guidance(
+  obj: &serde_json::Map<String, serde_json::Value>,
+) -> Result<(), ContractError> {
   let guidance = obj
     .get("guidance")
     .and_then(|v| v.as_object())
@@ -178,7 +183,9 @@ fn validate_guidance(obj: &serde_json::Map<String, serde_json::Value>) -> Result
   Ok(())
 }
 
-fn validate_question(obj: &serde_json::Map<String, serde_json::Value>) -> Result<(), ContractError> {
+fn validate_question(
+  obj: &serde_json::Map<String, serde_json::Value>,
+) -> Result<(), ContractError> {
   let question = obj
     .get("question")
     .and_then(|v| v.as_object())
@@ -262,7 +269,8 @@ mod tests {
         "perspective": "user",
         "extract_into": ["name"]
       }
-    }"#.to_string()
+    }"#
+      .to_string()
   }
 
   #[test]
@@ -344,8 +352,14 @@ mod tests {
 
   #[test]
   fn test_action_type_from_str() {
-    assert_eq!(ActionType::from_str("ask_question"), Ok(ActionType::AskQuestion));
-    assert_eq!(ActionType::from_str("generate_beads"), Ok(ActionType::GenerateBeads));
+    assert_eq!(
+      ActionType::from_str("ask_question"),
+      Ok(ActionType::AskQuestion)
+    );
+    assert_eq!(
+      ActionType::from_str("generate_beads"),
+      Ok(ActionType::GenerateBeads)
+    );
     assert!(ActionType::from_str("invalid").is_err());
   }
 

@@ -7,9 +7,7 @@
 //!
 //! The goal is to verify that "illegal states are truly unrepresentable."
 
-use crate::intent::interview::types::models::{
-  ConflictState, ConflictStateError, GapState,
-};
+use crate::intent::interview::types::models::{ConflictState, ConflictStateError, GapState};
 use crate::intent::interview::types::{
   Conflict, ConflictResolution, Gap, InterviewSession, Profile,
 };
@@ -31,12 +29,18 @@ mod serde_attacks {
     let result: Result<GapState, _> = serde_json::from_str(json);
 
     // Serde allows construction - this is a KNOWN limitation
-    assert!(result.is_ok(), "Serde allows empty resolution - this is a known limitation");
+    assert!(
+      result.is_ok(),
+      "Serde allows empty resolution - this is a known limitation"
+    );
     let state = result.unwrap();
 
     // But the resolve() method properly validates
     let new_state = GapState::Open.resolve(String::new());
-    assert!(new_state.is_err(), "resolve() correctly rejects empty resolution");
+    assert!(
+      new_state.is_err(),
+      "resolve() correctly rejects empty resolution"
+    );
   }
 
   /// Try to deserialize GapState::Resolved with whitespace-only resolution.
@@ -61,7 +65,10 @@ mod serde_attacks {
     let result: Result<ConflictState, _> = serde_json::from_str(json);
 
     // Serde allows this - KNOWN limitation
-    assert!(result.is_ok(), "Serde allows negative index - this is a known limitation");
+    assert!(
+      result.is_ok(),
+      "Serde allows negative index - this is a known limitation"
+    );
     let state = result.unwrap();
     assert_eq!(state.chosen_index(), Some(-1));
 
@@ -111,7 +118,10 @@ mod serde_attacks {
     // Serde ignores extra fields in tagged enums - this is expected
     let json = r#"{"status":"open","resolution":"should not be here"}"#;
     let result: Result<GapState, _> = serde_json::from_str(json);
-    assert!(result.is_ok(), "Serde ignores extra fields - this is expected");
+    assert!(
+      result.is_ok(),
+      "Serde ignores extra fields - this is expected"
+    );
     assert_eq!(result.unwrap(), GapState::Open);
   }
 
@@ -142,7 +152,10 @@ mod serde_attacks {
     // Serde ignores extra fields in tagged enums - this is expected
     let json = r#"{"status":"pending","chosen_index":0}"#;
     let result: Result<ConflictState, _> = serde_json::from_str(json);
-    assert!(result.is_ok(), "Serde ignores extra fields - this is expected");
+    assert!(
+      result.is_ok(),
+      "Serde ignores extra fields - this is expected"
+    );
     assert_eq!(result.unwrap(), ConflictState::Pending);
   }
 
@@ -336,14 +349,20 @@ mod edge_cases {
     use crate::intent::interview::types::Profile;
 
     // Case is normalized to lowercase, so "API" becomes "api" and is accepted
-    let result = Profile::from_str("API");
-    assert!(result.is_ok(), "Profile normalizes case, so 'API' -> 'api' is accepted");
+    let result = Profile::parse("API");
+    assert!(
+      result.is_ok(),
+      "Profile normalizes case, so 'API' -> 'api' is accepted"
+    );
 
     // Unicode inputs should be rejected
     let unicode_inputs = vec!["äpi", "cli\u{0301}", "事件"];
     for input in unicode_inputs {
-      let result = Profile::from_str(input);
-      assert!(result.is_err(), "Should reject unicode/unknown profile: {input:?}");
+      let result = Profile::parse(input);
+      assert!(
+        result.is_err(),
+        "Should reject unicode/unknown profile: {input:?}"
+      );
     }
   }
 }
@@ -461,7 +480,7 @@ mod fuzzing {
 
     // Unicode edge cases
     strings.push("\u{0000}".to_string()); // null byte
-    // Note: Surrogate \u{D800} cannot be represented in Rust strings - it's ill-formed UTF-8
+                                          // Note: Surrogate \u{D800} cannot be represented in Rust strings - it's ill-formed UTF-8
     strings.push("\u{FFFD}".to_string()); // replacement character
     strings.push("\u{FFFF}".to_string()); // BMP limit
     strings.push("\u{10FFFF}".to_string()); // max unicode
@@ -680,7 +699,9 @@ mod integration_attacks {
     }
 
     // Invalid profiles
-    for invalid in &["API", "Api", "api ", " api", "api\n", "invalid", "", "api-cli"] {
+    for invalid in &[
+      "API", "Api", "api ", " api", "api\n", "invalid", "", "api-cli",
+    ] {
       let json = format!("\"{invalid}\"");
       let result: Result<Profile, _> = serde_json::from_str(&json);
       assert!(result.is_err(), "Should reject profile: {invalid:?}");

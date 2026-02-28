@@ -18,6 +18,9 @@ thiserror = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tracing = { workspace = true }
+clarity-web = { path = "../clarity-web" }
+dialoguer = "0.11"
+chrono = { workspace = true }
 
 [lints]
 workspace = true

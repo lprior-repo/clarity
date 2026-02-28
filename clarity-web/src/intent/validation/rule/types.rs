@@ -62,19 +62,22 @@ pub enum RuleOutcome {
   /// Rule passed validation
   Pass { value: Option<String> },
   /// Rule failed validation with an error message
-  Fail { message: String, value: Option<String> },
+  Fail {
+    message: String,
+    value: Option<String>,
+  },
 }
 
 impl RuleOutcome {
   /// Create a passing outcome with an optional value.
   #[must_use]
-  pub fn pass(value: Option<String>) -> Self {
+  pub const fn pass(value: Option<String>) -> Self {
     Self::Pass { value }
   }
 
   /// Create a failing outcome with message and optional value.
   #[must_use]
-  pub fn fail(message: String, value: Option<String>) -> Self {
+  pub const fn fail(message: String, value: Option<String>) -> Self {
     Self::Fail { message, value }
   }
 
@@ -103,8 +106,7 @@ impl RuleOutcome {
   #[must_use]
   pub fn value(&self) -> Option<&str> {
     match self {
-      Self::Pass { value } => value.as_deref(),
-      Self::Fail { value, .. } => value.as_deref(),
+      Self::Pass { value } | Self::Fail { value, .. } => value.as_deref(),
     }
   }
 }

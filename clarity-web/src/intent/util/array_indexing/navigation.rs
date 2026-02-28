@@ -1,6 +1,10 @@
 use super::{parse_path_component, ArrayIndexError, ArraySpec};
 use serde_json::Value;
 
+/// Navigates a dotted path with optional array access against a JSON value.
+///
+/// # Errors
+/// Returns `ArrayIndexError` when path components are invalid or navigation fails.
 pub fn navigate_path(value: &Value, path: &[String]) -> Result<Value, ArrayIndexError> {
   if path.is_empty() {
     return Ok(value.clone());
@@ -33,7 +37,7 @@ fn navigate_array(value: &Value, spec: ArraySpec, field: &str) -> Result<Value, 
   if length == 0 {
     return match spec {
       ArraySpec::Index(i) => Err(ArrayIndexError::IndexOutOfBounds {
-        index: i as isize,
+        index: isize::try_from(i).unwrap_or(isize::MAX),
         length: 0,
       }),
       ArraySpec::NegativeIndex(_) | ArraySpec::All => Ok(Value::Array(Vec::new())),
@@ -47,10 +51,10 @@ fn navigate_array(value: &Value, spec: ArraySpec, field: &str) -> Result<Value, 
   match indices.len() {
     0 => Ok(Value::Array(Vec::new())),
     1 => Ok(
-      match indices.first().and_then(|index| array.get(*index).cloned()) {
-        Some(value) => value,
-        None => Value::Null,
-      },
+      indices
+        .first()
+        .and_then(|index| array.get(*index).cloned())
+        .map_or(Value::Null, |value| value),
     ),
     _ => Ok(Value::Array(
       indices

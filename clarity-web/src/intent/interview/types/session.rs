@@ -1,11 +1,11 @@
 use std::collections::HashSet;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use super::models::GapState;
 use super::{
   conflict_detection, Answer, Conflict, ConflictDetectionError, Gap, InterviewError,
   InterviewSession, InterviewSessionError, InterviewStage, Profile,
 };
-use super::models::GapState;
 
 impl InterviewSession {
   #[must_use]
@@ -60,6 +60,11 @@ impl InterviewSession {
       .collect()
   }
 
+  /// Resolve a gap by ID with a non-empty resolution.
+  ///
+  /// # Errors
+  /// Returns `InterviewError` when `gap_id`/`resolution` are empty or when the
+  /// referenced gap does not exist.
   pub fn resolve_gap(&mut self, gap_id: &str, resolution: &str) -> Result<(), InterviewError> {
     if gap_id.trim().is_empty() {
       return Err(InterviewError::EmptyGapId);
@@ -81,6 +86,12 @@ impl InterviewSession {
     Ok(())
   }
 
+  /// Add an answer to the current round.
+  ///
+  /// # Errors
+  /// Returns `InterviewSessionError` when the session is paused/complete, input
+  /// fields are empty, round does not match, or the answer duplicates an existing
+  /// question in the same round.
   pub fn add_answer(
     &mut self,
     answer: Answer,
@@ -123,6 +134,26 @@ impl InterviewSession {
     Ok(())
   }
 
+  #[must_use]
+  pub fn calculate_confidence(
+    response: &str,
+    extracted_fields: &std::collections::HashMap<String, String>,
+  ) -> f64 {
+    let response_length = response.chars().count();
+    let has_extracted_fields = !extracted_fields.is_empty();
+
+    if response_length > 50 && has_extracted_fields {
+      0.85
+    } else {
+      0.6
+    }
+  }
+
+  /// Mark the current round as complete and advance stage if needed.
+  ///
+  /// # Errors
+  /// Returns `InterviewSessionError` when the session is paused/complete or
+  /// when `timestamp` is empty.
   pub fn complete_round(&mut self, timestamp: &str) -> Result<(), InterviewSessionError> {
     if self.stage == InterviewStage::Paused {
       return Err(InterviewSessionError::SessionPaused);
@@ -149,6 +180,11 @@ impl InterviewSession {
     Ok(())
   }
 
+  /// Validate that no unresolved blocking gaps remain.
+  ///
+  /// # Errors
+  /// Returns `InterviewSessionError::BlockingGapsUnresolved` if any blocking
+  /// gaps are still open.
   pub fn can_proceed(&self) -> Result<(), InterviewSessionError> {
     let gap_ids: Vec<String> = self
       .get_blocking_gaps()
@@ -166,6 +202,11 @@ impl InterviewSession {
     }
   }
 
+  /// Mark a phase complete and optionally advance `current_phase`.
+  ///
+  /// # Errors
+  /// Returns `InterviewSessionError` when `phase_number` is zero or when
+  /// `timestamp` is empty.
   pub fn complete_phase(
     &mut self,
     phase_number: u32,
@@ -189,6 +230,11 @@ impl InterviewSession {
     Ok(())
   }
 
+  /// Detect and append newly found conflicts.
+  ///
+  /// # Errors
+  /// Returns `ConflictDetectionError` when the session ID is empty or when an
+  /// existing answer has an empty question ID.
   pub fn detect_conflicts(&mut self) -> Result<Vec<Conflict>, ConflictDetectionError> {
     if self.id.is_empty() {
       return Err(ConflictDetectionError::EmptySessionId);
@@ -211,6 +257,11 @@ impl InterviewSession {
     Ok(new_conflicts)
   }
 
+  /// Resolve a conflict by selecting an option index.
+  ///
+  /// # Errors
+  /// Returns `ConflictDetectionError` for invalid IDs, negative indexes,
+  /// already-resolved conflicts, out-of-range option indexes, or empty options.
   pub fn resolve_conflict(
     &mut self,
     conflict_id: &str,
@@ -246,16 +297,15 @@ impl InterviewSession {
         super::models::ConflictStateError::AlreadyResolved => {
           ConflictDetectionError::ConflictAlreadyResolved(conflict_id.to_string())
         }
-        super::models::ConflictStateError::InvalidIndex { index, option_count } => {
-          ConflictDetectionError::InvalidOptionIndex {
-            conflict_id: conflict_id.to_string(),
-            index,
-            option_count,
-          }
-        }
-        super::models::ConflictStateError::EmptyOptions => {
-          ConflictDetectionError::EmptyOptions
-        }
+        super::models::ConflictStateError::InvalidIndex {
+          index,
+          option_count,
+        } => ConflictDetectionError::InvalidOptionIndex {
+          conflict_id: conflict_id.to_string(),
+          index,
+          option_count,
+        },
+        super::models::ConflictStateError::EmptyOptions => ConflictDetectionError::EmptyOptions,
       })?;
 
     conflict.state = new_state;

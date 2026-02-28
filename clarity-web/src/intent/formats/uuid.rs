@@ -14,10 +14,10 @@ const UUID_LENGTH: usize = 36;
 /// Character positions where hyphens must appear in a valid UUID.
 ///
 /// Positions are zero-indexed:
-/// - Position 8: After the first 8 hex digits (time_low)
-/// - Position 13: After the next 4 hex digits (time_mid)
-/// - Position 18: After the next 4 hex digits (time_hi_and_version)
-/// - Position 23: After the next 4 hex digits (clock_seq_hi_and_reserved + clock_seq_low)
+/// - Position 8: After the first 8 hex digits (`time_low`)
+/// - Position 13: After the next 4 hex digits (`time_mid`)
+/// - Position 18: After the next 4 hex digits (`time_hi_and_version`)
+/// - Position 23: After the next 4 hex digits (`clock_seq_hi_and_reserved` + `clock_seq_low`)
 const HYPHEN_POSITIONS: [usize; 4] = [8, 13, 18, 23];
 
 /// Position of the version character in a UUID (within the third group).
@@ -32,6 +32,10 @@ const VERSION_CHAR_POSITION: usize = 14;
 /// Valid variant indicators: 8, 9, a, b (RFC 4122 variant)
 const VARIANT_CHAR_POSITION: usize = 19;
 
+/// Validates a canonical hyphenated UUID string.
+///
+/// # Errors
+/// Returns `FormatError::Uuid` when length, hyphen positions, hex digits, version, or variant are invalid.
 pub fn validate_uuid(input: &str) -> Result<(), FormatError> {
   if input.is_empty() {
     return Err(UuidError::Empty.into());

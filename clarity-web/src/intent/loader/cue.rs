@@ -19,7 +19,7 @@
 //! The shell handles:
 //! - File system operations (exists, metadata)
 //! - Process spawning (cue commands)
-//! - Error conversion to LoaderError
+//! - Error conversion to `LoaderError`
 //!
 //! The core handles:
 //! - Path validation
@@ -40,7 +40,7 @@ use super::error::{CueBinaryError, CueOutputError, LoaderError};
 use std::path::Path;
 use std::process::Command;
 
-pub use cue_core::{validate_command_output, validate_path_string, CommandOutput};
+pub use cue_core::{validate_command_output, CommandOutput};
 
 /// Validate that a file exists at the given path.
 ///

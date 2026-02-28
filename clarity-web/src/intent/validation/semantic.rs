@@ -53,7 +53,10 @@ use thiserror::Error;
 
 // Re-export the validated name types for backwards compatibility
 // These are now defined in crate::intent::types::names
-pub use crate::intent::types::{BehaviorName as ValidatedBehaviorName, FeatureName as ValidatedFeatureName, SpecName as ValidatedSpecName};
+pub use crate::intent::types::{
+  BehaviorName as ValidatedBehaviorName, FeatureName as ValidatedFeatureName,
+  SpecName as ValidatedSpecName,
+};
 
 /// Errors that can occur during semantic validation
 ///
@@ -575,7 +578,6 @@ impl SemanticValidator {
   ///     }
   /// }
   /// ```
-  #[must_use]
   pub fn cross_reference_validation(&self, spec: &Spec) -> SemanticResult<CrossReferenceResult> {
     let mut result = CrossReferenceResult {
       broken_references: Vec::new(),
@@ -862,7 +864,7 @@ impl SemanticValidator {
     let mut errors = Vec::new();
 
     // Check max dependency depth
-    let max_depth = self.calculate_max_dependency_depth(spec);
+    let max_depth = Self::calculate_max_dependency_depth(spec);
     if max_depth > MAX_DEPENDENCY_DEPTH {
       errors.push(SemanticError::dependency_chain_too_deep(
         max_depth,
@@ -922,7 +924,7 @@ impl SemanticValidator {
   /// # Returns
   ///
   /// The maximum dependency depth found (0 if no dependencies exist)
-  fn calculate_max_dependency_depth(&self, spec: &Spec) -> usize {
+  fn calculate_max_dependency_depth(spec: &Spec) -> usize {
     // Build dependency map
     let dep_map: HashMap<&str, &Vec<String>> = spec
       .features
@@ -966,12 +968,13 @@ impl SemanticValidator {
     }
     visiting.insert(feature_name);
 
-    let dependencies = match dep_map.get(feature_name) {
-      Some(deps) => deps,
-      None => return 0,
+    let Some(dependencies) = dep_map.get(feature_name) else {
+      visiting.remove(feature_name);
+      return 0;
     };
 
     if dependencies.is_empty() {
+      visiting.remove(feature_name);
       return 0;
     }
 

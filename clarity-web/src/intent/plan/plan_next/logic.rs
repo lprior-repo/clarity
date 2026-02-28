@@ -123,7 +123,10 @@ fn get_phase_completion_action(
   let phase_beads = plan.get_phase_beads(current_phase);
 
   if !phase_beads.is_empty() {
-    let completed_count = phase_beads.iter().filter(|bead| bead.is_completed()).count();
+    let completed_count = phase_beads
+      .iter()
+      .filter(|bead| bead.is_completed())
+      .count();
     if completed_count == phase_beads.len() {
       return Some(
         NextAction::new(

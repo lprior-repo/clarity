@@ -47,6 +47,10 @@ impl ResolutionResult {
   }
 }
 
+/// Resolves bead dependencies and computes an ordered execution plan.
+///
+/// # Errors
+/// Returns `PlanError` when dependencies are invalid or cycles are present.
 pub fn resolve_dependencies(beads: &[PlanBead]) -> Result<ResolutionResult, PlanError> {
   graph::resolve_dependencies(beads)
 }
@@ -56,10 +60,18 @@ pub fn detect_cycles(beads: &[PlanBead]) -> Vec<Vec<String>> {
   graph::detect_cycles(beads)
 }
 
+/// Produces a topologically sorted bead execution order.
+///
+/// # Errors
+/// Returns `PlanError` when dependency cycles are detected.
 pub fn topological_sort(beads: &[PlanBead]) -> Result<Vec<String>, PlanError> {
   graph::topological_sort(beads)
 }
 
+/// Validates that plan dependencies refer to known bead ids.
+///
+/// # Errors
+/// Returns `PlanError::InvalidDependency` if any dependency cannot be resolved.
 pub fn validate_plan_dependencies(plan: &ExecutionPlan) -> Result<(), PlanError> {
   plan::validate_plan_dependencies(plan)
 }
@@ -84,6 +96,10 @@ pub fn compute_parallelism(beads: &[PlanBead]) -> usize {
   metrics::compute_parallelism(beads)
 }
 
+/// Applies dependency resolution results to a mutable execution plan.
+///
+/// # Errors
+/// Returns `PlanError` when dependencies are invalid or contain cycles.
 pub fn apply_resolution_to_plan(plan: &mut ExecutionPlan) -> Result<(), PlanError> {
   plan::apply_resolution_to_plan(plan)
 }

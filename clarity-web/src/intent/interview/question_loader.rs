@@ -12,13 +12,12 @@
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
-use std::collections::HashMap;
-
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use super::types::{Question, QuestionCategory, QuestionPriority, Perspective};
-use crate::intent::interview::question_types::{QuestionCategoryType, QuestionPerspective, QuestionPriorityType};
+use super::types::{Perspective, Question, QuestionCategory, QuestionPriority};
+use crate::intent::interview::question_types::{
+  QuestionCategoryType, QuestionPerspective, QuestionPriorityType,
+};
 
 /// Default path for custom questions
 const CUSTOM_QUESTIONS_PATH: &str = ".intent/custom-questions.cue";
@@ -105,8 +104,8 @@ pub fn load_questions(path: &str) -> Result<QuestionsDatabase, QuestionLoadError
     return Err(QuestionLoadError::FileNotFound(path.to_string()));
   }
 
-  let contents = std::fs::read_to_string(path)
-    .map_err(|_| QuestionLoadError::FileNotFound(path.to_string()))?;
+  let contents =
+    std::fs::read_to_string(path).map_err(|_| QuestionLoadError::FileNotFound(path.to_string()))?;
 
   parse_questions_json(&contents)
 }
@@ -135,8 +134,8 @@ pub fn load_custom_questions(path: &str) -> Result<CustomQuestions, QuestionLoad
     return Err(QuestionLoadError::FileNotFound(path.to_string()));
   }
 
-  let contents = std::fs::read_to_string(path)
-    .map_err(|_| QuestionLoadError::FileNotFound(path.to_string()))?;
+  let contents =
+    std::fs::read_to_string(path).map_err(|_| QuestionLoadError::FileNotFound(path.to_string()))?;
 
   parse_custom_questions_json(&contents)
 }
@@ -217,9 +216,9 @@ fn parse_question_list(
 
 /// Parse a single question from JSON value
 fn parse_question(value: &serde_json::Value) -> Result<Question, QuestionLoadError> {
-  let obj = value
-    .as_object()
-    .ok_or_else(|| QuestionLoadError::QuestionParseError("Question must be an object".to_string()))?;
+  let obj = value.as_object().ok_or_else(|| {
+    QuestionLoadError::QuestionParseError("Question must be an object".to_string())
+  })?;
 
   let id = get_string_field(obj, "id")?;
   let round = get_u32_field(obj, "round")?;
@@ -244,7 +243,8 @@ fn parse_question(value: &serde_json::Value) -> Result<Question, QuestionLoadErr
     question: question_text,
     context,
     example,
-    expected_type: get_optional_string_field(obj, "expected_type").unwrap_or_else(|| "text".to_string()),
+    expected_type: get_optional_string_field(obj, "expected_type")
+      .unwrap_or_else(|| "text".to_string()),
     extract_into: get_optional_string_list(obj, "extract_into").unwrap_or_default(),
     depends_on: get_optional_string_list(obj, "depends_on").unwrap_or_default(),
     blocks: get_optional_string_list(obj, "blocks").unwrap_or_default(),
@@ -253,64 +253,77 @@ fn parse_question(value: &serde_json::Value) -> Result<Question, QuestionLoadErr
 
 /// Convert perspective string to enum
 fn convert_perspective(s: &str) -> Perspective {
-  match QuestionPerspective::from_str(s) {
-    Ok(QuestionPerspective::User) => Perspective::User,
+  match QuestionPerspective::parse(s) {
     Ok(QuestionPerspective::Developer) => Perspective::Developer,
     Ok(QuestionPerspective::Ops) => Perspective::Ops,
     Ok(QuestionPerspective::Security) => Perspective::Security,
     Ok(QuestionPerspective::Business) => Perspective::Business,
-    Err(_) => Perspective::User, // Default fallback
+    Ok(QuestionPerspective::User) | Err(_) => Perspective::User,
   }
 }
 
 /// Convert category string to enum
 fn convert_category(s: &str) -> QuestionCategory {
-  match QuestionCategoryType::from_str(s) {
-    Ok(QuestionCategoryType::HappyPath) => QuestionCategory::HappyPath,
+  match QuestionCategoryType::parse(s) {
     Ok(QuestionCategoryType::ErrorCase) => QuestionCategory::ErrorCase,
     Ok(QuestionCategoryType::EdgeCase) => QuestionCategory::EdgeCase,
     Ok(QuestionCategoryType::Constraint) => QuestionCategory::Constraint,
     Ok(QuestionCategoryType::Dependency) => QuestionCategory::Dependency,
     Ok(QuestionCategoryType::NonFunctional) => QuestionCategory::NonFunctional,
-    Err(_) => QuestionCategory::HappyPath, // Default fallback
+    Ok(QuestionCategoryType::HappyPath) | Err(_) => QuestionCategory::HappyPath,
   }
 }
 
 /// Convert priority string to enum
 fn convert_priority(s: &str) -> QuestionPriority {
-  match QuestionPriorityType::from_str(s) {
+  match QuestionPriorityType::parse(s) {
     Ok(QuestionPriorityType::Critical) => QuestionPriority::Critical,
-    Ok(QuestionPriorityType::Important) => QuestionPriority::Important,
     Ok(QuestionPriorityType::NiceToHave) => QuestionPriority::NiceToHave,
-    Err(_) => QuestionPriority::Important, // Default fallback
+    Ok(QuestionPriorityType::Important) | Err(_) => QuestionPriority::Important,
   }
 }
 
 /// Get required string field from object
-fn get_string_field(obj: &serde_json::Map<String, serde_json::Value>, key: &str) -> Result<String, QuestionLoadError> {
+fn get_string_field(
+  obj: &serde_json::Map<String, serde_json::Value>,
+  key: &str,
+) -> Result<String, QuestionLoadError> {
   obj
     .get(key)
     .and_then(|v| v.as_str())
     .map(String::from)
-    .ok_or_else(|| QuestionLoadError::QuestionParseError(format!("Missing or invalid field: {key}")))
+    .ok_or_else(|| {
+      QuestionLoadError::QuestionParseError(format!("Missing or invalid field: {key}"))
+    })
 }
 
 /// Get required u32 field from object
-fn get_u32_field(obj: &serde_json::Map<String, serde_json::Value>, key: &str) -> Result<u32, QuestionLoadError> {
+fn get_u32_field(
+  obj: &serde_json::Map<String, serde_json::Value>,
+  key: &str,
+) -> Result<u32, QuestionLoadError> {
   obj
     .get(key)
-    .and_then(|v| v.as_u64())
+    .and_then(serde_json::Value::as_u64)
     .map(|n| u32::try_from(n).unwrap_or(1))
-    .ok_or_else(|| QuestionLoadError::QuestionParseError(format!("Missing or invalid field: {key}")))
+    .ok_or_else(|| {
+      QuestionLoadError::QuestionParseError(format!("Missing or invalid field: {key}"))
+    })
 }
 
 /// Get optional string field from object
-fn get_optional_string_field(obj: &serde_json::Map<String, serde_json::Value>, key: &str) -> Option<String> {
+fn get_optional_string_field(
+  obj: &serde_json::Map<String, serde_json::Value>,
+  key: &str,
+) -> Option<String> {
   obj.get(key).and_then(|v| v.as_str()).map(String::from)
 }
 
 /// Get optional string list field from object
-fn get_optional_string_list(obj: &serde_json::Map<String, serde_json::Value>, key: &str) -> Option<Vec<String>> {
+fn get_optional_string_list(
+  obj: &serde_json::Map<String, serde_json::Value>,
+  key: &str,
+) -> Option<Vec<String>> {
   obj.get(key).and_then(|v| {
     v.as_array().map(|arr| {
       arr
@@ -354,7 +367,9 @@ fn parse_custom_profile_questions(
   match value {
     Some(v) if v.is_object() => {
       let obj = v.as_object().ok_or_else(|| {
-        QuestionLoadError::QuestionParseError("Custom profile questions must be an object".to_string())
+        QuestionLoadError::QuestionParseError(
+          "Custom profile questions must be an object".to_string(),
+        )
       })?;
 
       Ok(Some(CustomProfileQuestions {
@@ -373,7 +388,9 @@ fn parse_custom_common_questions(
   match value {
     Some(v) if v.is_object() => {
       let obj = v.as_object().ok_or_else(|| {
-        QuestionLoadError::QuestionParseError("Custom common questions must be an object".to_string())
+        QuestionLoadError::QuestionParseError(
+          "Custom common questions must be an object".to_string(),
+        )
       })?;
 
       Ok(Some(CustomCommonQuestions {
@@ -390,57 +407,59 @@ fn parse_custom_common_questions(
 /// Custom questions with same ID override built-ins; new IDs are added
 fn merge_custom_questions(db: &QuestionsDatabase, custom: &CustomQuestions) -> QuestionsDatabase {
   QuestionsDatabase {
-    api: merge_profile(&db.api, &custom.api),
-    cli: merge_profile(&db.cli, &custom.cli),
-    event: merge_profile(&db.event, &custom.event),
-    data: merge_profile(&db.data, &custom.data),
-    workflow: merge_profile(&db.workflow, &custom.workflow),
-    ui: merge_profile(&db.ui, &custom.ui),
-    common: merge_common(&db.common, &custom.common),
+    api: merge_profile(&db.api, custom.api.as_ref()),
+    cli: merge_profile(&db.cli, custom.cli.as_ref()),
+    event: merge_profile(&db.event, custom.event.as_ref()),
+    data: merge_profile(&db.data, custom.data.as_ref()),
+    workflow: merge_profile(&db.workflow, custom.workflow.as_ref()),
+    ui: merge_profile(&db.ui, custom.ui.as_ref()),
+    common: merge_common(&db.common, custom.common.as_ref()),
   }
 }
 
 /// Merge profile questions
-fn merge_profile(base: &ProfileQuestions, custom: &Option<CustomProfileQuestions>) -> ProfileQuestions {
-  match custom {
-    Some(c) => ProfileQuestions {
-      round_1: merge_question_list(&base.round_1, &c.round_1),
-      round_2: merge_question_list(&base.round_2, &c.round_2),
+fn merge_profile(
+  base: &ProfileQuestions,
+  custom: Option<&CustomProfileQuestions>,
+) -> ProfileQuestions {
+  custom.map_or_else(
+    || base.clone(),
+    |c| ProfileQuestions {
+      round_1: merge_question_list(&base.round_1, c.round_1.as_deref()),
+      round_2: merge_question_list(&base.round_2, c.round_2.as_deref()),
     },
-    None => base.clone(),
-  }
+  )
 }
 
 /// Merge common questions
-fn merge_common(base: &CommonQuestions, custom: &Option<CustomCommonQuestions>) -> CommonQuestions {
-  match custom {
-    Some(c) => CommonQuestions {
-      round_3: merge_question_list(&base.round_3, &c.round_3),
-      round_4: merge_question_list(&base.round_4, &c.round_4),
-      round_5: merge_question_list(&base.round_5, &c.round_5),
+fn merge_common(base: &CommonQuestions, custom: Option<&CustomCommonQuestions>) -> CommonQuestions {
+  custom.map_or_else(
+    || base.clone(),
+    |c| CommonQuestions {
+      round_3: merge_question_list(&base.round_3, c.round_3.as_deref()),
+      round_4: merge_question_list(&base.round_4, c.round_4.as_deref()),
+      round_5: merge_question_list(&base.round_5, c.round_5.as_deref()),
     },
-    None => base.clone(),
-  }
+  )
 }
 
 /// Merge question lists, with custom overriding by ID
-fn merge_question_list(base: &[Question], custom: &Option<Vec<Question>>) -> Vec<Question> {
-  match custom {
-    Some(custom_questions) => {
-      let custom_ids: Vec<&str> = custom_questions.iter().map(|q| q.id.as_str()).collect();
-
-      // Keep base questions that aren't overridden
-      let filtered_base: Vec<Question> = base
+fn merge_question_list(base: &[Question], custom: Option<&[Question]>) -> Vec<Question> {
+  custom.map_or_else(
+    || base.to_vec(),
+    |custom_questions| {
+      base
         .iter()
-        .filter(|q| !custom_ids.contains(&q.id.as_str()))
+        .filter(|question| {
+          custom_questions
+            .iter()
+            .all(|custom_question| custom_question.id != question.id)
+        })
         .cloned()
-        .collect();
-
-      // Append custom questions (overrides + new)
-      filtered_base.into_iter().chain(custom_questions.clone()).collect()
-    }
-    None => base.to_vec(),
-  }
+        .chain(custom_questions.iter().cloned())
+        .collect()
+    },
+  )
 }
 
 /// Get questions for a specific profile and round from a loaded database
@@ -466,7 +485,7 @@ pub fn get_questions(db: &QuestionsDatabase, profile: &str, round: u32) -> Vec<Q
   }
 }
 
-/// Format a QuestionLoadError as a human-readable string
+/// Format a `QuestionLoadError` as a human-readable string
 #[must_use]
 pub fn format_error(error: &QuestionLoadError) -> String {
   match error {
@@ -558,7 +577,7 @@ mod tests {
       id: "base".to_string(),
       ..Question::default()
     }];
-    let merged = merge_question_list(&base, &None);
+    let merged = merge_question_list(&base, None);
     assert_eq!(merged.len(), 1);
   }
 
@@ -574,7 +593,7 @@ mod tests {
       question: "custom question".to_string(),
       ..Question::default()
     }];
-    let merged = merge_question_list(&base, &Some(custom));
+    let merged = merge_question_list(&base, Some(&custom));
     assert_eq!(merged.len(), 1);
     assert_eq!(merged[0].question, "custom question");
   }
@@ -589,7 +608,7 @@ mod tests {
       id: "q2".to_string(),
       ..Question::default()
     }];
-    let merged = merge_question_list(&base, &Some(custom));
+    let merged = merge_question_list(&base, Some(&custom));
     assert_eq!(merged.len(), 2);
   }
 

@@ -30,8 +30,7 @@ impl Feature {
   /// # Errors
   /// Returns `TypeError::EmptyName` if name is empty or whitespace-only
   pub fn new(name: String) -> Result<Self, TypeError> {
-    let validated_name = FeatureName::parse(name.clone())
-      .map_err(|_| TypeError::EmptyName)?;
+    let validated_name = FeatureName::parse(name).map_err(|_| TypeError::EmptyName)?;
     Ok(Self {
       name: validated_name.into(),
       description: String::new(),

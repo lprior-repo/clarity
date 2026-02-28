@@ -184,7 +184,10 @@ impl std::fmt::Display for RenderingFailureReason {
 impl SpecTemplateError {
   /// Create a placeholder not found error
   #[must_use]
-  pub fn placeholder_missing(placeholder: impl Into<String>, template_name: impl Into<String>) -> Self {
+  pub fn placeholder_missing(
+    placeholder: impl Into<String>,
+    template_name: impl Into<String>,
+  ) -> Self {
     Self::PlaceholderNotFound {
       placeholder: placeholder.into(),
       template_name: template_name.into(),
@@ -193,7 +196,10 @@ impl SpecTemplateError {
 
   /// Create an unresolved placeholders error
   #[must_use]
-  pub fn unresolved_placeholders(template_name: impl Into<String>, placeholders: Vec<String>) -> Self {
+  pub fn unresolved_placeholders(
+    template_name: impl Into<String>,
+    placeholders: Vec<String>,
+  ) -> Self {
     let count = placeholders.len();
     Self::UnresolvedPlaceholders {
       template_name: template_name.into(),

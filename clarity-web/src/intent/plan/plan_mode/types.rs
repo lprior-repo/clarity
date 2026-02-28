@@ -43,84 +43,36 @@ impl PhaseStatus {
   /// Check if transition to another status is valid.
   ///
   /// Valid transitions:
-  /// - Pending -> InProgress, Blocked
-  /// - InProgress -> Complete, Blocked
-  /// - Blocked -> Pending, InProgress
+  /// - Pending -> `InProgress`, Blocked
+  /// - `InProgress` -> Complete, Blocked
+  /// - Blocked -> Pending, `InProgress`
   /// - Complete -> Complete (terminal)
   #[must_use]
   pub const fn can_transition_to(&self, next: Self) -> bool {
-    match (*self, next) {
-      // No-op transitions (staying in same state) - always valid
-      (Self::Pending, Self::Pending) => true,
-      (Self::InProgress, Self::InProgress) => true,
-      (Self::Complete, Self::Complete) => true,
-      (Self::Blocked, Self::Blocked) => true,
-      // Pending can go to InProgress or Blocked
-      (Self::Pending, Self::InProgress) => true,
-      (Self::Pending, Self::Blocked) => true,
-      // InProgress can go to Complete or Blocked
-      (Self::InProgress, Self::Complete) => true,
-      (Self::InProgress, Self::Blocked) => true,
-      // Blocked can go to Pending or InProgress
-      (Self::Blocked, Self::Pending) => true,
-      (Self::Blocked, Self::InProgress) => true,
-      // Complete is terminal - no transitions out
-      (Self::Complete, Self::Pending) => false,
-      (Self::Complete, Self::InProgress) => false,
-      (Self::Complete, Self::Blocked) => false,
-      // All remaining invalid transitions (explicitly listed for exhaustiveness)
-      (Self::Pending, Self::Complete) => false,
-      (Self::InProgress, Self::Pending) => false,
-      (Self::Blocked, Self::Complete) => false,
-    }
+    matches!(
+      (*self, next),
+      (
+        Self::Pending,
+        Self::Pending | Self::InProgress | Self::Blocked
+      ) | (
+        Self::InProgress | Self::Blocked,
+        Self::InProgress | Self::Blocked
+      ) | (Self::Complete | Self::InProgress, Self::Complete)
+    )
   }
 
   /// Transition to a new status with exhaustive pattern matching.
   ///
   /// # Errors
   /// Returns `PlanError::InvalidPhaseTransition` if the transition is not allowed.
-  pub fn transition_to(self, next: Self) -> Result<Self, PlanError> {
-    match (self, next) {
-      // No-op transitions (staying in same state) - always valid
-      (Self::Pending, Self::Pending) => Ok(Self::Pending),
-      (Self::InProgress, Self::InProgress) => Ok(Self::InProgress),
-      (Self::Complete, Self::Complete) => Ok(Self::Complete),
-      (Self::Blocked, Self::Blocked) => Ok(Self::Blocked),
-      // Pending can go to InProgress or Blocked
-      (Self::Pending, Self::InProgress) => Ok(Self::InProgress),
-      (Self::Pending, Self::Blocked) => Ok(Self::Blocked),
-      // InProgress can go to Complete or Blocked
-      (Self::InProgress, Self::Complete) => Ok(Self::Complete),
-      (Self::InProgress, Self::Blocked) => Ok(Self::Blocked),
-      // Blocked can go to Pending or InProgress
-      (Self::Blocked, Self::Pending) => Ok(Self::Pending),
-      (Self::Blocked, Self::InProgress) => Ok(Self::InProgress),
-      // Complete is terminal - no transitions out
-      (Self::Complete, Self::Pending) => Err(PlanError::InvalidPhaseTransition {
-        from: Self::Complete,
-        to: Self::Pending,
-      }),
-      (Self::Complete, Self::InProgress) => Err(PlanError::InvalidPhaseTransition {
-        from: Self::Complete,
-        to: Self::InProgress,
-      }),
-      (Self::Complete, Self::Blocked) => Err(PlanError::InvalidPhaseTransition {
-        from: Self::Complete,
-        to: Self::Blocked,
-      }),
-      // All remaining invalid transitions
-      (Self::Pending, Self::Complete) => Err(PlanError::InvalidPhaseTransition {
-        from: Self::Pending,
-        to: Self::Complete,
-      }),
-      (Self::InProgress, Self::Pending) => Err(PlanError::InvalidPhaseTransition {
-        from: Self::InProgress,
-        to: Self::Pending,
-      }),
-      (Self::Blocked, Self::Complete) => Err(PlanError::InvalidPhaseTransition {
-        from: Self::Blocked,
-        to: Self::Complete,
-      }),
+  pub const fn transition_to(self, next: Self) -> Result<Self, PlanError> {
+    if self.can_transition_to(next) {
+      Ok(next)
+    } else {
+      Err(PlanError::InvalidPhaseTransition {
+        from: self,
+        to: next,
+      })
     }
   }
 
@@ -151,119 +103,40 @@ impl BeadStatus {
   ///
   /// Valid transitions:
   /// - Pending -> Ready, Blocked
-  /// - Ready -> InProgress, Blocked
-  /// - InProgress -> Complete, Blocked
-  /// - Blocked -> Pending, Ready, InProgress
+  /// - Ready -> `InProgress`, Blocked
+  /// - `InProgress` -> Complete, Blocked
+  /// - Blocked -> Pending, Ready, `InProgress`
   /// - Complete -> Complete (terminal)
   #[must_use]
   pub const fn can_transition_to(&self, next: Self) -> bool {
-    match (*self, next) {
-      // No-op transitions (staying in same state) - always valid
-      (Self::Pending, Self::Pending) => true,
-      (Self::Ready, Self::Ready) => true,
-      (Self::InProgress, Self::InProgress) => true,
-      (Self::Complete, Self::Complete) => true,
-      (Self::Blocked, Self::Blocked) => true,
-      // Pending can go to Ready or Blocked
-      (Self::Pending, Self::Ready) => true,
-      (Self::Pending, Self::Blocked) => true,
-      // Ready can go to InProgress or Blocked
-      (Self::Ready, Self::InProgress) => true,
-      (Self::Ready, Self::Blocked) => true,
-      // InProgress can go to Complete or Blocked
-      (Self::InProgress, Self::Complete) => true,
-      (Self::InProgress, Self::Blocked) => true,
-      // Blocked can go to Pending, Ready, or InProgress
-      (Self::Blocked, Self::Pending) => true,
-      (Self::Blocked, Self::Ready) => true,
-      (Self::Blocked, Self::InProgress) => true,
-      // Complete is terminal - no transitions out
-      (Self::Complete, Self::Pending) => false,
-      (Self::Complete, Self::Ready) => false,
-      (Self::Complete, Self::InProgress) => false,
-      (Self::Complete, Self::Blocked) => false,
-      // All remaining invalid transitions (explicitly listed for exhaustiveness)
-      (Self::Pending, Self::InProgress) => false,
-      (Self::Pending, Self::Complete) => false,
-      (Self::Ready, Self::Pending) => false,
-      (Self::Ready, Self::Complete) => false,
-      (Self::InProgress, Self::Pending) => false,
-      (Self::InProgress, Self::Ready) => false,
-      (Self::Blocked, Self::Complete) => false,
-    }
+    matches!(
+      (*self, next),
+      (Self::Pending | Self::Blocked, Self::Pending)
+        | (Self::Ready | Self::Pending | Self::Blocked, Self::Ready)
+        | (
+          Self::InProgress | Self::Ready | Self::Blocked,
+          Self::InProgress
+        )
+        | (Self::Complete | Self::InProgress, Self::Complete)
+        | (
+          Self::Blocked | Self::Pending | Self::Ready | Self::InProgress,
+          Self::Blocked
+        )
+    )
   }
 
   /// Transition to a new status with exhaustive pattern matching.
   ///
   /// # Errors
   /// Returns `PlanError::InvalidBeadTransition` if the transition is not allowed.
-  pub fn transition_to(self, next: Self) -> Result<Self, PlanError> {
-    match (self, next) {
-      // No-op transitions (staying in same state) - always valid
-      (Self::Pending, Self::Pending) => Ok(Self::Pending),
-      (Self::Ready, Self::Ready) => Ok(Self::Ready),
-      (Self::InProgress, Self::InProgress) => Ok(Self::InProgress),
-      (Self::Complete, Self::Complete) => Ok(Self::Complete),
-      (Self::Blocked, Self::Blocked) => Ok(Self::Blocked),
-      // Pending can go to Ready or Blocked
-      (Self::Pending, Self::Ready) => Ok(Self::Ready),
-      (Self::Pending, Self::Blocked) => Ok(Self::Blocked),
-      // Ready can go to InProgress or Blocked
-      (Self::Ready, Self::InProgress) => Ok(Self::InProgress),
-      (Self::Ready, Self::Blocked) => Ok(Self::Blocked),
-      // InProgress can go to Complete or Blocked
-      (Self::InProgress, Self::Complete) => Ok(Self::Complete),
-      (Self::InProgress, Self::Blocked) => Ok(Self::Blocked),
-      // Blocked can go to Pending, Ready, or InProgress
-      (Self::Blocked, Self::Pending) => Ok(Self::Pending),
-      (Self::Blocked, Self::Ready) => Ok(Self::Ready),
-      (Self::Blocked, Self::InProgress) => Ok(Self::InProgress),
-      // Complete is terminal - no transitions out
-      (Self::Complete, Self::Pending) => Err(PlanError::InvalidBeadTransition {
-        from: Self::Complete,
-        to: Self::Pending,
-      }),
-      (Self::Complete, Self::Ready) => Err(PlanError::InvalidBeadTransition {
-        from: Self::Complete,
-        to: Self::Ready,
-      }),
-      (Self::Complete, Self::InProgress) => Err(PlanError::InvalidBeadTransition {
-        from: Self::Complete,
-        to: Self::InProgress,
-      }),
-      (Self::Complete, Self::Blocked) => Err(PlanError::InvalidBeadTransition {
-        from: Self::Complete,
-        to: Self::Blocked,
-      }),
-      // All remaining invalid transitions
-      (Self::Pending, Self::InProgress) => Err(PlanError::InvalidBeadTransition {
-        from: Self::Pending,
-        to: Self::InProgress,
-      }),
-      (Self::Pending, Self::Complete) => Err(PlanError::InvalidBeadTransition {
-        from: Self::Pending,
-        to: Self::Complete,
-      }),
-      (Self::Ready, Self::Pending) => Err(PlanError::InvalidBeadTransition {
-        from: Self::Ready,
-        to: Self::Pending,
-      }),
-      (Self::Ready, Self::Complete) => Err(PlanError::InvalidBeadTransition {
-        from: Self::Ready,
-        to: Self::Complete,
-      }),
-      (Self::InProgress, Self::Pending) => Err(PlanError::InvalidBeadTransition {
-        from: Self::InProgress,
-        to: Self::Pending,
-      }),
-      (Self::InProgress, Self::Ready) => Err(PlanError::InvalidBeadTransition {
-        from: Self::InProgress,
-        to: Self::Ready,
-      }),
-      (Self::Blocked, Self::Complete) => Err(PlanError::InvalidBeadTransition {
-        from: Self::Blocked,
-        to: Self::Complete,
-      }),
+  pub const fn transition_to(self, next: Self) -> Result<Self, PlanError> {
+    if self.can_transition_to(next) {
+      Ok(next)
+    } else {
+      Err(PlanError::InvalidBeadTransition {
+        from: self,
+        to: next,
+      })
     }
   }
 
@@ -416,8 +289,12 @@ mod tests {
     );
 
     // Invalid transitions
-    assert!(PhaseStatus::Complete.transition_to(PhaseStatus::Pending).is_err());
-    assert!(PhaseStatus::Pending.transition_to(PhaseStatus::Complete).is_err());
+    assert!(PhaseStatus::Complete
+      .transition_to(PhaseStatus::Pending)
+      .is_err());
+    assert!(PhaseStatus::Pending
+      .transition_to(PhaseStatus::Complete)
+      .is_err());
   }
 
   #[test]
@@ -549,8 +426,12 @@ mod tests {
     );
 
     // Invalid transitions
-    assert!(BeadStatus::Complete.transition_to(BeadStatus::Pending).is_err());
-    assert!(BeadStatus::Pending.transition_to(BeadStatus::Complete).is_err());
+    assert!(BeadStatus::Complete
+      .transition_to(BeadStatus::Pending)
+      .is_err());
+    assert!(BeadStatus::Pending
+      .transition_to(BeadStatus::Complete)
+      .is_err());
   }
 
   #[test]

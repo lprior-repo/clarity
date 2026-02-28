@@ -25,17 +25,11 @@ pub fn generate_vision_document(spec: &Spec) -> String {
   let anti_patterns = generate_anti_patterns(spec);
   let technical_considerations = generate_technical_considerations(spec);
 
-  format!(
-    "{}{}\n{}\n{}\n{}{}",
-    title, overview, features, invariants, anti_patterns, technical_considerations
-  )
+  format!("{title}{overview}\n{features}\n{invariants}\n{anti_patterns}{technical_considerations}")
 }
 
 fn generate_overview(spec: &Spec) -> String {
-  format!(
-    "## Overview\n\n## Description\n\n{}\n\n",
-    spec.description
-  )
+  format!("## Overview\n\n## Description\n\n{}\n\n", spec.description)
 }
 
 fn generate_features(spec: &Spec) -> String {
@@ -92,16 +86,16 @@ fn generate_behavior_summary(behavior: &Behavior) -> String {
     format!("\n  - Postconditions: {post}")
   };
 
-  let verification = match &behavior.verification {
-    Some(v) => {
+  let verification = behavior
+    .verification
+    .as_ref()
+    .map_or_else(String::new, |v| {
       if v.description.is_empty() {
         String::new()
       } else {
         format!("\n  - Verification: {}", v.description)
       }
-    }
-    None => String::new(),
-  };
+    });
 
   format!("- {name}{desc}{preconditions}{postconditions}{verification}")
 }
@@ -163,111 +157,107 @@ fn generate_anti_patterns(spec: &Spec) -> String {
 
 fn generate_technical_considerations(spec: &Spec) -> String {
   let hints = &spec.ai_hints;
-
-  let architecture = if hints.implementation.architecture.is_empty() {
-    String::new()
-  } else {
-    format!(
-      "### Architecture\n\n{}\n\n",
-      hints.implementation.architecture
-    )
-  };
-
-  let performance = if hints.implementation.performance_notes.is_empty() {
-    String::new()
-  } else {
-    format!(
-      "### Performance Notes\n\n{}\n\n",
-      hints.implementation.performance_notes
-    )
-  };
-
-  let error_handling = if hints.implementation.error_handling.is_empty() {
-    String::new()
-  } else {
-    format!(
-      "### Error Handling\n\n{}\n\n",
-      hints.implementation.error_handling
-    )
-  };
-
-  let entities = if hints.entities.is_empty() {
-    String::new()
-  } else {
-    let entity_list = hints
-      .entities
-      .iter()
-      .map(|entity| {
-        let fields = if entity.fields.is_empty() {
-          String::new()
-        } else {
-          let field_list = entity.fields.iter().map(|f| format!("- {f}")).join("\n");
-          format!("\n\n**Fields:**\n{field_list}")
-        };
-
-        let relationships = if entity.relationships.is_empty() {
-          String::new()
-        } else {
-          let rel_list = entity.relationships.iter().map(|r| format!("- {r}")).join("\n");
-          format!("\n\n**Relationships:**\n{rel_list}")
-        };
-
-        format!("#### {}\n\n{}{}{}", entity.name, entity.description, fields, relationships)
-      })
-      .join("\n\n");
-
-    format!("### Data Entities\n\n{entity_list}\n\n")
-  };
-
-  let security = if hints.security.password_hashing.is_empty()
-    && hints.security.jwt_algorithm.is_empty()
-    && hints.security.jwt_expiry.is_empty()
-    && hints.security.rate_limiting.is_empty()
-  {
-    String::new()
-  } else {
-    let password_hashing = if hints.security.password_hashing.is_empty() {
-      String::new()
-    } else {
-      format!("- **Password Hashing:** {}\n", hints.security.password_hashing)
-    };
-
-    let jwt_algorithm = if hints.security.jwt_algorithm.is_empty() {
-      String::new()
-    } else {
-      format!("- **JWT Algorithm:** {}\n", hints.security.jwt_algorithm)
-    };
-
-    let jwt_expiry = if hints.security.jwt_expiry.is_empty() {
-      String::new()
-    } else {
-      format!("- **JWT Expiry:** {}\n", hints.security.jwt_expiry)
-    };
-
-    let rate_limiting = if hints.security.rate_limiting.is_empty() {
-      String::new()
-    } else {
-      format!("- **Rate Limiting:** {}\n", hints.security.rate_limiting)
-    };
-
-    format!("### Security Considerations\n\n{password_hashing}{jwt_algorithm}{jwt_expiry}{rate_limiting}\n")
-  };
-
-  let libraries = if hints.preferred_libraries.is_empty() {
-    String::new()
-  } else {
-    let lib_list = hints
-      .preferred_libraries
-      .iter()
-      .map(|l| format!("- {l}"))
-      .join("\n");
-
-    format!("### Preferred Libraries\n\n{lib_list}\n")
-  };
+  let architecture = section("Architecture", &hints.implementation.architecture);
+  let performance = section("Performance Notes", &hints.implementation.performance_notes);
+  let error_handling = section("Error Handling", &hints.implementation.error_handling);
+  let entities = entities_section(spec);
+  let security = security_section(spec);
+  let libraries = libraries_section(spec);
 
   format!(
     "## Technical Considerations\n\n{architecture}{performance}{error_handling}{entities}{security}{libraries}"
   )
+}
+
+fn section(title: &str, content: &str) -> String {
+  if content.is_empty() {
+    String::new()
+  } else {
+    format!("### {title}\n\n{content}\n\n")
+  }
+}
+
+fn entities_section(spec: &Spec) -> String {
+  if spec.ai_hints.entities.is_empty() {
+    return String::new();
+  }
+
+  let entity_list = spec
+    .ai_hints
+    .entities
+    .iter()
+    .map(|entity| {
+      let fields = if entity.fields.is_empty() {
+        String::new()
+      } else {
+        format!(
+          "\n\n**Fields:**\n{}",
+          entity
+            .fields
+            .iter()
+            .map(|field| format!("- {field}"))
+            .join("\n")
+        )
+      };
+
+      let relationships = if entity.relationships.is_empty() {
+        String::new()
+      } else {
+        format!(
+          "\n\n**Relationships:**\n{}",
+          entity
+            .relationships
+            .iter()
+            .map(|relationship| format!("- {relationship}"))
+            .join("\n")
+        )
+      };
+
+      format!(
+        "#### {}\n\n{}{}{}",
+        entity.name, entity.description, fields, relationships
+      )
+    })
+    .join("\n\n");
+
+  format!("### Data Entities\n\n{entity_list}\n\n")
+}
+
+fn security_section(spec: &Spec) -> String {
+  let security = &spec.ai_hints.security;
+  let lines = [
+    (!security.password_hashing.is_empty())
+      .then(|| format!("- **Password Hashing:** {}", security.password_hashing)),
+    (!security.jwt_algorithm.is_empty())
+      .then(|| format!("- **JWT Algorithm:** {}", security.jwt_algorithm)),
+    (!security.jwt_expiry.is_empty()).then(|| format!("- **JWT Expiry:** {}", security.jwt_expiry)),
+    (!security.rate_limiting.is_empty())
+      .then(|| format!("- **Rate Limiting:** {}", security.rate_limiting)),
+  ]
+  .into_iter()
+  .flatten()
+  .collect::<Vec<_>>();
+
+  if lines.is_empty() {
+    String::new()
+  } else {
+    format!("### Security Considerations\n\n{}\n\n", lines.join("\n"))
+  }
+}
+
+fn libraries_section(spec: &Spec) -> String {
+  if spec.ai_hints.preferred_libraries.is_empty() {
+    return String::new();
+  }
+
+  let libraries = spec
+    .ai_hints
+    .preferred_libraries
+    .iter()
+    .map(|library| format!("- {library}"))
+    .join("\n");
+
+  format!("### Preferred Libraries\n\n{libraries}\n")
 }
 
 #[cfg(test)]

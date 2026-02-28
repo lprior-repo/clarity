@@ -15,8 +15,7 @@ pub use contextual::ContextualError;
 pub use formatting::format_error;
 pub use helpers::{extract_available_fields, levenshtein, suggest_field_names};
 pub use intent::{
-  ConfigurationErrorReason, ConstraintType, DependencyChain, InternalErrorDetails,
-  InvalidValueReason, IntentError, IoOperationType, JsonParseReason, PathInvalidReason,
-  ValidationFailureReason,
+  ConfigurationErrorReason, ConstraintType, DependencyChain, IntentError, InternalErrorDetails,
+  InvalidValueReason, IoOperationType, JsonParseReason, PathInvalidReason, ValidationFailureReason,
 };
 pub use validation::{FieldFailure, Suggestion, ValidationError};

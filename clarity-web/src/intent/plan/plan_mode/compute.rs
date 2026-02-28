@@ -29,29 +29,26 @@ fn generate_beads_from_session(session: &InterviewSession) -> Vec<PlanBead> {
     .map(String::as_str)
     .collect();
 
-  let field_beads = required_fields
-    .iter()
-    .map(|field| {
-      let is_answered = answered_fields.contains(*field);
-      PlanBead {
-        id: format!("bead-{}-{}", session.id, field),
-        title: format!("Define {}", field.replace('_', " ")),
-        description: if is_answered {
-          format!("Review and validate the {field} specification")
-        } else {
-          format!("Define the {field} for the system")
-        },
-        priority: if is_answered { 50 } else { 200 },
-        status: if is_answered {
-          BeadStatus::Ready
-        } else {
-          BeadStatus::Pending
-        },
-        depends_on: Vec::new(),
-        blocks: Vec::new(),
-      }
-    })
-    .collect::<Vec<_>>();
+  let field_beads = required_fields.iter().map(|field| {
+    let is_answered = answered_fields.contains(*field);
+    PlanBead {
+      id: format!("bead-{}-{}", session.id, field),
+      title: format!("Define {}", field.replace('_', " ")),
+      description: if is_answered {
+        format!("Review and validate the {field} specification")
+      } else {
+        format!("Define the {field} for the system")
+      },
+      priority: if is_answered { 50 } else { 200 },
+      status: if is_answered {
+        BeadStatus::Ready
+      } else {
+        BeadStatus::Pending
+      },
+      depends_on: Vec::new(),
+      blocks: Vec::new(),
+    }
+  });
 
   let gap_beads = session
     .gaps

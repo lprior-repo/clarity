@@ -15,6 +15,10 @@ impl ArraySpec {
     !matches!(self, Self::NoArray)
   }
 
+  /// Resolves this array spec into concrete indices for an array length.
+  ///
+  /// # Errors
+  /// Returns `ArrayIndexError::IndexOutOfBounds` when an index is outside the array bounds.
   pub fn resolve_indices(self, length: usize) -> Result<Vec<usize>, ArrayIndexError> {
     match self {
       Self::NoArray => Ok(Vec::new()),
@@ -23,7 +27,7 @@ impl ArraySpec {
           Ok(vec![i])
         } else {
           Err(ArrayIndexError::IndexOutOfBounds {
-            index: i as isize,
+            index: isize::try_from(i).unwrap_or(isize::MAX),
             length,
           })
         }
@@ -31,7 +35,7 @@ impl ArraySpec {
       Self::NegativeIndex(n) => {
         if n == 0 || n > length {
           Err(ArrayIndexError::IndexOutOfBounds {
-            index: -(n as isize),
+            index: -isize::try_from(n).unwrap_or(isize::MAX),
             length,
           })
         } else {

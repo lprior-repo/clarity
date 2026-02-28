@@ -37,7 +37,13 @@ pub fn build_spec_from_session(session: &InterviewSession) -> String {
   let spec = GeneratedCUE {
     package: "package api".to_string(),
     imports: Vec::new(),
-    body: build_spec_body(&features, &behaviors, &constraints, &security, &non_functional),
+    body: build_spec_body(
+      &features,
+      &behaviors,
+      &constraints,
+      &security,
+      &non_functional,
+    ),
   };
 
   format!("{}\n\n{}", spec.package, spec.body)
@@ -48,9 +54,7 @@ pub fn build_spec_from_session(session: &InterviewSession) -> String {
 pub fn extract_features_from_answers(answers: &[Answer]) -> Vec<String> {
   answers
     .iter()
-    .filter(|answer| {
-      contains_any_ignore_case(&answer.question_text, &["feature", "capability"])
-    })
+    .filter(|answer| contains_any_ignore_case(&answer.question_text, &["feature", "capability"]))
     .filter_map(|answer| {
       let trimmed = answer.response.trim();
       if trimmed.is_empty() {
@@ -73,11 +77,11 @@ pub fn extract_behaviors_from_answers(answers: &[Answer], _profile: &Profile) ->
     .collect();
 
   if api_answers.is_empty() {
-    r#"// Define API behaviors here
+    "// Define API behaviors here
 behaviors: {
   // Add endpoint definitions
-}"#
-      .to_string()
+}"
+    .to_string()
   } else {
     let behavior_lines = api_answers
       .iter()
@@ -91,11 +95,10 @@ behaviors: {
       .join("\n");
 
     format!(
-      r#"// API behaviors from interview
+      "// API behaviors from interview
 behaviors: {{
-{}
-}}"#,
-      behavior_lines
+{behavior_lines}
+}}"
     )
   }
 }
@@ -106,7 +109,10 @@ pub fn extract_constraints_from_answers(answers: &[Answer]) -> Vec<String> {
   answers
     .iter()
     .filter(|answer| {
-      contains_any_ignore_case(&answer.question_text, &["constraint", "limit", "requirement"])
+      contains_any_ignore_case(
+        &answer.question_text,
+        &["constraint", "limit", "requirement"],
+      )
     })
     .filter_map(|answer| {
       let trimmed = answer.response.trim();
@@ -150,10 +156,9 @@ pub fn extract_security_requirements(answers: &[Answer]) -> String {
       .join("\n");
 
     format!(
-      r#"security: {{
-{}
-}}"#,
-      security_lines
+      "security: {{
+{security_lines}
+}}"
     )
   }
 }
@@ -189,11 +194,11 @@ fn build_spec_body(
   non_functional: &[String],
 ) -> String {
   let features_section = if features.is_empty() {
-    r#"// Features
+    "// Features
 features: {
   // Add feature definitions
-}"#
-      .to_string()
+}"
+    .to_string()
   } else {
     let feature_lines = features
       .iter()
@@ -201,11 +206,10 @@ features: {
       .join("\n");
 
     format!(
-      r#"// Features extracted from interview
+      "// Features extracted from interview
 features: {{
-{}
-}}"#,
-      feature_lines
+{feature_lines}
+}}"
     )
   };
 
@@ -217,9 +221,7 @@ features: {{
       .map(|constraint| format!("  // {constraint}"))
       .join("\n");
 
-    format!(
-      "\n\n// Constraints and requirements\nconstraints: {{\n{constraint_lines}\n}}"
-    )
+    format!("\n\n// Constraints and requirements\nconstraints: {{\n{constraint_lines}\n}}")
   };
 
   let non_functional_section = if non_functional.is_empty() {
@@ -230,14 +232,11 @@ features: {{
       .map(|requirement| format!("  // {requirement}"))
       .join("\n");
 
-    format!(
-      "\n\n// Non-functional requirements\nnonFunctional: {{\n{nf_lines}\n}}"
-    )
+    format!("\n\n// Non-functional requirements\nnonFunctional: {{\n{nf_lines}\n}}")
   };
 
   format!(
-    "{}\n\n{}\n\n{}{}{}",
-    features_section, behaviors, security, constraints_section, non_functional_section
+    "{features_section}\n\n{behaviors}\n\n{security}{constraints_section}{non_functional_section}"
   )
 }
 
@@ -251,6 +250,9 @@ pub fn create_test_spec(behavior_count: usize) -> Spec {
   Spec {
     name: "test".to_string(),
     description: "test".to_string(),
+    audience: String::new(),
+    version: String::new(),
+    success_criteria: Vec::new(),
     features: vec![Feature {
       name: "test-feature".to_string(),
       description: "test".to_string(),
@@ -363,10 +365,7 @@ mod tests {
 
   #[test]
   fn test_extract_security_requirements_with_answers() {
-    let answers = vec![make_test_answer(
-      "What authentication method?",
-      "OAuth2",
-    )];
+    let answers = vec![make_test_answer("What authentication method?", "OAuth2")];
 
     let security = extract_security_requirements(&answers);
     assert!(security.contains("requirement: \"OAuth2\""));

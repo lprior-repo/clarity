@@ -14,6 +14,12 @@ pub struct AntiPattern {
   /// Description of the anti-pattern
   #[serde(default)]
   pub description: String,
+  /// Example of what NOT to do (serialized as JSON)
+  #[serde(default)]
+  pub bad_example: serde_json::Value,
+  /// Example of the correct approach (serialized as JSON)
+  #[serde(default)]
+  pub good_example: serde_json::Value,
   /// Why this pattern should be avoided
   #[serde(default)]
   pub why_avoid: String,
@@ -29,8 +35,28 @@ impl AntiPattern {
     Self {
       name,
       description,
+      bad_example: serde_json::Value::Null,
+      good_example: serde_json::Value::Null,
       why_avoid: String::new(),
       alternative: String::new(),
+    }
+  }
+
+  /// Builder method to set bad example
+  #[must_use]
+  pub fn with_bad_example(self, example: serde_json::Value) -> Self {
+    Self {
+      bad_example: example,
+      ..self
+    }
+  }
+
+  /// Builder method to set good example
+  #[must_use]
+  pub fn with_good_example(self, example: serde_json::Value) -> Self {
+    Self {
+      good_example: example,
+      ..self
     }
   }
 

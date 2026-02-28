@@ -5,6 +5,10 @@ use crate::intent::util::array_indexing::{
 };
 use serde_json::Value;
 
+/// Resolves a path expression against interpolation context.
+///
+/// # Errors
+/// Returns `InterpolationError` for invalid paths or missing variables.
 pub fn resolve_path(path: &str, context: &Context) -> Result<String, InterpolationError> {
   let trimmed = path.trim();
   if trimmed.is_empty() {
@@ -101,10 +105,10 @@ fn navigate_with_spec(
   match indices.len() {
     0 => Ok(Value::Array(Vec::new())),
     1 => Ok(
-      match indices.first().and_then(|index| array.get(*index).cloned()) {
-        Some(v) => v,
-        None => Value::Null,
-      },
+      indices
+        .first()
+        .and_then(|index| array.get(*index).cloned())
+        .map_or(Value::Null, |v| v),
     ),
     _ => Ok(Value::Array(
       indices
@@ -123,10 +127,7 @@ fn resolve_from_body(
   let body =
     body.ok_or_else(|| InterpolationError::VariableNotFound(format!("{body_name}.body")))?;
 
-  let actual_path = match path.strip_prefix("body.") {
-    Some(stripped) => stripped,
-    None => path,
-  };
+  let actual_path = path.strip_prefix("body.").map_or(path, |stripped| stripped);
   if actual_path.is_empty() || actual_path == "body" {
     return serde_json::to_string(body).map_err(|e| InterpolationError::JsonError(e.to_string()));
   }

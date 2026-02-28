@@ -3,6 +3,10 @@ use crate::intent::interview::types::{Answer, InterviewSession, Profile};
 use super::domain::{BeadError, BeadTemplate};
 mod profiles;
 
+/// Generates beads from interview answers and profile defaults.
+///
+/// # Errors
+/// Returns `BeadError` when any generated bead fails validation.
 pub fn generate_beads_from_session(
   session: &InterviewSession,
 ) -> Result<Vec<BeadTemplate>, BeadError> {
@@ -16,6 +20,10 @@ pub fn generate_beads_from_session(
   Ok(answer_beads.into_iter().chain(profile_beads).collect())
 }
 
+/// Generates profile-specific beads from an interview session.
+///
+/// # Errors
+/// Returns `BeadError` when a generated template fails validation.
 pub fn generate_profile_beads(session: &InterviewSession) -> Result<Vec<BeadTemplate>, BeadError> {
   let profile_type = session.profile.as_str().to_string();
   let core = match session.profile {
