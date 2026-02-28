@@ -76,7 +76,7 @@ fn determine_issue_type(response: &str) -> String {
   }
 }
 
-fn exclusion_keys(profile: Profile) -> &'static [&'static str] {
+const fn exclusion_keys(profile: Profile) -> &'static [&'static str] {
   match profile {
     Profile::Api => &["base_url", "auth_method"],
     Profile::Cli => &["command_name", "exit_codes"],

@@ -14,5 +14,9 @@ mod validation;
 pub use contextual::ContextualError;
 pub use formatting::format_error;
 pub use helpers::{extract_available_fields, levenshtein, suggest_field_names};
-pub use intent::IntentError;
+pub use intent::{
+  ConfigurationErrorReason, ConstraintType, DependencyChain, InternalErrorDetails,
+  InvalidValueReason, IntentError, IoOperationType, JsonParseReason, PathInvalidReason,
+  ValidationFailureReason,
+};
 pub use validation::{FieldFailure, Suggestion, ValidationError};

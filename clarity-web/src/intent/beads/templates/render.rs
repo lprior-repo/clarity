@@ -81,7 +81,7 @@ fn section_count(section: &str, key: &str, values: &[String]) -> Vec<String> {
     .iter()
     .counts()
     .into_iter()
-    .map(|(name, count)| format!("    {}: {}", name, count));
+    .map(|(name, count)| format!("    {name}: {count}"));
   std::iter::once(format!("// {section}"))
     .chain(std::iter::once(format!("{key}: {{")))
     .chain(lines)
@@ -112,7 +112,7 @@ fn section_labels(beads: &[BeadTemplate]) -> Vec<String> {
     .flat_map(|bead| bead.labels.iter())
     .cloned()
     .unique()
-    .map(|label| format!("    \"{}\": true", label));
+    .map(|label| format!("    \"{label}\": true"));
   std::iter::once("// Section 5: Labels Index".to_string())
     .chain(std::iter::once("labels_index: {".to_string()))
     .chain(labels)

@@ -23,7 +23,7 @@ pub(super) fn matched_keywords<'a>(text: &str, keywords: &'a [&'a str]) -> Vec<&
   keywords
     .iter()
     .filter(|keyword| lower.contains(*keyword))
-    .map(|keyword| *keyword)
+    .copied()
     .collect()
 }
 
@@ -108,9 +108,7 @@ pub(super) fn detect_by_keywords(
   message_prefix: &str,
 ) -> Vec<Effect> {
   let text = combined_behavior_text(behavior);
-  if !contains_keywords(&text, keywords) {
-    Vec::new()
-  } else {
+  if contains_keywords(&text, keywords) {
     let description = format!(
       "{message_prefix}: {}",
       matched_keywords(&text, keywords).join(", ")
@@ -121,5 +119,7 @@ pub(super) fn detect_by_keywords(
       description,
       &text,
     )]
+  } else {
+    Vec::new()
   }
 }

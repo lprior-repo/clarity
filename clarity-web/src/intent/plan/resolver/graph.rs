@@ -76,7 +76,7 @@ fn dfs_collect_cycles(
     .chain(std::iter::once(node.to_string()))
     .collect::<Vec<_>>();
 
-  let cycled = if let Some(neighbors) = adjacency.get(node) {
+  let result = if let Some(neighbors) = adjacency.get(node) {
     neighbors
       .iter()
       .fold((visited, stack, cycles), |state, neighbor| {
@@ -109,7 +109,7 @@ fn dfs_collect_cycles(
     (visited, stack, cycles)
   };
 
-  let (visited_final, stack_final, cycles_final) = cycled;
+  let (visited_final, stack_final, cycles_final) = result;
   let stack_without = stack_final
     .into_iter()
     .filter(|candidate| candidate != node)

@@ -8,7 +8,7 @@
 
 //! `OpenCode` extraction provider implementation
 //!
-//! This module provides a client for OpenCode session APIs,
+//! This module provides a client for `OpenCode` session APIs,
 //! which extracts structured fields from unstructured text.
 
 use async_trait::async_trait;
@@ -27,12 +27,12 @@ const DEFAULT_TIMEOUT_SECS: u64 = 30;
 /// Session ID header name
 const SESSION_HEADER: &str = "X-Session-ID";
 
-/// Default agent used when invoking OpenCode session API.
+/// Default agent used when invoking `OpenCode` session API.
 const DEFAULT_AGENT: &str = "build";
 
 /// `OpenCode` session API client
 ///
-/// This client communicates with OpenCode
+/// This client communicates with `OpenCode`
 /// to extract structured fields from text input.
 #[derive(Debug, Clone)]
 pub struct OpenCodeProvider {
@@ -40,7 +40,7 @@ pub struct OpenCodeProvider {
   endpoint: String,
   /// Session identifier for request tracking
   session_id: String,
-  /// Optional model identifier passed through to OpenCode
+  /// Optional model identifier passed through to `OpenCode`
   model: Option<String>,
   /// Optional routed provider identifier for model backends
   routing_provider: Option<String>,
@@ -520,7 +520,7 @@ impl OpenCodeProvider {
   }
 }
 
-/// Session API model descriptor for OpenCode `/session/:id/message`.
+/// Session API model descriptor for `OpenCode` `/session/:id/message`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct SessionModelRef {
   #[serde(rename = "providerID")]

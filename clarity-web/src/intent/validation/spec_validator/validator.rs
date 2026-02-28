@@ -5,16 +5,31 @@ use crate::intent::types::{Behavior, Feature, Spec};
 use itertools::Itertools;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone)]
-pub struct SpecValidator {
-  check_duplicates: bool,
-  check_cycles: bool,
-  check_required_fields: bool,
+/// Validation checks that can be enabled or disabled.
+///
+/// This enum replaces boolean control flags, following Scott Wlaschin's DDD principle
+/// of making modes explicit rather than using cryptic true/false values.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ValidationChecks {
+  pub check_duplicates: bool,
+  pub check_cycles: bool,
+  pub check_required_fields: bool,
 }
 
-impl SpecValidator {
+impl Default for ValidationChecks {
+  fn default() -> Self {
+    Self {
+      check_duplicates: true,
+      check_cycles: true,
+      check_required_fields: true,
+    }
+  }
+}
+
+impl ValidationChecks {
+  /// All validation checks enabled.
   #[must_use]
-  pub fn new() -> Self {
+  pub const fn all() -> Self {
     Self {
       check_duplicates: true,
       check_cycles: true,
@@ -22,39 +37,142 @@ impl SpecValidator {
     }
   }
 
+  /// No validation checks enabled (structure validation only).
   #[must_use]
-  pub fn without_duplicate_checking(mut self) -> Self {
-    self.check_duplicates = false;
+  pub const fn none() -> Self {
+    Self {
+      check_duplicates: false,
+      check_cycles: false,
+      check_required_fields: false,
+    }
+  }
+
+  /// Only structural validation (no expensive checks).
+  #[must_use]
+  pub const fn structural_only() -> Self {
+    Self {
+      check_duplicates: false,
+      check_cycles: false,
+      check_required_fields: true,
+    }
+  }
+
+  /// Disable duplicate checking.
+  #[must_use]
+  pub const fn without_duplicates(self) -> Self {
+    Self {
+      check_duplicates: false,
+      ..self
+    }
+  }
+
+  /// Disable cycle detection.
+  #[must_use]
+  pub const fn without_cycles(self) -> Self {
+    Self {
+      check_cycles: false,
+      ..self
+    }
+  }
+
+  /// Disable required field validation.
+  #[must_use]
+  pub const fn without_required_fields(self) -> Self {
+    Self {
+      check_required_fields: false,
+      ..self
+    }
+  }
+
+  /// Check if duplicate detection is enabled.
+  #[must_use]
+  pub const fn has_duplicates_check(&self) -> bool {
+    self.check_duplicates
+  }
+
+  /// Check if cycle detection is enabled.
+  #[must_use]
+  pub const fn has_cycles_check(&self) -> bool {
+    self.check_cycles
+  }
+
+  /// Check if required field validation is enabled.
+  #[must_use]
+  pub const fn has_required_fields_check(&self) -> bool {
+    self.check_required_fields
+  }
+}
+
+#[derive(Debug, Clone)]
+pub struct SpecValidator {
+  checks: ValidationChecks,
+}
+
+impl SpecValidator {
+  /// Create a new validator with all checks enabled.
+  #[must_use]
+  pub const fn new() -> Self {
+    Self {
+      checks: ValidationChecks::all(),
+    }
+  }
+
+  /// Create a validator with custom validation checks.
+  #[must_use]
+  pub const fn with_checks(checks: ValidationChecks) -> Self {
+    Self { checks }
+  }
+
+  /// Create a validator with no checks enabled.
+  #[must_use]
+  pub const fn empty() -> Self {
+    Self {
+      checks: ValidationChecks::none(),
+    }
+  }
+
+  /// Disable duplicate checking (builder pattern for backward compatibility).
+  #[must_use]
+  pub const fn without_duplicate_checking(mut self) -> Self {
+    self.checks = self.checks.without_duplicates();
     self
   }
 
+  /// Disable cycle checking (builder pattern for backward compatibility).
   #[must_use]
-  pub fn without_cycle_checking(mut self) -> Self {
-    self.check_cycles = false;
+  pub const fn without_cycle_checking(mut self) -> Self {
+    self.checks = self.checks.without_cycles();
     self
   }
 
+  /// Disable required field checking (builder pattern for backward compatibility).
   #[must_use]
-  pub fn without_required_field_checking(mut self) -> Self {
-    self.check_required_fields = false;
+  pub const fn without_required_field_checking(mut self) -> Self {
+    self.checks = self.checks.without_required_fields();
     self
+  }
+
+  /// Get the current validation checks configuration.
+  #[must_use]
+  pub const fn checks(&self) -> &ValidationChecks {
+    &self.checks
   }
 
   #[must_use]
   pub fn validate(&self, spec: &Spec) -> ValidationResult {
     let mut result = ValidationResult::new();
 
-    if self.check_required_fields {
+    if self.checks.check_required_fields {
       self.validate_required_fields(spec, &mut result);
     }
     self.validate_unique_features(spec, &mut result);
     for feature in &spec.features {
       self.validate_feature(feature, &mut result);
     }
-    if self.check_duplicates {
+    if self.checks.check_duplicates {
       self.detect_duplicate_behaviors(spec, &mut result);
     }
-    if self.check_cycles {
+    if self.checks.check_cycles {
       self.detect_circular_dependencies(spec, &mut result);
     }
 
@@ -200,6 +318,7 @@ impl SpecValidator {
     graph
   }
 
+  #[must_use]
   pub fn build_feature_dependency_graph(&self, spec: &Spec) -> DependencyGraph {
     let mut graph = DependencyGraph::new();
 
@@ -284,5 +403,95 @@ impl SpecValidator {
 impl Default for SpecValidator {
   fn default() -> Self {
     Self::new()
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn validation_checks_default_has_all_enabled() {
+    let checks = ValidationChecks::default();
+    assert!(checks.check_duplicates);
+    assert!(checks.check_cycles);
+    assert!(checks.check_required_fields);
+  }
+
+  #[test]
+  fn validation_checks_all_equals_default() {
+    assert_eq!(ValidationChecks::all(), ValidationChecks::default());
+  }
+
+  #[test]
+  fn validation_checks_none_has_all_disabled() {
+    let checks = ValidationChecks::none();
+    assert!(!checks.check_duplicates);
+    assert!(!checks.check_cycles);
+    assert!(!checks.check_required_fields);
+  }
+
+  #[test]
+  fn validation_checks_structural_only_has_only_required_fields() {
+    let checks = ValidationChecks::structural_only();
+    assert!(!checks.check_duplicates);
+    assert!(!checks.check_cycles);
+    assert!(checks.check_required_fields);
+  }
+
+  #[test]
+  fn validation_checks_predicates_match_fields() {
+    let checks = ValidationChecks::all();
+    assert_eq!(checks.has_duplicates_check(), checks.check_duplicates);
+    assert_eq!(checks.has_cycles_check(), checks.check_cycles);
+    assert_eq!(
+      checks.has_required_fields_check(),
+      checks.check_required_fields
+    );
+  }
+
+  #[test]
+  fn validation_checks_without_methods_work() {
+    let checks = ValidationChecks::all()
+      .without_duplicates()
+      .without_cycles()
+      .without_required_fields();
+    assert_eq!(checks, ValidationChecks::none());
+  }
+
+  #[test]
+  fn validation_checks_can_selectively_disable() {
+    let checks = ValidationChecks::all().without_duplicates();
+    assert!(!checks.check_duplicates);
+    assert!(checks.check_cycles);
+    assert!(checks.check_required_fields);
+  }
+
+  #[test]
+  fn spec_validator_new_has_all_checks() {
+    let validator = SpecValidator::new();
+    assert_eq!(*validator.checks(), ValidationChecks::all());
+  }
+
+  #[test]
+  fn spec_validator_empty_has_no_checks() {
+    let validator = SpecValidator::empty();
+    assert_eq!(*validator.checks(), ValidationChecks::none());
+  }
+
+  #[test]
+  fn spec_validator_with_checks_custom() {
+    let custom = ValidationChecks::structural_only();
+    let validator = SpecValidator::with_checks(custom);
+    assert_eq!(*validator.checks(), custom);
+  }
+
+  #[test]
+  fn spec_validator_builder_backward_compat() {
+    let validator = SpecValidator::new()
+      .without_duplicate_checking()
+      .without_cycle_checking()
+      .without_required_field_checking();
+    assert_eq!(*validator.checks(), ValidationChecks::none());
   }
 }

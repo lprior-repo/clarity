@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::intent::interview::types::{
   Answer, Gap, InterviewError, InterviewSession, InterviewSessionError, Perspective, Profile,
 };
+use crate::intent::interview::types::models::{GapState, GapStateError};
 
 fn make_session(profile: Profile) -> InterviewSession {
   InterviewSession::new(
@@ -19,7 +20,7 @@ fn detect_gaps_handles_no_answers() {
 
   assert_eq!(gaps.len(), 5);
   assert!(gaps.iter().all(|gap| gap.blocking));
-  assert!(gaps.iter().all(|gap| !gap.resolved));
+  assert!(gaps.iter().all(|gap| !gap.is_resolved()));
 }
 
 #[test]
@@ -58,21 +59,23 @@ fn get_blocking_gaps_filters_correctly() {
       id: "gap-1".to_string(),
       field: "field1".to_string(),
       blocking: true,
-      resolved: false,
+      state: GapState::Open,
       ..Gap::default()
     },
     Gap {
       id: "gap-2".to_string(),
       field: "field2".to_string(),
       blocking: true,
-      resolved: true,
+      state: GapState::Resolved {
+        resolution: "done".to_string(),
+      },
       ..Gap::default()
     },
     Gap {
       id: "gap-3".to_string(),
       field: "field3".to_string(),
       blocking: false,
-      resolved: false,
+      state: GapState::Open,
       ..Gap::default()
     },
   ];
@@ -89,15 +92,17 @@ fn resolve_gap_validates_and_updates_state() {
     id: "gap-base_url".to_string(),
     field: "base_url".to_string(),
     blocking: true,
-    resolved: false,
-    resolution: String::new(),
+    state: GapState::Open,
     ..Gap::default()
   });
 
   let ok = session.resolve_gap("gap-base_url", "https://api.example.com");
   assert!(ok.is_ok());
-  assert!(session.gaps[0].resolved);
-  assert_eq!(session.gaps[0].resolution, "https://api.example.com");
+  assert!(session.gaps[0].is_resolved());
+  assert_eq!(
+    session.gaps[0].resolution(),
+    Some("https://api.example.com")
+  );
 
   assert_eq!(
     session.resolve_gap("", "x"),
@@ -125,7 +130,7 @@ fn can_proceed_blocks_on_unresolved_blocking_gap() {
     field: "test".to_string(),
     description: "Missing".to_string(),
     blocking: true,
-    resolved: false,
+    state: GapState::Open,
     ..Gap::default()
   });
 
@@ -135,4 +140,145 @@ fn can_proceed_blocks_on_unresolved_blocking_gap() {
       Err(InterviewSessionError::BlockingGapsUnresolved { count: 1, gap_ids })
       if gap_ids == vec!["gap-1".to_string()]
   ));
+}
+
+// ============================================
+// Exhaustive match tests for GapState
+// ============================================
+
+#[test]
+fn gap_state_open_is_not_resolved() {
+  let state = GapState::Open;
+  assert!(!state.is_resolved());
+  assert!(state.resolution().is_none());
+}
+
+#[test]
+fn gap_state_resolved_is_resolved() {
+  let state = GapState::Resolved {
+    resolution: "fixed".to_string(),
+  };
+  assert!(state.is_resolved());
+  assert_eq!(state.resolution(), Some("fixed"));
+}
+
+#[test]
+fn gap_state_resolve_validates_non_empty() {
+  let state = GapState::Open;
+  let result = state.resolve(String::new());
+  assert!(result.is_err());
+}
+
+#[test]
+fn gap_state_resolve_validates_whitespace() {
+  let state = GapState::Open;
+  let result = state.resolve("   ".to_string());
+  assert!(result.is_err());
+}
+
+#[test]
+fn gap_state_resolve_succeeds_with_valid_text() {
+  let state = GapState::Open;
+  let result = state.resolve("valid resolution".to_string());
+  assert!(result.is_ok());
+  let new_state = result.unwrap();
+  assert!(new_state.is_resolved());
+  assert_eq!(new_state.resolution(), Some("valid resolution"));
+}
+
+#[test]
+fn gap_is_resolved_delegates_to_state() {
+  let open_gap = Gap {
+    state: GapState::Open,
+    ..Gap::default()
+  };
+  let resolved_gap = Gap {
+    state: GapState::Resolved {
+      resolution: "done".to_string(),
+    },
+    ..Gap::default()
+  };
+
+  assert!(!open_gap.is_resolved());
+  assert!(resolved_gap.is_resolved());
+}
+
+#[test]
+fn gap_resolution_delegates_to_state() {
+  let open_gap = Gap {
+    state: GapState::Open,
+    ..Gap::default()
+  };
+  let resolved_gap = Gap {
+    state: GapState::Resolved {
+      resolution: "done".to_string(),
+    },
+    ..Gap::default()
+  };
+
+  assert!(open_gap.resolution().is_none());
+  assert_eq!(resolved_gap.resolution(), Some("done"));
+}
+
+// ============================================
+// P0: State Machine Validation Tests
+// ============================================
+
+#[test]
+fn gap_state_one_way_transition_enforced() {
+  // P0: Cannot re-resolve an already resolved gap
+  let resolved = GapState::Resolved {
+    resolution: "first resolution".to_string(),
+  };
+
+  let result = resolved.resolve("second resolution".to_string());
+  assert!(result.is_err());
+  assert_eq!(result, Err(GapStateError::AlreadyResolved));
+}
+
+#[test]
+fn gap_state_can_transition_to_validates_one_way() {
+  let open = GapState::Open;
+  let resolved = GapState::Resolved {
+    resolution: "done".to_string(),
+  };
+
+  // Open can transition to Resolved
+  assert!(open.can_transition_to(&resolved));
+
+  // Resolved cannot transition back to Open
+  assert!(!resolved.can_transition_to(&GapState::Open));
+
+  // Same state is valid (no-op)
+  assert!(open.can_transition_to(&GapState::Open));
+  assert!(resolved.can_transition_to(&resolved));
+}
+
+#[test]
+fn gap_state_validate_catches_empty_resolution() {
+  // P1: Resolution must be non-empty
+  let invalid_resolved = GapState::Resolved {
+    resolution: String::new(),
+  };
+  assert_eq!(invalid_resolved.validate(), Err(GapStateError::EmptyResolution));
+
+  let whitespace_resolved = GapState::Resolved {
+    resolution: "   ".to_string(),
+  };
+  assert_eq!(whitespace_resolved.validate(), Err(GapStateError::EmptyResolution));
+
+  // Valid state
+  let valid_resolved = GapState::Resolved {
+    resolution: "valid".to_string(),
+  };
+  assert!(valid_resolved.validate().is_ok());
+
+  // Open state is always valid
+  assert!(GapState::Open.validate().is_ok());
+}
+
+#[test]
+fn gap_state_is_open_predicate() {
+  assert!(GapState::Open.is_open());
+  assert!(!GapState::Resolved { resolution: "x".to_string() }.is_open());
 }

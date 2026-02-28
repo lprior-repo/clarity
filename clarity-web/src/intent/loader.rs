@@ -17,12 +17,12 @@ pub use cue::{export_cue_to_json, validate_cue_file};
 pub use error::{format_loader_error, LoaderError};
 
 pub fn load_cue_file(path: &Path) -> Result<Spec, LoaderError> {
-    let path_str = path.to_string_lossy();
-    let validated_path = validate_file_path(&path_str)?;
-    let validated_path = PathBuf::from(validated_path);
+  let path_str = path.to_string_lossy();
+  let validated_path = validate_file_path(&path_str)?;
+  let validated_path = PathBuf::from(validated_path);
 
-    cue::validate_file_exists(&validated_path)?;
-    validate_cue_file(&validated_path)?;
-    let json = export_cue_to_json(&validated_path)?;
-    parse_spec(&json).map_err(LoaderError::from)
+  cue::validate_file_exists(&validated_path)?;
+  validate_cue_file(&validated_path)?;
+  let json = export_cue_to_json(&validated_path)?;
+  parse_spec(&json).map_err(LoaderError::from)
 }

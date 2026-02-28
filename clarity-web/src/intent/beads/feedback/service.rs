@@ -4,6 +4,11 @@ use super::domain::{
 };
 use super::store::{read_feedback_history, store_feedback};
 
+/// Collects feedback for a bead.
+///
+/// # Errors
+///
+/// Returns `FeedbackError` if the `bead_id` or `notes` validation fails.
 pub fn collect_feedback(
   bead_id: &str,
   status: BeadStatus,
@@ -12,6 +17,11 @@ pub fn collect_feedback(
   collect_feedback_with_reviewer(bead_id, status, notes, None, false)
 }
 
+/// Collects feedback for a bead with reviewer information.
+///
+/// # Errors
+///
+/// Returns `FeedbackError` if the `bead_id` or `notes` validation fails.
 pub fn collect_feedback_with_reviewer(
   bead_id: &str,
   status: BeadStatus,
@@ -33,6 +43,11 @@ pub fn collect_feedback_with_reviewer(
   Ok(feedback)
 }
 
+/// Updates the status of a bead based on feedback.
+///
+/// # Errors
+///
+/// Returns `FeedbackError` if the status transition is invalid.
 pub fn update_bead_status(
   bead: &mut BeadRecord,
   feedback: &BeadFeedback,

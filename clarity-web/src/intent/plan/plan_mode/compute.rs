@@ -1,7 +1,5 @@
+use super::types::{BeadStatus, ExecutionPlan, Phase, PhaseStatus, PlanBead, PlanError};
 use crate::intent::interview::types::InterviewSession;
-use super::types::{
-  BeadStatus, ExecutionPlan, Phase, PhaseStatus, PlanBead, PlanError,
-};
 use std::collections::HashSet;
 
 pub fn compute_plan(session: &InterviewSession) -> Result<ExecutionPlan, PlanError> {
@@ -39,9 +37,9 @@ fn generate_beads_from_session(session: &InterviewSession) -> Vec<PlanBead> {
         id: format!("bead-{}-{}", session.id, field),
         title: format!("Define {}", field.replace('_', " ")),
         description: if is_answered {
-          format!("Review and validate the {} specification", field)
+          format!("Review and validate the {field} specification")
         } else {
-          format!("Define the {} for the system", field)
+          format!("Define the {field} for the system")
         },
         priority: if is_answered { 50 } else { 200 },
         status: if is_answered {
@@ -58,7 +56,7 @@ fn generate_beads_from_session(session: &InterviewSession) -> Vec<PlanBead> {
   let gap_beads = session
     .gaps
     .iter()
-    .filter(|gap| !gap.resolved)
+    .filter(|gap| !gap.is_resolved())
     .map(|gap| PlanBead {
       id: format!("bead-gap-{}", gap.id),
       title: format!("Resolve gap: {}", gap.field),
@@ -72,7 +70,7 @@ fn generate_beads_from_session(session: &InterviewSession) -> Vec<PlanBead> {
   let conflict_beads = session
     .conflicts
     .iter()
-    .filter(|conflict| conflict.chosen.is_none())
+    .filter(|conflict| !conflict.is_resolved())
     .map(|conflict| PlanBead {
       id: format!("bead-conflict-{}", conflict.id),
       title: format!(
@@ -146,7 +144,7 @@ fn detect_blockers(session: &InterviewSession) -> Vec<String> {
   let unresolved_conflicts = session
     .conflicts
     .iter()
-    .filter(|conflict| conflict.chosen.is_none())
+    .filter(|conflict| !conflict.is_resolved())
     .map(|conflict| {
       format!(
         "Unresolved conflict: {} vs {} - {}",

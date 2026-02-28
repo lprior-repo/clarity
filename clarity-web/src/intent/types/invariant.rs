@@ -7,7 +7,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Invariant - a system property that must always hold
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct Invariant {
   /// Invariant name/identifier
   pub name: String,
@@ -19,20 +19,10 @@ pub struct Invariant {
   pub constraint: String,
 }
 
-impl Default for Invariant {
-  fn default() -> Self {
-    Self {
-      name: String::new(),
-      description: String::new(),
-      constraint: String::new(),
-    }
-  }
-}
-
 impl Invariant {
   /// Create a new invariant
   #[must_use]
-  pub fn new(name: String, description: String) -> Self {
+  pub const fn new(name: String, description: String) -> Self {
     Self {
       name,
       description,

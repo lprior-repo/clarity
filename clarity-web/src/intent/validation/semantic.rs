@@ -24,123 +24,36 @@
 #![forbid(unsafe_code)]
 
 use crate::intent::types::Spec;
+
+// ============================================================================
+// SEMANTIC VALIDATION CONSTANTS
+// ============================================================================
+
+/// Maximum recommended depth for feature dependency chains.
+///
+/// Dependency chains deeper than this threshold indicate tight coupling
+/// and complexity that may make the specification harder to maintain
+/// and understand.
+///
+/// A depth of 5 allows for reasonable feature layering (e.g., UI -> Service -> Repository -> Database -> Config)
+/// while flagging excessive coupling.
+const MAX_DEPENDENCY_DEPTH: usize = 5;
+
+/// Minimum length for a term to be considered in similarity detection.
+///
+/// Terms shorter than this threshold are not checked for substring matches
+/// to reduce false positives from short common prefixes/suffixes.
+///
+/// A value of 4 characters ensures meaningful similarity detection while
+/// avoiding noise from 2-3 character abbreviations.
+const MIN_SIMILAR_TERM_LENGTH: usize = 4;
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 
-/// Newtype wrapper for validated spec names
-///
-/// Following Scott Wlaschin's DDD principle of using types to make
-/// invalid states unrepresentable. A value of this type is guaranteed
-/// to have passed spec name validation.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ValidatedSpecName(String);
-
-impl ValidatedSpecName {
-  /// Get the inner string value
-  #[must_use]
-  pub fn as_str(&self) -> &str {
-    &self.0
-  }
-
-  /// Create a new validated spec name without validation
-  ///
-  /// # Safety
-  ///
-  /// This should only be called after proper validation has been performed.
-  #[must_use]
-  pub const fn unchecked_new(name: String) -> Self {
-    Self(name)
-  }
-}
-
-impl From<ValidatedSpecName> for String {
-  fn from(value: ValidatedSpecName) -> Self {
-    value.0
-  }
-}
-
-impl AsRef<str> for ValidatedSpecName {
-  fn as_ref(&self) -> &str {
-    &self.0
-  }
-}
-
-/// Newtype wrapper for validated feature names
-///
-/// Following Scott Wlaschin's DDD principle of using types to make
-/// invalid states unrepresentable. A value of this type is guaranteed
-/// to have passed feature name validation.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ValidatedFeatureName(String);
-
-impl ValidatedFeatureName {
-  /// Get the inner string value
-  #[must_use]
-  pub fn as_str(&self) -> &str {
-    &self.0
-  }
-
-  /// Create a new validated feature name without validation
-  ///
-  /// # Safety
-  ///
-  /// This should only be called after proper validation has been performed.
-  #[must_use]
-  pub const fn unchecked_new(name: String) -> Self {
-    Self(name)
-  }
-}
-
-impl From<ValidatedFeatureName> for String {
-  fn from(value: ValidatedFeatureName) -> Self {
-    value.0
-  }
-}
-
-impl AsRef<str> for ValidatedFeatureName {
-  fn as_ref(&self) -> &str {
-    &self.0
-  }
-}
-
-/// Newtype wrapper for validated behavior names
-///
-/// Following Scott Wlaschin's DDD principle of using types to make
-/// invalid states unrepresentable. A value of this type is guaranteed
-/// to have passed behavior name validation.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ValidatedBehaviorName(String);
-
-impl ValidatedBehaviorName {
-  /// Get the inner string value
-  #[must_use]
-  pub fn as_str(&self) -> &str {
-    &self.0
-  }
-
-  /// Create a new validated behavior name without validation
-  ///
-  /// # Safety
-  ///
-  /// This should only be called after proper validation has been performed.
-  #[must_use]
-  pub const fn unchecked_new(name: String) -> Self {
-    Self(name)
-  }
-}
-
-impl From<ValidatedBehaviorName> for String {
-  fn from(value: ValidatedBehaviorName) -> Self {
-    value.0
-  }
-}
-
-impl AsRef<str> for ValidatedBehaviorName {
-  fn as_ref(&self) -> &str {
-    &self.0
-  }
-}
+// Re-export the validated name types for backwards compatibility
+// These are now defined in crate::intent::types::names
+pub use crate::intent::types::{BehaviorName as ValidatedBehaviorName, FeatureName as ValidatedFeatureName, SpecName as ValidatedSpecName};
 
 /// Errors that can occur during semantic validation
 ///
@@ -896,11 +809,11 @@ impl SemanticValidator {
       return false;
     }
 
-    // Check if one is a substring of the other (min length 4)
-    if name_a.len() >= 4 && name_b.contains(name_a) {
+    // Check if one is a substring of the other (min length MIN_SIMILAR_TERM_LENGTH)
+    if name_a.len() >= MIN_SIMILAR_TERM_LENGTH && name_b.contains(name_a) {
       return true;
     }
-    if name_b.len() >= 4 && name_a.contains(name_b) {
+    if name_b.len() >= MIN_SIMILAR_TERM_LENGTH && name_a.contains(name_b) {
       return true;
     }
 
@@ -950,8 +863,11 @@ impl SemanticValidator {
 
     // Check max dependency depth
     let max_depth = self.calculate_max_dependency_depth(spec);
-    if max_depth > 5 {
-      errors.push(SemanticError::dependency_chain_too_deep(max_depth, 5));
+    if max_depth > MAX_DEPENDENCY_DEPTH {
+      errors.push(SemanticError::dependency_chain_too_deep(
+        max_depth,
+        MAX_DEPENDENCY_DEPTH,
+      ));
     }
 
     // Check for behaviors with preconditions that reference their own postconditions

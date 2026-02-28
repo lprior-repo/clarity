@@ -72,7 +72,7 @@ fn tagged_tasks(tag: &str, phase: u32, tasks: &[(&str, &str, u32)]) -> Vec<PlanB
   tasks
     .iter()
     .filter_map(|(id, title, effort)| {
-      PlanBead::new(format!("{}-{}", tag, id), (*title).to_string(), phase)
+      PlanBead::new(format!("{tag}-{id}"), (*title).to_string(), phase)
         .map(|bead| {
           bead
             .with_description(format!("{} task: {}", tag.to_uppercase(), title))

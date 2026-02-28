@@ -9,10 +9,7 @@ pub fn compute_critical_path(beads: &[PlanBead]) -> Vec<String> {
     .map(|bead| (bead.id.as_str(), bead.effort))
     .collect();
 
-  let order = match topological_sort(beads) {
-    Ok(value) => value,
-    Err(_) => Vec::new(),
-  };
+  let order = topological_sort(beads).unwrap_or_default();
   let (completion, predecessor) = order.iter().fold(
     (
       HashMap::<String, u32>::new(),

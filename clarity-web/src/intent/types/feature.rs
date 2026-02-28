@@ -6,10 +6,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{Behavior, TypeError};
+use super::{Behavior, FeatureDependency, FeatureName, TypeError};
 
 /// Feature - a named collection of behaviors
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Feature {
   /// Unique feature name
   pub name: String,
@@ -30,15 +30,35 @@ impl Feature {
   /// # Errors
   /// Returns `TypeError::EmptyName` if name is empty or whitespace-only
   pub fn new(name: String) -> Result<Self, TypeError> {
-    if name.trim().is_empty() {
-      return Err(TypeError::EmptyName);
-    }
+    let validated_name = FeatureName::parse(name.clone())
+      .map_err(|_| TypeError::EmptyName)?;
     Ok(Self {
-      name,
+      name: validated_name.into(),
       description: String::new(),
       behaviors: Vec::new(),
       depends_on: Vec::new(),
     })
+  }
+
+  /// Create a feature from a validated `FeatureName`.
+  ///
+  /// This constructor accepts a pre-validated name, avoiding redundant validation.
+  #[must_use]
+  pub fn from_validated_name(name: FeatureName) -> Self {
+    Self {
+      name: name.into(),
+      description: String::new(),
+      behaviors: Vec::new(),
+      depends_on: Vec::new(),
+    }
+  }
+
+  /// Get the feature name as a validated `FeatureName`.
+  ///
+  /// Returns `None` if the name is invalid (should not happen for well-constructed features).
+  #[must_use]
+  pub fn validated_name(&self) -> Option<FeatureName> {
+    FeatureName::parse(self.name.clone()).ok()
   }
 
   /// Builder method to set description
@@ -72,12 +92,35 @@ impl Feature {
     }
     self
   }
+
+  /// Add a validated dependency on another feature.
+  ///
+  /// This method accepts a pre-validated `FeatureDependency`.
+  pub fn add_validated_dependency(&mut self, dependency: FeatureDependency) -> &mut Self {
+    let dep_str: String = dependency.into();
+    if !self.depends_on.contains(&dep_str) {
+      self.depends_on.push(dep_str);
+    }
+    self
+  }
+
+  /// Get dependencies as validated `FeatureDependency` values.
+  ///
+  /// Invalid dependencies are filtered out.
+  #[must_use]
+  pub fn validated_dependencies(&self) -> Vec<FeatureDependency> {
+    self
+      .depends_on
+      .iter()
+      .filter_map(|s| FeatureDependency::parse(s.clone()).ok())
+      .collect()
+  }
 }
 
 #[cfg(test)]
 mod tests {
   use super::Feature;
-  use crate::intent::types::{Behavior, TypeError};
+  use crate::intent::types::{Behavior, FeatureDependency, FeatureName, TypeError};
 
   #[test]
   fn test_feature_new_valid() {
@@ -96,6 +139,28 @@ mod tests {
   fn test_feature_new_empty_name() {
     let result = Feature::new(String::new());
     assert!(matches!(result, Err(TypeError::EmptyName)));
+  }
+
+  #[test]
+  fn test_feature_from_validated_name() {
+    let name = match FeatureName::parse("auth".to_string()) {
+      Ok(n) => n,
+      Err(_) => return,
+    };
+    let feature = Feature::from_validated_name(name);
+    assert_eq!(feature.name, "auth");
+  }
+
+  #[test]
+  fn test_feature_validated_name() {
+    let feature = match Feature::new("user-auth".to_string()) {
+      Ok(f) => f,
+      Err(_) => return,
+    };
+    let validated = feature.validated_name();
+    assert!(validated.is_some());
+    let validated = validated.unwrap();
+    assert_eq!(validated.as_str(), "user-auth");
   }
 
   #[test]
@@ -120,6 +185,37 @@ mod tests {
 
     let result2 = feature.add_behavior(behavior2);
     assert!(matches!(result2, Err(TypeError::DuplicateBehavior(_, _))));
+  }
+
+  #[test]
+  fn test_feature_add_validated_dependency() {
+    let mut feature = match Feature::new("users".to_string()) {
+      Ok(f) => f,
+      Err(_) => return,
+    };
+    let dep = match FeatureDependency::parse("auth".to_string()) {
+      Ok(d) => d,
+      Err(_) => return,
+    };
+    feature.add_validated_dependency(dep);
+    assert_eq!(feature.depends_on.len(), 1);
+    assert_eq!(feature.depends_on[0], "auth");
+  }
+
+  #[test]
+  fn test_feature_validated_dependencies() {
+    let mut feature = match Feature::new("users".to_string()) {
+      Ok(f) => f,
+      Err(_) => return,
+    };
+    // Add valid dependency
+    feature.add_dependency("auth".to_string());
+    // Add empty dependency (invalid)
+    feature.depends_on.push("".to_string());
+
+    let validated = feature.validated_dependencies();
+    assert_eq!(validated.len(), 1);
+    assert_eq!(validated[0].as_str(), "auth");
   }
 
   #[test]

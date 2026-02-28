@@ -163,7 +163,7 @@ pub fn all_rules_pass(value: &str, rules: &[Rule]) -> Result<bool, RuleError> {
   Ok(
     validate_with_rules(value, rules)?
       .iter()
-      .all(|result| result.passed),
+      .all(|result| result.is_pass()),
   )
 }
 
@@ -171,7 +171,7 @@ pub fn failing_rules(value: &str, rules: &[Rule]) -> Result<Vec<RuleResult>, Rul
   Ok(
     validate_with_rules(value, rules)?
       .into_iter()
-      .filter(|result| !result.passed)
+      .filter(|result| result.is_fail())
       .collect(),
   )
 }

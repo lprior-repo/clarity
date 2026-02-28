@@ -1,7 +1,7 @@
-use super::{format_error, IntentError, Suggestion};
+use super::{format_error, InternalErrorDetails, IntentError, Suggestion};
 use std::fmt;
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ContextualError {
   pub error: IntentError,
   pub message: String,
@@ -17,9 +17,11 @@ impl ContextualError {
   pub fn new(error: IntentError, message: impl Into<String>) -> Result<Self, IntentError> {
     let message = message.into();
     if message.is_empty() {
-      return Err(IntentError::Internal(
-        "error message cannot be empty".into(),
-      ));
+      return Err(IntentError::Internal {
+        details: InternalErrorDetails::Generic {
+          message: "error message cannot be empty".into(),
+        },
+      });
     }
 
     Ok(Self {
@@ -41,13 +43,13 @@ impl ContextualError {
   }
 
   #[must_use]
-  pub fn with_line(mut self, line: usize) -> Self {
+  pub const fn with_line(mut self, line: usize) -> Self {
     self.line = Some(line);
     self
   }
 
   #[must_use]
-  pub fn with_column(mut self, column: usize) -> Self {
+  pub const fn with_column(mut self, column: usize) -> Self {
     self.column = Some(column);
     self
   }
@@ -77,7 +79,7 @@ impl ContextualError {
   }
 
   #[must_use]
-  pub fn has_location(&self) -> bool {
+  pub const fn has_location(&self) -> bool {
     self.source_file.is_some() || self.line.is_some() || self.json_path.is_some()
   }
 

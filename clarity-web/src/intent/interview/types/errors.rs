@@ -1,3 +1,10 @@
+#![deny(clippy::unwrap_used)]
+#![deny(clippy::expect_used)]
+#![deny(clippy::panic)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::nursery)]
+#![forbid(unsafe_code)]
+
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -39,9 +46,11 @@ pub enum ConflictDetectionError {
   NegativeOptionIndex(i32),
   #[error("answer has empty question_id at index {0}")]
   EmptyQuestionId(usize),
+  #[error("cannot resolve conflict with no options")]
+  EmptyOptions,
 }
 
-#[derive(Debug, Error, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Error, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum InterviewSessionError {
   #[error("answer round {answer_round} does not match current round {current_round}")]
   RoundMismatch {

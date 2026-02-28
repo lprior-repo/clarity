@@ -1,11 +1,10 @@
-use once_cell::sync::Lazy;
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, RwLock};
 
 use super::domain::{BeadFeedback, FeedbackError};
 
-static FEEDBACK_STORE: Lazy<Arc<RwLock<HashMap<String, VecDeque<BeadFeedback>>>>> =
-  Lazy::new(|| Arc::new(RwLock::new(HashMap::new())));
+static FEEDBACK_STORE: std::sync::LazyLock<Arc<RwLock<HashMap<String, VecDeque<BeadFeedback>>>>> =
+  std::sync::LazyLock::new(|| Arc::new(RwLock::new(HashMap::new())));
 
 pub(super) fn store_feedback(feedback: &BeadFeedback) -> Result<(), FeedbackError> {
   FEEDBACK_STORE

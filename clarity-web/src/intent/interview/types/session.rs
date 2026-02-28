@@ -5,6 +5,7 @@ use super::{
   conflict_detection, Answer, Conflict, ConflictDetectionError, Gap, InterviewError,
   InterviewSession, InterviewSessionError, InterviewStage, Profile,
 };
+use super::models::GapState;
 
 impl InterviewSession {
   #[must_use]
@@ -45,8 +46,7 @@ impl InterviewSession {
         suggested_default: String::new(),
         why_needed: String::new(),
         round: self.get_current_round(),
-        resolved: false,
-        resolution: String::new(),
+        state: GapState::Open,
       })
       .collect()
   }
@@ -56,7 +56,7 @@ impl InterviewSession {
     self
       .gaps
       .iter()
-      .filter(|gap| gap.blocking && !gap.resolved)
+      .filter(|gap| gap.blocking && !gap.is_resolved())
       .collect()
   }
 
@@ -74,8 +74,9 @@ impl InterviewSession {
       .find(|gap| gap.id == gap_id)
       .ok_or_else(|| InterviewError::GapNotFound(gap_id.to_string()))?;
 
-    gap.resolved = true;
-    gap.resolution = resolution.to_string();
+    gap.state = GapState::Resolved {
+      resolution: resolution.to_string(),
+    };
     self.updated_at = current_unix_timestamp();
     Ok(())
   }
@@ -228,24 +229,36 @@ impl InterviewSession {
       .find(|conflict| conflict.id == conflict_id)
       .ok_or_else(|| ConflictDetectionError::ConflictNotFound(conflict_id.to_string()))?;
 
-    if conflict.chosen.is_some() {
+    if conflict.is_resolved() {
       return Err(ConflictDetectionError::ConflictAlreadyResolved(
         conflict_id.to_string(),
       ));
     }
 
     let option_count = conflict.options.len();
-    let chosen_index = usize::try_from(chosen_option)
-      .map_err(|_| ConflictDetectionError::NegativeOptionIndex(chosen_option))?;
-    if chosen_index >= option_count {
-      return Err(ConflictDetectionError::InvalidOptionIndex {
-        conflict_id: conflict_id.to_string(),
-        index: chosen_option,
-        option_count,
-      });
-    }
+    let new_state = conflict
+      .state
+      .resolve(chosen_option, option_count)
+      .map_err(|e| match e {
+        super::models::ConflictStateError::NegativeIndex(idx) => {
+          ConflictDetectionError::NegativeOptionIndex(idx)
+        }
+        super::models::ConflictStateError::AlreadyResolved => {
+          ConflictDetectionError::ConflictAlreadyResolved(conflict_id.to_string())
+        }
+        super::models::ConflictStateError::InvalidIndex { index, option_count } => {
+          ConflictDetectionError::InvalidOptionIndex {
+            conflict_id: conflict_id.to_string(),
+            index,
+            option_count,
+          }
+        }
+        super::models::ConflictStateError::EmptyOptions => {
+          ConflictDetectionError::EmptyOptions
+        }
+      })?;
 
-    conflict.chosen = Some(chosen_option);
+    conflict.state = new_state;
     self.updated_at = current_unix_timestamp();
     Ok(())
   }

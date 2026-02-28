@@ -36,7 +36,7 @@ fn get_blocking_gap_action(session: &InterviewSession) -> Option<NextAction> {
   session
     .gaps
     .iter()
-    .filter(|gap| gap.blocking && !gap.resolved)
+    .filter(|gap| gap.blocking && !gap.is_resolved())
     .min_by_key(|gap| gap.round)
     .map(|gap| {
       NextAction::new(
@@ -56,7 +56,7 @@ fn get_conflict_action(session: &InterviewSession) -> Option<NextAction> {
   session
     .conflicts
     .iter()
-    .find(|conflict| conflict.chosen.is_none())
+    .find(|conflict| !conflict.is_resolved())
     .map(|conflict| {
       NextAction::new(
         ActionType::ResolveConflict,
@@ -88,8 +88,8 @@ fn get_question_action(session: &InterviewSession) -> Option<NextAction> {
     return Some(
       NextAction::new(
         ActionType::AnswerQuestion,
-        format!("round-{}-complete", current_round),
-        format!("Complete round {} or add more answers", current_round),
+        format!("round-{current_round}-complete"),
+        format!("Complete round {current_round} or add more answers"),
         "You have answers ready; you can complete the round or add more details".to_string(),
       )
       .with_priority(3),
@@ -100,9 +100,9 @@ fn get_question_action(session: &InterviewSession) -> Option<NextAction> {
     return Some(
       NextAction::new(
         ActionType::AnswerQuestion,
-        format!("round-{}-start", current_round),
-        format!("Start answering questions for round {}", current_round),
-        format!("Round {} has not started yet", current_round),
+        format!("round-{current_round}-start"),
+        format!("Start answering questions for round {current_round}"),
+        format!("Round {current_round} has not started yet"),
       )
       .with_priority(3),
     );
@@ -123,13 +123,13 @@ fn get_phase_completion_action(
   let phase_beads = plan.get_phase_beads(current_phase);
 
   if !phase_beads.is_empty() {
-    let completed_count = phase_beads.iter().filter(|bead| bead.completed).count();
+    let completed_count = phase_beads.iter().filter(|bead| bead.is_completed()).count();
     if completed_count == phase_beads.len() {
       return Some(
         NextAction::new(
           ActionType::CompletePhase,
-          format!("phase-{}", current_phase),
-          format!("Complete phase {} (all beads done)", current_phase),
+          format!("phase-{current_phase}"),
+          format!("Complete phase {current_phase} (all beads done)"),
           format!(
             "All {} work items in phase {} are complete",
             phase_beads.len(),
@@ -144,7 +144,7 @@ fn get_phase_completion_action(
     let first_in_phase = actionable
       .iter()
       .find(|bead| bead.phase == current_phase)
-      .map(|bead| *bead);
+      .copied();
 
     if let Some(bead) = first_in_phase {
       return Some(
@@ -167,8 +167,8 @@ fn get_phase_completion_action(
   (session.can_proceed().is_ok() && !session.completed_phases.contains(&current_phase)).then_some(
     NextAction::new(
       ActionType::CompletePhase,
-      format!("phase-{}", current_phase),
-      format!("Complete phase {}", current_phase),
+      format!("phase-{current_phase}"),
+      format!("Complete phase {current_phase}"),
       "Phase requirements are satisfied".to_string(),
     )
     .with_priority(4),
@@ -182,7 +182,7 @@ pub fn determine_next_phase(plan: &ExecutionPlan) -> Option<u32> {
       let mut phases = plan
         .beads
         .iter()
-        .filter(|bead| !bead.completed)
+        .filter(|bead| !bead.is_completed())
         .map(|bead| bead.phase)
         .collect::<Vec<_>>();
       phases.sort_unstable();

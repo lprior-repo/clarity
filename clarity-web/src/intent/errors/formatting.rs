@@ -5,19 +5,19 @@ pub fn format_error(error: &ContextualError) -> String {
   let mut output = String::new();
 
   let error_type = match &error.error {
-    IntentError::JsonParse(_) => "JSON Parse Error",
-    IntentError::MissingField(_) => "Missing Field",
+    IntentError::JsonParse { .. } => "JSON Parse Error",
+    IntentError::MissingField { .. } => "Missing Field",
     IntentError::InvalidType { .. } => "Type Error",
     IntentError::InvalidValue { .. } => "Value Error",
-    IntentError::UnknownField(_) => "Unknown Field",
-    IntentError::ValidationFailed(_) => "Validation Error",
-    IntentError::Io(_) => "IO Error",
-    IntentError::FileNotFound(_) => "File Not Found",
-    IntentError::InvalidPath(_) => "Invalid Path",
-    IntentError::CircularDependency(_) => "Circular Dependency",
-    IntentError::ConstraintViolation(_) => "Constraint Violation",
-    IntentError::Configuration(_) => "Configuration Error",
-    IntentError::Internal(_) => "Internal Error",
+    IntentError::UnknownField { .. } => "Unknown Field",
+    IntentError::ValidationFailed { .. } => "Validation Error",
+    IntentError::Io { .. } => "IO Error",
+    IntentError::FileNotFound { .. } => "File Not Found",
+    IntentError::InvalidPath { .. } => "Invalid Path",
+    IntentError::CircularDependency { .. } => "Circular Dependency",
+    IntentError::ConstraintViolation { .. } => "Constraint Violation",
+    IntentError::Configuration { .. } => "Configuration Error",
+    IntentError::Internal { .. } => "Internal Error",
   };
 
   output.push_str(&format!("Error: {error_type}\n"));

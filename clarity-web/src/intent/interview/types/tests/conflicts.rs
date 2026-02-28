@@ -1,6 +1,7 @@
 use crate::intent::interview::types::{
   Answer, Conflict, ConflictDetectionError, ConflictResolution, InterviewSession, Profile,
 };
+use crate::intent::interview::types::models::{ConflictState, ConflictStateError};
 
 fn make_session() -> InterviewSession {
   InterviewSession::new(
@@ -127,7 +128,7 @@ fn resolve_conflict_handles_validation_and_success() {
         recommendation: true,
       },
     ],
-    chosen: None,
+    state: ConflictState::Pending,
   });
 
   let negative = session.resolve_conflict("conflict-1", -1);
@@ -144,11 +145,189 @@ fn resolve_conflict_handles_validation_and_success() {
 
   let ok = session.resolve_conflict("conflict-1", 1);
   assert!(ok.is_ok());
-  assert_eq!(session.conflicts[0].chosen, Some(1));
+  assert_eq!(session.conflicts[0].chosen_index(), Some(1));
 
   let already = session.resolve_conflict("conflict-1", 0);
   assert!(matches!(
       already,
       Err(ConflictDetectionError::ConflictAlreadyResolved(conflict_id)) if conflict_id == "conflict-1"
   ));
+}
+
+// ============================================
+// Exhaustive match tests for ConflictState
+// ============================================
+
+#[test]
+fn conflict_state_pending_is_not_resolved() {
+  let state = ConflictState::Pending;
+  assert!(!state.is_resolved());
+  assert!(state.chosen_index().is_none());
+}
+
+#[test]
+fn conflict_state_resolved_is_resolved() {
+  let state = ConflictState::Resolved { chosen_index: 1 };
+  assert!(state.is_resolved());
+  assert_eq!(state.chosen_index(), Some(1));
+}
+
+#[test]
+fn conflict_state_resolve_rejects_negative_index() {
+  let state = ConflictState::Pending;
+  let result = state.resolve(-1, 2);
+  assert!(result.is_err());
+}
+
+#[test]
+fn conflict_state_resolve_rejects_out_of_bounds() {
+  let state = ConflictState::Pending;
+  let result = state.resolve(5, 2);
+  assert!(result.is_err());
+}
+
+#[test]
+fn conflict_state_resolve_rejects_already_resolved() {
+  let state = ConflictState::Resolved { chosen_index: 0 };
+  let result = state.resolve(1, 2);
+  assert!(result.is_err());
+}
+
+#[test]
+fn conflict_state_resolve_succeeds_with_valid_index() {
+  let state = ConflictState::Pending;
+  let result = state.resolve(1, 3);
+  assert!(result.is_ok());
+  let new_state = result.unwrap();
+  assert!(new_state.is_resolved());
+  assert_eq!(new_state.chosen_index(), Some(1));
+}
+
+#[test]
+fn conflict_is_resolved_delegates_to_state() {
+  let pending_conflict = Conflict {
+    state: ConflictState::Pending,
+    ..Conflict::default()
+  };
+  let resolved_conflict = Conflict {
+    state: ConflictState::Resolved { chosen_index: 0 },
+    ..Conflict::default()
+  };
+
+  assert!(!pending_conflict.is_resolved());
+  assert!(resolved_conflict.is_resolved());
+}
+
+#[test]
+fn conflict_chosen_index_delegates_to_state() {
+  let pending_conflict = Conflict {
+    state: ConflictState::Pending,
+    ..Conflict::default()
+  };
+  let resolved_conflict = Conflict {
+    state: ConflictState::Resolved { chosen_index: 2 },
+    ..Conflict::default()
+  };
+
+  assert!(pending_conflict.chosen_index().is_none());
+  assert_eq!(resolved_conflict.chosen_index(), Some(2));
+}
+
+// ============================================
+// P0: State Machine Validation Tests
+// ============================================
+
+#[test]
+fn conflict_state_one_way_transition_enforced() {
+  // P0: Cannot re-resolve an already resolved conflict
+  let resolved = ConflictState::Resolved { chosen_index: 0 };
+
+  let result = resolved.resolve(1, 5);
+  assert!(result.is_err());
+  assert_eq!(result, Err(ConflictStateError::AlreadyResolved));
+}
+
+#[test]
+fn conflict_state_can_transition_to_validates_one_way() {
+  let pending = ConflictState::Pending;
+  let resolved = ConflictState::Resolved { chosen_index: 0 };
+
+  // Pending can transition to Resolved
+  assert!(pending.can_transition_to(&resolved));
+
+  // Resolved cannot transition back to Pending
+  assert!(!resolved.can_transition_to(&ConflictState::Pending));
+
+  // Same state is valid (no-op)
+  assert!(pending.can_transition_to(&ConflictState::Pending));
+  assert!(resolved.can_transition_to(&resolved));
+}
+
+#[test]
+fn conflict_state_rejects_empty_options() {
+  // P1: Cannot resolve with no options
+  let pending = ConflictState::Pending;
+  let result = pending.resolve(0, 0);
+  assert!(result.is_err());
+  assert_eq!(result, Err(ConflictStateError::EmptyOptions));
+}
+
+#[test]
+fn conflict_state_rejects_out_of_bounds_even_with_zero_index() {
+  // When options exist, index 0 is valid
+  let pending = ConflictState::Pending;
+  let result = pending.resolve(0, 1);
+  assert!(result.is_ok());
+
+  // But with no options, even index 0 is invalid
+  let pending2 = ConflictState::Pending;
+  let result2 = pending2.resolve(0, 0);
+  assert_eq!(result2, Err(ConflictStateError::EmptyOptions));
+}
+
+#[test]
+fn conflict_state_validate_catches_negative_index() {
+  // Valid state
+  let valid_resolved = ConflictState::Resolved { chosen_index: 0 };
+  assert!(valid_resolved.validate().is_ok());
+
+  // Invalid: negative index
+  let invalid_resolved = ConflictState::Resolved { chosen_index: -1 };
+  assert_eq!(
+    invalid_resolved.validate(),
+    Err(ConflictStateError::NegativeIndex(-1))
+  );
+
+  // Pending state is always valid
+  assert!(ConflictState::Pending.validate().is_ok());
+}
+
+#[test]
+fn conflict_state_validate_bounds_full_check() {
+  // Valid bounds
+  let resolved = ConflictState::Resolved { chosen_index: 2 };
+  assert!(resolved.validate_bounds(5).is_ok());
+  assert!(resolved.validate_bounds(3).is_ok());
+
+  // Out of bounds
+  assert!(resolved.validate_bounds(2).is_err());
+  assert!(resolved.validate_bounds(1).is_err());
+
+  // Empty options
+  let resolved2 = ConflictState::Resolved { chosen_index: 0 };
+  assert_eq!(resolved2.validate_bounds(0), Err(ConflictStateError::EmptyOptions));
+
+  // Negative index
+  let invalid = ConflictState::Resolved { chosen_index: -5 };
+  assert_eq!(invalid.validate_bounds(10), Err(ConflictStateError::NegativeIndex(-5)));
+
+  // Pending is always valid
+  assert!(ConflictState::Pending.validate_bounds(0).is_ok());
+  assert!(ConflictState::Pending.validate_bounds(100).is_ok());
+}
+
+#[test]
+fn conflict_state_is_pending_predicate() {
+  assert!(ConflictState::Pending.is_pending());
+  assert!(!ConflictState::Resolved { chosen_index: 0 }.is_pending());
 }

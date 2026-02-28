@@ -64,7 +64,7 @@ pub struct Effect {
 
 impl Effect {
   #[must_use]
-  pub fn new(
+  pub const fn new(
     effect_type: EffectType,
     description: String,
     severity: EffectSeverity,

@@ -9,7 +9,7 @@ mod error;
 mod execution_plan;
 mod phase;
 
-pub use bead::PlanBead;
+pub use bead::{BeadState, PlanBead};
 pub use error::PlanError;
 pub use execution_plan::ExecutionPlan;
 pub use phase::PlanPhase;

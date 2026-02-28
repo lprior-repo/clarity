@@ -17,6 +17,6 @@ mod tests;
 pub use domain::{QualityIssue, QualityReport};
 pub use formatting::format_report;
 pub use scoring::{
-    analyze_spec, calculate_ai_readiness_score, calculate_clarity_score, calculate_coverage_score,
-    calculate_overall_score, calculate_testability_score,
+  analyze_spec, calculate_ai_readiness_score, calculate_clarity_score, calculate_coverage_score,
+  calculate_overall_score, calculate_testability_score,
 };

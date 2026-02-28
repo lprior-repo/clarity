@@ -1,4 +1,4 @@
-use super::bead::PlanBead;
+use super::bead::{BeadState, PlanBead};
 use super::error::PlanError;
 use super::phase::PlanPhase;
 use serde::{Deserialize, Serialize};
@@ -73,7 +73,7 @@ impl ExecutionPlan {
     self
       .beads
       .iter()
-      .filter(|bead| bead.completed)
+      .filter(|bead| bead.is_completed())
       .map(|bead| bead.id.as_str())
       .collect()
   }
@@ -84,7 +84,7 @@ impl ExecutionPlan {
     self
       .beads
       .iter()
-      .filter(|bead| !bead.completed && bead.dependencies_satisfied(&completed_ids))
+      .filter(|bead| !bead.is_completed() && bead.dependencies_satisfied(&completed_ids))
       .collect()
   }
 
@@ -94,8 +94,7 @@ impl ExecutionPlan {
     }
     match self.get_bead_mut(id) {
       Some(bead) => {
-        bead.completed = true;
-        bead.ready = false;
+        bead.state = BeadState::Completed;
         Ok(())
       }
       None => Err(PlanError::InvalidDependency {
@@ -115,7 +114,7 @@ impl ExecutionPlan {
     self
       .beads
       .iter()
-      .filter(|bead| bead.completed)
+      .filter(|bead| bead.is_completed())
       .map(|bead| bead.effort)
       .sum()
   }
@@ -125,7 +124,7 @@ impl ExecutionPlan {
     if self.beads.is_empty() {
       return 0.0;
     }
-    let completed = self.beads.iter().filter(|bead| bead.completed).count();
+    let completed = self.beads.iter().filter(|bead| bead.is_completed()).count();
     (completed as f64 / self.beads.len() as f64) * 100.0
   }
 }

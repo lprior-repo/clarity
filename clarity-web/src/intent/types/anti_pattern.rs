@@ -6,8 +6,8 @@
 
 use serde::{Deserialize, Serialize};
 
-/// AntiPattern - a pattern to avoid in implementation
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+/// `AntiPattern` - a pattern to avoid in implementation
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct AntiPattern {
   /// Anti-pattern name/identifier
   pub name: String,
@@ -22,21 +22,10 @@ pub struct AntiPattern {
   pub alternative: String,
 }
 
-impl Default for AntiPattern {
-  fn default() -> Self {
-    Self {
-      name: String::new(),
-      description: String::new(),
-      why_avoid: String::new(),
-      alternative: String::new(),
-    }
-  }
-}
-
 impl AntiPattern {
   /// Create a new anti-pattern
   #[must_use]
-  pub fn new(name: String, description: String) -> Self {
+  pub const fn new(name: String, description: String) -> Self {
     Self {
       name,
       description,

@@ -1,3 +1,10 @@
+#![deny(clippy::unwrap_used)]
+#![deny(clippy::expect_used)]
+#![deny(clippy::panic)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::nursery)]
+#![forbid(unsafe_code)]
+
 use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -18,4 +25,10 @@ pub enum PlanError {
   NoBeads,
   #[error("duplicate bead ID: {0}")]
   DuplicateBeadId(String),
+  #[error("invalid state transition for bead '{bead_id}': {from} -> {to}")]
+  InvalidStateTransition {
+    bead_id: String,
+    from: String,
+    to: String,
+  },
 }

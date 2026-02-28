@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use std::fmt;
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ValidationError {
   pub message: String,
   pub field_failures: Vec<FieldFailure>,
@@ -35,7 +35,7 @@ impl ValidationError {
   }
 
   #[must_use]
-  pub fn has_failures(&self) -> bool {
+  pub const fn has_failures(&self) -> bool {
     !self.field_failures.is_empty()
   }
 
@@ -66,7 +66,7 @@ impl fmt::Display for ValidationError {
   }
 }
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct FieldFailure {
   pub field: String,
   pub code: String,

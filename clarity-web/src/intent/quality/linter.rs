@@ -55,6 +55,28 @@
 #![forbid(unsafe_code)]
 
 use crate::intent::types::Spec;
+
+// ============================================================================
+// LINTING THRESHOLD CONSTANTS
+// ============================================================================
+
+/// Minimum length for spec and feature descriptions to be considered adequate.
+///
+/// Descriptions shorter than this threshold are flagged as too brief to
+/// provide meaningful documentation. This value ensures descriptions contain
+/// at least a few words of explanation.
+///
+/// Example: "Manages user" (13 chars) passes, but "User" (4 chars) fails.
+const MIN_DESCRIPTION_LENGTH: usize = 10;
+
+/// Minimum length for behavior descriptions to be considered detailed enough.
+///
+/// Behavior descriptions at this threshold are considered "very short" and
+/// receive a Hint-level lint result (informational, not a warning).
+///
+/// This is lower than MIN_DESCRIPTION_LENGTH because behaviors are more granular
+/// and may have shorter but still meaningful descriptions like "Log out" (7 chars).
+const MIN_BEHAVIOR_DESCRIPTION_LENGTH: usize = 5;
 use thiserror::Error;
 
 /// Errors that can occur during linting
@@ -257,7 +279,7 @@ pub struct LintResult {
   pub rule: LintRule,
   /// Severity of the lint
   pub severity: LintSeverity,
-  /// Location in the spec (e.g., "features[0].behaviors[1]")
+  /// Location in the spec (e.g., "features\[0\].behaviors\[1\]")
   pub location: String,
   /// Message describing the issue
   pub message: String,
@@ -272,7 +294,7 @@ impl LintResult {
   ///
   /// * `rule` - The rule that generated this result
   /// * `severity` - The severity level of the issue
-  /// * `location` - The location in the spec (e.g., "features[0].behaviors[1]")
+  /// * `location` - The location in the spec (e.g., "features\[0\].behaviors\[1\]")
   /// * `message` - A description of the issue
   ///
   /// # Returns
@@ -906,7 +928,7 @@ impl SpecLinter {
     let severity = LintRule::DescriptionQuality.default_severity();
 
     // Check spec description
-    if spec.description.trim().len() < 10 {
+    if spec.description.trim().len() < MIN_DESCRIPTION_LENGTH {
       report.add_result(
         LintResult::new(
           LintRule::DescriptionQuality,
@@ -914,13 +936,17 @@ impl SpecLinter {
           "spec.description".to_string(),
           "Spec description is too short or missing".to_string(),
         )
-        .with_suggestion("Add a more detailed description (at least 10 characters)".to_string()),
+        .with_suggestion(format!(
+          "Add a more detailed description (at least {MIN_DESCRIPTION_LENGTH} characters)"
+        )),
       );
     }
 
     // Check feature descriptions
     for (idx, feature) in spec.features.iter().enumerate() {
-      if feature.description.trim().len() < 10 && !feature.description.is_empty() {
+      if feature.description.trim().len() < MIN_DESCRIPTION_LENGTH
+        && !feature.description.is_empty()
+      {
         report.add_result(
           LintResult::new(
             LintRule::DescriptionQuality,
@@ -944,7 +970,7 @@ impl SpecLinter {
             )
             .with_suggestion("Add a description explaining what the behavior does".to_string()),
           );
-        } else if behavior.description.trim().len() < 5 {
+        } else if behavior.description.trim().len() < MIN_BEHAVIOR_DESCRIPTION_LENGTH {
           report.add_result(
             LintResult::new(
               LintRule::DescriptionQuality,

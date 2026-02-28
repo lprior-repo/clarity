@@ -8,15 +8,15 @@
 #![forbid(unsafe_code)]
 
 mod suggestions;
-mod types;
-mod vague_rules;
 #[cfg(test)]
 mod tests;
+mod types;
+mod vague_rules;
 
 pub use suggestions::{
-    suggest_examples_improvements, suggest_improvements, suggest_missing_tests,
-    suggest_vague_rules_improvements,
+  suggest_examples_improvements, suggest_improvements, suggest_missing_tests,
+  suggest_vague_rules_improvements,
 };
 pub use types::{
-    ImprovementSuggestion, ImproverError, IssueCategory, QualityIssueReport, QualityReport,
+  ImprovementSuggestion, ImproverError, IssueCategory, QualityIssueReport, QualityReport,
 };

@@ -1,7 +1,7 @@
 use crate::intent::util::array_indexing::ArrayIndexError;
 use thiserror::Error;
 
-#[derive(Debug, Error, Clone, PartialEq)]
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum InterpolationError {
   #[error("variable not found: {0}")]
   VariableNotFound(String),

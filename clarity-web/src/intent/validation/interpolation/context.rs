@@ -1,7 +1,7 @@
 use serde_json::Value;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Context {
   pub variables: HashMap<String, String>,
   pub request_body: Option<Value>,

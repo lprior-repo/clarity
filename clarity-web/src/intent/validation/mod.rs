@@ -18,7 +18,8 @@ mod semantic_adversarial;
 // Re-export key types for convenience
 pub use spec_validator::{
   feature_execution_order, has_circular_dependencies, validate_spec, BehaviorPriority,
-  DependencyGraph, SpecValidationError, SpecValidator, ValidationResult, ValidationWarning,
+  DependencyGraph, SpecValidationError, SpecValidator, ValidationChecks, ValidationResult,
+  ValidationWarning,
 };
 
 // Re-export interpolation types (WP20)

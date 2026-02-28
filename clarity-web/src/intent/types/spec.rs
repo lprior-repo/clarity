@@ -7,7 +7,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
-use super::{AIHints, AntiPattern, Feature, Invariant, TypeError};
+use super::{AIHints, AntiPattern, Feature, Invariant, SpecName, TypeError};
 
 /// Top-level specification container
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -37,17 +37,39 @@ impl Spec {
   /// # Errors
   /// Returns `TypeError::EmptyName` if name is empty or whitespace-only
   pub fn new(name: String) -> Result<Self, TypeError> {
-    if name.trim().is_empty() {
-      return Err(TypeError::EmptyName);
-    }
+    let validated_name = SpecName::parse(name.clone())
+      .map_err(|_| TypeError::EmptyName)?;
     Ok(Self {
-      name,
+      name: validated_name.into(),
       description: String::new(),
       features: Vec::new(),
       invariants: Vec::new(),
       anti_patterns: Vec::new(),
       ai_hints: AIHints::default(),
     })
+  }
+
+  /// Create a spec from a validated `SpecName`.
+  ///
+  /// This constructor accepts a pre-validated name, avoiding redundant validation.
+  #[must_use]
+  pub fn from_validated_name(name: SpecName) -> Self {
+    Self {
+      name: name.into(),
+      description: String::new(),
+      features: Vec::new(),
+      invariants: Vec::new(),
+      anti_patterns: Vec::new(),
+      ai_hints: AIHints::default(),
+    }
+  }
+
+  /// Get the spec name as a validated `SpecName`.
+  ///
+  /// Returns `None` if the name is invalid (should not happen for well-constructed specs).
+  #[must_use]
+  pub fn validated_name(&self) -> Option<SpecName> {
+    SpecName::parse(self.name.clone()).ok()
   }
 
   /// Builder method to set description
@@ -145,12 +167,7 @@ impl Spec {
         }
       }
 
-      Self::dfs_visit(
-        feature.name.as_str(),
-        &dep_map,
-        &mut visiting,
-        &mut visited,
-      )?;
+      Self::dfs_visit(feature.name.as_str(), &dep_map, &mut visiting, &mut visited)?;
     }
 
     Ok(())
@@ -196,7 +213,7 @@ impl Spec {
 #[cfg(test)]
 mod tests {
   use super::Spec;
-  use crate::intent::types::{Behavior, Feature, TypeError};
+  use crate::intent::types::{Behavior, Feature, SpecName, TypeError};
 
   #[test]
   fn test_spec_new_valid() {
@@ -223,6 +240,28 @@ mod tests {
   fn test_spec_new_whitespace_name() {
     let result = Spec::new("   ".to_string());
     assert!(matches!(result, Err(TypeError::EmptyName)));
+  }
+
+  #[test]
+  fn test_spec_from_validated_name() {
+    let name = match SpecName::parse("my-spec".to_string()) {
+      Ok(n) => n,
+      Err(_) => return,
+    };
+    let spec = Spec::from_validated_name(name);
+    assert_eq!(spec.name, "my-spec");
+  }
+
+  #[test]
+  fn test_spec_validated_name() {
+    let spec = match Spec::new("my-spec".to_string()) {
+      Ok(s) => s,
+      Err(_) => return,
+    };
+    let validated = spec.validated_name();
+    assert!(validated.is_some());
+    let validated = validated.unwrap();
+    assert_eq!(validated.as_str(), "my-spec");
   }
 
   #[test]

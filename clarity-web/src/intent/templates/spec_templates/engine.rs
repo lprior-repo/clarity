@@ -8,11 +8,12 @@ use super::profile_templates::template_for_profile;
 
 const PLACEHOLDER_START: &str = "{{";
 const PLACEHOLDER_END: &str = "}}";
+const TEMPLATE_NAME: &str = "spec_template";
 
 pub fn generate_spec_template(profile: Profile) -> Result<String, SpecTemplateError> {
   let template = template_for_profile(profile);
   if template.trim().is_empty() {
-    Err(SpecTemplateError::EmptyTemplate)
+    Err(SpecTemplateError::empty_template(format!("{profile:?}")))
   } else {
     Ok(template)
   }
@@ -23,7 +24,11 @@ pub fn fill_template(
   session: &InterviewSession,
 ) -> Result<String, SpecTemplateError> {
   if template.trim().is_empty() {
-    return Err(SpecTemplateError::EmptyTemplate);
+    return Err(SpecTemplateError::empty_template(TEMPLATE_NAME));
+  }
+
+  if session.answers.is_empty() {
+    return Err(SpecTemplateError::no_answers(&session.id));
   }
 
   let fields = extract_field_values(session);
@@ -38,9 +43,7 @@ pub fn fill_template(
   if unresolved.is_empty() {
     Ok(rendered)
   } else {
-    Err(SpecTemplateError::PlaceholderNotFound(
-      unresolved.join(", "),
-    ))
+    Err(SpecTemplateError::unresolved_placeholders(TEMPLATE_NAME, unresolved))
   }
 }
 
@@ -66,7 +69,7 @@ fn extract_field_values(session: &InterviewSession) -> HashMap<String, String> {
       Some((format!("{question_key}_notes"), answer.notes.clone()))
     };
 
-    base.chain(extracted).chain(notes.into_iter())
+    base.chain(extracted).chain(notes)
   });
 
   metadata.into_iter().chain(answer_pairs).collect()

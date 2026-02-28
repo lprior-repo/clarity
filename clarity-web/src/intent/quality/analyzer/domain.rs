@@ -50,7 +50,7 @@ impl QualityIssue {
   }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct QualityReport {
   pub coverage_score: u8,
   pub clarity_score: u8,
@@ -88,12 +88,12 @@ impl QualityReport {
   }
 
   #[must_use]
-  pub fn has_issues(&self) -> bool {
+  pub const fn has_issues(&self) -> bool {
     !self.issues.is_empty()
   }
 
   #[must_use]
-  pub fn issue_count(&self) -> usize {
+  pub const fn issue_count(&self) -> usize {
     self.issues.len()
   }
 
@@ -104,7 +104,7 @@ impl QualityReport {
     }
   }
 
-  pub fn merge_issues(&mut self, other: &QualityReport) {
+  pub fn merge_issues(&mut self, other: &Self) {
     other.issues.iter().for_each(|issue| self.add_issue(*issue));
   }
 }

@@ -7,9 +7,9 @@
 use serde::{Deserialize, Serialize};
 
 /// Verification - how to verify a behavior works correctly
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct Verification {
-  /// Verification type (e.g., "unit_test", "integration_test", "manual")
+  /// Verification type (e.g., "`unit_test`", "`integration_test`", "manual")
   #[serde(default)]
   pub verification_type: String,
   /// Description of how to verify
@@ -20,20 +20,10 @@ pub struct Verification {
   pub example: String,
 }
 
-impl Default for Verification {
-  fn default() -> Self {
-    Self {
-      verification_type: String::new(),
-      description: String::new(),
-      example: String::new(),
-    }
-  }
-}
-
 impl Verification {
   /// Create a new verification
   #[must_use]
-  pub fn new(verification_type: String, description: String) -> Self {
+  pub const fn new(verification_type: String, description: String) -> Self {
     Self {
       verification_type,
       description,

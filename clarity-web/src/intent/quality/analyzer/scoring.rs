@@ -32,12 +32,12 @@ pub fn analyze_spec(spec: &Spec) -> QualityReport {
 #[must_use]
 pub fn calculate_coverage_score(spec: &Spec) -> u8 {
   let score = 100_u16
-    .saturating_sub((!check_has_error_tests(spec)) as u16 * 20)
-    .saturating_sub((!check_has_auth_tests(spec)) as u16 * 15)
-    .saturating_sub((!check_has_edge_cases(spec)) as u16 * 15)
-    .saturating_sub((!check_invariants_tested(spec)) as u16 * 20)
-    .saturating_add((calculate_verification_ratio(spec) > 0.8) as u16 * 10)
-    .saturating_add((!spec.invariants.is_empty()) as u16 * 5);
+    .saturating_sub(u16::from(!check_has_error_tests(spec)) * 20)
+    .saturating_sub(u16::from(!check_has_auth_tests(spec)) * 15)
+    .saturating_sub(u16::from(!check_has_edge_cases(spec)) * 15)
+    .saturating_sub(u16::from(!check_invariants_tested(spec)) * 20)
+    .saturating_add(u16::from(calculate_verification_ratio(spec) > 0.8) * 10)
+    .saturating_add(u16::from(!spec.invariants.is_empty()) * 5);
   score.min(100).pipe(|s| s as u8)
 }
 
@@ -54,9 +54,9 @@ pub fn calculate_clarity_score(spec: &Spec) -> u8 {
 
   let score = 100_u16
     .saturating_sub(description_penalty)
-    .saturating_sub((spec.description.is_empty()) as u16 * 10)
-    .saturating_sub((count_vague_language(spec) as u16).saturating_mul(5))
-    .saturating_add((desc_ratio >= 0.9) as u16 * 5);
+    .saturating_sub(u16::from(spec.description.is_empty()) * 10)
+    .saturating_sub(u16::from(count_vague_language(spec)).saturating_mul(5))
+    .saturating_add(u16::from(desc_ratio >= 0.9) * 5);
   score.min(100).pipe(|s| s as u8)
 }
 
@@ -68,12 +68,12 @@ pub fn calculate_testability_score(spec: &Spec) -> u8 {
   let deps_ratio = calculate_dependency_documentation_ratio(spec);
 
   let score = 100_u16
-    .saturating_sub((precond_ratio < 0.5) as u16 * 15)
-    .saturating_sub((postcond_ratio < 0.5) as u16 * 15)
-    .saturating_sub((example_ratio < 0.5) as u16 * 15)
-    .saturating_sub((deps_ratio < 0.5) as u16 * 10)
-    .saturating_add((precond_ratio >= 0.8 && postcond_ratio >= 0.8) as u16 * 10)
-    .saturating_add((example_ratio >= 0.8) as u16 * 5);
+    .saturating_sub(u16::from(precond_ratio < 0.5) * 15)
+    .saturating_sub(u16::from(postcond_ratio < 0.5) * 15)
+    .saturating_sub(u16::from(example_ratio < 0.5) * 15)
+    .saturating_sub(u16::from(deps_ratio < 0.5) * 10)
+    .saturating_add(u16::from(precond_ratio >= 0.8 && postcond_ratio >= 0.8) * 10)
+    .saturating_add(u16::from(example_ratio >= 0.8) * 5);
   score.min(100).pipe(|s| s as u8)
 }
 
@@ -93,13 +93,13 @@ pub fn calculate_ai_readiness_score(spec: &Spec) -> u8 {
   let example_ratio = calculate_example_ratio(spec);
 
   let score = 100_u16
-    .saturating_sub((!has_impl_hints) as u16 * 20)
-    .saturating_sub((!has_security_hints) as u16 * 15)
-    .saturating_sub((!has_entity_hints) as u16 * 10)
-    .saturating_sub((!has_lib_hints) as u16 * 5)
-    .saturating_sub((!has_style_hints) as u16 * 5)
-    .saturating_sub((example_ratio < 0.5) as u16 * 15)
-    .saturating_add((has_impl_hints && has_security_hints && has_entity_hints) as u16 * 10);
+    .saturating_sub(u16::from(!has_impl_hints) * 20)
+    .saturating_sub(u16::from(!has_security_hints) * 15)
+    .saturating_sub(u16::from(!has_entity_hints) * 10)
+    .saturating_sub(u16::from(!has_lib_hints) * 5)
+    .saturating_sub(u16::from(!has_style_hints) * 5)
+    .saturating_sub(u16::from(example_ratio < 0.5) * 15)
+    .saturating_add(u16::from(has_impl_hints && has_security_hints && has_entity_hints) * 10);
   score.min(100).pipe(|s| s as u8)
 }
 
@@ -119,11 +119,11 @@ pub(super) fn calculate_overall_score_from_values(
   testability: u8,
   ai_readiness: u8,
 ) -> u8 {
-  let weighted_sum = (coverage as u16)
+  let weighted_sum = u16::from(coverage)
     .saturating_mul(30)
-    .saturating_add((clarity as u16).saturating_mul(25))
-    .saturating_add((testability as u16).saturating_mul(25))
-    .saturating_add((ai_readiness as u16).saturating_mul(20));
+    .saturating_add(u16::from(clarity).saturating_mul(25))
+    .saturating_add(u16::from(testability).saturating_mul(25))
+    .saturating_add(u16::from(ai_readiness).saturating_mul(20));
   (weighted_sum / 100).pipe(|s| s as u8)
 }
 
@@ -240,7 +240,7 @@ pub(super) fn count_vague_language(spec: &Spec) -> u8 {
         .filter(|word| text.contains(*word))
         .count() as u8
     })
-    .fold(0_u8, |acc, c| acc.saturating_add(c))
+    .fold(0_u8, u8::saturating_add)
     .min(20)
 }
 

@@ -1,12 +1,12 @@
 use crate::intent::interview::types::{Answer, InterviewSession, InterviewStage};
-use crate::intent::plan::plan_emit_beads::{check_existing_beads, EmissionResult};
+use crate::intent::plan::plan_emit_beads::{check_existing_beads, EmissionMode, EmissionResult};
 use crate::intent::plan::types::{ExecutionPlan, PlanBead, PlanError, PlanPhase};
 use std::collections::{HashMap, HashSet};
 
 pub fn emit_beads(
   session: &InterviewSession,
   plan: &mut ExecutionPlan,
-  dry_run: bool,
+  mode: EmissionMode,
 ) -> Result<(Vec<PlanBead>, EmissionResult), PlanError> {
   validate_session(session)?;
 
@@ -23,7 +23,7 @@ pub fn emit_beads(
     .chain(from_conflicts)
     .collect::<Vec<_>>();
 
-  if !dry_run {
+  if mode.should_persist() {
     emitted_beads
       .iter()
       .for_each(|bead| match plan.add_bead(bead.clone()) {
@@ -87,7 +87,7 @@ fn generate_beads_from_gaps(
   session
     .gaps
     .iter()
-    .filter(|gap| !gap.resolved)
+    .filter(|gap| !gap.is_resolved())
     .filter_map(|gap| {
       let title = format!("Address gap: {}", gap.field);
       if check_existing_beads(std::slice::from_ref(&title), existing_titles).is_empty() {
@@ -109,7 +109,7 @@ fn generate_beads_from_gaps(
         })
         .map_or_else(
           |error| {
-            result.add_error(format!("Failed to create gap bead: {}", error));
+            result.add_error(format!("Failed to create gap bead: {error}"));
             None
           },
           Some,
@@ -126,7 +126,7 @@ fn generate_beads_from_conflicts(
   session
     .conflicts
     .iter()
-    .filter(|conflict| conflict.chosen.is_none())
+    .filter(|conflict| !conflict.is_resolved())
     .filter_map(|conflict| {
       let title = format!(
         "Resolve conflict: {} vs {}",
@@ -150,7 +150,7 @@ fn generate_beads_from_conflicts(
         })
         .map_or_else(
           |error| {
-            result.add_error(format!("Failed to create conflict bead: {}", error));
+            result.add_error(format!("Failed to create conflict bead: {error}"));
             None
           },
           Some,
@@ -228,7 +228,7 @@ fn update_plan_phases(plan: &mut ExecutionPlan) {
         .map(|bead| bead.id.clone())
         .collect::<Vec<_>>();
 
-      let mut phase = PlanPhase::new(phase_number, format!("Phase {}", phase_number));
+      let mut phase = PlanPhase::new(phase_number, format!("Phase {phase_number}"));
       bead_ids
         .into_iter()
         .for_each(|bead_id| phase.add_bead(bead_id));

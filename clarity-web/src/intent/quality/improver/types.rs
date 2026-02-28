@@ -44,7 +44,7 @@ impl ImprovementSuggestion {
   }
 
   #[must_use]
-  pub fn is_high_priority(&self) -> bool {
+  pub const fn is_high_priority(&self) -> bool {
     self.priority >= 8
   }
 
@@ -54,7 +54,7 @@ impl ImprovementSuggestion {
   }
 
   #[must_use]
-  pub fn is_low_priority(&self) -> bool {
+  pub const fn is_low_priority(&self) -> bool {
     self.priority <= 3
   }
 }
@@ -76,7 +76,7 @@ pub enum IssueCategory {
 
 impl IssueCategory {
   #[must_use]
-  pub fn label(self) -> &'static str {
+  pub const fn label(self) -> &'static str {
     match self {
       Self::MissingTests => "Missing Tests",
       Self::VagueRules => "Vague Rules",
@@ -93,7 +93,7 @@ impl IssueCategory {
   }
 
   #[must_use]
-  pub fn all() -> &'static [IssueCategory] {
+  pub const fn all() -> &'static [Self] {
     &[
       Self::MissingTests,
       Self::VagueRules,
@@ -159,7 +159,7 @@ pub struct QualityReport {
 
 impl QualityReport {
   #[must_use]
-  pub fn new() -> Self {
+  pub const fn new() -> Self {
     Self {
       overall_score: 0,
       issues: Vec::new(),

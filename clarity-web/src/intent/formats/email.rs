@@ -1,5 +1,31 @@
 use super::{EmailError, FormatError};
 
+// ============================================================================
+// EMAIL FORMAT CONSTANTS (RFC 5321 / RFC 5322)
+// ============================================================================
+
+/// Maximum length of the local part (before @) in an email address.
+///
+/// RFC 5321 specifies that the maximum total length of a reverse-path
+/// (including the local-part) is 256 characters, but the local-part
+/// itself has a maximum of 64 characters.
+const MAX_LOCAL_PART_LENGTH: usize = 64;
+
+/// Maximum length of the domain part (after @) in an email address.
+///
+/// RFC 5321 specifies a maximum domain length of 255 characters.
+const MAX_DOMAIN_LENGTH: usize = 255;
+
+/// Maximum length of a single domain label (segment between dots).
+///
+/// RFC 1035 specifies that each label in a domain name can be at most
+/// 63 octets (characters).
+const MAX_DOMAIN_LABEL_LENGTH: usize = 63;
+
+/// Special characters allowed in the local part of an email address.
+///
+/// RFC 5322 allows these characters in the local part (with some restrictions
+/// on dots and quoted strings).
 const ALLOWED_LOCAL_SPECIAL: &[char] = &[
   '!', '#', '$', '%', '&', '\'', '*', '+', '-', '/', '=', '?', '^', '_', '`', '{', '|', '}', '~',
   '.', '"',
@@ -26,7 +52,7 @@ fn validate_email_local(local: &str) -> Result<(), EmailError> {
   if local.is_empty() {
     return Err(EmailError::EmptyLocalPart);
   }
-  if local.len() > 64 {
+  if local.len() > MAX_LOCAL_PART_LENGTH {
     return Err(EmailError::LocalPartTooLong);
   }
   if local.starts_with('.') {
@@ -53,7 +79,7 @@ fn validate_email_domain(domain: &str) -> Result<(), EmailError> {
   if domain.is_empty() {
     return Err(EmailError::EmptyDomain);
   }
-  if domain.len() > 255 {
+  if domain.len() > MAX_DOMAIN_LENGTH {
     return Err(EmailError::DomainTooLong);
   }
   if domain.starts_with('.') {
@@ -80,7 +106,7 @@ fn validate_domain_label(label: &str) -> Result<(), EmailError> {
   if label.is_empty() {
     return Err(EmailError::ConsecutiveDots);
   }
-  if label.len() > 63 {
+  if label.len() > MAX_DOMAIN_LABEL_LENGTH {
     return Err(EmailError::DomainLabelTooLong);
   }
   if label.starts_with('-') {

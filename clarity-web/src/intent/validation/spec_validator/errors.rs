@@ -27,8 +27,5 @@ pub enum SpecValidationError {
   #[error("unknown dependency: '{0}' references non-existent behavior or feature")]
   UnknownDependency(String),
   #[error("validation failed with {count} errors")]
-  MultipleValidationErrors {
-    count: usize,
-    errors: Vec<SpecValidationError>,
-  },
+  MultipleValidationErrors { count: usize, errors: Vec<Self> },
 }
