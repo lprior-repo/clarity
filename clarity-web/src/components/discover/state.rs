@@ -581,6 +581,257 @@ impl fmt::Display for ConfirmSubPhase {
   }
 }
 
+/// AI request status for tracking the lifecycle of AI operations
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum AiRequestStatus {
+  /// No active AI request
+  #[default]
+  Idle,
+  /// AI request in progress
+  Loading,
+  /// AI request completed successfully
+  Success,
+  /// AI request failed
+  Error,
+}
+
+impl AiRequestStatus {
+  /// Get a human-readable display name
+  #[must_use]
+  pub const fn display_name(self) -> &'static str {
+    match self {
+      Self::Idle => "Ready",
+      Self::Loading => "Processing",
+      Self::Success => "Complete",
+      Self::Error => "Error",
+    }
+  }
+
+  /// Check if this status represents an active request
+  #[must_use]
+  pub const fn is_active(self) -> bool {
+    matches!(self, Self::Loading)
+  }
+
+  /// Check if this status represents a terminal state
+  #[must_use]
+  pub const fn is_terminal(self) -> bool {
+    matches!(self, Self::Success | Self::Error)
+  }
+}
+
+/// Error categories for AI operations
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum AiErrorCategory {
+  /// Network connectivity issue
+  Network,
+  /// Authentication/authorization failure
+  Authentication,
+  /// Rate limit exceeded
+  RateLimited,
+  /// Request timed out
+  Timeout,
+  /// Unknown/unclassified error
+  #[default]
+  Unknown,
+}
+
+impl AiErrorCategory {
+  /// Get a human-readable error category name
+  #[must_use]
+  pub const fn display_name(self) -> &'static str {
+    match self {
+      Self::Network => "Network Error",
+      Self::Authentication => "Authentication Error",
+      Self::RateLimited => "Rate Limited",
+      Self::Timeout => "Timeout",
+      Self::Unknown => "Error",
+    }
+  }
+
+  /// Get a suggested action for this error category
+  #[must_use]
+  pub const fn suggestion(self) -> &'static str {
+    match self {
+      Self::Network => "Check your internet connection and try again.",
+      Self::Authentication => "Verify your credentials are correct.",
+      Self::RateLimited => "Wait a moment before trying again.",
+      Self::Timeout => "The request took too long. Try with shorter input.",
+      Self::Unknown => "An unexpected error occurred. Please try again.",
+    }
+  }
+
+  /// Infer error category from an error message
+  #[must_use]
+  pub fn from_error_message(message: &str) -> Self {
+    let lower = message.to_lowercase();
+    if lower.contains("network") || lower.contains("connection") || lower.contains("timeout") {
+      Self::Network
+    } else if lower.contains("unauthorized") || lower.contains("forbidden") || lower.contains("auth") {
+      Self::Authentication
+    } else if lower.contains("rate limit") || lower.contains("too many") {
+      Self::RateLimited
+    } else if lower.contains("timed out") {
+      Self::Timeout
+    } else {
+      Self::Unknown
+    }
+  }
+}
+
+/// AI provider information for status display
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct AiProviderInfo {
+  /// Provider name (e.g., "opencode")
+  pub provider: String,
+  /// Optional model name (e.g., "glm-5")
+  pub model: Option<String>,
+  /// Processing duration in milliseconds
+  pub processing_duration_ms: Option<u64>,
+}
+
+impl AiProviderInfo {
+  /// Create new provider info
+  #[must_use]
+  pub fn new(provider: String, model: Option<String>) -> Self {
+    Self {
+      provider,
+      model,
+      processing_duration_ms: None,
+    }
+  }
+
+  /// Create provider info from extraction results
+  #[must_use]
+  pub fn from_extraction(provider: String, model: Option<String>, duration_ms: u64) -> Self {
+    Self {
+      provider,
+      model,
+      processing_duration_ms: Some(duration_ms),
+    }
+  }
+
+  /// Check if provider info is configured
+  #[must_use]
+  pub fn is_configured(&self) -> bool {
+    !self.provider.is_empty()
+  }
+
+  /// Get a display string for the provider/model
+  #[must_use]
+  pub fn display_string(&self) -> String {
+    match &self.model {
+      Some(model) => format!("{} / {}", self.provider, model),
+      None => self.provider.clone(),
+    }
+  }
+}
+
+/// Complete AI status for tracking operations
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+pub struct AiStatus {
+  /// Current request status
+  pub status: AiRequestStatus,
+  /// Provider information
+  pub provider_info: AiProviderInfo,
+  /// Error message (if any)
+  pub error_message: Option<String>,
+  /// Error category (if any)
+  pub error_category: AiErrorCategory,
+}
+
+impl AiStatus {
+  /// Create an idle status
+  #[must_use]
+  pub fn idle() -> Self {
+    Self::default()
+  }
+
+  /// Create a loading status
+  #[must_use]
+  pub fn loading(provider: String, model: Option<String>) -> Self {
+    Self {
+      status: AiRequestStatus::Loading,
+      provider_info: AiProviderInfo::new(provider, model),
+      error_message: None,
+      error_category: AiErrorCategory::Unknown,
+    }
+  }
+
+  /// Create a success status
+  #[must_use]
+  pub fn success(provider: String, model: Option<String>, duration_ms: u64) -> Self {
+    Self {
+      status: AiRequestStatus::Success,
+      provider_info: AiProviderInfo::from_extraction(provider, model, duration_ms),
+      error_message: None,
+      error_category: AiErrorCategory::Unknown,
+    }
+  }
+
+  /// Create an error status
+  #[must_use]
+  pub fn error(message: String, category: AiErrorCategory) -> Self {
+    Self {
+      status: AiRequestStatus::Error,
+      provider_info: AiProviderInfo::default(),
+      error_message: Some(message),
+      error_category: category,
+    }
+  }
+
+  /// Check if currently loading
+  #[must_use]
+  pub const fn is_loading(&self) -> bool {
+    matches!(self.status, AiRequestStatus::Loading)
+  }
+
+  /// Check if operation succeeded
+  #[must_use]
+  pub const fn is_success(&self) -> bool {
+    matches!(self.status, AiRequestStatus::Success)
+  }
+
+  /// Check if operation failed
+  #[must_use]
+  pub const fn is_error(&self) -> bool {
+    matches!(self.status, AiRequestStatus::Error)
+  }
+
+  /// Get a summary string for display
+  #[must_use]
+  pub fn summary(&self) -> String {
+    match self.status {
+      AiRequestStatus::Idle => "AI: Ready".to_string(),
+      AiRequestStatus::Loading => {
+        if self.provider_info.is_configured() {
+          format!("AI: Processing with {}", self.provider_info.display_string())
+        } else {
+          "AI: Processing".to_string()
+        }
+      }
+      AiRequestStatus::Success => {
+        let duration = self
+          .provider_info
+          .processing_duration_ms
+          .map_or(String::new(), |d| format!(" in {d}ms"));
+        if self.provider_info.is_configured() {
+          format!("AI: {}{}", self.provider_info.display_string(), duration)
+        } else {
+          format!("AI: Complete{duration}")
+        }
+      }
+      AiRequestStatus::Error => {
+        let category = self.error_category.display_name();
+        match &self.error_message {
+          Some(msg) => format!("AI: {} - {}", category, msg),
+          None => format!("AI: {}", category),
+        }
+      }
+    }
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
