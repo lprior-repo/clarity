@@ -24,8 +24,8 @@ pub use spec_validator::{
 
 // Re-export interpolation types (WP20)
 pub use interpolation::{
-  extract_variables, has_placeholders, interpolate_string, resolve_path, validate_variables,
-  Context, InterpolationError,
+  extract_capture, extract_variables, has_placeholders, interpolate_headers, interpolate_string,
+  json_to_string, resolve_path, validate_variables, Context, InterpolationError,
 };
 
 // Re-export rule types (WP21)

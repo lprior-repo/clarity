@@ -1,8 +1,3 @@
-//! Provider configuration resolution
-//!
-//! This module handles resolving provider configuration from various sources
-//! (environment variables, config files, defaults).
-
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
@@ -10,185 +5,101 @@
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
+//! Provider resolution module
+//!
+//! Resolves provider configuration to create concrete provider instances.
+
+use super::r#trait::ExtractionError;
 use serde::{Deserialize, Serialize};
 
 /// Resolved provider configuration
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ResolvedProviderConfig {
-  /// Provider name (e.g., "opencode", "openai")
-  pub provider: String,
-  /// Model to use (provider-specific)
+  /// Provider type identifier
+  pub provider_type: String,
+  /// Model identifier
   pub model: Option<String>,
-  /// API endpoint (for custom deployments)
+  /// API endpoint URL
   pub endpoint: Option<String>,
-  /// API key (if required)
-  pub api_key: Option<String>,
-  /// Additional configuration options
-  pub options: Vec<String>,
+  /// Additional configuration
+  pub extra: serde_json::Value,
 }
 
-impl Default for ResolvedProviderConfig {
-  fn default() -> Self {
-    Self {
-      provider: "opencode".to_string(),
-      model: None,
-      endpoint: None,
-      api_key: None,
-      options: Vec::new(),
-    }
-  }
+/// Resolve provider configuration from a config value
+///
+/// # Errors
+/// Returns an error if the configuration is invalid or missing required fields.
+pub fn resolve_provider_config(
+  config: &serde_json::Value,
+) -> Result<ResolvedProviderConfig, ExtractionError> {
+  let provider_type = config
+    .get("provider_type")
+    .and_then(|v| v.as_str())
+    .unwrap_or("opencode")
+    .to_string();
+
+  let model = config.get("model").and_then(|v| v.as_str()).map(String::from);
+
+  let endpoint = config.get("endpoint").and_then(|v| v.as_str()).map(String::from);
+
+  let extra = config.get("extra").cloned().unwrap_or(serde_json::Value::Null);
+
+  Ok(ResolvedProviderConfig {
+    provider_type,
+    model,
+    endpoint,
+    extra,
+  })
 }
 
-impl ResolvedProviderConfig {
-  /// Create a new resolved config with the given provider
-  #[must_use]
-  pub fn new(provider: String) -> Self {
-    Self {
-      provider,
-      ..Self::default()
-    }
-  }
-
-  /// Create a resolved config with provider and model
-  #[must_use]
-  pub fn with_model(provider: String, model: String) -> Self {
-    Self {
-      provider,
-      model: Some(model),
-      ..Self::default()
-    }
-  }
-
-  /// Check if the configuration is valid
-  #[must_use]
-  pub fn is_valid(&self) -> bool {
-    !self.provider.is_empty()
-  }
-}
-
-/// Resolve provider configuration from environment and defaults.
+/// Resolve provider from a provider configuration string
 ///
-/// This function attempts to resolve the provider configuration by:
-/// 1. Checking environment variables
-/// 2. Falling back to defaults
-///
-/// # Returns
-/// A resolved provider configuration
-#[must_use]
-pub fn resolve_provider_config() -> ResolvedProviderConfig {
-  // Check for environment variable overrides
-  if let Ok(provider) = std::env::var("CLARITY_AI_PROVIDER") {
-    let model = std::env::var("CLARITY_AI_MODEL").ok();
-    let endpoint = std::env::var("CLARITY_AI_ENDPOINT").ok();
-    let api_key = std::env::var("CLARITY_AI_API_KEY").ok();
+/// # Errors
+/// Returns an error if the configuration string cannot be parsed or is invalid.
+pub fn resolve_from_provider_config(
+  config_str: &str,
+) -> Result<ResolvedProviderConfig, ExtractionError> {
+  let config: serde_json::Value = serde_json::from_str(config_str)
+    .map_err(|e| ExtractionError::ConfigurationError(format!("Invalid JSON config: {e}")))?;
 
-    return ResolvedProviderConfig {
-      provider,
-      model,
-      endpoint,
-      api_key,
-      options: Vec::new(),
-    };
-  }
-
-  // Default to opencode provider
-  ResolvedProviderConfig::default()
-}
-
-/// Resolve provider configuration from an existing config structure.
-///
-/// This function takes a pre-existing configuration and resolves it
-/// into a standardized `ResolvedProviderConfig`.
-///
-/// # Arguments
-/// * `config` - Optional provider configuration (may be from app state)
-///
-/// # Returns
-/// A resolved provider configuration
-#[must_use]
-pub fn resolve_from_provider_config(config: Option<&ProviderConfigSource>) -> ResolvedProviderConfig {
-  match config {
-    Some(cfg) => ResolvedProviderConfig {
-      provider: cfg.provider.clone(),
-      model: cfg.model.clone(),
-      endpoint: cfg.endpoint.clone(),
-      api_key: cfg.api_key.clone(),
-      options: cfg.options.clone(),
-    },
-    None => resolve_provider_config(),
-  }
-}
-
-/// Source configuration for provider resolution
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
-pub struct ProviderConfigSource {
-  /// Provider name
-  pub provider: String,
-  /// Model to use
-  pub model: Option<String>,
-  /// API endpoint
-  pub endpoint: Option<String>,
-  /// API key
-  pub api_key: Option<String>,
-  /// Additional options
-  pub options: Vec<String>,
+  resolve_provider_config(&config)
 }
 
 #[cfg(test)]
 mod tests {
   use super::*;
+  use serde_json::json;
 
   #[test]
-  fn test_resolved_config_default() {
-    let config = ResolvedProviderConfig::default();
-    assert_eq!(config.provider, "opencode");
-    assert!(config.model.is_none());
-    assert!(config.is_valid());
+  fn test_resolve_provider_config_defaults() {
+    let config = json!({});
+    let resolved = resolve_provider_config(&config).unwrap();
+    assert_eq!(resolved.provider_type, "opencode");
+    assert!(resolved.model.is_none());
+    assert!(resolved.endpoint.is_none());
   }
 
   #[test]
-  fn test_resolved_config_new() {
-    let config = ResolvedProviderConfig::new("openai".to_string());
-    assert_eq!(config.provider, "openai");
-    assert!(config.model.is_none());
-    assert!(config.is_valid());
+  fn test_resolve_provider_config_with_values() {
+    let config = json!({
+      "provider_type": "openai",
+      "model": "gpt-4",
+      "endpoint": "https://api.openai.com/v1"
+    });
+    let resolved = resolve_provider_config(&config).unwrap();
+    assert_eq!(resolved.provider_type, "openai");
+    assert_eq!(resolved.model, Some("gpt-4".to_string()));
+    assert_eq!(
+      resolved.endpoint,
+      Some("https://api.openai.com/v1".to_string())
+    );
   }
 
   #[test]
-  fn test_resolved_config_with_model() {
-    let config = ResolvedProviderConfig::with_model("openai".to_string(), "gpt-4".to_string());
-    assert_eq!(config.provider, "openai");
-    assert_eq!(config.model, Some("gpt-4".to_string()));
-    assert!(config.is_valid());
-  }
-
-  #[test]
-  fn test_resolved_config_invalid_empty_provider() {
-    let config = ResolvedProviderConfig {
-      provider: String::new(),
-      ..Default::default()
-    };
-    assert!(!config.is_valid());
-  }
-
-  #[test]
-  fn test_resolve_from_provider_config_none() {
-    let config = resolve_from_provider_config(None);
-    assert_eq!(config.provider, "opencode");
-  }
-
-  #[test]
-  fn test_resolve_from_provider_config_some() {
-    let source = ProviderConfigSource {
-      provider: "anthropic".to_string(),
-      model: Some("claude-3".to_string()),
-      endpoint: None,
-      api_key: Some("test-key".to_string()),
-      options: Vec::new(),
-    };
-    let config = resolve_from_provider_config(Some(&source));
-    assert_eq!(config.provider, "anthropic");
-    assert_eq!(config.model, Some("claude-3".to_string()));
-    assert_eq!(config.api_key, Some("test-key".to_string()));
+  fn test_resolve_from_provider_config() {
+    let config_str = r#"{"provider_type": "test", "model": "test-model"}"#;
+    let resolved = resolve_from_provider_config(config_str).unwrap();
+    assert_eq!(resolved.provider_type, "test");
+    assert_eq!(resolved.model, Some("test-model".to_string()));
   }
 }
