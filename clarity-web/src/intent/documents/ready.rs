@@ -335,6 +335,9 @@ mod tests {
     Spec {
       name: "Test API".to_string(),
       description: "A test API".to_string(),
+      audience: String::new(),
+      version: String::new(),
+      success_criteria: Vec::new(),
       features: vec![Feature {
         name: "Auth".to_string(),
         description: "Authentication".to_string(),

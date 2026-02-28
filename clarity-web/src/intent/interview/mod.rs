@@ -7,7 +7,9 @@
 //! - JSONL storage and session diffing
 //! - Question loading and management
 //! - Contract validation
+//! - Answer extraction (field extraction from free-text responses)
 
+pub mod answer_extraction;
 pub mod interview_contract;
 pub mod interview_questions;
 pub mod question_loader;
@@ -16,6 +18,7 @@ pub mod storage;
 pub mod types;
 
 // Re-export types
+pub use answer_extraction::*;
 pub use interview_contract::*;
 pub use interview_questions::*;
 pub use question_loader::*;

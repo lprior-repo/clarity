@@ -251,6 +251,9 @@ pub fn create_test_spec(behavior_count: usize) -> Spec {
   Spec {
     name: "test".to_string(),
     description: "test".to_string(),
+    audience: String::new(),
+    version: String::new(),
+    success_criteria: Vec::new(),
     features: vec![Feature {
       name: "test-feature".to_string(),
       description: "test".to_string(),

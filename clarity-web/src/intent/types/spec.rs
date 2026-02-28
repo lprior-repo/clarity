@@ -68,6 +68,9 @@ impl Spec {
     Self {
       name: name.into(),
       description: String::new(),
+      audience: String::new(),
+      version: String::new(),
+      success_criteria: Vec::new(),
       features: Vec::new(),
       invariants: Vec::new(),
       anti_patterns: Vec::new(),

@@ -275,7 +275,7 @@ pub fn ExtractFieldsButtonWithServer(props: ExtractFieldsButtonWithServerProps) 
                           let on_error = on_error;
 
                           async move {
-                              let result = extract_fields_server(prompt_text, session).await;
+                              let result = extract_fields_server(prompt_text, session, None).await;
 
                               *is_loading.write() = false;
 
