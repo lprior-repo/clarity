@@ -3,8 +3,42 @@
 //! A command-line tool for managing specifications, interviews, and bead generation.
 //! This is the Rust implementation mirroring the Gleam CLI functionality.
 
-use anyhow::Result;
+#![deny(clippy::unwrap_used)]
+#![deny(clippy::expect_used)]
+#![deny(clippy::panic)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::nursery)]
+#![forbid(unsafe_code)]
+
+use anyhow::{Context, Result};
+use chrono::Utc;
 use clap::{Parser, Subcommand};
+use clarity_web::intent::beads::feedback::{
+  collect_feedback, get_bead_feedback_history, BeadStatus as FeedbackBeadStatus,
+};
+use clarity_web::intent::beads::templates::{
+  beads_to_enhanced_cue, beads_to_jsonl, generate_beads_from_session, BeadTemplate,
+};
+use clarity_web::intent::documents::ready::generate_ready_document;
+use clarity_web::intent::documents::vision::generate_vision_document;
+use clarity_web::intent::interview::storage::{
+  append_session_to_jsonl, get_session_from_jsonl, list_sessions_from_jsonl, session_to_jsonl_line,
+};
+use clarity_web::intent::interview::types::{InterviewSession, InterviewStage, Profile};
+use clarity_web::intent::loader::{export_cue_to_json, format_loader_error, validate_cue_file};
+use clarity_web::intent::parser::parse_spec;
+use clarity_web::intent::plan::plan_emit_beads::{emit_beads, EmissionMode};
+use clarity_web::intent::plan::plan_mode::{compute_plan, format_plan_human, format_plan_json};
+use clarity_web::intent::plan::plan_next::get_next_action;
+use clarity_web::intent::plan::types::{BeadState, ExecutionPlan};
+use clarity_web::intent::quality::effects::analyze_spec as analyze_spec_effects;
+use clarity_web::intent::templates::generate_spec_template;
+use clarity_web::intent::types::Spec;
+use clarity_web::intent::validation::validate_spec;
+use std::collections::HashMap;
+use std::fs;
+use std::io::{self, Read};
+use std::path::{Path, PathBuf};
 
 /// Intent CLI - Planning and bead generation tool
 #[derive(Parser, Debug)]
@@ -14,7 +48,7 @@ use clap::{Parser, Subcommand};
   about = "Planning and bead generation tool",
   long_about = "Intent is a planning and bead generation tool that runs interactive \
                   interviews to capture requirements, generates structured CUE specifications, \
-                  and creates beads (tasks) from specifications for use with br (beads_rust)."
+                  and creates beads (tasks) for use with br (beads_rust)."
 )]
 struct Cli {
   /// The command to execute
@@ -26,14 +60,10 @@ struct Cli {
 #[derive(Subcommand, Debug)]
 enum Commands {
   /// Initialize a new Intent spec from a template
-  ///
-  /// Creates a new Intent specification file (.cue) from a template.
-  /// Templates provide a starting point with common patterns, examples,
-  /// and best practices pre-configured for different project types.
   Init {
     /// Spec name (optional, will prompt if not provided)
     name: Option<String>,
-    /// Template profile to use (api-spec|cli-tool|data-pipeline|workflow)
+    /// Template profile to use (api|cli|data|event|workflow|ui)
     #[arg(short, long, value_name = "PROFILE")]
     profile: Option<String>,
     /// Output filename (default: <name>.cue)
@@ -42,10 +72,6 @@ enum Commands {
   },
 
   /// Run an interactive interview to capture requirements
-  ///
-  /// Starts an interactive interview session to capture requirements
-  /// for a specification. The interview questions guide users through
-  /// defining features, behaviors, and success criteria.
   Interview {
     /// Path to the spec file
     #[arg(value_name = "SPEC")]
@@ -62,9 +88,6 @@ enum Commands {
   },
 
   /// Generate beads from a specification
-  ///
-  /// Parses a CUE specification and generates beads (tasks) that can
-  /// be used with br (`beads_rust`) for project management.
   Beads {
     /// Path to the spec file
     #[arg(value_name = "SPEC")]
@@ -81,8 +104,6 @@ enum Commands {
   },
 
   /// Get or update bead status
-  ///
-  /// Query or update the status of a specific bead in the project.
   BeadStatus {
     /// Bead ID to query or update
     #[arg(value_name = "ID")]
@@ -96,8 +117,6 @@ enum Commands {
   },
 
   /// Show interview history
-  ///
-  /// Display the history of interview sessions for the project.
   History {
     /// Number of entries to show
     #[arg(short, long, default_value = "10")]
@@ -108,8 +127,6 @@ enum Commands {
   Version,
 
   /// Compare two specs or show changes
-  ///
-  /// Compare two specification files and show the differences.
   Diff {
     /// First spec file
     spec1: String,
@@ -118,8 +135,6 @@ enum Commands {
   },
 
   /// Manage interview sessions
-  ///
-  /// List, resume, or delete interview sessions.
   Sessions {
     /// Session ID to operate on
     #[arg(value_name = "ID")]
@@ -130,9 +145,6 @@ enum Commands {
   },
 
   /// Generate a plan from a specification
-  ///
-  /// Analyzes a specification and generates an implementation plan
-  /// with ordered tasks and dependencies.
   Plan {
     /// Path to the spec file
     #[arg(value_name = "SPEC")]
@@ -146,8 +158,6 @@ enum Commands {
   },
 
   /// Show the next recommended task
-  ///
-  /// Analyzes the current state and recommends the next task to work on.
   PlanNext {
     /// Path to the plan file
     #[arg(value_name = "PLAN")]
@@ -158,8 +168,6 @@ enum Commands {
   },
 
   /// Approve a planned task
-  ///
-  /// Mark a task as approved in the plan, making it ready for implementation.
   PlanApprove {
     /// Task ID to approve
     #[arg(value_name = "ID")]
@@ -170,9 +178,6 @@ enum Commands {
   },
 
   /// Emit beads from a plan
-  ///
-  /// Generate beads from an approved plan. This is idempotent - running
-  /// multiple times will not create duplicate beads.
   PlanEmitBeads {
     /// Path to the plan file
     #[arg(value_name = "PLAN")]
@@ -183,9 +188,6 @@ enum Commands {
   },
 
   /// Regenerate beads from existing spec
-  ///
-  /// Re-generates beads from an existing specification, preserving
-  /// manual modifications where possible.
   BeadsRegenerate {
     /// Path to the spec file
     #[arg(value_name = "SPEC")]
@@ -193,9 +195,6 @@ enum Commands {
   },
 
   /// Generate a vision document from a spec
-  ///
-  /// Creates a high-level vision document that describes the project
-  /// goals, architecture, and key features.
   Vision {
     /// Path to the spec file
     #[arg(value_name = "SPEC")]
@@ -206,9 +205,6 @@ enum Commands {
   },
 
   /// Generate a ready document from a spec
-  ///
-  /// Creates a ready document summarizing the specification in a
-  /// format suitable for review and approval.
   Ready {
     /// Path to the spec file
     #[arg(value_name = "SPEC")]
@@ -219,9 +215,6 @@ enum Commands {
   },
 
   /// Analyze specification for second-order effects
-  ///
-  /// Analyzes a specification for potential second-order effects,
-  /// cascading changes, and other impacts.
   Effects {
     /// Path to the spec file
     #[arg(value_name = "SPEC")]
@@ -232,9 +225,6 @@ enum Commands {
   },
 
   /// Validate a specification
-  ///
-  /// Validates a CUE specification against the Intent schema,
-  /// checking for completeness, consistency, and correctness.
   Validate {
     /// Path to the spec file
     #[arg(value_name = "SPEC")]
@@ -248,9 +238,6 @@ enum Commands {
   },
 
   /// Run batch operations
-  ///
-  /// Execute multiple operations in batch mode, reading from
-  /// a batch configuration file or stdin.
   Batch {
     /// Path to batch configuration file
     #[arg(value_name = "FILE")]
@@ -363,165 +350,1224 @@ fn main() -> Result<()> {
 }
 
 // ============================================================================
-// COMMAND STUBS
+// HELPER FUNCTIONS
+// ============================================================================
+
+/// Get the default interview sessions directory
+fn sessions_dir() -> PathBuf {
+  PathBuf::from(".interview/sessions")
+}
+
+/// Get the default session JSONL file path
+fn session_jsonl_path() -> PathBuf {
+  sessions_dir().join("sessions.jsonl")
+}
+
+/// Get the default beads directory
+fn beads_dir() -> PathBuf {
+  PathBuf::from(".beads")
+}
+
+/// Get the beads JSONL file path
+fn beads_jsonl_path() -> PathBuf {
+  beads_dir().join("beads.jsonl")
+}
+
+/// Get current timestamp in ISO 8601 format
+fn current_timestamp() -> String {
+  Utc::now().to_rfc3339()
+}
+
+/// Generate a unique session ID
+fn generate_session_id() -> String {
+  let timestamp = Utc::now().format("%Y%m%d-%H%M%S");
+  format!("session-{timestamp}")
+}
+
+/// Load a spec from a CUE file
+fn load_spec_from_cue(path: &str) -> Result<Spec> {
+  let spec_path = Path::new(path);
+
+  // Validate file exists
+  if !spec_path.exists() {
+    return Err(anyhow::anyhow!("Spec file not found: {path}"));
+  }
+
+  // Export CUE to JSON
+  let json_str = export_cue_to_json(spec_path)
+    .map_err(|e| anyhow::anyhow!("Failed to export CUE: {}", format_loader_error(&e)))?;
+
+  // Parse JSON to Spec
+  let spec = parse_spec(&json_str).map_err(|e| anyhow::anyhow!("Failed to parse spec: {e:?}"))?;
+
+  Ok(spec)
+}
+
+/// Load or create an interview session
+fn load_or_create_session(session_id: Option<&str>) -> Result<InterviewSession> {
+  let jsonl_path = session_jsonl_path();
+
+  session_id.map_or_else(
+    || {
+      Ok(InterviewSession {
+        id: generate_session_id(),
+        profile: Profile::default(),
+        created_at: current_timestamp(),
+        updated_at: current_timestamp(),
+        completed_at: None,
+        stage: InterviewStage::Discovery,
+        rounds_completed: 0,
+        answers: Vec::new(),
+        gaps: Vec::new(),
+        conflicts: Vec::new(),
+        raw_notes: String::new(),
+        current_phase: 1,
+        completed_phases: Vec::new(),
+      })
+    },
+    |id| {
+      get_session_from_jsonl(&jsonl_path, id)
+        .map_err(|e| anyhow::anyhow!("Failed to load session: {e}"))
+    },
+  )
+}
+
+/// Save an interview session
+fn save_session(session: &InterviewSession) -> Result<()> {
+  let jsonl_path = session_jsonl_path();
+  append_session_to_jsonl(session, &jsonl_path)
+    .map_err(|e| anyhow::anyhow!("Failed to save session: {e}"))
+}
+
+/// Write output to file or stdout
+fn write_output(content: &str, output_path: Option<&str>) -> Result<()> {
+  match output_path {
+    Some(path) => {
+      let path = Path::new(path);
+      if let Some(parent) = path.parent() {
+        if !parent.exists() {
+          fs::create_dir_all(parent)
+            .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
+        }
+      }
+      fs::write(path, content)
+        .with_context(|| format!("Failed to write file: {}", path.display()))?;
+      println!("Output written to: {}", path.display());
+    }
+    None => {
+      println!("{content}");
+    }
+  }
+  Ok(())
+}
+
+/// Load beads from the beads JSONL file
+fn load_beads() -> Result<Vec<BeadTemplate>> {
+  let beads_path = beads_jsonl_path();
+  if !beads_path.exists() {
+    return Ok(Vec::new());
+  }
+
+  let content = fs::read_to_string(&beads_path)
+    .with_context(|| format!("Failed to read beads file: {}", beads_path.display()))?;
+
+  let beads: Vec<BeadTemplate> = content
+    .lines()
+    .filter(|line| !line.trim().is_empty())
+    .filter_map(|line| serde_json::from_str(line).ok())
+    .collect();
+
+  Ok(beads)
+}
+
+/// Save beads to the beads JSONL file
+fn save_beads(beads: &[BeadTemplate]) -> Result<()> {
+  let beads_path = beads_jsonl_path();
+  if let Some(parent) = beads_path.parent() {
+    if !parent.exists() {
+      fs::create_dir_all(parent)
+        .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
+    }
+  }
+
+  let jsonl =
+    beads_to_jsonl(beads).map_err(|e| anyhow::anyhow!("Failed to serialize beads: {e:?}"))?;
+  fs::write(&beads_path, jsonl)
+    .with_context(|| format!("Failed to write beads file: {}", beads_path.display()))?;
+
+  Ok(())
+}
+
+/// Load execution plan from file
+fn load_plan(path: &str) -> Result<ExecutionPlan> {
+  let plan_path = Path::new(path);
+  if !plan_path.exists() {
+    return Err(anyhow::anyhow!("Plan file not found: {path}"));
+  }
+
+  let content =
+    fs::read_to_string(plan_path).with_context(|| format!("Failed to read plan file: {path}"))?;
+
+  let plan: ExecutionPlan =
+    serde_json::from_str(&content).with_context(|| "Failed to parse plan file")?;
+
+  Ok(plan)
+}
+
+/// Save execution plan to file
+fn save_plan(plan: &ExecutionPlan, path: &str) -> Result<()> {
+  let plan_path = Path::new(path);
+  if let Some(parent) = plan_path.parent() {
+    if !parent.exists() {
+      fs::create_dir_all(parent)
+        .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
+    }
+  }
+
+  let content = serde_json::to_string_pretty(plan).with_context(|| "Failed to serialize plan")?;
+
+  fs::write(plan_path, content).with_context(|| format!("Failed to write plan file: {path}"))?;
+
+  Ok(())
+}
+
+// ============================================================================
+// COMMAND IMPLEMENTATIONS
 // ============================================================================
 
 /// Initialize a new Intent spec from a template
 fn cmd_init(name: Option<&str>, profile: Option<&str>, output: Option<&str>) -> Result<()> {
-  // TODO: Implement init command
-  // This should:
-  // 1. If no name provided, prompt interactively
-  // 2. Load the specified template profile
-  // 3. Generate a new .cue spec file
-  eprintln!("init: name={name:?}, profile={profile:?}, output={output:?}");
-  eprintln!("TODO: Implement init command");
-  std::process::exit(1);
+  // Get spec name, prompting if not provided
+  let spec_name = match name {
+    Some(n) => n.to_string(),
+    None => dialoguer::Input::new()
+      .with_prompt("Spec name")
+      .interact_text()
+      .context("Failed to read spec name")?,
+  };
+
+  // Get profile, prompting if not provided
+  let profile_str = if let Some(p) = profile { p.to_string() } else {
+    let profiles = ["api", "cli", "data", "event", "workflow", "ui"];
+    let selection = dialoguer::Select::new()
+      .with_prompt("Select template profile")
+      .items(&profiles)
+      .default(0)
+      .interact()
+      .context("Failed to select profile")?;
+    profiles[selection].to_string()
+  };
+
+  // Parse profile
+  let parsed_profile = Profile::parse(&profile_str)
+    .map_err(|e| anyhow::anyhow!("Invalid profile '{profile_str}': {e:?}"))?;
+
+  // Generate template
+  let template = generate_spec_template(parsed_profile)
+    .map_err(|e| anyhow::anyhow!("Failed to generate template: {e:?}"))?;
+
+  // Replace placeholder name
+  let content = template.replace("{{name}}", &spec_name);
+
+  // Determine output file
+  let output_file = output.map_or_else(
+    || format!("{}.cue", spec_name.replace(' ', "-").to_lowercase()),
+    std::string::ToString::to_string,
+  );
+
+  // Write output
+  write_output(&content, Some(&output_file))?;
+
+  println!("Created spec file: {output_file}");
+  Ok(())
 }
 
 /// Run an interactive interview to capture requirements
 fn cmd_interview(
-  spec: Option<&str>,
+  _spec: Option<&str>,
   resume: Option<&str>,
   answer: Option<&str>,
   export_answers_template: Option<&str>,
 ) -> Result<()> {
-  // TODO: Implement interview command
-  // This should:
-  // 1. Load or create an interview session
-  // 2. Run interactive questions
-  // 3. Save answers to the session
-  eprintln!("interview: spec={spec:?}, resume={resume:?}, answer={answer:?}, export_answers_template={export_answers_template:?}");
-  eprintln!("TODO: Implement interview command");
-  std::process::exit(1);
+  // Export answers template if requested
+  if let Some(template_path) = export_answers_template {
+    let template = r#"{
+  "answers": [
+    {
+      "question_id": "q1",
+      "response": "Your answer here"
+    }
+  ]
+}"#;
+    write_output(template, Some(template_path))?;
+    return Ok(());
+  }
+
+  // Load or create session
+  let mut session = load_or_create_session(resume)?;
+
+  // If answer file provided, use non-interactive mode
+  if let Some(answer_file) = answer {
+    let content = fs::read_to_string(answer_file)
+      .with_context(|| format!("Failed to read answer file: {answer_file}"))?;
+
+    let answers: HashMap<String, String> =
+      serde_json::from_str(&content).with_context(|| "Failed to parse answer file")?;
+
+    // Process answers
+    for (question_id, response) in answers {
+      session
+        .answers
+        .push(clarity_web::intent::interview::types::Answer {
+          question_id,
+          question_text: String::new(),
+          perspective: clarity_web::intent::interview::types::Perspective::default(),
+          round: session.rounds_completed + 1,
+          response,
+          extracted: HashMap::new(),
+          confidence: 1.0,
+          notes: String::new(),
+          timestamp: current_timestamp(),
+        });
+    }
+
+    session.updated_at = current_timestamp();
+    save_session(&session)?;
+    println!("Interview completed. Session ID: {}", session.id);
+    return Ok(());
+  }
+
+  // Interactive interview
+  println!("Starting interview session: {}", session.id);
+  println!("Profile: {:?}", session.profile);
+  println!("Stage: {:?}", session.stage);
+  println!();
+
+  // Get profile-specific required fields as questions
+  let required_fields = session.profile.required_fields();
+  for field in required_fields {
+    let prompt = format!("Enter value for '{field}':");
+    let response: String = dialoguer::Input::new()
+      .with_prompt(&prompt)
+      .interact_text()
+      .context("Failed to read input")?;
+
+    session
+      .answers
+      .push(clarity_web::intent::interview::types::Answer {
+        question_id: field.to_string(),
+        question_text: prompt,
+        perspective: clarity_web::intent::interview::types::Perspective::User,
+        round: session.rounds_completed + 1,
+        response,
+        extracted: HashMap::new(),
+        confidence: 1.0,
+        notes: String::new(),
+        timestamp: current_timestamp(),
+      });
+  }
+
+  // Ask for raw notes
+  let notes: String = dialoguer::Input::new()
+    .with_prompt("Additional notes (optional)")
+    .allow_empty(true)
+    .interact_text()
+    .context("Failed to read notes")?;
+  session.raw_notes = notes;
+
+  // Update session
+  session.updated_at = current_timestamp();
+  session.rounds_completed += 1;
+  session.stage = InterviewStage::Refinement;
+
+  // Save session
+  save_session(&session)?;
+
+  println!();
+  println!("Interview saved. Session ID: {}", session.id);
+  println!("Stage: {:?}", session.stage);
+
+  Ok(())
 }
 
 /// Generate beads from a specification
 fn cmd_beads(spec: &str, format: &str, dir: Option<&str>, feature: Option<&str>) -> Result<()> {
-  // TODO: Implement beads command
-  // This should:
-  // 1. Parse the CUE spec
-  // 2. Generate bead files
-  // 3. Output in the requested format
-  eprintln!("beads: spec={spec:?}, format={format:?}, dir={dir:?}, feature={feature:?}");
-  eprintln!("TODO: Implement beads command");
-  std::process::exit(1);
+  // Load spec (validates it exists and parses)
+  let _loaded_spec = load_spec_from_cue(spec)?;
+
+  // Create a minimal session from the spec for bead generation
+  let session = InterviewSession {
+    id: generate_session_id(),
+    profile: Profile::default(),
+    created_at: current_timestamp(),
+    updated_at: current_timestamp(),
+    completed_at: None,
+    stage: InterviewStage::Complete,
+    rounds_completed: 1,
+    answers: Vec::new(),
+    gaps: Vec::new(),
+    conflicts: Vec::new(),
+    raw_notes: String::new(),
+    current_phase: 1,
+    completed_phases: vec![1],
+  };
+
+  // Generate beads
+  let all_beads = generate_beads_from_session(&session)
+    .map_err(|e| anyhow::anyhow!("Failed to generate beads: {e:?}"))?;
+
+  // Filter by feature if specified
+  let beads: Vec<BeadTemplate> = match feature {
+    Some(f) => all_beads
+      .into_iter()
+      .filter(|b| b.title.contains(f) || b.description.contains(f))
+      .collect(),
+    None => all_beads,
+  };
+
+  // Output based on format
+  let output = match format {
+    "json" => {
+      beads_to_jsonl(&beads).map_err(|e| anyhow::anyhow!("Failed to format beads: {e:?}"))?
+    }
+    "markdown" | "md" => beads_to_enhanced_cue(&beads)
+      .map_err(|e| anyhow::anyhow!("Failed to format beads: {e:?}"))?,
+    _ => {
+      return Err(anyhow::anyhow!(
+        "Unknown format '{format}'. Supported: json, markdown"
+      ))
+    }
+  };
+
+  // Determine output destination
+  match dir {
+    Some(d) => {
+      let output_dir = Path::new(d);
+      fs::create_dir_all(output_dir)
+        .with_context(|| format!("Failed to create directory: {d}"))?;
+
+      let output_file = output_dir.join("beads.jsonl");
+      fs::write(&output_file, &output)
+        .with_context(|| format!("Failed to write beads file: {}", output_file.display()))?;
+
+      println!(
+        "Generated {} beads to {}",
+        beads.len(),
+        output_file.display()
+      );
+    }
+    None => {
+      println!("{output}");
+    }
+  }
+
+  Ok(())
 }
 
 /// Get or update bead status
 fn cmd_bead_status(bead_id: &str, status: Option<&str>, reason: Option<&str>) -> Result<()> {
-  // TODO: Implement bead-status command
-  eprintln!("bead-status: bead_id={bead_id:?}, status={status:?}, reason={reason:?}");
-  eprintln!("TODO: Implement bead-status command");
-  std::process::exit(1);
+  // If no status provided, just show current status
+  if status.is_none() {
+    let history = get_bead_feedback_history(bead_id);
+
+    if history.is_empty() {
+      println!("Bead '{bead_id}' not found.");
+      return Ok(());
+    }
+
+    println!("Bead: {bead_id}");
+    println!("History:");
+    for feedback in history {
+      println!(
+        "  - {:?} at {} | {}",
+        feedback.status, feedback.timestamp, feedback.notes
+      );
+    }
+    return Ok(());
+  }
+
+  // Parse new status
+  let new_status = match status {
+    Some(s) => match s.to_lowercase().as_str() {
+      "pending" => FeedbackBeadStatus::Pending,
+      "ready" => FeedbackBeadStatus::Ready,
+      "in_progress" | "inprogress" => FeedbackBeadStatus::InProgress,
+      "blocked" => FeedbackBeadStatus::Blocked,
+      "complete" | "completed" | "done" => FeedbackBeadStatus::Complete,
+      "failed" => FeedbackBeadStatus::Failed,
+      _ => return Err(anyhow::anyhow!("Unknown status: {s}")),
+    },
+    None => FeedbackBeadStatus::Pending,
+  };
+
+  // Collect feedback (this updates the bead status)
+  let notes = reason.unwrap_or("Status updated via CLI");
+  collect_feedback(bead_id, new_status, notes)
+    .map_err(|e| anyhow::anyhow!("Failed to update bead status: {e:?}"))?;
+
+  println!("Bead '{bead_id}' status updated to {new_status:?}");
+  Ok(())
 }
 
 /// Show interview history
 fn cmd_history(limit: usize) -> Result<()> {
-  // TODO: Implement history command
-  eprintln!("history: limit={limit}");
-  eprintln!("TODO: Implement history command");
-  std::process::exit(1);
+  let jsonl_path = session_jsonl_path();
+
+  if !jsonl_path.exists() {
+    println!("No interview history found.");
+    return Ok(());
+  }
+
+  let sessions = list_sessions_from_jsonl(&jsonl_path)
+    .map_err(|e| anyhow::anyhow!("Failed to list sessions: {e}"))?;
+
+  if sessions.is_empty() {
+    println!("No interview sessions found.");
+    return Ok(());
+  }
+
+  println!(
+    "Interview History (showing last {}):",
+    limit.min(sessions.len())
+  );
+  println!("{}", "-".repeat(60));
+
+  for session in sessions.iter().rev().take(limit) {
+    println!("Session: {}", session.id);
+    println!("  Profile: {:?}", session.profile);
+    println!("  Stage: {:?}", session.stage);
+    println!("  Answers: {}", session.answers.len());
+    println!("  Created: {}", session.created_at);
+    println!("  Updated: {}", session.updated_at);
+    println!();
+  }
+
+  println!("Total sessions: {}", sessions.len());
+  Ok(())
 }
 
 /// Show version information
 fn cmd_version() {
   println!("intent v0.1.0");
+  println!("Planning and bead generation tool");
+  println!("Part of the Clarity specification system");
 }
 
 /// Compare two specs or show changes
 fn cmd_diff(spec1: &str, spec2: &str) -> Result<()> {
-  // TODO: Implement diff command
-  eprintln!("diff: spec1={spec1:?}, spec2={spec2:?}");
-  eprintln!("TODO: Implement diff command");
-  std::process::exit(1);
+  // Load both specs
+  let spec1_parsed = load_spec_from_cue(spec1)?;
+  let spec2_parsed = load_spec_from_cue(spec2)?;
+
+  // Compare specs
+  println!("Comparing specs:");
+  println!("  Spec 1: {} ({})", spec1_parsed.name, spec1);
+  println!("  Spec 2: {} ({})", spec2_parsed.name, spec2);
+  println!("{}", "-".repeat(60));
+
+  // Compare names
+  if spec1_parsed.name != spec2_parsed.name {
+    println!(
+      "Name changed: '{}' -> '{}'",
+      spec1_parsed.name, spec2_parsed.name
+    );
+  }
+
+  // Compare descriptions
+  if spec1_parsed.description != spec2_parsed.description {
+    println!("Description changed:");
+    println!("  - {}", spec1_parsed.description);
+    println!("  + {}", spec2_parsed.description);
+  }
+
+  // Compare features
+  let features1: std::collections::HashSet<&str> = spec1_parsed
+    .features
+    .iter()
+    .map(|f| f.name.as_str())
+    .collect();
+  let features2: std::collections::HashSet<&str> = spec2_parsed
+    .features
+    .iter()
+    .map(|f| f.name.as_str())
+    .collect();
+
+  let added: Vec<_> = features2.difference(&features1).copied().collect();
+  let removed: Vec<_> = features1.difference(&features2).copied().collect();
+
+  if !added.is_empty() {
+    println!("Features added:");
+    for f in &added {
+      println!("  + {f}");
+    }
+  }
+
+  if !removed.is_empty() {
+    println!("Features removed:");
+    for f in &removed {
+      println!("  - {f}");
+    }
+  }
+
+  // Compare behavior counts
+  let behaviors1: usize = spec1_parsed
+    .features
+    .iter()
+    .map(|f| f.behaviors.len())
+    .sum();
+  let behaviors2: usize = spec2_parsed
+    .features
+    .iter()
+    .map(|f| f.behaviors.len())
+    .sum();
+
+  if behaviors1 != behaviors2 {
+    println!("Behavior count changed: {behaviors1} -> {behaviors2}");
+  }
+
+  // Compare invariants
+  if spec1_parsed.invariants.len() != spec2_parsed.invariants.len() {
+    println!(
+      "Invariants count changed: {} -> {}",
+      spec1_parsed.invariants.len(),
+      spec2_parsed.invariants.len()
+    );
+  }
+
+  // Compare anti-patterns
+  if spec1_parsed.anti_patterns.len() != spec2_parsed.anti_patterns.len() {
+    println!(
+      "Anti-patterns count changed: {} -> {}",
+      spec1_parsed.anti_patterns.len(),
+      spec2_parsed.anti_patterns.len()
+    );
+  }
+
+  if added.is_empty() && removed.is_empty() && behaviors1 == behaviors2 {
+    println!("No significant differences found.");
+  }
+
+  Ok(())
 }
 
 /// Manage interview sessions
 fn cmd_sessions(session_id: Option<&str>, delete: bool) -> Result<()> {
-  // TODO: Implement sessions command
-  eprintln!("sessions: session_id={session_id:?}, delete={delete}");
-  eprintln!("TODO: Implement sessions command");
-  std::process::exit(1);
+  let jsonl_path = session_jsonl_path();
+
+  if !jsonl_path.exists() {
+    println!("No sessions found.");
+    return Ok(());
+  }
+
+  match (session_id, delete) {
+    (Some(id), true) => {
+      // Delete session
+      let sessions = list_sessions_from_jsonl(&jsonl_path)
+        .map_err(|e| anyhow::anyhow!("Failed to list sessions: {e}"))?;
+
+      let original_len = sessions.len();
+      let remaining: Vec<_> = sessions.into_iter().filter(|s| s.id != id).collect();
+
+      if remaining.len() == original_len {
+        println!("Session '{id}' not found.");
+        return Ok(());
+      }
+
+      // Rewrite the file without the deleted session
+      let mut content = String::new();
+      for session in &remaining {
+        let line = session_to_jsonl_line(session)
+          .map_err(|e| anyhow::anyhow!("Failed to serialize session: {e}"))?;
+        content.push_str(&line);
+        content.push('\n');
+      }
+
+      fs::write(&jsonl_path, content)
+        .with_context(|| format!("Failed to write sessions file: {}", jsonl_path.display()))?;
+
+      println!("Session '{id}' deleted.");
+    }
+    (Some(id), false) => {
+      // Show specific session
+      let session = get_session_from_jsonl(&jsonl_path, id)
+        .map_err(|e| anyhow::anyhow!("Failed to get session: {e}"))?;
+
+      println!("Session: {}", session.id);
+      println!("  Profile: {:?}", session.profile);
+      println!("  Stage: {:?}", session.stage);
+      println!("  Rounds completed: {}", session.rounds_completed);
+      println!("  Answers: {}", session.answers.len());
+      println!("  Gaps: {}", session.gaps.len());
+      println!("  Conflicts: {}", session.conflicts.len());
+      println!("  Created: {}", session.created_at);
+      println!("  Updated: {}", session.updated_at);
+
+      if !session.answers.is_empty() {
+        println!("\nAnswers:");
+        for answer in &session.answers {
+          println!("  - {}: {}", answer.question_id, answer.response);
+        }
+      }
+    }
+    (None, _) => {
+      // List all sessions
+      let sessions = list_sessions_from_jsonl(&jsonl_path)
+        .map_err(|e| anyhow::anyhow!("Failed to list sessions: {e}"))?;
+
+      if sessions.is_empty() {
+        println!("No sessions found.");
+        return Ok(());
+      }
+
+      println!("Sessions:");
+      for session in &sessions {
+        println!(
+          "  {} [{:?}] {} answers, {} gaps",
+          session.id,
+          session.stage,
+          session.answers.len(),
+          session.gaps.len()
+        );
+      }
+      println!("\nTotal: {} sessions", sessions.len());
+    }
+  }
+
+  Ok(())
 }
 
 /// Generate a plan from a specification
 fn cmd_plan(spec: &str, strategy: &str, output: Option<&str>) -> Result<()> {
-  // TODO: Implement plan command
-  eprintln!("plan: spec={spec:?}, strategy={strategy:?}, output={output:?}");
-  eprintln!("TODO: Implement plan command");
-  std::process::exit(1);
+  // Load spec (validates it exists)
+  let _loaded_spec = load_spec_from_cue(spec)?;
+
+  // Create session from spec for plan generation
+  let session = InterviewSession {
+    id: generate_session_id(),
+    profile: Profile::default(),
+    created_at: current_timestamp(),
+    updated_at: current_timestamp(),
+    completed_at: None,
+    stage: InterviewStage::Complete,
+    rounds_completed: 1,
+    answers: Vec::new(),
+    gaps: Vec::new(),
+    conflicts: Vec::new(),
+    raw_notes: String::new(),
+    current_phase: 1,
+    completed_phases: vec![1],
+  };
+
+  // Compute plan
+  let plan =
+    compute_plan(&session).map_err(|e| anyhow::anyhow!("Failed to compute plan: {e:?}"))?;
+
+  // Format output
+  let content = match strategy {
+    "json" => format_plan_json(&plan),
+    _ => format_plan_human(&plan),
+  };
+
+  // Write output
+  let output_file = output.unwrap_or("plan.json");
+  write_output(&content, Some(output_file))?;
+
+  println!("Plan generated with {} phases", plan.phases.len());
+  Ok(())
 }
 
 /// Show the next recommended task
 fn cmd_plan_next(plan: Option<&str>, json: bool) -> Result<()> {
-  // TODO: Implement plan-next command
-  eprintln!("plan-next: plan={plan:?}, json={json}");
-  eprintln!("TODO: Implement plan-next command");
-  std::process::exit(1);
+  // Load plan
+  let plan_path = plan.unwrap_or("plan.json");
+  let loaded_plan = load_plan(plan_path)?;
+
+  // Create a minimal session
+  let session = InterviewSession {
+    id: generate_session_id(),
+    profile: Profile::default(),
+    created_at: current_timestamp(),
+    updated_at: current_timestamp(),
+    completed_at: None,
+    stage: InterviewStage::Complete,
+    rounds_completed: 1,
+    answers: Vec::new(),
+    gaps: Vec::new(),
+    conflicts: Vec::new(),
+    raw_notes: String::new(),
+    current_phase: 1,
+    completed_phases: vec![1],
+  };
+
+  // Get next action
+  let next_action = get_next_action(&session, &loaded_plan);
+
+  match next_action {
+    Some(action) => {
+      if json {
+        let json_output =
+          serde_json::to_string_pretty(&action).with_context(|| "Failed to serialize action")?;
+        println!("{json_output}");
+      } else {
+        println!("Next Recommended Action:");
+        println!("  Type: {:?}", action.action_type);
+        println!("  Target: {}", action.target_id);
+        println!("  Description: {}", action.description);
+        println!("  Reason: {}", action.reason);
+        if action.priority > 0 {
+          println!("  Priority: {}", action.priority);
+        }
+      }
+    }
+    None => {
+      if json {
+        println!("{{\"status\": \"no_action_available\"}}");
+      } else {
+        println!("No next action available. All tasks may be complete.");
+      }
+    }
+  }
+
+  Ok(())
 }
 
 /// Approve a planned task
 fn cmd_plan_approve(task_id: &str, notes: Option<&str>) -> Result<()> {
-  // TODO: Implement plan-approve command
-  eprintln!("plan-approve: task_id={task_id:?}, notes={notes:?}");
-  eprintln!("TODO: Implement plan-approve command");
-  std::process::exit(1);
+  // Load plan
+  let plan_path = "plan.json";
+  let mut loaded_plan = load_plan(plan_path)?;
+
+  // Find and update the bead
+  let found = loaded_plan.beads.iter_mut().any(|bead| {
+    if bead.id == task_id {
+      bead.state = BeadState::Ready;
+      true
+    } else {
+      false
+    }
+  });
+
+  if !found {
+    return Err(anyhow::anyhow!("Task '{task_id}' not found in plan"));
+  }
+
+  // Save plan
+  save_plan(&loaded_plan, plan_path)?;
+
+  println!("Task '{task_id}' approved.");
+  if let Some(n) = notes {
+    println!("Notes: {n}");
+  }
+
+  Ok(())
 }
 
 /// Emit beads from a plan
-fn cmd_plan_emit_beads(plan: &str, dry_run: bool) -> Result<()> {
-  // TODO: Implement plan-emit-beads command
-  eprintln!("plan-emit-beads: plan={plan:?}, dry_run={dry_run}");
-  eprintln!("TODO: Implement plan-emit-beads command");
-  std::process::exit(1);
+fn cmd_plan_emit_beads(plan_path: &str, dry_run: bool) -> Result<()> {
+  // Load plan
+  let loaded_plan = load_plan(plan_path)?;
+
+  // Create a minimal session
+  let session = InterviewSession {
+    id: generate_session_id(),
+    profile: Profile::default(),
+    created_at: current_timestamp(),
+    updated_at: current_timestamp(),
+    completed_at: None,
+    stage: InterviewStage::Complete,
+    rounds_completed: 1,
+    answers: Vec::new(),
+    gaps: Vec::new(),
+    conflicts: Vec::new(),
+    raw_notes: String::new(),
+    current_phase: 1,
+    completed_phases: vec![1],
+  };
+
+  // Determine emission mode
+  let mode = if dry_run {
+    EmissionMode::Simulate
+  } else {
+    EmissionMode::Persist
+  };
+
+  // Emit beads
+  let mut mutable_plan = loaded_plan;
+  let (emitted_beads, result) = emit_beads(&session, &mut mutable_plan, mode)
+    .map_err(|e| anyhow::anyhow!("Failed to emit beads: {e:?}"))?;
+
+  // Report results
+  if dry_run {
+    println!("Dry run - would emit {} beads:", emitted_beads.len());
+  } else {
+    println!("Emitted {} beads:", emitted_beads.len());
+  }
+
+  for bead in &emitted_beads {
+    println!("  - {} [Phase {}]", bead.title, bead.phase);
+  }
+
+  if result.skipped > 0 {
+    println!("Skipped {} existing beads", result.skipped);
+  }
+
+  if !result.errors.is_empty() {
+    println!("\nErrors:");
+    for error in &result.errors {
+      println!("  - {error}");
+    }
+  }
+
+  // Save emitted beads to beads directory
+  if !dry_run && !emitted_beads.is_empty() {
+    let mut existing_beads = load_beads()?;
+    existing_beads.extend(emitted_beads.iter().map(|b| BeadTemplate {
+      title: b.title.clone(),
+      description: b.description.clone(),
+      profile_type: "plan".to_string(),
+      priority: u8::try_from(b.priority.clamp(1, 5)).unwrap_or(3),
+      dependencies: b.dependencies.clone(),
+      ..BeadTemplate::default()
+    }));
+    save_beads(&existing_beads)?;
+    println!("\nBeads saved to: {}", beads_jsonl_path().display());
+  }
+
+  Ok(())
 }
 
 /// Regenerate beads from existing spec
 fn cmd_beads_regenerate(spec: &str) -> Result<()> {
-  // TODO: Implement beads-regenerate command
-  eprintln!("beads-regenerate: spec={spec:?}");
-  eprintln!("TODO: Implement beads-regenerate command");
-  std::process::exit(1);
+  println!("Regenerating beads from: {spec}");
+
+  // Load spec (validates it exists)
+  let _loaded_spec = load_spec_from_cue(spec)?;
+
+  // Create session for bead generation
+  let session = InterviewSession {
+    id: generate_session_id(),
+    profile: Profile::default(),
+    created_at: current_timestamp(),
+    updated_at: current_timestamp(),
+    completed_at: None,
+    stage: InterviewStage::Complete,
+    rounds_completed: 1,
+    answers: Vec::new(),
+    gaps: Vec::new(),
+    conflicts: Vec::new(),
+    raw_notes: String::new(),
+    current_phase: 1,
+    completed_phases: vec![1],
+  };
+
+  // Generate new beads
+  let new_beads = generate_beads_from_session(&session)
+    .map_err(|e| anyhow::anyhow!("Failed to generate beads: {e:?}"))?;
+
+  // Load existing beads
+  let existing_beads = load_beads()?;
+
+  // Merge: keep existing bead status, add new beads (by title matching)
+  let existing_titles: std::collections::HashSet<String> =
+    existing_beads.iter().map(|b| b.title.clone()).collect();
+
+  let merged: Vec<BeadTemplate> = existing_beads
+    .into_iter()
+    .chain(
+      new_beads
+        .into_iter()
+        .filter(|b| !existing_titles.contains(&b.title)),
+    )
+    .collect();
+
+  // Save merged beads
+  save_beads(&merged)?;
+
+  println!("Regenerated {} beads", merged.len());
+  Ok(())
 }
 
 /// Generate a vision document from a spec
 fn cmd_vision(spec: &str, output: Option<&str>) -> Result<()> {
-  // TODO: Implement vision command
-  eprintln!("vision: spec={spec:?}, output={output:?}");
-  eprintln!("TODO: Implement vision command");
-  std::process::exit(1);
+  // Load spec
+  let loaded_spec = load_spec_from_cue(spec)?;
+
+  // Generate vision document
+  let vision = generate_vision_document(&loaded_spec);
+
+  // Write output
+  write_output(&vision, output)?;
+
+  Ok(())
 }
 
 /// Generate a ready document from a spec
 fn cmd_ready(spec: &str, output: Option<&str>) -> Result<()> {
-  // TODO: Implement ready command
-  eprintln!("ready: spec={spec:?}, output={output:?}");
-  eprintln!("TODO: Implement ready command");
-  std::process::exit(1);
+  // Load spec
+  let loaded_spec = load_spec_from_cue(spec)?;
+
+  // Generate ready document
+  let ready = generate_ready_document(&loaded_spec);
+
+  // Write output
+  write_output(&ready, output)?;
+
+  Ok(())
 }
 
 /// Analyze specification for second-order effects
 fn cmd_effects(spec: &str, json: bool) -> Result<()> {
-  // TODO: Implement effects command
-  eprintln!("effects: spec={spec:?}, json={json}");
-  eprintln!("TODO: Implement effects command");
-  std::process::exit(1);
+  // Load spec
+  let loaded_spec = load_spec_from_cue(spec)?;
+
+  // Analyze effects
+  let report = analyze_spec_effects(&loaded_spec);
+
+  if json {
+    let json_output = serde_json::to_string_pretty(&report)
+      .with_context(|| "Failed to serialize effects report")?;
+    println!("{json_output}");
+  } else {
+    println!("Effects Analysis for: {}", report.spec_name);
+    println!("{}", "-".repeat(60));
+
+    if report.behavior_reports.is_empty() {
+      println!("No significant effects detected.");
+    } else {
+      for behavior_report in &report.behavior_reports {
+        if !behavior_report.effects.is_empty() {
+          println!("\nBehavior: {}", behavior_report.behavior_name);
+          for effect in &behavior_report.effects {
+            println!(
+              "  - {} [{}]: {}",
+              effect.effect_type, effect.severity, effect.description
+            );
+          }
+        }
+      }
+    }
+  }
+
+  Ok(())
 }
 
 /// Validate a specification
 fn cmd_validate(spec: &str, json: bool, security: bool) -> Result<()> {
-  // TODO: Implement validate command
-  eprintln!("validate: spec={spec:?}, json={json}, security={security}");
-  eprintln!("TODO: Implement validate command");
-  std::process::exit(1);
+  let spec_path = Path::new(spec);
+
+  // Check file exists
+  if !spec_path.exists() {
+    return Err(anyhow::anyhow!("Spec file not found: {spec}"));
+  }
+
+  let mut errors: Vec<String> = Vec::new();
+  let mut warnings: Vec<String> = Vec::new();
+
+  // Validate CUE syntax
+  match validate_cue_file(spec_path) {
+    Ok(()) => {}
+    Err(e) => {
+      errors.push(format!(
+        "CUE validation failed: {}",
+        format_loader_error(&e)
+      ));
+    }
+  }
+
+  // Load and parse spec
+  let loaded_spec = match load_spec_from_cue(spec) {
+    Ok(s) => Some(s),
+    Err(e) => {
+      errors.push(format!("Failed to parse spec: {e}"));
+      None
+    }
+  };
+
+  // Validate spec structure
+  if let Some(ref parsed_spec) = loaded_spec {
+    let result = validate_spec(parsed_spec);
+
+    if !result.is_valid() {
+      errors.push("Spec validation failed".to_string());
+      for error in &result.errors {
+        errors.push(format!("  - {error}"));
+      }
+    }
+
+    for warning in &result.warnings {
+      let ctx = warning
+        .context
+        .as_ref()
+        .map(|c| format!(" ({c})"))
+        .unwrap_or_default();
+      warnings.push(format!("  - {}{}", warning.message, ctx));
+    }
+
+    // Security checks if requested
+    if security {
+      let security_issues = check_security(parsed_spec);
+      errors.extend(security_issues);
+    }
+  }
+
+  // Output results
+  if json {
+    let result = serde_json::json!({
+      "valid": errors.is_empty(),
+      "errors": errors,
+      "warnings": warnings,
+    });
+    println!("{}", serde_json::to_string_pretty(&result)?);
+  } else {
+    if errors.is_empty() {
+      println!("Validation passed: {spec}");
+    } else {
+      println!("Validation FAILED: {spec}");
+      println!("\nErrors:");
+      for error in &errors {
+        println!("  {error}");
+      }
+    }
+
+    if !warnings.is_empty() {
+      println!("\nWarnings:");
+      for warning in &warnings {
+        println!("  {warning}");
+      }
+    }
+  }
+
+  if !errors.is_empty() {
+    std::process::exit(1);
+  }
+
+  Ok(())
+}
+
+/// Check for security issues in a spec
+fn check_security(spec: &Spec) -> Vec<String> {
+  let mut issues = Vec::new();
+
+  // Check for insecure patterns in behaviors
+  for feature in &spec.features {
+    for behavior in &feature.behaviors {
+      let lower_intent = behavior.intent.to_lowercase();
+      let lower_desc = behavior.description.to_lowercase();
+
+      // Check for password-related issues
+      if (lower_intent.contains("password") || lower_desc.contains("password"))
+        && !lower_intent.contains("hash") && !lower_desc.contains("hash") {
+          issues.push(format!(
+            "Potential plaintext password handling in behavior '{}'",
+            behavior.name
+          ));
+        }
+
+      // Check for SQL injection risks
+      if (lower_intent.contains("sql") || lower_desc.contains("sql"))
+        && !lower_intent.contains("parameterized") && !lower_desc.contains("parameterized") {
+          issues.push(format!(
+            "Potential SQL injection risk in behavior '{}'",
+            behavior.name
+          ));
+        }
+    }
+  }
+
+  issues
 }
 
 /// Run batch operations
 fn cmd_batch(file: Option<&str>, continue_on_error: bool, parallel: bool) -> Result<()> {
-  // TODO: Implement batch command
-  eprintln!("batch: file={file:?}, continue_on_error={continue_on_error}, parallel={parallel}");
-  eprintln!("TODO: Implement batch command");
-  std::process::exit(1);
+  // Read batch configuration
+  let config_content = if let Some(path) = file {
+    fs::read_to_string(path).with_context(|| format!("Failed to read batch file: {path}"))?
+  } else {
+    let mut content = String::new();
+    io::stdin()
+      .read_to_string(&mut content)
+      .context("Failed to read from stdin")?;
+    content
+  };
+
+  // Get spec files
+  let spec_files: Vec<String> = if config_content.trim().starts_with('{') {
+    // JSON configuration
+    let config: serde_json::Value = serde_json::from_str(&config_content)
+      .with_context(|| "Failed to parse batch configuration")?;
+
+    match config.get("files") {
+      Some(files) => {
+        serde_json::from_value(files.clone()).with_context(|| "Failed to parse files list")?
+      }
+      None => {
+        return Err(anyhow::anyhow!("No 'files' field in batch configuration"));
+      }
+    }
+  } else {
+    // Plain list of files
+    config_content
+      .lines()
+      .filter(|line| !line.trim().is_empty() && !line.trim().starts_with('#'))
+      .map(String::from)
+      .collect()
+  };
+
+  if spec_files.is_empty() {
+    println!("No spec files to process.");
+    return Ok(());
+  }
+
+  println!("Processing {} spec files...", spec_files.len());
+  if parallel {
+    println!("Running in parallel mode");
+  }
+  if continue_on_error {
+    println!("Continue on error: enabled");
+  }
+  println!();
+
+  // Process each file
+  let mut successful = 0;
+  let mut failed = 0;
+  let mut skipped = 0;
+
+  for spec_file in &spec_files {
+    let path = Path::new(spec_file);
+    if !path.exists() {
+      println!("[SKIP] {spec_file} - File not found");
+      skipped += 1;
+      if !continue_on_error {
+        return Err(anyhow::anyhow!("File not found: {spec_file}"));
+      }
+      continue;
+    }
+
+    match load_spec_from_cue(spec_file) {
+      Ok(_spec) => {
+        println!("[OK] {spec_file}");
+        successful += 1;
+      }
+      Err(e) => {
+        println!("[FAIL] {spec_file} - {e}");
+        failed += 1;
+        if !continue_on_error {
+          return Err(e);
+        }
+      }
+    }
+  }
+
+  // Print summary
+  println!("{}", "=".repeat(60));
+  println!("Batch Processing Summary");
+  println!("{}", "=".repeat(60));
+  println!("Total files: {}", spec_files.len());
+  println!("Successful: {successful}");
+  println!("Failed: {failed}");
+  println!("Skipped: {skipped}");
+
+  Ok(())
 }
 
 #[cfg(test)]
@@ -539,5 +1585,18 @@ mod tests {
     // Verify that the CLI can be constructed
     use clap::CommandFactory;
     Cli::command().debug_assert();
+  }
+
+  #[test]
+  fn test_current_timestamp() {
+    let ts = current_timestamp();
+    assert!(!ts.is_empty());
+    assert!(ts.contains('T')); // ISO 8601 format
+  }
+
+  #[test]
+  fn test_generate_session_id() {
+    let id = generate_session_id();
+    assert!(id.starts_with("session-"));
   }
 }

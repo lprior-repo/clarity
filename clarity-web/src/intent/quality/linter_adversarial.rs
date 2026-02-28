@@ -40,7 +40,7 @@ mod edge_cases {
 
   #[test]
   fn test_empty_string_spec_name() {
-    let mut spec = match Spec::new("".to_string()) {
+    let mut spec = match Spec::new(String::new()) {
       Ok(s) => s,
       Err(_) => return,
     };
@@ -94,11 +94,11 @@ mod edge_cases {
 
   #[test]
   fn test_empty_feature_name() {
-    let mut spec = match Spec::new("test-spec".to_string()) {
+    let spec = match Spec::new("test-spec".to_string()) {
       Ok(mut s) => {
         s.description = "Test spec".to_string();
 
-        let mut feature = match Feature::new("".to_string()) {
+        let mut feature = match Feature::new(String::new()) {
           Ok(f) => f,
           Err(_) => return,
         };
@@ -133,7 +133,7 @@ mod edge_cases {
 
   #[test]
   fn test_whitespace_only_feature_name() {
-    let mut spec = match Spec::new("test-spec".to_string()) {
+    let spec = match Spec::new("test-spec".to_string()) {
       Ok(mut s) => {
         s.description = "Test spec".to_string();
 
@@ -172,7 +172,7 @@ mod edge_cases {
 
   #[test]
   fn test_empty_behavior_name() {
-    let mut spec = match Spec::new("test-spec".to_string()) {
+    let spec = match Spec::new("test-spec".to_string()) {
       Ok(mut s) => {
         s.description = "Test spec".to_string();
 
@@ -181,7 +181,7 @@ mod edge_cases {
           Err(_) => return,
         };
 
-        let behavior = match Behavior::new("".to_string()) {
+        let behavior = match Behavior::new(String::new()) {
           Ok(b) => b,
           Err(_) => return,
         };
@@ -211,7 +211,7 @@ mod edge_cases {
 
   #[test]
   fn test_feature_with_no_behaviors() {
-    let mut spec = match Spec::new("test-spec".to_string()) {
+    let spec = match Spec::new("test-spec".to_string()) {
       Ok(mut s) => {
         s.description = "Test spec".to_string();
 
@@ -475,8 +475,7 @@ mod description_edge_cases {
     // Should handle long descriptions without performance issue
     assert!(
       duration.as_secs() < 1,
-      "Linting took too long with long descriptions: {:?}",
-      duration
+      "Linting took too long with long descriptions: {duration:?}"
     );
     assert!(result.is_ok());
   }
@@ -735,7 +734,7 @@ mod performance_tests {
 
   #[test]
   fn test_large_spec_performance() {
-    let mut spec = match Spec::new("large-spec".to_string()) {
+    let spec = match Spec::new("large-spec".to_string()) {
       Ok(mut s) => {
         s.description = "Large test specification".to_string();
 
@@ -770,27 +769,26 @@ mod performance_tests {
     // Should complete in reasonable time (< 5 seconds)
     assert!(
       duration.as_secs() < 5,
-      "Linting took too long: {:?}",
-      duration
+      "Linting took too long: {duration:?}"
     );
     assert!(result.is_ok());
   }
 
   #[test]
   fn test_spec_with_many_issues() {
-    let mut spec = match Spec::new("problematic-spec".to_string()) {
+    let spec = match Spec::new("problematic-spec".to_string()) {
       Ok(mut s) => {
         s.description = "x".to_string(); // Too short
 
         // Create 100 features with naming issues
         for i in 0..100 {
-          let mut feature = match Feature::new(format!("Feature-{}_test", i)) {
+          let mut feature = match Feature::new(format!("Feature-{i}_test")) {
             Ok(f) => f,
             Err(_) => return,
           };
 
           for j in 0..10 {
-            let mut behavior = match Behavior::new(format!("Behavior-{}", j)) {
+            let mut behavior = match Behavior::new(format!("Behavior-{j}")) {
               Ok(b) => b,
               Err(_) => return,
             };
@@ -814,8 +812,7 @@ mod performance_tests {
     // Should complete reasonably even with many issues
     assert!(
       duration.as_secs() < 5,
-      "Linting with many issues took too long: {:?}",
-      duration
+      "Linting with many issues took too long: {duration:?}"
     );
 
     assert!(result.is_ok());

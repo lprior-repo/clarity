@@ -109,7 +109,8 @@ async fn test_full_mode_switch_round_trip() {
   let storage = RedbStore::open_in_memory().unwrap();
 
   // 1. Start in Express mode - enter freeform text
-  let _express_content = "Problem: Remote teams lose track of tasks. User: Project managers. Context: Multiple time zones.";
+  let express_content = "Problem: Remote teams lose track of tasks. User: Project managers. Context: Multiple time zones.";
+  let _ = express_content; // Acknowledge usage
 
   // 2. Extract fields (simulated) - save to storage
   let extracted_answers = vec![

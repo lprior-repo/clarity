@@ -560,6 +560,9 @@ impl TryFrom<String> for FeatureDependency {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+
   use super::*;
 
   // -------------------------------------------------------------------------
@@ -606,7 +609,7 @@ mod tests {
 
   #[test]
   fn test_behavior_name_empty() {
-    let result = BehaviorName::parse("".to_string());
+    let result = BehaviorName::parse(String::new());
     assert!(matches!(result, Err(NameError::InvalidBehaviorName(_))));
   }
 
@@ -641,7 +644,7 @@ mod tests {
 
   #[test]
   fn test_feature_name_empty() {
-    let result = FeatureName::parse("".to_string());
+    let result = FeatureName::parse(String::new());
     assert!(matches!(result, Err(NameError::EmptyFeatureName)));
   }
 
@@ -682,7 +685,7 @@ mod tests {
 
   #[test]
   fn test_spec_name_empty() {
-    let result = SpecName::parse("".to_string());
+    let result = SpecName::parse(String::new());
     assert!(matches!(result, Err(NameError::EmptySpecName)));
   }
 
@@ -786,7 +789,7 @@ mod tests {
 
   #[test]
   fn test_feature_dependency_empty() {
-    let result = FeatureDependency::parse("".to_string());
+    let result = FeatureDependency::parse(String::new());
     assert!(matches!(result, Err(NameError::EmptyDependency)));
   }
 

@@ -41,7 +41,7 @@ mod edge_cases {
 
   #[test]
   fn test_empty_string_spec_name() {
-    let mut spec = match Spec::new("".to_string()) {
+    let mut spec = match Spec::new(String::new()) {
       Ok(s) => s,
       Err(_) => return,
     };
@@ -63,11 +63,8 @@ mod edge_cases {
     let result = validator.validate_semantics(&spec);
 
     assert!(result.is_err());
-    match result {
-      Err(errors) => {
-        assert!(errors.iter().any(|e| e == &SemanticError::EmptySpecName));
-      }
-      Ok(_) => {}
+    if let Err(errors) = result {
+      assert!(errors.iter().any(|e| e == &SemanticError::EmptySpecName));
     }
   }
 
@@ -95,19 +92,16 @@ mod edge_cases {
     let result = validator.validate_semantics(&spec);
 
     assert!(result.is_err());
-    match result {
-      Err(errors) => {
-        assert!(errors.iter().any(|e| e == &SemanticError::EmptySpecName));
-      }
-      Ok(_) => {}
+    if let Err(errors) = result {
+      assert!(errors.iter().any(|e| e == &SemanticError::EmptySpecName));
     }
   }
 
   #[test]
   fn test_empty_feature_name() {
-    let mut spec = match Spec::new("test-spec".to_string()) {
+    let spec = match Spec::new("test-spec".to_string()) {
       Ok(mut s) => {
-        let mut feature = match Feature::new("".to_string()) {
+        let mut feature = match Feature::new(String::new()) {
           Ok(f) => f,
           Err(_) => return,
         };
@@ -134,14 +128,14 @@ mod edge_cases {
 
   #[test]
   fn test_empty_behavior_name() {
-    let mut spec = match Spec::new("test-spec".to_string()) {
+    let spec = match Spec::new("test-spec".to_string()) {
       Ok(mut s) => {
         let mut feature = match Feature::new("auth".to_string()) {
           Ok(f) => f,
           Err(_) => return,
         };
 
-        let behavior = match Behavior::new("".to_string()) {
+        let behavior = match Behavior::new(String::new()) {
           Ok(b) => b,
           Err(_) => return,
         };
@@ -162,7 +156,7 @@ mod edge_cases {
 
   #[test]
   fn test_circular_feature_dependencies() {
-    let mut spec = match Spec::new("test-spec".to_string()) {
+    let spec = match Spec::new("test-spec".to_string()) {
       Ok(mut s) => {
         // Feature A depends on B
         let mut feature_a = match Feature::new("feature_a".to_string()) {
@@ -220,7 +214,7 @@ mod edge_cases {
 
   #[test]
   fn test_self_referencing_feature_dependency() {
-    let mut spec = match Spec::new("test-spec".to_string()) {
+    let spec = match Spec::new("test-spec".to_string()) {
       Ok(mut s) => {
         let mut feature = match Feature::new("auth".to_string()) {
           Ok(mut f) => {
@@ -252,7 +246,7 @@ mod edge_cases {
 
   #[test]
   fn test_maximum_nesting_depth_dependency_chain() {
-    let mut spec = match Spec::new("test-spec".to_string()) {
+    let spec = match Spec::new("test-spec".to_string()) {
       Ok(mut s) => {
         let mut prev_feature_name: Option<String> = None;
 
@@ -509,7 +503,7 @@ mod malformed_input_tests {
 
   #[test]
   fn test_reference_with_multiple_dots() {
-    let mut spec = match Spec::new("test-spec".to_string()) {
+    let spec = match Spec::new("test-spec".to_string()) {
       Ok(mut s) => {
         let mut feature = match Feature::new("auth".to_string()) {
           Ok(f) => f,
@@ -549,7 +543,7 @@ mod malformed_input_tests {
 
   #[test]
   fn test_reference_starting_with_dot() {
-    let mut spec = match Spec::new("test-spec".to_string()) {
+    let spec = match Spec::new("test-spec".to_string()) {
       Ok(mut s) => {
         let mut feature = match Feature::new("auth".to_string()) {
           Ok(f) => f,
@@ -580,7 +574,7 @@ mod malformed_input_tests {
 
   #[test]
   fn test_reference_ending_with_dot() {
-    let mut spec = match Spec::new("test-spec".to_string()) {
+    let spec = match Spec::new("test-spec".to_string()) {
       Ok(mut s) => {
         let mut feature = match Feature::new("auth".to_string()) {
           Ok(f) => f,
@@ -611,7 +605,7 @@ mod malformed_input_tests {
 
   #[test]
   fn test_reference_with_only_dots() {
-    let mut spec = match Spec::new("test-spec".to_string()) {
+    let spec = match Spec::new("test-spec".to_string()) {
       Ok(mut s) => {
         let mut feature = match Feature::new("auth".to_string()) {
           Ok(f) => f,
@@ -642,7 +636,7 @@ mod malformed_input_tests {
 
   #[test]
   fn test_duplicate_preconditions() {
-    let mut spec = match Spec::new("test-spec".to_string()) {
+    let spec = match Spec::new("test-spec".to_string()) {
       Ok(mut s) => {
         let mut feature = match Feature::new("auth".to_string()) {
           Ok(f) => f,
@@ -689,7 +683,7 @@ mod malformed_input_tests {
 
   #[test]
   fn test_overlapping_pre_and_post_conditions_duplicates() {
-    let mut spec = match Spec::new("test-spec".to_string()) {
+    let spec = match Spec::new("test-spec".to_string()) {
       Ok(mut s) => {
         let mut feature = match Feature::new("auth".to_string()) {
           Ok(f) => f,
@@ -743,7 +737,7 @@ mod performance_tests {
 
   #[test]
   fn test_large_spec_many_features() {
-    let mut spec = match Spec::new("large-spec".to_string()) {
+    let spec = match Spec::new("large-spec".to_string()) {
       Ok(mut s) => {
         // Create 1000 features with 10 behaviors each
         for i in 0..1000 {
@@ -776,15 +770,14 @@ mod performance_tests {
     // Should complete in reasonable time (< 5 seconds)
     assert!(
       duration.as_secs() < 5,
-      "Validation took too long: {:?}",
-      duration
+      "Validation took too long: {duration:?}"
     );
     assert!(result.is_ok());
   }
 
   #[test]
   fn test_large_spec_many_references() {
-    let mut spec = match Spec::new("large-spec".to_string()) {
+    let spec = match Spec::new("large-spec".to_string()) {
       Ok(mut s) => {
         let base_feature = match Feature::new("base".to_string()) {
           Ok(mut f) => {
@@ -838,15 +831,14 @@ mod performance_tests {
     // Should complete in reasonable time
     assert!(
       duration.as_secs() < 5,
-      "Cross-reference validation took too long: {:?}",
-      duration
+      "Cross-reference validation took too long: {duration:?}"
     );
     assert!(result.is_ok());
   }
 
   #[test]
   fn test_deeply_nested_terminology_check() {
-    let mut spec = match Spec::new("large-spec".to_string()) {
+    let spec = match Spec::new("large-spec".to_string()) {
       Ok(mut s) => {
         // Create many features with similar names (terminology check is O(n^2))
         for i in 0..500 {
@@ -879,8 +871,7 @@ mod performance_tests {
     // Should complete but might take longer due to O(n^2) algorithm
     assert!(
       duration.as_secs() < 10,
-      "Terminology check took too long: {:?}",
-      duration
+      "Terminology check took too long: {duration:?}"
     );
     assert!(result.is_ok());
   }

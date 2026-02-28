@@ -198,6 +198,9 @@ pub fn get_session_from_jsonl(
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+
   use super::*;
   use crate::intent::interview::types::Profile;
 

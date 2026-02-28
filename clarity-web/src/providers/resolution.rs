@@ -105,8 +105,14 @@ fn resolve_model_and_provider(
   routing_provider: Option<&String>,
 ) -> (Option<String>, Option<String>) {
   match (model, routing_provider) {
-    // Upgraded config: both specified
-    (Some(m), Some(rp)) => (Some(m.clone()), Some(rp.clone())),
+    // Upgraded config: both specified - extract model from provider/model format if present
+    (Some(m), Some(rp)) => {
+      if let Some((_provider, model_id)) = m.split_once('/') {
+        (Some(model_id.to_string()), Some(rp.clone()))
+      } else {
+        (Some(m.clone()), Some(rp.clone()))
+      }
+    }
 
     // Legacy config: model contains provider/model format
     (Some(m), None) => {
@@ -147,6 +153,9 @@ fn sanitize_endpoint(endpoint: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+
   use super::*;
   use crate::config::ai::{AiConfig, ProviderConfig, ProviderType};
 

@@ -1,7 +1,10 @@
 //! Tests for Context variables storing JSON values
 //!
-//! These tests verify that Context.variables can store serde_json::Value
+//! These tests verify that Context.variables can store `serde_json::Value`
 //! instead of just String, enabling array indexing and nested object access.
+
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
 
 use serde_json::json;
 
@@ -19,7 +22,7 @@ mod context_value_storage {
 
   /// GIVEN: a new empty context
   /// WHEN: a string variable is added
-  /// THEN: the variable is retrievable as a Value::String
+  /// THEN: the variable is retrievable as a `Value::String`
   #[test]
   fn given_empty_context_when_add_string_variable_then_retrievable_as_string_value() {
     // GIVEN
@@ -37,7 +40,7 @@ mod context_value_storage {
 
   /// GIVEN: a new empty context
   /// WHEN: an integer variable is added via Value
-  /// THEN: the variable is retrievable as a Value::Number
+  /// THEN: the variable is retrievable as a `Value::Number`
   #[test]
   fn given_empty_context_when_add_integer_variable_then_retrievable_as_number_value() {
     // GIVEN
@@ -55,7 +58,7 @@ mod context_value_storage {
 
   /// GIVEN: a new empty context
   /// WHEN: a boolean variable is added via Value
-  /// THEN: the variable is retrievable as a Value::Bool
+  /// THEN: the variable is retrievable as a `Value::Bool`
   #[test]
   fn given_empty_context_when_add_boolean_variable_then_retrievable_as_bool_value() {
     // GIVEN
@@ -73,7 +76,7 @@ mod context_value_storage {
 
   /// GIVEN: a new empty context
   /// WHEN: a null value is added via Value
-  /// THEN: the variable is retrievable as Value::Null
+  /// THEN: the variable is retrievable as `Value::Null`
   #[test]
   fn given_empty_context_when_add_null_variable_then_retrievable_as_null_value() {
     // GIVEN
@@ -91,7 +94,7 @@ mod context_value_storage {
 
   /// GIVEN: a new empty context
   /// WHEN: an array value is added
-  /// THEN: the array is preserved as Value::Array
+  /// THEN: the array is preserved as `Value::Array`
   #[test]
   fn given_empty_context_when_add_array_variable_then_array_preserved() {
     // GIVEN
@@ -99,7 +102,7 @@ mod context_value_storage {
     let items = json!([1, 2, 3]);
 
     // WHEN
-    let ctx = ctx.with_variable("items", items.clone());
+    let ctx = ctx.with_variable("items", items);
 
     // THEN
     let value = ctx.variables.get("items");
@@ -110,7 +113,7 @@ mod context_value_storage {
 
   /// GIVEN: a new empty context
   /// WHEN: an object value is added
-  /// THEN: the object is preserved as Value::Object
+  /// THEN: the object is preserved as `Value::Object`
   #[test]
   fn given_empty_context_when_add_object_variable_then_object_preserved() {
     // GIVEN
@@ -118,7 +121,7 @@ mod context_value_storage {
     let user = json!({"name": "Alice", "age": 30});
 
     // WHEN
-    let ctx = ctx.with_variable("user", user.clone());
+    let ctx = ctx.with_variable("user", user);
 
     // THEN
     let value = ctx.variables.get("user");
@@ -313,7 +316,7 @@ mod array_indexing {
 
   /// GIVEN: context with 3-element array
   /// WHEN: resolving with index [100]
-  /// THEN: returns IndexOutOfBounds error
+  /// THEN: returns `IndexOutOfBounds` error
   #[test]
   fn given_context_with_small_array_when_resolve_large_index_then_returns_out_of_bounds() {
     // GIVEN
@@ -334,7 +337,7 @@ mod array_indexing {
 
   /// GIVEN: context with empty array
   /// WHEN: resolving with index [0]
-  /// THEN: returns IndexOutOfBounds error
+  /// THEN: returns `IndexOutOfBounds` error
   #[test]
   fn given_context_with_empty_array_when_resolve_any_index_then_returns_out_of_bounds() {
     // GIVEN
@@ -352,7 +355,7 @@ mod array_indexing {
 
   /// GIVEN: context with string variable
   /// WHEN: resolving with array index [0]
-  /// THEN: returns NotAnArray error
+  /// THEN: returns `NotAnArray` error
   #[test]
   fn given_context_with_string_when_resolve_with_index_then_returns_not_an_array() {
     // GIVEN
@@ -441,7 +444,7 @@ mod nested_path_navigation {
 
   /// GIVEN: context with object without requested field
   /// WHEN: resolving user.missing
-  /// THEN: returns FieldNotFound error
+  /// THEN: returns `FieldNotFound` error
   #[test]
   fn given_context_with_object_when_resolve_missing_field_then_returns_not_found() {
     // GIVEN
@@ -467,7 +470,7 @@ mod error_handling {
 
   /// GIVEN: empty context
   /// WHEN: resolving unknown variable
-  /// THEN: returns VariableNotFound error
+  /// THEN: returns `VariableNotFound` error
   #[test]
   fn given_empty_context_when_resolve_unknown_then_returns_variable_not_found() {
     // GIVEN
@@ -482,7 +485,7 @@ mod error_handling {
 
   /// GIVEN: any context
   /// WHEN: resolving empty path
-  /// THEN: returns InvalidPath error
+  /// THEN: returns `InvalidPath` error
   #[test]
   fn given_any_context_when_resolve_empty_path_then_returns_invalid_path() {
     // GIVEN
@@ -497,7 +500,7 @@ mod error_handling {
 
   /// GIVEN: any context
   /// WHEN: resolving whitespace-only path
-  /// THEN: returns InvalidPath error
+  /// THEN: returns `InvalidPath` error
   #[test]
   fn given_any_context_when_resolve_whitespace_path_then_returns_invalid_path() {
     // GIVEN
@@ -512,7 +515,7 @@ mod error_handling {
 
   /// GIVEN: any context
   /// WHEN: resolving path with double dots user..name
-  /// THEN: returns InvalidPath error
+  /// THEN: returns `InvalidPath` error
   #[test]
   fn given_any_context_when_resolve_double_dot_path_then_returns_invalid_path() {
     // GIVEN
@@ -527,7 +530,7 @@ mod error_handling {
 
   /// GIVEN: context with array
   /// WHEN: resolving path with unclosed bracket items[0
-  /// THEN: returns InvalidPath error
+  /// THEN: returns `InvalidPath` error
   #[test]
   fn given_context_with_array_when_resolve_unclosed_bracket_then_returns_invalid_path() {
     // GIVEN
@@ -544,7 +547,7 @@ mod error_handling {
 
   /// GIVEN: context with array
   /// WHEN: resolving with non-numeric index items[abc]
-  /// THEN: returns InvalidPath error
+  /// THEN: returns `InvalidPath` error
   #[test]
   fn given_context_with_array_when_resolve_non_numeric_index_then_returns_invalid_path() {
     // GIVEN
@@ -565,7 +568,7 @@ mod error_handling {
 mod backward_compatibility {
   use super::*;
 
-  /// GIVEN: existing code using with_variable with &str
+  /// GIVEN: existing code using `with_variable` with &str
   /// WHEN: context is used for resolution
   /// THEN: string is stored and resolved correctly
   #[test]
@@ -580,7 +583,7 @@ mod backward_compatibility {
     assert_eq!(result, Ok("Alice".to_string()));
   }
 
-  /// GIVEN: existing code using from_variables with String pairs
+  /// GIVEN: existing code using `from_variables` with String pairs
   /// WHEN: context is used for resolution
   /// THEN: all variables are stored and resolved correctly
   #[test]
@@ -601,7 +604,7 @@ mod backward_compatibility {
     assert_eq!(city, Ok("London".to_string()));
   }
 
-  /// GIVEN: existing code using chained with_variable
+  /// GIVEN: existing code using chained `with_variable`
   /// WHEN: context is used for resolution
   /// THEN: all variables are accessible
   #[test]
@@ -720,7 +723,7 @@ mod edge_cases {
 mod integration {
   use super::*;
 
-  /// GIVEN: context with variables, request_body, and response_body
+  /// GIVEN: context with variables, `request_body`, and `response_body`
   /// WHEN: resolving from different sources
   /// THEN: correct source is used in priority order
   #[test]

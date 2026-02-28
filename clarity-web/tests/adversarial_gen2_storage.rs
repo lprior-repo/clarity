@@ -75,7 +75,7 @@ fn test_storage_concurrent_read_write() {
 
   // Write initial data
   for i in 0..10 {
-    let answer = create_answer(&format!("key{}", i), &format!("value{}", i));
+    let answer = create_answer(&format!("key{i}"), &format!("value{i}"));
     store
       .save_answer(&answer)
       .expect("Failed to save initial answer");
@@ -95,7 +95,7 @@ fn test_storage_concurrent_read_write() {
   // Spawn write thread
   let handle_write = thread::spawn(move || {
     for i in 10..20 {
-      let answer = create_answer(&format!("key{}", i), &format!("value{}", i));
+      let answer = create_answer(&format!("key{i}"), &format!("value{i}"));
       let _ = store_write.save_answer(&answer);
       thread::sleep(Duration::from_millis(2));
     }
@@ -192,12 +192,12 @@ fn test_storage_special_characters_in_values() {
   for (key, answer) in &special_cases {
     store
       .save_answer(answer)
-      .expect(&format!("Failed to save {}", key));
+      .unwrap_or_else(|_| panic!("Failed to save {key}"));
   }
 
   for (key, original) in &special_cases {
     let result = store.get_answer(key);
-    assert!(result.is_ok(), "Should read {}", key);
+    assert!(result.is_ok(), "Should read {key}");
 
     match result.unwrap() {
       Some(retrieved) => {
@@ -205,7 +205,7 @@ fn test_storage_special_characters_in_values() {
         assert_eq!(retrieved.value, original.value);
       }
       None => {
-        panic!("Should retrieve {}", key);
+        panic!("Should retrieve {key}");
       }
     }
   }
@@ -258,7 +258,7 @@ fn test_storage_delete_nonexistent() {
 
   let result = store.delete_answer("nonexistent");
   assert!(result.is_ok());
-  assert_eq!(result.unwrap(), false); // Should return false (not deleted)
+  assert!(!result.unwrap()); // Should return false (not deleted)
 }
 
 #[test]
@@ -373,15 +373,12 @@ fn test_storage_unicode_keys() {
   let save_result = store.save_answer(&answer);
 
   // May fail depending on redb's unicode support
-  match save_result {
-    Ok(_) => {
-      let load_result = store.get_answer("用户目标");
-      assert!(load_result.is_ok());
-      assert!(load_result.unwrap().is_some());
-    }
-    Err(_) => {
-      // Acceptable if unicode keys aren't supported
-    }
+  if matches!(save_result, Ok(())) {
+    let load_result = store.get_answer("用户目标");
+    assert!(load_result.is_ok());
+    assert!(load_result.unwrap().is_some());
+  } else {
+    // Acceptable if unicode keys aren't supported
   }
 }
 
@@ -394,15 +391,12 @@ fn test_storage_null_byte_in_key() {
   let save_result = store.save_answer(&answer);
 
   // Should handle gracefully (likely fail or sanitize)
-  match save_result {
-    Ok(_) => {
-      // If saved, should be retrievable
-      let load_result = store.get_answer("key\0with\0null");
-      assert!(load_result.is_ok());
-    }
-    Err(_) => {
-      // Acceptable to reject null bytes
-    }
+  if matches!(save_result, Ok(())) {
+    // If saved, should be retrievable
+    let load_result = store.get_answer("key\0with\0null");
+    assert!(load_result.is_ok());
+  } else {
+    // Acceptable to reject null bytes
   }
 }
 
@@ -412,10 +406,10 @@ fn test_storage_rapid_fire_operations() {
   let store = RedbStore::open_in_memory().expect("Failed to open store");
 
   for i in 0..1000 {
-    let answer = create_answer(&format!("key{}", i), &format!("value{}", i));
+    let answer = create_answer(&format!("key{i}"), &format!("value{i}"));
     store
       .save_answer(&answer)
-      .expect(&format!("Failed to save iteration {}", i));
+      .unwrap_or_else(|_| panic!("Failed to save iteration {i}"));
   }
 
   let all_answers = store.get_all_answers().expect("Failed to get all answers");
@@ -424,10 +418,10 @@ fn test_storage_rapid_fire_operations() {
 
   // Verify all values
   for i in 0..1000 {
-    let key = format!("key{}", i);
+    let key = format!("key{i}");
     let result = store.get_answer(&key);
     assert!(result.is_ok());
-    assert!(result.unwrap().is_some(), "Key {} should exist", i);
+    assert!(result.unwrap().is_some(), "Key {i} should exist");
   }
 }
 

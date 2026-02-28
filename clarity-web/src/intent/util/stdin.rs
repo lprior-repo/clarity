@@ -147,7 +147,7 @@ mod tests {
     assert!(err.to_string().contains("no input"));
 
     let err = StdinError::InvalidYesNo;
-    assert!(err.to_string().contains("y"));
+    assert!(err.to_string().contains('y'));
   }
 
   // Integration tests would require feeding input to stdin

@@ -289,7 +289,7 @@ mod tests {
 
   #[test]
   fn test_validate_ai_directive_json_missing_action() {
-    let json = r#"{}"#;
+    let json = r"{}";
     let result = validate_ai_directive_json(json);
     assert!(matches!(result, Err(ContractError::MissingField(_))));
   }

@@ -16,7 +16,7 @@ pub struct Invariant {
   pub description: String,
   /// Formal or informal specification
   #[serde(default)]
-  pub constraint: String,
+  pub criteria: Vec<String>,
 }
 
 impl Invariant {
@@ -26,14 +26,14 @@ impl Invariant {
     Self {
       name,
       description,
-      constraint: String::new(),
+      criteria: Vec::new(),
     }
   }
 
-  /// Builder method to set constraint
+  /// Builder method to set criteria
   #[must_use]
-  pub fn with_constraint(self, constraint: String) -> Self {
-    Self { constraint, ..self }
+  pub fn with_criteria(self, criteria: Vec<String>) -> Self {
+    Self { criteria, ..self }
   }
 }
 
@@ -47,10 +47,10 @@ mod tests {
       "unique_email".to_string(),
       "Emails must be unique".to_string(),
     )
-    .with_constraint("email UNIQUE in users".to_string());
+    .with_criteria(vec!["email UNIQUE in users".to_string()]);
 
     assert_eq!(invariant.name, "unique_email");
     assert_eq!(invariant.description, "Emails must be unique");
-    assert_eq!(invariant.constraint, "email UNIQUE in users");
+    assert_eq!(invariant.criteria, vec!["email UNIQUE in users"]);
   }
 }

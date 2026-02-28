@@ -111,13 +111,18 @@ fn generate_invariants(spec: &Spec) -> String {
     .map(|invariant| {
       let name = format!("### {}", invariant.name);
       let description = invariant.description.clone();
-      let constraint = if invariant.constraint.is_empty() {
+      let criteria = if invariant.criteria.is_empty() {
         String::new()
       } else {
-        format!("\n\n**Constraint:** {}", invariant.constraint)
+        let criteria_list = invariant
+          .criteria
+          .iter()
+          .map(|c| format!("- {c}"))
+          .join("\n");
+        format!("\n\n**Criteria:**\n{criteria_list}")
       };
 
-      format!("{name}\n\n{description}{constraint}")
+      format!("{name}\n\n{description}{criteria}")
     })
     .join("\n\n");
 
@@ -264,7 +269,7 @@ fn libraries_section(spec: &Spec) -> String {
 mod tests {
   use super::*;
   use crate::intent::types::{
-    AIHints, AntiPattern, Behavior, EntityHint, Feature, ImplementationHints, Invariant,
+    AIHints, AntiPattern, Behavior, Feature, ImplementationHints, Invariant,
     SecurityHints,
   };
 
@@ -272,6 +277,9 @@ mod tests {
     Spec {
       name: "Test API".to_string(),
       description: "A test API for testing".to_string(),
+      audience: "developers".to_string(),
+      version: "1.0.0".to_string(),
+      success_criteria: vec![],
       features: vec![Feature {
         name: "Authentication".to_string(),
         description: "User authentication feature".to_string(),
@@ -291,11 +299,13 @@ mod tests {
       invariants: vec![Invariant {
         name: "Session validity".to_string(),
         description: "Sessions must be valid".to_string(),
-        constraint: "session.expired == false".to_string(),
+        criteria: vec!["session.expired == false".to_string()],
       }],
       anti_patterns: vec![AntiPattern {
         name: "Plaintext passwords".to_string(),
         description: "Do not store passwords in plaintext".to_string(),
+        bad_example: serde_json::Value::Null,
+        good_example: serde_json::Value::Null,
         why_avoid: "Security risk".to_string(),
         alternative: "Use bcrypt or argon2".to_string(),
       }],

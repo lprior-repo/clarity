@@ -537,7 +537,7 @@ mod tests {
       resolution: "fixed".to_string(),
     };
 
-    let result = open.transition_to(resolved.clone());
+    let result = open.transition_to(resolved);
     assert!(result.is_ok());
     assert_eq!(
       result,
@@ -562,7 +562,7 @@ mod tests {
   fn gap_state_transition_to_empty_resolution_fails() {
     let open = GapState::Open;
     let resolved_empty = GapState::Resolved {
-      resolution: "".to_string(),
+      resolution: String::new(),
     };
     let resolved_whitespace = GapState::Resolved {
       resolution: "   ".to_string(),
@@ -618,7 +618,7 @@ mod tests {
   fn gap_state_resolve_empty_fails() {
     let open = GapState::Open;
     assert_eq!(
-      open.resolve("".to_string()),
+      open.resolve(String::new()),
       Err(GapStateError::EmptyResolution)
     );
     assert_eq!(
@@ -640,7 +640,7 @@ mod tests {
 
     // Resolved with empty is invalid
     let resolved_empty = GapState::Resolved {
-      resolution: "".to_string(),
+      resolution: String::new(),
     };
     assert_eq!(
       resolved_empty.validate(),

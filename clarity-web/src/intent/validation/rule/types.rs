@@ -251,7 +251,7 @@ mod tests {
 
   #[test]
   fn rule_result_failed_creates_fail_outcome() {
-    let result = RuleResult::failed("required", "is empty", Some("".to_string()));
+    let result = RuleResult::failed("required", "is empty", Some(String::new()));
     assert!(result.is_fail());
     assert_eq!(result.rule_name, "required");
     assert_eq!(result.message(), Some("is empty"));

@@ -78,18 +78,15 @@ fn test_quality_boundary_maximum_score_edge_case() {
     Ok(score) => {
       // Check that overall is bounded correctly
       assert!(score.overall <= 100, "Overall score must not exceed 100");
-      assert!(score.overall >= 0, "Overall score must not be negative");
 
       // Check all dimensions are valid
       for dim in &score.dimensions {
         assert!(dim.score <= 100, "Dimension score must not exceed 100");
-        assert!(dim.score >= 0, "Dimension score must not be negative");
       }
     }
     Err(e) => {
       panic!(
-        "Quality calculation should succeed with valid input: {:?}",
-        e
+        "Quality calculation should succeed with valid input: {e:?}"
       );
     }
   }
@@ -116,14 +113,13 @@ fn test_quality_division_by_zero_protection() {
     Ok(score) => {
       // Completeness should be 0 (no required fields)
       assert!(score.overall <= 100);
-      assert!(score.overall >= 0);
 
       // Should have completeness issues
       let completeness_issues = score.get_issues(QualityDimension::Completeness);
       assert!(!completeness_issues.is_empty());
     }
     Err(e) => {
-      panic!("Should handle missing fields gracefully: {:?}", e);
+      panic!("Should handle missing fields gracefully: {e:?}");
     }
   }
 }
@@ -161,7 +157,6 @@ fn test_quality_overflow_in_calculation() {
     Ok(score) => {
       // Overall should be valid
       assert!(score.overall <= 100);
-      assert!(score.overall >= 0);
 
       // Should be exactly 100 since security might not be perfect
       // but other dimensions should be high
@@ -170,7 +165,7 @@ fn test_quality_overflow_in_calculation() {
       // This is acceptable - overflow is detected
     }
     Err(e) => {
-      panic!("Unexpected error: {:?}", e);
+      panic!("Unexpected error: {e:?}");
     }
   }
 }
@@ -212,7 +207,7 @@ fn test_quality_single_answer() {
       assert_eq!(testability.unwrap().score, 0);
     }
     Err(e) => {
-      panic!("Should handle single answer: {:?}", e);
+      panic!("Should handle single answer: {e:?}");
     }
   }
 }
@@ -237,7 +232,7 @@ fn test_quality_consistency_single_answer() {
       assert_eq!(consistency.unwrap().score, 100);
     }
     Err(e) => {
-      panic!("Should handle single answer: {:?}", e);
+      panic!("Should handle single answer: {e:?}");
     }
   }
 }
@@ -267,7 +262,7 @@ fn test_quality_testability_empty_ears() {
       assert!(testability_issues[0].message.contains("No EARS"));
     }
     Err(e) => {
-      panic!("Should handle empty EARS: {:?}", e);
+      panic!("Should handle empty EARS: {e:?}");
     }
   }
 }
@@ -403,7 +398,7 @@ fn test_quality_completeness_with_whitespace_only() {
       assert!(!completeness_issues.is_empty());
     }
     Err(e) => {
-      panic!("Should handle whitespace: {:?}", e);
+      panic!("Should handle whitespace: {e:?}");
     }
   }
 }
@@ -433,7 +428,7 @@ fn test_quality_consistency_contradiction_self() {
       assert_eq!(consistency.unwrap().score, 100); // No pairs to compare
     }
     Err(e) => {
-      panic!("Should handle self-contradiction: {:?}", e);
+      panic!("Should handle self-contradiction: {e:?}");
     }
   }
 }
@@ -456,7 +451,6 @@ fn test_quality_clarity_extremely_long_sentence() {
   match result {
     Ok(score) => {
       // Should penalize heavily but not crash
-      assert!(score.overall >= 0);
       assert!(score.overall <= 100);
 
       let clarity = score.get_dimension(QualityDimension::Clarity);
@@ -464,7 +458,7 @@ fn test_quality_clarity_extremely_long_sentence() {
       assert!(clarity.unwrap().score < 100);
     }
     Err(e) => {
-      panic!("Should handle long sentences: {:?}", e);
+      panic!("Should handle long sentences: {e:?}");
     }
   }
 }
@@ -492,7 +486,7 @@ fn test_quality_security_all_keywords_repeated() {
       assert_eq!(security.unwrap().score, 100);
     }
     Err(e) => {
-      panic!("Should handle repeated keywords: {:?}", e);
+      panic!("Should handle repeated keywords: {e:?}");
     }
   }
 }
@@ -527,7 +521,7 @@ fn test_quality_testability_mixed_criteria() {
       assert_eq!(testability_issues.len(), 1);
     }
     Err(e) => {
-      panic!("Should handle mixed criteria: {:?}", e);
+      panic!("Should handle mixed criteria: {e:?}");
     }
   }
 }

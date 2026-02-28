@@ -193,6 +193,9 @@ fn value_type_name(value: &Value) -> String {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+
   use super::*;
 
   #[test]
@@ -236,7 +239,7 @@ mod tests {
 
   #[test]
   fn test_parse_answers_json_invalid() {
-    let json = r#"not valid json"#;
+    let json = r"not valid json";
     let result = parse_answers_json("test.json", json);
     assert!(result.is_err());
   }
@@ -292,7 +295,7 @@ mod tests {
   fn test_last_key_segment() {
     assert_eq!(last_key_segment("a.b.c"), Some("c".to_string()));
     assert_eq!(last_key_segment("single"), Some("single".to_string()));
-    assert_eq!(last_key_segment(""), Some("".to_string()));
+    assert_eq!(last_key_segment(""), Some(String::new()));
   }
 
   #[test]
@@ -306,14 +309,14 @@ mod tests {
 
   #[test]
   fn test_parse_answers_json_for_test_invalid_json() {
-    let json = r#"invalid"#;
+    let json = r"invalid";
     let result = parse_answers_json_for_test("test.json", json);
     assert!(result.is_err());
   }
 
   #[test]
   fn test_parse_answers_json_for_test_not_object() {
-    let json = r#"[1, 2, 3]"#;
+    let json = r"[1, 2, 3]";
     let result = parse_answers_json_for_test("test.json", json);
     assert!(result.is_err());
     if let Err(ParseErrorWithDetails::DecodeError { actual, .. }) = result {

@@ -179,6 +179,7 @@ fn check_cue_binary() -> Result<(), LoaderError> {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::intent::loader::cue::cue_core::validate_path_string;
 
   #[test]
   fn validate_file_exists_fails_for_nonexistent() {

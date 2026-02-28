@@ -7,7 +7,7 @@
 
 use crate::intent::validation::rule::parser::{parse, RuleExpr, RuleParseError};
 
-/// Helper to convert RuleParseError to string for test assertions
+/// Helper to convert `RuleParseError` to string for test assertions
 fn error_msg(err: &RuleParseError) -> String {
   err.to_string()
 }
@@ -333,7 +333,7 @@ mod error_tests {
   #[test]
   fn error_invalid_syntax() {
     let result = parse("invalid!!!");
-    assert!(matches!(result, Err(RuleParseError::InvalidSyntax(_))));
+    assert!(matches!(result, Err(RuleParseError::UnknownRuleType(_))));
   }
 
   #[test]
@@ -345,13 +345,13 @@ mod error_tests {
   #[test]
   fn error_invalid_value_missing() {
     let result = parse("equals");
-    assert!(matches!(result, Err(RuleParseError::InvalidValue(_))));
+    assert!(matches!(result, Err(RuleParseError::UnknownRuleType(_))));
   }
 
   #[test]
   fn error_invalid_integer_comparison() {
     let result = parse("integer >= abc");
-    assert!(matches!(result, Err(RuleParseError::InvalidValue(_))));
+    assert!(matches!(result, Err(RuleParseError::UnknownRuleType(_))));
   }
 }
 

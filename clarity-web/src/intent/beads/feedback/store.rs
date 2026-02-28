@@ -32,7 +32,7 @@ pub(super) fn read_feedback_history(bead_id: &str) -> Vec<BeadFeedback> {
 }
 
 #[cfg(test)]
-pub(crate) fn clear_feedback_store() {
+pub fn clear_feedback_store() {
   let _ = FEEDBACK_STORE
     .write()
     .map(|mut store| store.clear())

@@ -211,6 +211,9 @@ pub fn config_file_exists() -> bool {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+
   use super::*;
 
   #[test]
@@ -244,10 +247,10 @@ mod tests {
 
   #[test]
   fn test_parse_yaml_config_simple() {
-    let yaml = r#"
+    let yaml = r"
 default_profile: cli
 default_output_format: markdown
-"#;
+";
     let config = parse_yaml_config(yaml).unwrap();
     assert_eq!(config.default_profile, "cli");
     assert_eq!(config.default_output_format, "markdown");
@@ -255,10 +258,10 @@ default_output_format: markdown
 
   #[test]
   fn test_parse_yaml_config_with_comments() {
-    let yaml = r#"
+    let yaml = r"
 # This is a comment
 default_profile: cli
-"#;
+";
     let config = parse_yaml_config(yaml).unwrap();
     assert_eq!(config.default_profile, "cli");
   }

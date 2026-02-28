@@ -118,6 +118,9 @@ impl Feature {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+
   use super::Feature;
   use crate::intent::types::{Behavior, FeatureDependency, FeatureName, TypeError};
 
@@ -210,7 +213,7 @@ mod tests {
     // Add valid dependency
     feature.add_dependency("auth".to_string());
     // Add empty dependency (invalid)
-    feature.depends_on.push("".to_string());
+    feature.depends_on.push(String::new());
 
     let validated = feature.validated_dependencies();
     assert_eq!(validated.len(), 1);

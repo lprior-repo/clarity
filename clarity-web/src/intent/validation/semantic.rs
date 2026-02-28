@@ -1188,11 +1188,8 @@ mod tests {
     let result = validator.validate_semantics(&spec);
 
     assert!(result.is_err());
-    match result {
-      Err(errors) => {
-        assert!(errors.iter().any(|e| e == &SemanticError::EmptySpecName));
-      }
-      Ok(_) => {}
+    if let Err(errors) = result {
+      assert!(errors.iter().any(|e| e == &SemanticError::EmptySpecName));
     }
   }
 
@@ -1207,17 +1204,14 @@ mod tests {
     let result = validator.validate_semantics(&spec);
 
     assert!(result.is_err());
-    match result {
-      Err(errors) => {
-        assert!(errors.iter().any(|e| e == &SemanticError::NoFeatures));
-      }
-      Ok(_) => {}
+    if let Err(errors) = result {
+      assert!(errors.iter().any(|e| e == &SemanticError::NoFeatures));
     }
   }
 
   #[test]
   fn test_broken_reference_returns_error() {
-    let mut spec = match Spec::new("test-spec".to_string()) {
+    let spec = match Spec::new("test-spec".to_string()) {
       Ok(mut s) => {
         let mut feature = match Feature::new("auth".to_string()) {
           Ok(f) => f,
@@ -1257,7 +1251,7 @@ mod tests {
 
   #[test]
   fn test_broken_feature_dependency_returns_error() {
-    let mut spec = match Spec::new("test-spec".to_string()) {
+    let spec = match Spec::new("test-spec".to_string()) {
       Ok(mut s) => {
         let mut feature = match Feature::new("auth".to_string()) {
           Ok(f) => f,
@@ -1314,7 +1308,7 @@ mod tests {
 
   #[test]
   fn test_inconsistent_naming_conventions() {
-    let mut spec = match Spec::new("test-spec".to_string()) {
+    let spec = match Spec::new("test-spec".to_string()) {
       Ok(mut s) => {
         // Feature with kebab-case
         let mut feature1 = match Feature::new("auth-service".to_string()) {
@@ -1368,14 +1362,14 @@ mod tests {
 
   #[test]
   fn test_overlapping_pre_post_conditions() {
-    let mut spec = match Spec::new("test-spec".to_string()) {
+    let spec = match Spec::new("test-spec".to_string()) {
       Ok(mut s) => {
         let mut feature = match Feature::new("auth".to_string()) {
           Ok(f) => f,
           Err(_) => return,
         };
 
-        let mut session = match Behavior::new("session".to_string()) {
+        let session = match Behavior::new("session".to_string()) {
           Ok(mut b) => {
             // Add same behavior to both pre and post conditions
             b.preconditions.push("authenticate".to_string());
@@ -1422,11 +1416,8 @@ mod tests {
     let result1 = validator.validate_semantics(&spec);
     let result2 = validator.validate_semantics(&spec);
 
-    match (result1, result2) {
-      (Ok(r1), Ok(r2)) => {
-        assert_eq!(r1, r2);
-      }
-      _ => {}
+    if let (Ok(r1), Ok(r2)) = (result1, result2) {
+      assert_eq!(r1, r2);
     }
   }
 
@@ -1444,7 +1435,7 @@ mod tests {
   #[test]
   fn test_deep_dependency_chain_violation() {
     // Create a chain of dependencies > 5 deep
-    let mut spec = match Spec::new("test-spec".to_string()) {
+    let spec = match Spec::new("test-spec".to_string()) {
       Ok(mut s) => {
         let mut prev_feature_name: Option<String> = None;
 
@@ -1490,14 +1481,14 @@ mod tests {
 
   #[test]
   fn test_behavior_with_preconditions_no_description() {
-    let mut spec = match Spec::new("test-spec".to_string()) {
+    let spec = match Spec::new("test-spec".to_string()) {
       Ok(mut s) => {
         let mut feature = match Feature::new("auth".to_string()) {
           Ok(f) => f,
           Err(_) => return,
         };
 
-        let mut authenticate = match Behavior::new("authenticate".to_string()) {
+        let authenticate = match Behavior::new("authenticate".to_string()) {
           Ok(b) => b,
           Err(_) => return,
         };

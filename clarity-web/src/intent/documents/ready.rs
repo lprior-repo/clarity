@@ -148,15 +148,20 @@ fn generate_invariants(spec: &Spec) -> String {
     .invariants
     .iter()
     .map(|invariant| {
-      let constraint = if invariant.constraint.is_empty() {
+      let criteria = if invariant.criteria.is_empty() {
         String::new()
       } else {
-        format!("\n\n**Constraint:** {}", invariant.constraint)
+        let criteria_list = invariant
+          .criteria
+          .iter()
+          .map(|c| format!("- {c}"))
+          .join("\n");
+        format!("\n\n**Criteria:**\n{criteria_list}")
       };
 
       format!(
         "### {}\n\n{}{}",
-        invariant.name, invariant.description, constraint
+        invariant.name, invariant.description, criteria
       )
     })
     .join("\n\n");
@@ -360,6 +365,9 @@ mod tests {
     Spec {
       name: "Test API".to_string(),
       description: "A test API".to_string(),
+      audience: "developers".to_string(),
+      version: "1.0.0".to_string(),
+      success_criteria: vec![],
       features: vec![Feature {
         name: "Auth".to_string(),
         description: "Authentication".to_string(),
@@ -383,11 +391,13 @@ mod tests {
       invariants: vec![Invariant {
         name: "Security".to_string(),
         description: "Must be secure".to_string(),
-        constraint: "HTTPS required".to_string(),
+        criteria: vec!["HTTPS required".to_string()],
       }],
       anti_patterns: vec![AntiPattern {
         name: "Bad Pattern".to_string(),
         description: "Don't do this".to_string(),
+        bad_example: serde_json::Value::Null,
+        good_example: serde_json::Value::Null,
         why_avoid: "Security risk".to_string(),
         alternative: "Use proper hashing".to_string(),
       }],

@@ -7,6 +7,9 @@
 //!
 //! The goal is to verify that "illegal states are truly unrepresentable."
 
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
+
 use crate::intent::interview::types::models::{ConflictState, ConflictStateError, GapState};
 use crate::intent::interview::types::{
   Conflict, ConflictResolution, Gap, InterviewSession, Profile,
@@ -20,7 +23,7 @@ use crate::intent::validation::rule::Rule;
 mod serde_attacks {
   use super::*;
 
-  /// Try to deserialize GapState::Resolved with empty resolution via serde.
+  /// Try to deserialize `GapState::Resolved` with empty resolution via serde.
   /// This should succeed (serde doesn't validate), but subsequent use should be safe.
   #[test]
   fn gap_state_serde_allows_empty_resolution_but_code_validates() {
@@ -33,7 +36,7 @@ mod serde_attacks {
       result.is_ok(),
       "Serde allows empty resolution - this is a known limitation"
     );
-    let state = result.unwrap();
+    let _state = result.unwrap();
 
     // But the resolve() method properly validates
     let new_state = GapState::Open.resolve(String::new());
@@ -43,7 +46,7 @@ mod serde_attacks {
     );
   }
 
-  /// Try to deserialize GapState::Resolved with whitespace-only resolution.
+  /// Try to deserialize `GapState::Resolved` with whitespace-only resolution.
   #[test]
   fn gap_state_serde_allows_whitespace_resolution() {
     let json = r#"{"status":"resolved","resolution":"   "}"#;
@@ -58,7 +61,7 @@ mod serde_attacks {
     assert!(new_state.is_err());
   }
 
-  /// Try to deserialize ConflictState::Resolved with negative index.
+  /// Try to deserialize `ConflictState::Resolved` with negative index.
   #[test]
   fn conflict_state_serde_allows_negative_index() {
     let json = r#"{"status":"resolved","chosen_index":-1}"#;
@@ -77,7 +80,7 @@ mod serde_attacks {
     assert!(new_state.is_err());
   }
 
-  /// Try to deserialize ConflictState::Resolved with i32::MIN.
+  /// Try to deserialize `ConflictState::Resolved` with `i32::MIN`.
   #[test]
   fn conflict_state_serde_allows_i32_min() {
     let json = r#"{"status":"resolved","chosen_index":-2147483648}"#;
@@ -85,7 +88,7 @@ mod serde_attacks {
     assert!(result.is_ok());
   }
 
-  /// Try to deserialize ConflictState::Resolved with i32::MAX.
+  /// Try to deserialize `ConflictState::Resolved` with `i32::MAX`.
   #[test]
   fn conflict_state_serde_allows_i32_max() {
     let json = r#"{"status":"resolved","chosen_index":2147483647}"#;
@@ -93,14 +96,14 @@ mod serde_attacks {
     assert!(result.is_ok());
   }
 
-  /// Try malformed JSON for GapState.
+  /// Try malformed JSON for `GapState`.
   #[test]
   fn gap_state_malformed_json_rejected() {
     let cases = vec![
       r#"{"status":"invalid"}"#,
       r#"{"status":""}"#,
-      r#"{}"#,
-      r#"null"#,
+      r"{}",
+      r"null",
       r#""open""#,
       r#"{"status":"resolved"}"#, // missing resolution field
     ];
@@ -111,7 +114,7 @@ mod serde_attacks {
     }
   }
 
-  /// Test that GapState accepts extra fields (serde default behavior).
+  /// Test that `GapState` accepts extra fields (serde default behavior).
   /// This is a KNOWN BEHAVIOR - extra fields are ignored.
   #[test]
   fn gap_state_extra_fields_in_open_accepted() {
@@ -125,14 +128,14 @@ mod serde_attacks {
     assert_eq!(result.unwrap(), GapState::Open);
   }
 
-  /// Try malformed JSON for ConflictState.
+  /// Try malformed JSON for `ConflictState`.
   #[test]
   fn conflict_state_malformed_json_rejected() {
     let cases = vec![
       r#"{"status":"invalid"}"#,
       r#"{"status":""}"#,
-      r#"{}"#,
-      r#"null"#,
+      r"{}",
+      r"null",
       r#""pending""#,
       r#"{"status":"resolved"}"#, // missing chosen_index
       r#"{"status":"resolved","chosen_index":"not a number"}"#,
@@ -145,7 +148,7 @@ mod serde_attacks {
     }
   }
 
-  /// Test that ConflictState accepts extra fields (serde default behavior).
+  /// Test that `ConflictState` accepts extra fields (serde default behavior).
   /// This is a KNOWN BEHAVIOR - extra fields are ignored.
   #[test]
   fn conflict_state_extra_fields_in_pending_accepted() {
@@ -159,7 +162,7 @@ mod serde_attacks {
     assert_eq!(result.unwrap(), ConflictState::Pending);
   }
 
-  /// Test that GapState ignores completely unknown extra fields.
+  /// Test that `GapState` ignores completely unknown extra fields.
   #[test]
   fn gap_state_unknown_extra_fields_ignored() {
     let json = r#"{"status":"open","extra":"malicious","hack":true}"#;
@@ -214,7 +217,7 @@ mod serde_attacks {
 mod edge_cases {
   use super::*;
 
-  /// Test GapState with unicode resolution text.
+  /// Test `GapState` with unicode resolution text.
   #[test]
   fn gap_state_unicode_resolution() {
     let unicode_cases = vec![
@@ -236,7 +239,7 @@ mod edge_cases {
     }
   }
 
-  /// Test GapState with empty/whitespace strings - should fail.
+  /// Test `GapState` with empty/whitespace strings - should fail.
   #[test]
   fn gap_state_empty_strings_rejected() {
     let empty_cases = vec!["", " ", "  ", "\t", "\n", "\r\n", "\u{00A0}", "\u{3000}"];
@@ -252,7 +255,7 @@ mod edge_cases {
     }
   }
 
-  /// Test ConflictState with boundary index values.
+  /// Test `ConflictState` with boundary index values.
   #[test]
   fn conflict_state_boundary_indices() {
     // Test with 0 options - any index should fail
@@ -271,7 +274,7 @@ mod edge_cases {
     assert!(result.is_err());
   }
 
-  /// Test GapState::resolve cannot be called twice (via AlreadyResolved check would be needed).
+  /// Test `GapState::resolve` cannot be called twice (via `AlreadyResolved` check would be needed).
   #[test]
   fn gap_state_resolve_can_be_called_multiple_times_on_open() {
     // Note: Current implementation allows calling resolve() on Open multiple times
@@ -286,7 +289,7 @@ mod edge_cases {
     // Both produce new states from the same Open state
   }
 
-  /// Test ConflictState::resolve rejects double-resolution.
+  /// Test `ConflictState::resolve` rejects double-resolution.
   #[test]
   fn conflict_state_resolve_rejects_double_resolution() {
     let state = ConflictState::Resolved { chosen_index: 0 };
@@ -327,7 +330,7 @@ mod edge_cases {
     assert!(result.is_ok());
   }
 
-  /// Test numeric edge cases for Rule::Range.
+  /// Test numeric edge cases for `Rule::Range`.
   #[test]
   fn rule_range_edge_cases() {
     // NaN and infinity are representable in f64
@@ -374,7 +377,7 @@ mod edge_cases {
 mod fuzzing {
   use super::*;
 
-  /// Fuzz GapState::resolve with various string patterns.
+  /// Fuzz `GapState::resolve` with various string patterns.
   #[test]
   fn fuzz_gap_state_resolve() {
     let patterns = generate_fuzz_strings();
@@ -385,7 +388,7 @@ mod fuzzing {
     }
   }
 
-  /// Fuzz ConflictState::resolve with various indices.
+  /// Fuzz `ConflictState::resolve` with various indices.
   #[test]
   fn fuzz_conflict_state_resolve() {
     let indices = vec![
@@ -415,7 +418,7 @@ mod fuzzing {
   fn fuzz_gap_state_json() {
     let malformed_inputs = vec![
       // Invalid JSON
-      r#"{}}"#,
+      r"{}}",
       r#"{"status":"#,
       r#"{"status":null}"#,
       r#"{"status":[]}"#,
@@ -426,7 +429,7 @@ mod fuzzing {
       // Deeply nested
       r#"{"status":{"status":{"status":"open"}}}"#,
       // Array instead of object
-      r#"[]"#,
+      r"[]",
       r#"[{"status":"open"}]"#,
       // String injection attempts
       r#"{"status":"open\""}"#,
@@ -445,7 +448,7 @@ mod fuzzing {
     }
   }
 
-  /// Fuzz ConflictState JSON deserialization.
+  /// Fuzz `ConflictState` JSON deserialization.
   #[test]
   fn fuzz_conflict_state_json() {
     let malformed_inputs = vec![
@@ -510,7 +513,7 @@ mod fuzzing {
 mod state_machine_invariants {
   use super::*;
 
-  /// Verify GapState state machine invariants.
+  /// Verify `GapState` state machine invariants.
   #[test]
   fn gap_state_invariants() {
     // Open state
@@ -527,11 +530,11 @@ mod state_machine_invariants {
 
     // Cannot construct invalid state through resolve()
     assert!(GapState::Open.resolve(String::new()).is_err());
-    assert!(GapState::Open.resolve("".to_string()).is_err());
+    assert!(GapState::Open.resolve(String::new()).is_err());
     assert!(GapState::Open.resolve("   ".to_string()).is_err());
   }
 
-  /// Verify ConflictState state machine invariants.
+  /// Verify `ConflictState` state machine invariants.
   #[test]
   fn conflict_state_invariants() {
     // Pending state
@@ -739,7 +742,7 @@ mod vulnerability_summary {
   fn all_transitions_guarded() {
     // GapState: Open -> Resolved (guarded by non-empty validation)
     assert!(GapState::Open.resolve("valid".to_string()).is_ok());
-    assert!(GapState::Open.resolve("".to_string()).is_err());
+    assert!(GapState::Open.resolve(String::new()).is_err());
 
     // ConflictState: Pending -> Resolved (guarded by index bounds)
     assert!(ConflictState::Pending.resolve(0, 1).is_ok());

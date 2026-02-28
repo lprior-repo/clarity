@@ -1,3 +1,6 @@
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
+
 use crate::intent::quality::analyzer::{
   analyze_spec, calculate_ai_readiness_score, calculate_clarity_score, calculate_coverage_score,
   calculate_testability_score,

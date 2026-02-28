@@ -1435,11 +1435,8 @@ mod tests {
     let result1 = linter.lint_spec(&spec);
     let result2 = linter.lint_spec(&spec);
 
-    match (result1, result2) {
-      (Ok(r1), Ok(r2)) => {
-        assert_eq!(r1, r2);
-      }
-      _ => {}
+    if let (Ok(r1), Ok(r2)) = (result1, result2) {
+      assert_eq!(r1, r2);
     }
   }
 
@@ -1453,7 +1450,7 @@ mod tests {
 
   #[test]
   fn test_empty_behavior_description() {
-    let mut spec = match Spec::new("test-spec".to_string()) {
+    let spec = match Spec::new("test-spec".to_string()) {
       Ok(mut s) => {
         let mut feature = match Feature::new("auth".to_string()) {
           Ok(f) => f,
@@ -1492,7 +1489,7 @@ mod tests {
 
   #[test]
   fn test_feature_with_single_behavior() {
-    let mut spec = match Spec::new("test-spec".to_string()) {
+    let spec = match Spec::new("test-spec".to_string()) {
       Ok(mut s) => {
         let mut feature = match Feature::new("auth".to_string()) {
           Ok(f) => f,

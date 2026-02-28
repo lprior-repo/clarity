@@ -226,6 +226,9 @@ impl Spec {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+
   use super::Spec;
   use crate::intent::types::{Behavior, Feature, SpecName, TypeError};
 
@@ -379,11 +382,11 @@ mod tests {
     };
     feature_b.add_dependency("feature_a".to_string());
 
-    let add_a_result = spec.add_feature(feature_a);
-    assert!(add_a_result.is_ok());
+    let result_a = spec.add_feature(feature_a);
+    assert!(result_a.is_ok());
 
-    let add_b_result = spec.add_feature(feature_b);
-    assert!(add_b_result.is_ok());
+    let result_b = spec.add_feature(feature_b);
+    assert!(result_b.is_ok());
 
     let result = spec.validate();
     assert!(matches!(result, Err(TypeError::CircularDependency(_, _))));
@@ -418,14 +421,14 @@ mod tests {
     };
     feature_c.add_dependency("feature_a".to_string());
 
-    let add_a_result = spec.add_feature(feature_a);
-    assert!(add_a_result.is_ok());
+    let result_feat_a = spec.add_feature(feature_a);
+    assert!(result_feat_a.is_ok());
 
-    let add_b_result = spec.add_feature(feature_b);
-    assert!(add_b_result.is_ok());
+    let result_feat_b = spec.add_feature(feature_b);
+    assert!(result_feat_b.is_ok());
 
-    let add_c_result = spec.add_feature(feature_c);
-    assert!(add_c_result.is_ok());
+    let result_feat_c = spec.add_feature(feature_c);
+    assert!(result_feat_c.is_ok());
 
     let result = spec.validate();
     assert!(matches!(result, Err(TypeError::CircularDependency(_, _))));

@@ -242,6 +242,9 @@ pub fn validate_jsonl_content(content: &str) -> Result<(), Vec<(usize, String)>>
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+
   use super::*;
   use serde::{Deserialize, Serialize};
 
@@ -370,8 +373,8 @@ mod tests {
       },
     ];
     let content = build_jsonl_content(&sessions).unwrap();
-    assert!(content.contains("1"));
-    assert!(content.contains("2"));
+    assert!(content.contains('1'));
+    assert!(content.contains('2'));
   }
 
   #[test]

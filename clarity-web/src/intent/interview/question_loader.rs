@@ -499,11 +499,14 @@ pub fn format_error(error: &QuestionLoadError) -> String {
 
 #[cfg(test)]
 mod tests {
+  #![allow(clippy::unwrap_used)]
+  #![allow(clippy::expect_used)]
+
   use super::*;
 
   #[test]
   fn test_parse_questions_json_empty() {
-    let json = r#"{}"#;
+    let json = r"{}";
     let db = parse_questions_json(json).unwrap();
     assert!(db.api.round_1.is_empty());
     assert!(db.common.round_3.is_empty());
