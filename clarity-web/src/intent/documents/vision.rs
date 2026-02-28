@@ -92,18 +92,23 @@ fn generate_behavior_summary(behavior: &Behavior) -> String {
     format!("\n  - Postconditions: {post}")
   };
 
-  let verification = match &behavior.verification {
-    Some(v) => {
-      if v.description.is_empty() {
-        String::new()
-      } else {
-        format!("\n  - Verification: {}", v.description)
-      }
+  let verifications = if behavior.verifications.is_empty() {
+    String::new()
+  } else {
+    let ver_list = behavior
+      .verifications
+      .iter()
+      .filter(|v| !v.description.is_empty())
+      .map(|v| v.description.clone())
+      .join(", ");
+    if ver_list.is_empty() {
+      String::new()
+    } else {
+      format!("\n  - Verifications: {ver_list}")
     }
-    None => String::new(),
   };
 
-  format!("- {name}{desc}{preconditions}{postconditions}{verification}")
+  format!("- {name}{desc}{preconditions}{postconditions}{verifications}")
 }
 
 fn generate_invariants(spec: &Spec) -> String {
@@ -282,7 +287,7 @@ mod tests {
         behaviors: vec![Behavior {
           name: "login".to_string(),
           description: "User can log in".to_string(),
-          verification: None,
+          verifications: Vec::new(),
           preconditions: vec!["User exists".to_string()],
           postconditions: vec!["Session created".to_string()],
         }],

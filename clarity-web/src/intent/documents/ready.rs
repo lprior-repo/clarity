@@ -119,18 +119,23 @@ fn generate_behavior_details(behavior: &Behavior) -> String {
     format!("\n**Postconditions:**\n{post_list}")
   };
 
-  let verification = match &behavior.verification {
-    Some(v) => {
-      if v.description.is_empty() {
-        String::new()
-      } else {
-        format!("\n**Verification:** {}", v.description)
-      }
+  let verifications = if behavior.verifications.is_empty() {
+    String::new()
+  } else {
+    let ver_list = behavior
+      .verifications
+      .iter()
+      .filter(|v| !v.description.is_empty())
+      .map(|v| format!("- {}", v.description))
+      .join("\n");
+    if ver_list.is_empty() {
+      String::new()
+    } else {
+      format!("\n**Verifications:**\n{ver_list}")
     }
-    None => String::new(),
   };
 
-  format!("{header}{preconditions}{postconditions}{verification}")
+  format!("{header}{preconditions}{postconditions}{verifications}")
 }
 
 fn generate_invariants(spec: &Spec) -> String {
@@ -336,11 +341,11 @@ mod tests {
         behaviors: vec![Behavior {
           name: "login".to_string(),
           description: "User logs in".to_string(),
-          verification: Some(Verification {
+          verifications: vec![Verification {
             verification_type: "unit_test".to_string(),
             description: "Test login returns token".to_string(),
             example: String::new(),
-          }),
+          }],
           preconditions: vec!["User exists".to_string()],
           postconditions: vec!["Session created".to_string()],
         }],
@@ -425,10 +430,10 @@ mod tests {
   }
 
   #[test]
-  fn test_generate_ready_document_includes_verification() {
+  fn test_generate_ready_document_includes_verifications() {
     let spec = make_test_spec();
     let doc = generate_ready_document(&spec);
-    assert!(doc.contains("**Verification:**"));
+    assert!(doc.contains("**Verifications:**"));
     assert!(doc.contains("Test login returns token"));
   }
 

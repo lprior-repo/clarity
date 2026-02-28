@@ -130,7 +130,7 @@ pub(super) fn calculate_overall_score_from_values(
 pub(super) fn check_has_error_tests(spec: &Spec) -> bool {
   spec.features.iter().any(|f| {
     f.behaviors.iter().any(|b| {
-      b.verification.as_ref().is_some_and(|v| {
+      b.verifications.iter().any(|v| {
         let text = format!("{} {}", v.description, v.example).to_lowercase();
         ["error", "fail", "invalid"]
           .iter()
@@ -150,7 +150,7 @@ pub(super) fn check_has_auth_tests(spec: &Spec) -> bool {
         auth_words
           .iter()
           .any(|kw| b.name.to_lowercase().contains(kw))
-          || b.verification.as_ref().is_some_and(|v| {
+          || b.verifications.iter().any(|v| {
             auth_words
               .iter()
               .any(|kw| v.description.to_lowercase().contains(kw))
@@ -169,7 +169,7 @@ pub(super) fn check_has_edge_cases(spec: &Spec) -> bool {
       b.preconditions.iter().any(|p| {
         let lower = p.to_lowercase();
         edge_words.iter().any(|kw| lower.contains(kw))
-      }) || b.verification.as_ref().is_some_and(|v: &Verification| {
+      }) || b.verifications.iter().any(|v: &Verification| {
         let lower = format!("{} {}", v.description, v.example).to_lowercase();
         edge_words.iter().any(|kw| lower.contains(kw))
       })
@@ -181,7 +181,7 @@ pub(super) fn check_invariants_tested(spec: &Spec) -> bool {
   spec.invariants.is_empty()
     || spec.features.iter().any(|f| {
       f.behaviors.iter().any(|b| {
-        b.verification.as_ref().is_some_and(|v| {
+        b.verifications.iter().any(|v| {
           let lower = format!("{} {}", v.description, v.example).to_lowercase();
           lower.contains("invariant")
         }) || b
@@ -193,7 +193,7 @@ pub(super) fn check_invariants_tested(spec: &Spec) -> bool {
 }
 
 pub(super) fn calculate_verification_ratio(spec: &Spec) -> f64 {
-  ratio_by_behaviors(spec, |b| b.verification.is_some())
+  ratio_by_behaviors(spec, |b| !b.verifications.is_empty())
 }
 
 pub(super) fn calculate_description_ratio(spec: &Spec) -> f64 {
@@ -254,9 +254,9 @@ pub(super) fn calculate_postcondition_ratio(spec: &Spec) -> f64 {
 
 pub(super) fn calculate_example_ratio(spec: &Spec) -> f64 {
   ratio_by_behaviors(spec, |b| {
-    b.verification
-      .as_ref()
-      .is_some_and(|v| !v.example.is_empty())
+    b.verifications
+      .iter()
+      .any(|v| !v.example.is_empty())
   })
 }
 

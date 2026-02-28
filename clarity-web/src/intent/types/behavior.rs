@@ -16,9 +16,9 @@ pub struct Behavior {
   /// Human-readable description of the behavior
   #[serde(default)]
   pub description: String,
-  /// How to verify this behavior
+  /// How to verify this behavior (multiple verifications allowed)
   #[serde(default)]
-  pub verification: Option<Verification>,
+  pub verifications: Vec<Verification>,
   /// Pre-conditions for this behavior (behavior references)
   #[serde(default)]
   pub preconditions: Vec<String>,
@@ -41,7 +41,7 @@ impl Behavior {
     Ok(Self {
       name: validated_name.into(),
       description: String::new(),
-      verification: None,
+      verifications: Vec::new(),
       preconditions: Vec::new(),
       postconditions: Vec::new(),
     })
@@ -55,7 +55,7 @@ impl Behavior {
     Self {
       name: name.into(),
       description: String::new(),
-      verification: None,
+      verifications: Vec::new(),
       preconditions: Vec::new(),
       postconditions: Vec::new(),
     }
@@ -78,13 +78,24 @@ impl Behavior {
     }
   }
 
-  /// Builder method to set verification
+  /// Builder method to add a verification
   #[must_use]
   pub fn with_verification(self, verification: Verification) -> Self {
-    Self {
-      verification: Some(verification),
-      ..self
-    }
+    let mut verifications = self.verifications.clone();
+    verifications.push(verification);
+    Self { verifications, ..self }
+  }
+
+  /// Builder method to set verifications (replaces all)
+  #[must_use]
+  pub fn with_verifications(self, verifications: Vec<Verification>) -> Self {
+    Self { verifications, ..self }
+  }
+
+  /// Add a verification
+  pub fn add_verification(&mut self, verification: Verification) -> &mut Self {
+    self.verifications.push(verification);
+    self
   }
 
   /// Add a pre-condition
