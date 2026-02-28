@@ -5,6 +5,7 @@
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
+mod answer_loader;
 mod cue;
 mod error;
 
@@ -13,6 +14,7 @@ use std::path::{Path, PathBuf};
 use super::parser::parse_spec;
 use super::security::validate_file_path;
 use super::types::Spec;
+pub use answer_loader::{load_from_file, AnswerLoaderError, ParseErrorWithDetails};
 pub use cue::{export_cue_to_json, validate_cue_file};
 pub use error::{format_loader_error, LoaderError};
 

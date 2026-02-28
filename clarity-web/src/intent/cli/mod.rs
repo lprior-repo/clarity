@@ -5,8 +5,14 @@
 //! - Configuration management
 //! - Environment handling
 //! - Flag suggestions
+//! - Init prompts
 
-// Modules will be added in P2 phase
-// pub mod ui;
-// pub mod config;
-// pub mod env;
+pub mod config;
+pub mod env;
+pub mod flag_suggestions;
+pub mod init_prompt;
+
+pub use config::*;
+pub use env::*;
+pub use flag_suggestions::*;
+pub use init_prompt::*;
