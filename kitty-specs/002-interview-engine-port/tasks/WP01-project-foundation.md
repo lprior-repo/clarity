@@ -1,7 +1,7 @@
 ---
 work_package_id: WP01
 title: Project Foundation
-lane: "doing"
+lane: "for_review"
 dependencies: []
 base_branch: main
 base_commit: 9f57391125901350eb491008e73430470040e47b
@@ -274,3 +274,4 @@ fn test_p3_violation_module_exists_error() {
 ## Activity Log
 
 - 2026-02-28T04:03:22Z – claude-opus – shell_pid=277957 – lane=doing – Assigned agent via workflow command
+- 2026-02-28T04:05:47Z – claude-opus – shell_pid=277957 – lane=for_review – Ready for review: Added CUE schemas and test directory structure. Intent module structure and dependencies already existed.
