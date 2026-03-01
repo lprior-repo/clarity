@@ -784,7 +784,17 @@ pub fn can_execute_phase(session: InterviewSession, phase_number: Int) -> Bool {
 
 /// Get the next unlockable phase
 pub fn get_next_phase(session: InterviewSession) -> Int {
-  session.current_phase
+  // Find the first phase that can be executed but hasn't been completed
+  let next_executable =
+    list.range(1, session.current_phase + 1)
+    |> list.find(fn(phase) {
+      can_execute_phase(session, phase)
+      && !list.contains(session.completed_phases, phase)
+    })
+  case next_executable {
+    Ok(phase) -> phase
+    Error(Nil) -> session.current_phase
+  }
 }
 
 /// Format progress summary
