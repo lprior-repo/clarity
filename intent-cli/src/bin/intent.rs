@@ -847,8 +847,7 @@ fn parse_answer_file(content: &str) -> Result<HashMap<String, String>> {
 
   // Try JSON first (starts with {)
   if trimmed.starts_with('{') {
-    return serde_json::from_str(trimmed)
-      .with_context(|| "Failed to parse answer file as JSON");
+    return serde_json::from_str(trimmed).with_context(|| "Failed to parse answer file as JSON");
   }
 
   // Try TOML format
