@@ -110,3 +110,7 @@ REMAINING_*.md
 .amazonq/
 .github/copilot/
 .kittify/.dashboard
+
+# Large test binaries (don't track - these are ~34MB each)
+test_crate_root_imports
+test_integration
