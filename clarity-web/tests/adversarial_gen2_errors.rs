@@ -106,9 +106,7 @@ fn test_quality_error_chain_integrity() {
       assert!(issue.message.contains("contradiction"));
     }
     Err(e) => {
-      panic!(
-        "Should detect contradictions via issues, not error: {e:?}"
-      );
+      panic!("Should detect contradictions via issues, not error: {e:?}");
     }
   }
 }

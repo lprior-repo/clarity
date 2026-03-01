@@ -37,6 +37,9 @@ pub fn create_snapshot(session: &InterviewSession, description: &str) -> Session
     gaps_count: session.gaps.len(),
     conflicts_count: session.conflicts.len(),
     stage: session.stage.as_str().to_string(),
+    created_by: None,
+    version: 1,
+    tags: Vec::new(),
   }
 }
 

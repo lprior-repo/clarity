@@ -93,4 +93,56 @@ mod tests {
     assert_eq!(anti.why_avoid, "Violates SRP");
     assert_eq!(anti.alternative, "Split into focused classes");
   }
+
+  #[test]
+  fn test_why_avoid_and_alternative_serialization() {
+    let anti = AntiPattern::new(
+      "premature_optimization".to_string(),
+      "Optimizing too early".to_string(),
+    )
+    .with_why_avoid("Makes code harder to maintain".to_string())
+    .with_alternative("Measure first, then optimize bottlenecks".to_string());
+
+    // Test serialization
+    let json = serde_json::to_string(&anti).expect("Failed to serialize");
+    assert!(json.contains("why_avoid"));
+    assert!(json.contains("alternative"));
+    assert!(json.contains("Makes code harder to maintain"));
+    assert!(json.contains("Measure first, then optimize bottlenecks"));
+
+    // Test deserialization
+    let deserialized: AntiPattern = serde_json::from_str(&json).expect("Failed to deserialize");
+    assert_eq!(deserialized.why_avoid, "Makes code harder to maintain");
+    assert_eq!(
+      deserialized.alternative,
+      "Measure first, then optimize bottlenecks"
+    );
+  }
+
+  #[test]
+  fn test_why_avoid_and_alternative_defaults() {
+    // When deserializing without these fields, they should default to empty strings
+    let json = r#"{"name":"test","description":"test description"}"#;
+    let anti: AntiPattern = serde_json::from_str(json).expect("Failed to deserialize");
+
+    assert_eq!(anti.why_avoid, "");
+    assert_eq!(anti.alternative, "");
+  }
+
+  #[test]
+  fn test_why_avoid_and_alternative_from_json() {
+    let json = r#"{
+      "name": "spaghetti_code",
+      "description": "Tangled code structure",
+      "why_avoid": "Makes debugging and maintenance nightmare",
+      "alternative": "Use clear separation of concerns"
+    }"#;
+
+    let anti: AntiPattern = serde_json::from_str(json).expect("Failed to deserialize");
+
+    assert_eq!(anti.name, "spaghetti_code");
+    assert_eq!(anti.description, "Tangled code structure");
+    assert_eq!(anti.why_avoid, "Makes debugging and maintenance nightmare");
+    assert_eq!(anti.alternative, "Use clear separation of concerns");
+  }
 }

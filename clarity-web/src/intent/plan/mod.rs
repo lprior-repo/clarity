@@ -22,21 +22,25 @@ pub mod plan_mode;
 pub mod plan_emit_beads;
 pub mod plan_next;
 pub mod resolver;
+pub mod timestamp;
 pub mod types;
 
 // Re-export legacy types for backwards compatibility
 pub use plan_mode::{
   apply_phase_gating, compute_plan, get_actionable_beads as get_actionable_beads_legacy,
-  validate_plan_dependencies as validate_plan_dependencies_legacy, BeadStatus, Phase, PhaseStatus,
+  validate_plan_dependencies as validate_plan_dependencies_legacy, Action as PlanAction,
+  BeadStatus, Phase, PhaseStatus,
 };
 
 // Re-export new types at module level with distinct names to avoid conflicts
 pub use plan_emit_beads::{
-  check_existing_beads, emit_beads, generate_profile_beads, EmissionMode, EmissionResult,
+  check_existing_beads, emit_beads, filter_new_beads_for_test, format_result,
+  generate_profile_beads, EmissionMode, EmissionResult,
 };
 pub use plan_next::{
-  can_proceed, determine_next_phase, get_actionable_beads, get_blocking_gaps, get_next_action,
-  ActionType, NextAction,
+  can_proceed, determine_next_phase, format_next_action_json, format_next_action_json_compact,
+  get_actionable_beads, get_blocking_gaps, get_next_action, Action as NextActionType,
+  ActionContext, ActionSuggestion, ActionType, NextAction, PlanNextJsonOutput,
 };
 pub use resolver::{
   apply_resolution_to_plan, compute_critical_path, compute_parallelism, detect_cycles,
@@ -52,3 +56,6 @@ pub use types::{
 
 // Re-export legacy PlanError and ExecutionPlan as the primary types for backwards compat
 pub use plan_mode::{ExecutionPlan, PlanBead, PlanError};
+
+// Re-export timestamp utility
+pub use timestamp::current_iso8601_timestamp;

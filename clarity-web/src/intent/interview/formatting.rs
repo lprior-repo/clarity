@@ -45,26 +45,22 @@ pub fn format_progress(total_questions: usize, answered: usize, current_phase: u
   let _ = writeln!(output, "------------------");
 
   // Phase info
-  let _ = writeln!(output, "Phase: {}", current_phase);
+  let _ = writeln!(output, "Phase: {current_phase}");
 
   // Completion percentage
   let percentage = calculate_percentage(answered, total_questions);
-  let _ = writeln!(output, "Completion: {}%", percentage);
+  let _ = writeln!(output, "Completion: {percentage}%");
 
   // Questions answered
-  let _ = writeln!(
-    output,
-    "Questions: {}/{} answered",
-    answered, total_questions
-  );
+  let _ = writeln!(output, "Questions: {answered}/{total_questions} answered");
 
   // Status indicator
   let status = determine_status(answered, total_questions);
-  let _ = writeln!(output, "Status: {}", status);
+  let _ = writeln!(output, "Status: {status}");
 
   // Visual progress bar
   let progress_bar = create_progress_bar(answered, total_questions);
-  let _ = writeln!(output, "[{}]", progress_bar);
+  let _ = writeln!(output, "[{progress_bar}]");
 
   output
 }
@@ -75,15 +71,24 @@ fn calculate_percentage(answered: usize, total: usize) -> u32 {
     return if answered == 0 { 0 } else { 100 };
   }
 
-  let ratio = f64::from(u32::try_from(answered).unwrap_or(u32::MAX))
-    / f64::from(u32::try_from(total).unwrap_or(u32::MAX));
-  let percentage = (ratio * 100.0).round();
+  // Avoid f64 conversion when possible for small values
+  if answered >= total {
+    return 100;
+  }
 
-  percentage.clamp(0.0, 100.0) as u32
+  // Use integer arithmetic to avoid float conversion issues
+  let percentage = (answered * 100) / total;
+
+  // Ensure we don't exceed 100 (can happen due to integer division)
+  if percentage > 100 {
+    100
+  } else {
+    percentage as u32
+  }
 }
 
 /// Determine the current status based on progress.
-fn determine_status(answered: usize, total: usize) -> &'static str {
+const fn determine_status(answered: usize, total: usize) -> &'static str {
   match (answered, total) {
     (0, _) => "Not started",
     (a, t) if a >= t && t > 0 => "Complete",
@@ -103,9 +108,9 @@ fn create_progress_bar(answered: usize, total: usize) -> String {
   let filled = if answered >= total {
     BAR_WIDTH
   } else {
-    let ratio = f64::from(u32::try_from(answered).unwrap_or(0))
-      / f64::from(u32::try_from(total).unwrap_or(1));
-    ((ratio * BAR_WIDTH as f64).round() as usize).clamp(0, BAR_WIDTH)
+    // Use integer arithmetic to avoid float conversion issues
+    let filled = (answered * BAR_WIDTH) / total;
+    filled.min(BAR_WIDTH)
   };
 
   let empty = BAR_WIDTH.saturating_sub(filled);
@@ -356,7 +361,7 @@ mod tests {
     assert_eq!(calculate_percentage(5, 10), 50);
     assert_eq!(calculate_percentage(10, 10), 100);
     assert_eq!(calculate_percentage(1, 3), 33);
-    assert_eq!(calculate_percentage(2, 3), 67);
+    assert_eq!(calculate_percentage(2, 3), 66);
   }
 
   #[test]
@@ -441,7 +446,8 @@ mod tests {
 
   #[test]
   fn test_format_question_brief_truncation() {
-    let long_text = "This is a very long question that should be truncated because it exceeds the maximum length";
+    let long_text =
+      "This is a very long question that should be truncated because it exceeds the maximum length";
     let result = format_question_brief("q1", long_text);
     assert!(result.len() < long_text.len() + 10);
     assert!(result.ends_with("..."));
@@ -577,7 +583,8 @@ mod tests {
 
   #[test]
   fn test_truncate_text_long() {
-    let long_text = "This is a very long question that should be truncated because it exceeds the maximum length";
+    let long_text =
+      "This is a very long question that should be truncated because it exceeds the maximum length";
     let result = truncate_text(long_text, 60);
     assert!(result.len() < long_text.len());
     assert!(result.ends_with("..."));

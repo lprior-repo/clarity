@@ -12,7 +12,7 @@ mod intent;
 mod validation;
 
 pub use contextual::ContextualError;
-pub use formatting::format_error;
+pub use formatting::{format_error, format_plan_error};
 pub use helpers::{extract_available_fields, levenshtein, suggest_field_names};
 pub use intent::{
   ConfigurationErrorReason, ConstraintType, DependencyChain, IntentError, InternalErrorDetails,

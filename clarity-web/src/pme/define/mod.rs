@@ -16,14 +16,13 @@
 //! - **Great Reindexing Engine**: Converts time-based stories into graph-based requirements
 //! - **Brutal Truths Prioritizer**: Applies Four Brutal Truths framework with VORP scoring
 
-pub mod great_reindexing;
 pub mod brutal_truths;
+pub mod great_reindexing;
 
-pub use great_reindexing::{
-    GraphRequirement, JobToBeDone, RequirementEdge, RequirementGraph, RequirementNode,
-    ReindexingError, ReindexingOutput, StoryInput, UserStory,
-};
 pub use brutal_truths::{
-    BrutalTruth, BrutalTruthsOutput, PrioritizedItem, PrioritizerError, VorpCalculator,
-    VorpScore,
+  BrutalTruth, BrutalTruthsOutput, PrioritizedItem, PrioritizerError, VorpCalculator, VorpScore,
+};
+pub use great_reindexing::{
+  GraphRequirement, JobToBeDone, ReindexingError, ReindexingOutput, RequirementEdge,
+  RequirementGraph, RequirementNode, StoryInput, UserStory,
 };

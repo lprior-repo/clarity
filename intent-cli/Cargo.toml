@@ -21,6 +21,9 @@ tracing = { workspace = true }
 clarity-web = { path = "../clarity-web" }
 dialoguer = "0.11"
 chrono = { workspace = true }
+owo-colors = "4"
+atty = "0.2"
+itertools = { workspace = true }
 
 [lints]
 workspace = true

@@ -6,6 +6,7 @@ import gleam/string
 import gleeunit
 import gleeunit/should
 import intent/bead_templates
+
 // import intent/checker  // Removed in v3.0
 // import intent/http_client  // Removed in v3.0
 import intent/effects_analyzer
@@ -13,12 +14,14 @@ import intent/interpolate
 import intent/interview
 import intent/interview_contract
 import intent/interview_questions
+
 // import intent/kirk/effects_analyzer  // Disabled in v3.0, now at intent/effects_analyzer
 import intent/question_loader
 import intent/question_types.{
   type Question, Critical, Developer, HappyPath, Ops, Question, Security, User,
 }
 import intent/resolver
+
 // import intent/rules_engine  // Removed in v3.0
 import intent/types
 
@@ -58,7 +61,7 @@ fn make_spec(features: List(types.Feature)) -> types.Spec {
     invariants: [],
     anti_patterns: [],
     ai_hints: types.AIHints(
-      implementation: types.ImplementationHints(suggested_stack: []),
+      implementation: types.ImplementationHints([], "", []),
       entities: dict.new(),
       security: types.SecurityHints(
         password_hashing: "",

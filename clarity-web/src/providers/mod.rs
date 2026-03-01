@@ -12,7 +12,7 @@
 
 #[cfg(not(target_arch = "wasm32"))]
 mod opencode;
-mod resolution;
+pub mod resolution;
 mod r#trait;
 
 #[cfg(not(target_arch = "wasm32"))]

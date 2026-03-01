@@ -61,7 +61,10 @@ fn create_test_answer_record(
 /// Helper to verify database file exists and is valid
 fn verify_database_file_exists(db_path: &Path) -> Result<(), String> {
   if !db_path.exists() {
-    return Err(format!("Database file does not exist: {}", db_path.display()));
+    return Err(format!(
+      "Database file does not exist: {}",
+      db_path.display()
+    ));
   }
 
   // Check file has content

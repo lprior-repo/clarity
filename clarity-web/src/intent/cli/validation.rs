@@ -176,13 +176,11 @@ pub fn validate_no_args(args: &[String], command_name: &str) -> Result<(), Strin
 pub fn validate_single_arg(args: &[String], command_name: &str) -> Result<String, String> {
   match args.len() {
     0 => Err(format!(
-      "Command '{}' requires exactly 1 argument, but received 0",
-      command_name
+      "Command '{command_name}' requires exactly 1 argument, but received 0"
     )),
     1 => Ok(args[0].clone()),
     n => Err(format!(
-      "Command '{}' requires exactly 1 argument, but received {}",
-      command_name, n
+      "Command '{command_name}' requires exactly 1 argument, but received {n}"
     )),
   }
 }
@@ -206,10 +204,7 @@ pub fn validate_required_flag(flag_name: &str, value: &str) -> Result<String, St
   let trimmed = value.trim();
 
   if trimmed.is_empty() {
-    Err(format!(
-      "Required flag '--{}' is missing or empty",
-      flag_name
-    ))
+    Err(format!("Required flag '--{flag_name}' is missing or empty"))
   } else {
     Ok(trimmed.to_string())
   }

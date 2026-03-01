@@ -3,6 +3,89 @@ use std::collections::HashMap;
 
 use crate::intent::interview::types::Answer;
 
+// ============================================================================
+// Field-Level Answer Diff Types
+// ============================================================================
+
+/// Identifies which field of an Answer changed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AnswerField {
+  /// The question_id field changed.
+  QuestionId,
+  /// The question_text field changed.
+  QuestionText,
+  /// The perspective field changed.
+  Perspective,
+  /// The round field changed.
+  Round,
+  /// The response field changed.
+  Response,
+  /// The extracted HashMap changed.
+  Extracted,
+  /// The confidence field changed.
+  Confidence,
+  /// The notes field changed.
+  Notes,
+  /// The timestamp field changed.
+  Timestamp,
+}
+
+/// A change to a single field within an Answer.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AnswerFieldDiff {
+  /// Which field changed.
+  pub field: AnswerField,
+  /// Old value as string (None for added fields).
+  pub old_value: Option<String>,
+  /// New value as string (None for removed fields).
+  pub new_value: Option<String>,
+}
+
+/// Complete field-level diff for a single answer.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AnswerFieldsDiff {
+  /// Question identifier.
+  pub question_id: String,
+  /// The question text for context.
+  pub question_text: String,
+  /// Type of change at the answer level.
+  pub change_type: AnswerChangeType,
+  /// Individual field changes (empty if no fields changed).
+  pub field_changes: Vec<AnswerFieldDiff>,
+}
+
+impl AnswerFieldsDiff {
+  /// Check if any fields changed.
+  #[must_use]
+  pub const fn has_changes(&self) -> bool {
+    !self.field_changes.is_empty()
+  }
+
+  /// Get the number of changed fields.
+  #[must_use]
+  pub fn changed_field_count(&self) -> usize {
+    self.field_changes.len()
+  }
+
+  /// Check if a specific field changed.
+  #[must_use]
+  pub fn has_field_change(&self, field: AnswerField) -> bool {
+    self
+      .field_changes
+      .iter()
+      .any(|change| change.field == field)
+  }
+
+  /// Get the diff for a specific field, if it changed.
+  #[must_use]
+  pub fn get_field_diff(&self, field: AnswerField) -> Option<&AnswerFieldDiff> {
+    self
+      .field_changes
+      .iter()
+      .find(|change| change.field == field)
+  }
+}
+
 /// Snapshot for history tracking.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SessionSnapshot {
@@ -22,6 +105,45 @@ pub struct SessionSnapshot {
   pub conflicts_count: usize,
   /// Session stage at snapshot time.
   pub stage: String,
+  /// Who created this snapshot (e.g., user id, system, automation).
+  #[serde(default)]
+  pub created_by: Option<String>,
+  /// Schema version for this snapshot format.
+  #[serde(default)]
+  pub version: u32,
+  /// Tags for categorizing and filtering snapshots.
+  #[serde(default)]
+  pub tags: Vec<String>,
+}
+
+impl SessionSnapshot {
+  /// Set the creator of this snapshot.
+  #[must_use]
+  pub fn with_created_by(mut self, created_by: impl Into<String>) -> Self {
+    self.created_by = Some(created_by.into());
+    self
+  }
+
+  /// Set the version of this snapshot.
+  #[must_use]
+  pub fn with_version(mut self, version: u32) -> Self {
+    self.version = version;
+    self
+  }
+
+  /// Set the tags for this snapshot.
+  #[must_use]
+  pub fn with_tags(mut self, tags: Vec<String>) -> Self {
+    self.tags = tags;
+    self
+  }
+
+  /// Add a single tag to this snapshot.
+  #[must_use]
+  pub fn add_tag(mut self, tag: impl Into<String>) -> Self {
+    self.tags.push(tag.into());
+    self
+  }
 }
 
 /// Change type for answer differences.
@@ -232,7 +354,9 @@ impl SessionWithHistories {
 
   /// Create a wrapper and initialize histories from the session's answers.
   #[must_use]
-  pub fn with_initial_histories(session: crate::intent::interview::types::InterviewSession) -> Self {
+  pub fn with_initial_histories(
+    session: crate::intent::interview::types::InterviewSession,
+  ) -> Self {
     let answer_histories = session
       .answers
       .iter()
@@ -311,7 +435,9 @@ impl SessionWithHistories {
       None => {
         // No history exists yet - create one with this as initial version
         let history = AnswerWithHistory::new(question_id, new_response, change_reason);
-        self.answer_histories.insert(question_id.to_string(), history);
+        self
+          .answer_histories
+          .insert(question_id.to_string(), history);
       }
     }
 

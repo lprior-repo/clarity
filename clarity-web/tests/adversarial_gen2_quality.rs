@@ -85,9 +85,7 @@ fn test_quality_boundary_maximum_score_edge_case() {
       }
     }
     Err(e) => {
-      panic!(
-        "Quality calculation should succeed with valid input: {e:?}"
-      );
+      panic!("Quality calculation should succeed with valid input: {e:?}");
     }
   }
 }

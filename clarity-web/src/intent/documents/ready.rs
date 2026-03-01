@@ -125,11 +125,21 @@ fn generate_behavior_details(behavior: &Behavior) -> String {
   let verification = if behavior.verifications.is_empty() {
     String::new()
   } else {
+    // Use new criteria/example fields, fall back to deprecated description for backward compatibility
+    #[allow(deprecated)]
     let verifs: Vec<String> = behavior
       .verifications
       .iter()
-      .filter(|v| !v.description.is_empty())
-      .map(|v| v.description.clone())
+      .filter(|v| !v.criteria.is_empty() || !v.example.is_empty() || !v.description.is_empty())
+      .map(|v| {
+        if !v.criteria.is_empty() {
+          format!("Criteria: {}", v.criteria.join(", "))
+        } else if !v.example.is_empty() {
+          format!("Example: {}", v.example)
+        } else {
+          v.description.clone()
+        }
+      })
       .collect();
     if verifs.is_empty() {
       String::new()
@@ -358,6 +368,8 @@ fn get_current_timestamp() -> String {
 
 #[cfg(test)]
 mod tests {
+  #![allow(deprecated)]
+
   use super::*;
   use crate::intent::types::{
     AIHints, AntiPattern, Behavior, Feature, ImplementationHints, Invariant, SecurityHints,

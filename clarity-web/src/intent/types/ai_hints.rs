@@ -31,8 +31,7 @@ pub struct AIHints {
 
 /// `ImplementationHints` - hints for implementation approach
 ///
-/// This type extends the Gleam/CUE schema with additional fields for
-/// Rust-specific document generation. Fields present in CUE schema:
+/// This type aligns with the Gleam/CUE schema. Fields present in Gleam/CUE schema:
 /// - `suggested_stack` - CUE: `suggested_stack?: [...string]`
 /// - `architecture` - CUE: `architecture?: string`
 /// - `key_components` - CUE: `key_components?: [...string]`

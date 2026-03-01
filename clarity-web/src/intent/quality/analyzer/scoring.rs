@@ -131,7 +131,10 @@ pub(super) fn check_has_error_tests(spec: &Spec) -> bool {
   spec.features.iter().any(|f| {
     f.behaviors.iter().any(|b| {
       b.verifications.iter().any(|v| {
-        let text = format!("{} {}", v.description, v.example).to_lowercase();
+        // Combine new fields with deprecated description for backward compatibility
+        #[allow(deprecated)]
+        let text =
+          format!("{} {} {}", v.description, v.example, v.criteria.join(" ")).to_lowercase();
         ["error", "fail", "invalid"]
           .iter()
           .any(|kw| text.contains(kw))
@@ -151,9 +154,11 @@ pub(super) fn check_has_auth_tests(spec: &Spec) -> bool {
           .iter()
           .any(|kw| b.name.to_lowercase().contains(kw))
           || b.verifications.iter().any(|v| {
-            auth_words
-              .iter()
-              .any(|kw| v.description.to_lowercase().contains(kw))
+            // Combine new fields with deprecated description for backward compatibility
+            #[allow(deprecated)]
+            let text =
+              format!("{} {} {}", v.description, v.example, v.criteria.join(" ")).to_lowercase();
+            auth_words.iter().any(|kw| text.contains(kw))
           })
       })
   });
@@ -172,7 +177,10 @@ pub(super) fn check_has_edge_cases(spec: &Spec) -> bool {
         let lower = p.to_lowercase();
         edge_words.iter().any(|kw| lower.contains(kw))
       }) || b.verifications.iter().any(|v: &Verification| {
-        let lower = format!("{} {}", v.description, v.example).to_lowercase();
+        // Combine new fields with deprecated description for backward compatibility
+        #[allow(deprecated)]
+        let lower =
+          format!("{} {} {}", v.description, v.example, v.criteria.join(" ")).to_lowercase();
         edge_words.iter().any(|kw| lower.contains(kw))
       })
     })
@@ -184,7 +192,10 @@ pub(super) fn check_invariants_tested(spec: &Spec) -> bool {
     || spec.features.iter().any(|f| {
       f.behaviors.iter().any(|b| {
         b.verifications.iter().any(|v| {
-          let lower = format!("{} {}", v.description, v.example).to_lowercase();
+          // Combine new fields with deprecated description for backward compatibility
+          #[allow(deprecated)]
+          let lower =
+            format!("{} {} {}", v.description, v.example, v.criteria.join(" ")).to_lowercase();
           lower.contains("invariant")
         }) || b
           .postconditions

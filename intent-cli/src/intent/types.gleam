@@ -73,7 +73,11 @@ pub type AIHints {
 }
 
 pub type ImplementationHints {
-  ImplementationHints(suggested_stack: List(String))
+  ImplementationHints(
+    suggested_stack: List(String),
+    architecture: String,
+    key_components: List(String),
+  )
 }
 
 pub type EntityHint {

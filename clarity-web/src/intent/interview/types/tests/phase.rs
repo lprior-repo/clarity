@@ -142,11 +142,7 @@ fn complete_phase_is_idempotent() {
   session.complete_phase(1, "t2").ok();
 
   // Phase 1 appears only once in completed_phases
-  let count = session
-    .completed_phases
-    .iter()
-    .filter(|&&p| p == 1)
-    .count();
+  let count = session.completed_phases.iter().filter(|&&p| p == 1).count();
   assert_eq!(count, 1);
 
   // current_phase doesn't change on re-completion

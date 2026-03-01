@@ -20,7 +20,8 @@ use std::collections::HashMap;
 
 use clarity_web::intent::documents::spec_builder::{
   build_spec_from_session, extract_behaviors_from_answers, extract_constraints_from_answers,
-  extract_features_from_answers, extract_non_functional_requirements, extract_security_requirements,
+  extract_features_from_answers, extract_non_functional_requirements,
+  extract_security_requirements,
 };
 use clarity_web::intent::interview::storage::{
   append_session_to_jsonl, diff_sessions, format_diff, get_session_from_jsonl,
@@ -58,13 +59,19 @@ fn make_answer_with_extraction(
 /// Create a complete API interview session with realistic data.
 fn make_api_session_with_extraction(session_id: &str) -> InterviewSession {
   let mut extracted_base_url = HashMap::new();
-  extracted_base_url.insert("base_url".to_string(), "https://api.example.com/v1".to_string());
+  extracted_base_url.insert(
+    "base_url".to_string(),
+    "https://api.example.com/v1".to_string(),
+  );
 
   let mut extracted_auth = HashMap::new();
   extracted_auth.insert("auth_method".to_string(), "Bearer JWT".to_string());
 
   let mut extracted_happy = HashMap::new();
-  extracted_happy.insert("happy_path".to_string(), "GET /users returns list".to_string());
+  extracted_happy.insert(
+    "happy_path".to_string(),
+    "GET /users returns list".to_string(),
+  );
 
   let mut extracted_errors = HashMap::new();
   extracted_errors.insert(
@@ -284,13 +291,13 @@ fn test_extraction_pipeline_with_jsonl_file() {
   let retrieved = retrieved_result.unwrap();
 
   // Step 5: Verify extracted fields intact
-  let auth_answer = retrieved
-    .answers
-    .iter()
-    .find(|a| a.question_id == "q-auth");
+  let auth_answer = retrieved.answers.iter().find(|a| a.question_id == "q-auth");
   assert!(auth_answer.is_some());
   let auth = auth_answer.unwrap();
-  assert_eq!(auth.extracted.get("auth_method"), Some(&"Bearer JWT".to_string()));
+  assert_eq!(
+    auth.extracted.get("auth_method"),
+    Some(&"Bearer JWT".to_string())
+  );
 
   // Step 6: Build spec from retrieved session
   let spec = build_spec_from_session(&retrieved);
@@ -448,9 +455,15 @@ fn test_diff_with_extraction_changes() {
   session2.id = "diff-2".to_string();
 
   // Modify extraction in session2
-  if let Some(answer) = session2.answers.iter_mut().find(|a| a.question_id == "q-auth") {
+  if let Some(answer) = session2
+    .answers
+    .iter_mut()
+    .find(|a| a.question_id == "q-auth")
+  {
     answer.response = "OAuth2 with refresh tokens".to_string();
-    answer.extracted.insert("auth_method".to_string(), "OAuth2".to_string());
+    answer
+      .extracted
+      .insert("auth_method".to_string(), "OAuth2".to_string());
   }
 
   // Add new answer with extraction
@@ -698,12 +711,15 @@ fn test_event_profile_extraction() {
 #[test]
 fn test_confidence_score_with_extraction() {
   let mut extracted = HashMap::new();
-  extracted.insert("base_url".to_string(), "https://api.example.com".to_string());
+  extracted.insert(
+    "base_url".to_string(),
+    "https://api.example.com".to_string(),
+  );
 
   // Long response with extracted fields
-  let long_response = "This is a very detailed response about the API base URL that exceeds fifty characters";
-  let confidence_high =
-    InterviewSession::calculate_confidence(long_response, &HashMap::new());
+  let long_response =
+    "This is a very detailed response about the API base URL that exceeds fifty characters";
+  let confidence_high = InterviewSession::calculate_confidence(long_response, &HashMap::new());
   assert_eq!(confidence_high, 0.6); // Long but no extracted fields
 
   let confidence_with_extraction =
@@ -712,8 +728,7 @@ fn test_confidence_score_with_extraction() {
 
   // Short response
   let short_response = "Short";
-  let confidence_short =
-    InterviewSession::calculate_confidence(short_response, &HashMap::new());
+  let confidence_short = InterviewSession::calculate_confidence(short_response, &HashMap::new());
   assert_eq!(confidence_short, 0.6);
 }
 
@@ -725,7 +740,10 @@ fn test_confidence_score_with_extraction() {
 fn test_gap_detection_with_extracted_fields() {
   // Session with partial extraction (missing some required fields)
   let mut extracted_base_url = HashMap::new();
-  extracted_base_url.insert("base_url".to_string(), "https://api.example.com".to_string());
+  extracted_base_url.insert(
+    "base_url".to_string(),
+    "https://api.example.com".to_string(),
+  );
 
   let session = InterviewSession {
     id: "gap-test-1".to_string(),
@@ -790,7 +808,10 @@ fn test_extraction_across_multiple_rounds() {
 
   // Add first round answer
   let mut extracted1 = HashMap::new();
-  extracted1.insert("base_url".to_string(), "https://api.example.com".to_string());
+  extracted1.insert(
+    "base_url".to_string(),
+    "https://api.example.com".to_string(),
+  );
 
   let answer1 = Answer {
     question_id: "q-base-url".to_string(),
@@ -869,13 +890,19 @@ fn test_multiple_sessions_with_unique_extractions() {
   assert!(retrieved_api.is_ok());
   let api = retrieved_api.unwrap();
   assert_eq!(api.profile, Profile::Api);
-  assert!(api.answers.iter().any(|a| a.extracted.contains_key("base_url")));
+  assert!(api
+    .answers
+    .iter()
+    .any(|a| a.extracted.contains_key("base_url")));
 
   let retrieved_cli = get_session_from_jsonl(path, "concurrent-cli");
   assert!(retrieved_cli.is_ok());
   let cli = retrieved_cli.unwrap();
   assert_eq!(cli.profile, Profile::Cli);
-  assert!(cli.answers.iter().any(|a| a.extracted.contains_key("command_name")));
+  assert!(cli
+    .answers
+    .iter()
+    .any(|a| a.extracted.contains_key("command_name")));
 }
 
 // =============================================================================
@@ -897,7 +924,7 @@ fn test_extraction_with_empty_response() {
       question_text: "What is X?".to_string(),
       perspective: Perspective::User,
       round: 1,
-      response: String::new(), // Empty response
+      response: String::new(),   // Empty response
       extracted: HashMap::new(), // No extraction
       confidence: 0.0,
       notes: String::new(),
@@ -958,13 +985,20 @@ fn test_extraction_with_special_characters() {
   let parsed = parsed_result.unwrap();
   let answer = &parsed.answers[0];
   assert!(answer.extracted.contains_key("special_field"));
-  assert!(answer.extracted.get("special_field").unwrap().contains("quotes"));
+  assert!(answer
+    .extracted
+    .get("special_field")
+    .unwrap()
+    .contains("quotes"));
 }
 
 #[test]
 fn test_extraction_with_unicode() {
   let mut extracted = HashMap::new();
-  extracted.insert("unicode_field".to_string(), "Unicode: \u{4e2d}\u{6587} \u{65e5}\u{672c}\u{8a9e}".to_string());
+  extracted.insert(
+    "unicode_field".to_string(),
+    "Unicode: \u{4e2d}\u{6587} \u{65e5}\u{672c}\u{8a9e}".to_string(),
+  );
 
   let session = InterviewSession {
     id: "unicode-test".to_string(),
@@ -996,4 +1030,533 @@ fn test_extraction_with_unicode() {
 
   let parsed = parsed_result.unwrap();
   assert!(parsed.answers[0].response.contains("\u{4e2d}\u{6587}"));
+}
+
+// =============================================================================
+// End-to-End Extraction Pipeline Tests
+// =============================================================================
+//
+// These tests verify the complete extraction pipeline by actually calling
+// the extraction functions on raw interview responses, then verifying
+// the extracted data flows correctly through storage and spec building.
+
+#[test]
+fn test_e2e_extraction_pipeline_text_field() {
+  // Realistic interview Q&A for a text field
+  let response = "The API is available at https://api.example.com/v2";
+
+  // Create session with extracted data
+  let mut spec = HashMap::new();
+  spec.insert("endpoint".to_string(), "url".to_string());
+
+  let extracted_from_response =
+    clarity_web::intent::interview::answer_extraction::extract_fields_with_types(response, &spec);
+
+  // Verify extraction worked
+  assert!(extracted_from_response.contains_key("endpoint"));
+  assert!(extracted_from_response
+    .get("endpoint")
+    .unwrap()
+    .contains("https://api.example.com"));
+
+  // Now create session and verify full pipeline
+  let mut answer_extracted = HashMap::new();
+  answer_extracted.insert(
+    "endpoint".to_string(),
+    extracted_from_response.get("endpoint").unwrap().clone(),
+  );
+
+  let session = InterviewSession {
+    id: "e2e-text-1".to_string(),
+    profile: Profile::Api,
+    created_at: "2026-02-28T10:00:00Z".to_string(),
+    updated_at: "2026-02-28T10:00:00Z".to_string(),
+    completed_at: None,
+    stage: InterviewStage::Discovery,
+    rounds_completed: 0,
+    answers: vec![Answer {
+      question_id: "q-endpoint".to_string(),
+      question_text: "What is the API endpoint URL?".to_string(),
+      perspective: Perspective::User,
+      round: 1,
+      response: response.to_string(),
+      extracted: answer_extracted,
+      confidence: 0.9,
+      notes: String::new(),
+      timestamp: "2026-02-28T10:00:00Z".to_string(),
+    }],
+    gaps: Vec::new(),
+    conflicts: Vec::new(),
+    raw_notes: String::new(),
+    current_phase: 1,
+    completed_phases: Vec::new(),
+  };
+
+  // Verify storage roundtrip
+  let line_result = session_to_jsonl_line(&session);
+  assert!(line_result.is_ok());
+
+  let parsed_result = serde_json::from_str::<InterviewSession>(&line_result.unwrap());
+  assert!(parsed_result.is_ok());
+
+  let parsed = parsed_result.unwrap();
+  assert_eq!(
+    parsed.answers[0].extracted.get("endpoint").unwrap(),
+    "https://api.example.com/v2"
+  );
+}
+
+#[test]
+fn test_e2e_extraction_pipeline_integer_field() {
+  let response = "The rate limit is 1000 requests per minute";
+
+  // Extract integer using actual function
+  let mut spec = HashMap::new();
+  spec.insert("rate_limit".to_string(), "integer".to_string());
+
+  let extracted =
+    clarity_web::intent::interview::answer_extraction::extract_fields_with_types(response, &spec);
+
+  assert!(extracted.contains_key("rate_limit"));
+  assert_eq!(extracted.get("rate_limit").unwrap(), "1000");
+
+  // Create session and verify pipeline
+  let mut answer_extracted = HashMap::new();
+  answer_extracted.insert(
+    "rate_limit".to_string(),
+    extracted.get("rate_limit").unwrap().clone(),
+  );
+
+  let session = InterviewSession {
+    id: "e2e-int-1".to_string(),
+    profile: Profile::Api,
+    created_at: "2026-02-28T10:00:00Z".to_string(),
+    updated_at: "2026-02-28T10:00:00Z".to_string(),
+    completed_at: None,
+    stage: InterviewStage::Discovery,
+    rounds_completed: 0,
+    answers: vec![Answer {
+      question_id: "q-rate-limit".to_string(),
+      question_text: "What is the rate limit?".to_string(),
+      perspective: Perspective::User,
+      round: 1,
+      response: response.to_string(),
+      extracted: answer_extracted,
+      confidence: 0.85,
+      notes: String::new(),
+      timestamp: "2026-02-28T10:00:00Z".to_string(),
+    }],
+    gaps: Vec::new(),
+    conflicts: Vec::new(),
+    raw_notes: String::new(),
+    current_phase: 1,
+    completed_phases: Vec::new(),
+  };
+
+  // Build spec from extracted data
+  let spec_output = build_spec_from_session(&session);
+  assert!(spec_output.contains("package api"));
+}
+
+#[test]
+fn test_e2e_extraction_pipeline_boolean_field() {
+  let response = "yes";
+
+  // Extract boolean
+  let mut spec = HashMap::new();
+  spec.insert("auth_method".to_string(), "boolean".to_string());
+
+  let extracted =
+    clarity_web::intent::interview::answer_extraction::extract_fields_with_types(response, &spec);
+
+  assert!(extracted.contains_key("auth_method"));
+  assert_eq!(extracted.get("auth_method").unwrap(), "true");
+
+  // Create session
+  let mut answer_extracted = HashMap::new();
+  answer_extracted.insert(
+    "auth_method".to_string(),
+    extracted.get("auth_method").unwrap().clone(),
+  );
+
+  let session = InterviewSession {
+    id: "e2e-bool-1".to_string(),
+    profile: Profile::Api,
+    created_at: "2026-02-28T10:00:00Z".to_string(),
+    updated_at: "2026-02-28T10:00:00Z".to_string(),
+    completed_at: None,
+    stage: InterviewStage::Discovery,
+    rounds_completed: 0,
+    answers: vec![Answer {
+      question_id: "q-auth-required".to_string(),
+      question_text: "Does the API require authentication?".to_string(),
+      perspective: Perspective::User,
+      round: 1,
+      response: response.to_string(),
+      extracted: answer_extracted,
+      confidence: 0.9,
+      notes: String::new(),
+      timestamp: "2026-02-28T10:00:00Z".to_string(),
+    }],
+    gaps: Vec::new(),
+    conflicts: Vec::new(),
+    raw_notes: String::new(),
+    current_phase: 1,
+    completed_phases: Vec::new(),
+  };
+
+  // Verify gap detection works correctly with extracted boolean
+  let gaps = session.detect_gaps();
+  // Auth field is now filled, so it shouldn't appear as a gap
+  let auth_gap_exists = gaps.iter().any(|g| g.field == "auth_method");
+  assert!(
+    !auth_gap_exists,
+    "Boolean extraction should fill auth_method gap"
+  );
+}
+
+#[test]
+fn test_e2e_extraction_pipeline_email_field() {
+  let response = "Please contact support@example.com for more details";
+
+  // Extract email
+  let mut spec = HashMap::new();
+  spec.insert("contact_email".to_string(), "email".to_string());
+
+  let extracted =
+    clarity_web::intent::interview::answer_extraction::extract_fields_with_types(response, &spec);
+
+  assert!(extracted.contains_key("contact_email"));
+  assert_eq!(
+    extracted.get("contact_email").unwrap(),
+    "support@example.com"
+  );
+}
+
+#[test]
+fn test_e2e_extraction_pipeline_float_field() {
+  let response = "2.5";
+
+  // Extract float
+  let mut spec = HashMap::new();
+  spec.insert("version".to_string(), "float".to_string());
+
+  let extracted =
+    clarity_web::intent::interview::answer_extraction::extract_fields_with_types(response, &spec);
+
+  assert!(extracted.contains_key("version"));
+  assert_eq!(extracted.get("version").unwrap(), "2.5");
+}
+
+#[test]
+fn test_e2e_extraction_pipeline_name_field() {
+  let response = "Payment Gateway";
+
+  // Extract name (should take first line only)
+  let mut spec = HashMap::new();
+  spec.insert("api_name".to_string(), "name".to_string());
+
+  let extracted =
+    clarity_web::intent::interview::answer_extraction::extract_fields_with_types(response, &spec);
+
+  assert!(extracted.contains_key("api_name"));
+  assert_eq!(extracted.get("api_name").unwrap(), "Payment Gateway");
+}
+
+#[test]
+fn test_e2e_extraction_pipeline_boolean_field_with_storage() {
+  let response = "yes";
+
+  // Extract boolean
+  let mut spec = HashMap::new();
+  spec.insert("auth_method".to_string(), "boolean".to_string());
+
+  let extracted =
+    clarity_web::intent::interview::answer_extraction::extract_fields_with_types(response, &spec);
+
+  assert!(extracted.contains_key("auth_method"));
+  assert_eq!(extracted.get("auth_method").unwrap(), "true");
+
+  // Create session
+  let mut answer_extracted = HashMap::new();
+  answer_extracted.insert(
+    "auth_method".to_string(),
+    extracted.get("auth_method").unwrap().clone(),
+  );
+
+  let session = InterviewSession {
+    id: "e2e-bool-1".to_string(),
+    profile: Profile::Api,
+    created_at: "2026-02-28T10:00:00Z".to_string(),
+    updated_at: "2026-02-28T10:00:00Z".to_string(),
+    completed_at: None,
+    stage: InterviewStage::Discovery,
+    rounds_completed: 0,
+    answers: vec![Answer {
+      question_id: "q-auth-required".to_string(),
+      question_text: "Does the API require authentication?".to_string(),
+      perspective: Perspective::User,
+      round: 1,
+      response: response.to_string(),
+      extracted: answer_extracted,
+      confidence: 0.9,
+      notes: String::new(),
+      timestamp: "2026-02-28T10:00:00Z".to_string(),
+    }],
+    gaps: Vec::new(),
+    conflicts: Vec::new(),
+    raw_notes: String::new(),
+    current_phase: 1,
+    completed_phases: Vec::new(),
+  };
+
+  // Verify gap detection works correctly with extracted boolean
+  let gaps = session.detect_gaps();
+  // Auth field is now filled, so it shouldn't appear as a gap
+  let auth_gap_exists = gaps.iter().any(|g| g.field == "auth_method");
+  assert!(
+    !auth_gap_exists,
+    "Boolean extraction should fill auth_method gap"
+  );
+}
+
+#[test]
+fn test_e2e_full_api_interview_extraction() {
+  // Simulate a complete API interview with multiple Q&A pairs
+
+  // Q1: Base URL
+  let q1_response = "The API base URL is https://api.myservice.com/v3";
+  let q1_extracted = {
+    let mut spec = HashMap::new();
+    spec.insert("base_url".to_string(), "url".to_string());
+    clarity_web::intent::interview::answer_extraction::extract_fields_with_types(q1_response, &spec)
+  };
+
+  // Q2: Authentication
+  let q2_response = "We use Bearer tokens with OAuth2";
+  let q2_extracted = {
+    let mut spec = HashMap::new();
+    spec.insert("auth_method".to_string(), "text".to_string());
+    clarity_web::intent::interview::answer_extraction::extract_fields_with_types(q2_response, &spec)
+  };
+
+  // Q3: Happy path
+  let q3_response = "GET /users returns a paginated list of users with 100 items per page";
+  let q3_extracted = {
+    let mut spec = HashMap::new();
+    spec.insert("happy_path".to_string(), "text".to_string());
+    clarity_web::intent::interview::answer_extraction::extract_fields_with_types(q3_response, &spec)
+  };
+
+  // Q4: Error cases
+  let q4_response = "401 Unauthorized when token is expired, 404 Not Found for missing resources, 500 for server errors";
+  let q4_extracted = {
+    let mut spec = HashMap::new();
+    spec.insert("error_cases".to_string(), "text".to_string());
+    clarity_web::intent::interview::answer_extraction::extract_fields_with_types(q4_response, &spec)
+  };
+
+  // Q5: Response format
+  let q5_response = "JSON with consistent envelope structure";
+  let q5_extracted = {
+    let mut spec = HashMap::new();
+    spec.insert("response_format".to_string(), "text".to_string());
+    clarity_web::intent::interview::answer_extraction::extract_fields_with_types(q5_response, &spec)
+  };
+
+  // Build session with all extracted data
+  let session = InterviewSession {
+    id: "full-api-interview-1".to_string(),
+    profile: Profile::Api,
+    created_at: "2026-02-28T10:00:00Z".to_string(),
+    updated_at: "2026-02-28T12:00:00Z".to_string(),
+    completed_at: Some("2026-02-28T12:00:00Z".to_string()),
+    stage: InterviewStage::Complete,
+    rounds_completed: 1,
+    answers: vec![
+      Answer {
+        question_id: "q-base-url".to_string(),
+        question_text: "What is the base URL?".to_string(),
+        perspective: Perspective::User,
+        round: 1,
+        response: q1_response.to_string(),
+        extracted: q1_extracted,
+        confidence: 0.95,
+        notes: String::new(),
+        timestamp: "2026-02-28T10:00:00Z".to_string(),
+      },
+      Answer {
+        question_id: "q-auth".to_string(),
+        question_text: "What authentication method?".to_string(),
+        perspective: Perspective::User,
+        round: 1,
+        response: q2_response.to_string(),
+        extracted: q2_extracted,
+        confidence: 0.9,
+        notes: String::new(),
+        timestamp: "2026-02-28T10:05:00Z".to_string(),
+      },
+      Answer {
+        question_id: "q-happy".to_string(),
+        question_text: "What is the happy path?".to_string(),
+        perspective: Perspective::User,
+        round: 1,
+        response: q3_response.to_string(),
+        extracted: q3_extracted,
+        confidence: 0.85,
+        notes: String::new(),
+        timestamp: "2026-02-28T10:10:00Z".to_string(),
+      },
+      Answer {
+        question_id: "q-errors".to_string(),
+        question_text: "What error cases to handle?".to_string(),
+        perspective: Perspective::User,
+        round: 1,
+        response: q4_response.to_string(),
+        extracted: q4_extracted,
+        confidence: 0.9,
+        notes: String::new(),
+        timestamp: "2026-02-28T10:15:00Z".to_string(),
+      },
+      Answer {
+        question_id: "q-format".to_string(),
+        question_text: "What is the response format?".to_string(),
+        perspective: Perspective::User,
+        round: 1,
+        response: q5_response.to_string(),
+        extracted: q5_extracted,
+        confidence: 0.95,
+        notes: String::new(),
+        timestamp: "2026-02-28T10:20:00Z".to_string(),
+      },
+    ],
+    gaps: Vec::new(),
+    conflicts: Vec::new(),
+    raw_notes: String::new(),
+    current_phase: 1,
+    completed_phases: vec![1],
+  };
+
+  // Verify no gaps (all required fields extracted)
+  let gaps = session.detect_gaps();
+  assert!(
+    gaps.is_empty(),
+    "All API required fields should be extracted, no gaps expected"
+  );
+
+  // Verify spec building works
+  let spec = build_spec_from_session(&session);
+  assert!(spec.contains("package api"));
+
+  // Verify storage roundtrip
+  let line_result = session_to_jsonl_line(&session);
+  assert!(line_result.is_ok());
+
+  let parsed_result = serde_json::from_str::<InterviewSession>(&line_result.unwrap());
+  assert!(parsed_result.is_ok());
+
+  let parsed = parsed_result.unwrap();
+
+  // Verify all extracted data survived roundtrip
+  assert!(parsed.answers.iter().all(|a| !a.extracted.is_empty()));
+
+  // Verify specific extracted values
+  let base_url_answer = parsed
+    .answers
+    .iter()
+    .find(|a| a.question_id == "q-base-url");
+  assert!(base_url_answer.is_some());
+  assert!(base_url_answer
+    .unwrap()
+    .extracted
+    .get("base_url")
+    .unwrap()
+    .contains("https://api.myservice.com"));
+}
+
+#[test]
+fn test_e2e_extraction_error_handling() {
+  // Test extraction with invalid inputs
+
+  // Invalid URL (no protocol)
+  let response_no_protocol = "My API is at myserver.com";
+  let mut spec = HashMap::new();
+  spec.insert("url".to_string(), "url".to_string());
+
+  let extracted = clarity_web::intent::interview::answer_extraction::extract_fields_with_types(
+    response_no_protocol,
+    &spec,
+  );
+
+  // Should not extract URL when no protocol present
+  assert!(!extracted.contains_key("url"));
+
+  // Empty response
+  let response_empty = "";
+  let mut spec2 = HashMap::new();
+  spec2.insert("name".to_string(), "name".to_string());
+
+  let extracted_empty =
+    clarity_web::intent::interview::answer_extraction::extract_fields_with_types(
+      response_empty,
+      &spec2,
+    );
+
+  // Should not extract from empty response
+  assert!(!extracted_empty.contains_key("name"));
+}
+
+#[test]
+fn test_e2e_extraction_with_mixed_responses() {
+  // Realistic interview with varied response types
+
+  // Text response (use "name" type - which extracts first line only)
+  let r1 = "deploy";
+  let e1 = {
+    let mut s = HashMap::new();
+    s.insert("name".to_string(), "name".to_string());
+    clarity_web::intent::interview::answer_extraction::extract_fields_with_types(r1, &s)
+  };
+
+  // Boolean response
+  let r2 = "yes";
+  let e2 = {
+    let mut s = HashMap::new();
+    s.insert("autocomplete".to_string(), "boolean".to_string());
+    clarity_web::intent::interview::answer_extraction::extract_fields_with_types(r2, &s)
+  };
+
+  // List response
+  let r3 = "init, build, deploy, status";
+  let e3 = {
+    let mut s = HashMap::new();
+    s.insert("subcommands".to_string(), "list".to_string());
+    clarity_web::intent::interview::answer_extraction::extract_fields_with_types(r3, &s)
+  };
+
+  // URL response
+  let r4 = "https://docs.example.com/cli";
+  let e4 = {
+    let mut s = HashMap::new();
+    s.insert("docs_url".to_string(), "url".to_string());
+    clarity_web::intent::interview::answer_extraction::extract_fields_with_types(r4, &s)
+  };
+
+  // Verify all extractions worked
+  assert!(e1.contains_key("name"));
+  assert_eq!(e1.get("name").unwrap(), "deploy");
+
+  assert!(e2.contains_key("autocomplete"));
+  assert_eq!(e2.get("autocomplete").unwrap(), "true");
+
+  assert!(e3.contains_key("subcommands"));
+  let subcommands = e3.get("subcommands").unwrap();
+  assert!(subcommands.contains("init"));
+  assert!(subcommands.contains("deploy"));
+
+  assert!(e4.contains_key("docs_url"));
+  assert!(e4
+    .get("docs_url")
+    .unwrap()
+    .contains("https://docs.example.com"));
 }

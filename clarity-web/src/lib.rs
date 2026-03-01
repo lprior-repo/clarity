@@ -15,6 +15,7 @@ pub mod hooks;
 pub mod intent;
 pub mod kirk;
 pub mod lattice;
+pub mod pme;
 pub mod providers;
 pub mod server;
 pub mod storage;

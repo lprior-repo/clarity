@@ -1,3 +1,17 @@
+//! Interview session management and operations.
+//!
+//! This module provides the [`InterviewSession`] implementation with methods
+//! for managing the interview lifecycle, including:
+//!
+//! - Phase completion tracking
+//! - Round management
+//! - Gap detection and resolution
+//! - Conflict detection and resolution
+//! - Answer collection
+//!
+//! See the [module-level documentation](../index.html#phase-and-stage-management)
+//! for an overview of phase and stage management.
+
 use std::collections::HashSet;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -8,6 +22,26 @@ use super::{
 };
 
 impl InterviewSession {
+  /// Create a new interview session.
+  ///
+  /// The session starts in the Discovery stage with `current_phase` set to 1.
+  ///
+  /// # Examples
+  ///
+  /// ```ignore
+  /// use clarity_web::intent::interview::types::{InterviewSession, Profile};
+  ///
+  /// let session = InterviewSession::new(
+  ///     "session-123".to_string(),
+  ///     Profile::Api,
+  ///     "2024-01-01T00:00:00Z".to_string(),
+  /// );
+  ///
+  /// assert_eq!(session.id, "session-123");
+  /// assert_eq!(session.profile, Profile::Api);
+  /// assert_eq!(session.current_phase, 1);
+  /// assert!(session.completed_phases.is_empty());
+  /// ```
   #[must_use]
   pub fn new(id: String, profile: Profile, timestamp: String) -> Self {
     Self {
@@ -20,11 +54,17 @@ impl InterviewSession {
     }
   }
 
+  /// Get the current round number (1-indexed).
+  ///
+  /// The current round is always `rounds_completed + 1`.
   #[must_use]
   pub const fn get_current_round(&self) -> u32 {
     self.rounds_completed + 1
   }
 
+  /// Detect gaps in required fields based on the profile.
+  ///
+  /// Returns a list of gaps for required fields that have not been answered.
   #[must_use]
   pub fn detect_gaps(&self) -> Vec<Gap> {
     let required = self.profile.required_fields();
@@ -51,6 +91,7 @@ impl InterviewSession {
       .collect()
   }
 
+  /// Get all blocking gaps that are still unresolved.
   #[must_use]
   pub fn get_blocking_gaps(&self) -> Vec<&Gap> {
     self
@@ -63,8 +104,10 @@ impl InterviewSession {
   /// Resolve a gap by ID with a non-empty resolution.
   ///
   /// # Errors
-  /// Returns `InterviewError` when `gap_id`/`resolution` are empty or when the
-  /// referenced gap does not exist.
+  ///
+  /// - Returns [`InterviewError::EmptyGapId`] if `gap_id` is empty or whitespace.
+  /// - Returns [`InterviewError::EmptyResolution`] if `resolution` is empty or whitespace.
+  /// - Returns [`InterviewError::GapNotFound`] if no gap matches the ID.
   pub fn resolve_gap(&mut self, gap_id: &str, resolution: &str) -> Result<(), InterviewError> {
     if gap_id.trim().is_empty() {
       return Err(InterviewError::EmptyGapId);
@@ -89,9 +132,13 @@ impl InterviewSession {
   /// Add an answer to the current round.
   ///
   /// # Errors
-  /// Returns `InterviewSessionError` when the session is paused/complete, input
-  /// fields are empty, round does not match, or the answer duplicates an existing
-  /// question in the same round.
+  ///
+  /// - Returns [`InterviewSessionError::SessionPaused`] if the session is paused.
+  /// - Returns [`InterviewSessionError::AlreadyComplete`] if the session is complete.
+  /// - Returns [`InterviewSessionError::EmptyQuestionId`] if the answer has no question ID.
+  /// - Returns [`InterviewSessionError::EmptyTimestamp`] if the timestamp is empty.
+  /// - Returns [`InterviewSessionError::RoundMismatch`] if the answer's round doesn't match.
+  /// - Returns [`InterviewSessionError::DuplicateAnswer`] if this question was already answered in this round.
   pub fn add_answer(
     &mut self,
     answer: Answer,
@@ -134,6 +181,11 @@ impl InterviewSession {
     Ok(())
   }
 
+  /// Calculate confidence score for an answer.
+  ///
+  /// Returns a confidence score based on response length and extracted fields:
+  /// - 0.85 if response is > 50 characters and has extracted fields
+  /// - 0.60 otherwise
   #[must_use]
   pub fn calculate_confidence(
     response: &str,
@@ -151,9 +203,20 @@ impl InterviewSession {
 
   /// Mark the current round as complete and advance stage if needed.
   ///
+  /// This method:
+  /// 1. Increments `rounds_completed`
+  /// 2. Updates the stage based on rounds completed:
+  ///    - Rounds 1-2: Discovery
+  ///    - Round 3: Refinement
+  ///    - Round 4: Validation
+  ///    - Round 5+: Complete
+  /// 3. Sets `completed_at` if the session is now Complete
+  ///
   /// # Errors
-  /// Returns `InterviewSessionError` when the session is paused/complete or
-  /// when `timestamp` is empty.
+  ///
+  /// - Returns [`InterviewSessionError::SessionPaused`] if the session is paused.
+  /// - Returns [`InterviewSessionError::AlreadyComplete`] if the session is complete.
+  /// - Returns [`InterviewSessionError::EmptyTimestamp`] if the timestamp is empty.
   pub fn complete_round(&mut self, timestamp: &str) -> Result<(), InterviewSessionError> {
     if self.stage == InterviewStage::Paused {
       return Err(InterviewSessionError::SessionPaused);
@@ -183,8 +246,9 @@ impl InterviewSession {
   /// Validate that no unresolved blocking gaps remain.
   ///
   /// # Errors
-  /// Returns `InterviewSessionError::BlockingGapsUnresolved` if any blocking
-  /// gaps are still open.
+  ///
+  /// Returns [`InterviewSessionError::BlockingGapsUnresolved`] if any blocking
+  /// gaps are still open, containing the count and IDs of unresolved gaps.
   pub fn can_proceed(&self) -> Result<(), InterviewSessionError> {
     let gap_ids: Vec<String> = self
       .get_blocking_gaps()
@@ -202,11 +266,65 @@ impl InterviewSession {
     }
   }
 
-  /// Mark a phase complete and optionally advance `current_phase`.
+  /// Mark a phase as complete and optionally advance `current_phase`.
+  ///
+  /// This method tracks fine-grained progress within an interview session.
+  /// Unlike rounds, phases can be completed in any order.
+  ///
+  /// # Behavior
+  ///
+  /// - Adds `phase_number` to `completed_phases` (idempotent - won't duplicate)
+  /// - Advances `current_phase` only if completing the current phase
+  /// - Updates `updated_at` timestamp
+  /// - Works regardless of the current [`InterviewStage`]
+  ///
+  /// # Phase Rules
+  ///
+  /// - Phases are 1-indexed (phase 0 is invalid)
+  /// - Phases can be completed out of order
+  /// - `current_phase` only advances when the *current* phase is completed
+  /// - Completing the same phase multiple times is idempotent
   ///
   /// # Errors
-  /// Returns `InterviewSessionError` when `phase_number` is zero or when
-  /// `timestamp` is empty.
+  ///
+  /// - Returns [`InterviewSessionError::InvalidPhaseNumber`] if `phase_number` is 0.
+  /// - Returns [`InterviewSessionError::EmptyTimestamp`] if `timestamp` is empty.
+  ///
+  /// # Examples
+  ///
+  /// ## Sequential Phase Completion
+  ///
+  /// ```ignore
+  /// use clarity_web::intent::interview::types::{InterviewSession, Profile};
+  ///
+  /// let mut session = InterviewSession::new(
+  ///     "session-1".into(),
+  ///     Profile::Api,
+  ///     "t1".into(),
+  /// );
+  ///
+  /// // Initially at phase 1
+  /// assert_eq!(session.current_phase, 1);
+  /// assert!(session.completed_phases.is_empty());
+  ///
+  /// // Complete phase 1
+  /// session.complete_phase(1, "t2").unwrap();
+  /// assert_eq!(session.current_phase, 2);
+  /// assert_eq!(session.completed_phases, vec![1]);
+  /// ```
+  ///
+  /// ## Out-of-Order Phase Completion
+  ///
+  /// ```ignore
+  /// // Complete phase 3 before phase 1
+  /// session.complete_phase(3, "t1").unwrap();
+  /// assert!(session.completed_phases.contains(&3));
+  /// assert_eq!(session.current_phase, 1); // unchanged - not the current phase
+  ///
+  /// // Now complete phase 1 (current)
+  /// session.complete_phase(1, "t2").unwrap();
+  /// assert_eq!(session.current_phase, 2); // advances now
+  /// ```
   pub fn complete_phase(
     &mut self,
     phase_number: u32,
@@ -232,9 +350,12 @@ impl InterviewSession {
 
   /// Detect and append newly found conflicts.
   ///
+  /// Analyzes all answers for conflicts and appends any new ones to the session.
+  ///
   /// # Errors
-  /// Returns `ConflictDetectionError` when the session ID is empty or when an
-  /// existing answer has an empty question ID.
+  ///
+  /// - Returns [`ConflictDetectionError::EmptySessionId`] if the session ID is empty.
+  /// - Returns [`ConflictDetectionError::EmptyQuestionId`] if an answer has no question ID.
   pub fn detect_conflicts(&mut self) -> Result<Vec<Conflict>, ConflictDetectionError> {
     if self.id.is_empty() {
       return Err(ConflictDetectionError::EmptySessionId);
@@ -260,8 +381,13 @@ impl InterviewSession {
   /// Resolve a conflict by selecting an option index.
   ///
   /// # Errors
-  /// Returns `ConflictDetectionError` for invalid IDs, negative indexes,
-  /// already-resolved conflicts, out-of-range option indexes, or empty options.
+  ///
+  /// - Returns [`ConflictDetectionError::EmptyConflictId`] if `conflict_id` is empty.
+  /// - Returns [`ConflictDetectionError::NegativeOptionIndex`] if `chosen_option` is negative.
+  /// - Returns [`ConflictDetectionError::ConflictNotFound`] if no conflict matches the ID.
+  /// - Returns [`ConflictDetectionError::ConflictAlreadyResolved`] if the conflict is already resolved.
+  /// - Returns [`ConflictDetectionError::InvalidOptionIndex`] if the index is out of bounds.
+  /// - Returns [`ConflictDetectionError::EmptyOptions`] if the conflict has no options.
   pub fn resolve_conflict(
     &mut self,
     conflict_id: &str,

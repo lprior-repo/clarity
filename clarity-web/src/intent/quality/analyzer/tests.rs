@@ -21,13 +21,14 @@ fn analyze_spec_empty_has_issues() {
 #[test]
 fn score_functions_return_reasonable_values() {
   let mut spec = minimal_spec();
+  let verification = Verification::with_criteria_and_example(
+    "verify error cases".to_string(),
+    vec!["returns error for invalid input".to_string()],
+  );
   let behavior = Behavior::new("create_user".to_string())
     .expect("test setup should create behavior")
     .with_description("Create user and handle invalid input".to_string())
-    .with_verification(Verification::new(
-      "unit_test".to_string(),
-      "verify error cases".to_string(),
-    ));
+    .with_verification(verification);
 
   let mut feature = Feature::new("users".to_string()).expect("test setup should create feature");
 

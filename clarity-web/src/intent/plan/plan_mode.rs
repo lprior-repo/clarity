@@ -12,7 +12,7 @@ mod validate;
 
 use crate::intent::interview::types::InterviewSession;
 
-pub use types::{BeadStatus, ExecutionPlan, Phase, PhaseStatus, PlanBead, PlanError};
+pub use types::{Action, BeadStatus, ExecutionPlan, Phase, PhaseStatus, PlanBead, PlanError};
 
 pub use format::{
   bead_status_to_string, effort_to_label, format_plan_ai, format_plan_human, format_plan_json,

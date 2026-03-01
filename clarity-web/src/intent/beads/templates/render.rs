@@ -2,6 +2,15 @@ use itertools::Itertools;
 
 use super::domain::{BeadError, BeadTemplate};
 
+/// Decodes a JSON array of beads into `Vec<BeadTemplate>`.
+///
+/// # Errors
+/// Returns `BeadError::JsonError` if the input is not valid JSON or
+/// does not conform to the expected bead array structure.
+pub fn decode_beads_json(json: &str) -> Result<Vec<BeadTemplate>, BeadError> {
+  serde_json::from_str(json).map_err(|err| BeadError::JsonError(err.to_string()))
+}
+
 /// Renders bead templates as JSONL.
 ///
 /// # Errors
@@ -204,4 +213,111 @@ fn escape_cue_string(value: &str) -> String {
     .replace('\n', "\\n")
     .replace('\r', "\\r")
     .replace('\t', "\\t")
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_decode_beads_json_empty_array() {
+    let result = decode_beads_json("[]");
+    assert!(result.is_ok());
+    let beads = result.expect("checked above");
+    assert!(beads.is_empty());
+  }
+
+  #[test]
+  fn test_decode_beads_json_single_bead() {
+    let json = r#"[{
+      "title": "Test Bead",
+      "description": "Test description",
+      "profile_type": "feature",
+      "priority": 3,
+      "issue_type": "task",
+      "labels": ["test"],
+      "ai_hints": "Some hints",
+      "acceptance_criteria": ["criterion 1"],
+      "dependencies": []
+    }]"#;
+    let result = decode_beads_json(json);
+    assert!(result.is_ok());
+    let beads = result.expect("checked above");
+    assert_eq!(beads.len(), 1);
+    assert_eq!(beads[0].title, "Test Bead");
+    assert_eq!(beads[0].description, "Test description");
+    assert_eq!(beads[0].profile_type, "feature");
+    assert_eq!(beads[0].priority, 3);
+  }
+
+  #[test]
+  fn test_decode_beads_json_multiple_beads() {
+    let json = r#"[
+      {"title": "First", "description": "Desc 1", "profile_type": "p1", "priority": 1, "issue_type": "bug", "labels": [], "ai_hints": "", "acceptance_criteria": [], "dependencies": []},
+      {"title": "Second", "description": "Desc 2", "profile_type": "p2", "priority": 2, "issue_type": "feature", "labels": [], "ai_hints": "", "acceptance_criteria": [], "dependencies": []}
+    ]"#;
+    let result = decode_beads_json(json);
+    assert!(result.is_ok());
+    let beads = result.expect("checked above");
+    assert_eq!(beads.len(), 2);
+    assert_eq!(beads[0].title, "First");
+    assert_eq!(beads[1].title, "Second");
+  }
+
+  #[test]
+  fn test_decode_beads_json_invalid_json() {
+    let result = decode_beads_json("not valid json");
+    assert!(result.is_err());
+    if let Err(BeadError::JsonError(msg)) = result {
+      assert!(msg.contains("expected"));
+    } else {
+      panic!("Expected JsonError");
+    }
+  }
+
+  #[test]
+  fn test_roundtrip_jsonl() {
+    let original = vec![BeadTemplate {
+      title: "Test".to_string(),
+      description: "Description".to_string(),
+      profile_type: "profile".to_string(),
+      priority: 2,
+      issue_type: "feature".to_string(),
+      labels: vec!["label1".to_string()],
+      ai_hints: "hints".to_string(),
+      acceptance_criteria: vec!["criterion".to_string()],
+      dependencies: vec![],
+    }];
+
+    let jsonl = beads_to_jsonl(&original).expect("serialization should succeed");
+    let json_array = format!("[{}]", jsonl.replace('\n', ","));
+    let decoded = decode_beads_json(&json_array).expect("deserialization should succeed");
+
+    assert_eq!(decoded.len(), original.len());
+    assert_eq!(decoded[0].title, original[0].title);
+    assert_eq!(decoded[0].description, original[0].description);
+  }
+
+  #[test]
+  fn test_public_api_via_intent_module() {
+    // This test demonstrates public usage via the re-exported API
+    use crate::intent::decode_beads_json;
+
+    let json = r#"[{
+      "title": "API Test",
+      "description": "Public API test",
+      "profile_type": "test",
+      "priority": 1,
+      "issue_type": "task",
+      "labels": [],
+      "ai_hints": "",
+      "acceptance_criteria": [],
+      "dependencies": []
+    }]"#;
+
+    let result = decode_beads_json(json);
+    assert!(result.is_ok());
+    let beads = result.expect("checked above");
+    assert_eq!(beads[0].title, "API Test");
+  }
 }

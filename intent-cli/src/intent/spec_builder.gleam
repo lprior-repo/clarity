@@ -6,7 +6,10 @@ import gleam/list
 import gleam/string
 import intent/case_insensitive.{contains_any_ignore_case}
 import intent/interview.{type Answer, type InterviewSession, type Profile}
-import intent/types.{type Spec, Spec, type Behavior, Behavior, Feature, ImplementationHints, SecurityHints, AIHints}
+import intent/types.{
+  type Behavior, type Spec, AIHints, Behavior, Feature, ImplementationHints,
+  SecurityHints, Spec,
+}
 
 /// Generated CUE code
 pub type GeneratedCUE {
@@ -199,7 +202,7 @@ pub fn create_test_spec(behavior_count: Int) -> Spec {
     invariants: [],
     anti_patterns: [],
     ai_hints: AIHints(
-      ImplementationHints([]),
+      ImplementationHints([], "", []),
       dict.new(),
       SecurityHints("", "", "", ""),
       [],

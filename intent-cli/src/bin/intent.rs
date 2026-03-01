@@ -22,7 +22,8 @@ use clarity_web::intent::beads::templates::{
 use clarity_web::intent::documents::ready::generate_ready_document;
 use clarity_web::intent::documents::vision::generate_vision_document;
 use clarity_web::intent::interview::storage::{
-  append_session_to_jsonl, get_session_from_jsonl, list_sessions_from_jsonl, session_to_jsonl_line,
+  append_session_to_jsonl, diff_snapshots, format_diff, get_session_from_jsonl,
+  list_session_history, list_sessions_from_jsonl, session_to_jsonl_line, SessionSnapshot,
 };
 use clarity_web::intent::interview::types::{InterviewSession, InterviewStage, Profile};
 use clarity_web::intent::loader::{export_cue_to_json, format_loader_error, validate_cue_file};
@@ -35,6 +36,7 @@ use clarity_web::intent::quality::effects::analyze_spec as analyze_spec_effects;
 use clarity_web::intent::templates::generate_spec_template;
 use clarity_web::intent::types::Spec;
 use clarity_web::intent::validation::validate_spec;
+use itertools::Itertools;
 use std::collections::HashMap;
 use std::fs;
 use std::io::{self, Read};
@@ -79,12 +81,16 @@ enum Commands {
     /// Resume from a specific session
     #[arg(short, long, value_name = "SESSION")]
     resume: Option<String>,
-    /// Answer file to use for non-interactive mode
-    #[arg(short, long, value_name = "FILE")]
-    answer: Option<String>,
-    /// Export answers template
+    /// Inline answer in format question_id=value (can be repeated)
+    /// Example: --answer q-api-type="REST API"
+    #[arg(short = 'a', long, value_name = "QUESTION_ID=VALUE")]
+    answer: Vec<String>,
+    /// Answer file to use for non-interactive mode (JSON or TOML format)
     #[arg(long, value_name = "FILE")]
-    export_answers_template: Option<String>,
+    answer_file: Option<String>,
+    /// Generate an answer template file with all questions from the session
+    #[arg(long, value_name = "FILE")]
+    generate_template: Option<String>,
   },
 
   /// Generate beads from a specification
@@ -126,12 +132,23 @@ enum Commands {
   /// Show version information
   Version,
 
-  /// Compare two specs or show changes
+  /// Compare two specs, sessions, or show changes
   Diff {
-    /// First spec file
-    spec1: String,
-    /// Second spec file
-    spec2: String,
+    /// First spec file or session ID (when --session is used)
+    spec1: Option<String>,
+    /// Second spec file (not used with --session)
+    spec2: Option<String>,
+    /// Compare session snapshots instead of specs
+    /// Usage: intent diff --session <session_id>
+    /// Or: intent diff --session <session_id> --snapshot <snapshot_id>
+    #[arg(long, value_name = "SESSION_ID")]
+    session: Option<String>,
+    /// Compare two specific snapshots by ID (requires --session)
+    #[arg(long, value_name = "SNAPSHOT_ID")]
+    snapshot: Option<String>,
+    /// Output in JSON format
+    #[arg(long)]
+    json: bool,
   },
 
   /// Manage interview sessions
@@ -266,13 +283,15 @@ fn main() -> Result<()> {
       spec,
       resume,
       answer,
-      export_answers_template,
+      answer_file,
+      generate_template,
     } => {
       cmd_interview(
         spec.as_deref(),
         resume.as_deref(),
-        answer.as_deref(),
-        export_answers_template.as_deref(),
+        &answer,
+        answer_file.as_deref(),
+        generate_template.as_deref(),
       )?;
     }
     Commands::Beads {
@@ -296,8 +315,20 @@ fn main() -> Result<()> {
     Commands::Version => {
       cmd_version();
     }
-    Commands::Diff { spec1, spec2 } => {
-      cmd_diff(&spec1, &spec2)?;
+    Commands::Diff {
+      spec1,
+      spec2,
+      session,
+      snapshot,
+      json,
+    } => {
+      cmd_diff(
+        spec1.as_deref(),
+        spec2.as_deref(),
+        session.as_deref(),
+        snapshot.as_deref(),
+        json,
+      )?;
     }
     Commands::Sessions { session_id, delete } => {
       cmd_sessions(session_id.as_deref(), delete)?;
@@ -361,6 +392,11 @@ fn sessions_dir() -> PathBuf {
 /// Get the default session JSONL file path
 fn session_jsonl_path() -> PathBuf {
   sessions_dir().join("sessions.jsonl")
+}
+
+/// Get the session history file path
+fn session_history_path() -> PathBuf {
+  sessions_dir().join("history.jsonl")
 }
 
 /// Get the default beads directory
@@ -537,85 +573,126 @@ fn save_plan(plan: &ExecutionPlan, path: &str) -> Result<()> {
 
 /// Initialize a new Intent spec from a template
 fn cmd_init(name: Option<&str>, profile: Option<&str>, output: Option<&str>) -> Result<()> {
-  // Get spec name, prompting if not provided
-  let spec_name = match name {
-    Some(n) => n.to_string(),
-    None => dialoguer::Input::new()
-      .with_prompt("Spec name")
-      .interact_text()
-      .context("Failed to read spec name")?,
-  };
+  use intent::init_prompt::{run_interactive_setup, ProjectConfig};
 
-  // Get profile, prompting if not provided
-  let profile_str = if let Some(p) = profile { p.to_string() } else {
-    let profiles = ["api", "cli", "data", "event", "workflow", "ui"];
-    let selection = dialoguer::Select::new()
-      .with_prompt("Select template profile")
-      .items(&profiles)
-      .default(0)
-      .interact()
-      .context("Failed to select profile")?;
-    profiles[selection].to_string()
+  // If all options are provided, use non-interactive mode
+  let config = if name.is_some() && profile.is_some() && output.is_some() {
+    // Non-interactive mode with all args provided
+    let spec_name = name.context("name is required")?.to_string();
+    let profile_str = profile.context("profile is required")?.to_string();
+    let output_file = output.context("output is required")?.to_string();
+
+    ProjectConfig {
+      name: spec_name.clone(),
+      description: format!("{spec_name} specification"),
+      audience: "developers".to_string(),
+      profile: profile_str,
+      output_file,
+      version: "0.1.0".to_string(),
+    }
+  } else {
+    // Run fully interactive setup
+    run_interactive_setup(name)?
   };
 
   // Parse profile
-  let parsed_profile = Profile::parse(&profile_str)
-    .map_err(|e| anyhow::anyhow!("Invalid profile '{profile_str}': {e:?}"))?;
+  let parsed_profile = Profile::parse(&config.profile)
+    .map_err(|e| anyhow::anyhow!("Invalid profile '{}': {:?}", config.profile, e))?;
 
   // Generate template
   let template = generate_spec_template(parsed_profile)
-    .map_err(|e| anyhow::anyhow!("Failed to generate template: {e:?}"))?;
+    .map_err(|e| anyhow::anyhow!("Failed to generate template: {:?}", e))?;
 
-  // Replace placeholder name
-  let content = template.replace("{{name}}", &spec_name);
-
-  // Determine output file
-  let output_file = output.map_or_else(
-    || format!("{}.cue", spec_name.replace(' ', "-").to_lowercase()),
-    std::string::ToString::to_string,
-  );
+  // Replace placeholders with collected values
+  let content = template
+    .replace("{{name}}", &config.name)
+    .replace("{{description}}", &config.description)
+    .replace("{{audience}}", &config.audience)
+    .replace("{{version}}", &config.version);
 
   // Write output
-  write_output(&content, Some(&output_file))?;
+  write_output(&content, Some(&config.output_file))?;
 
-  println!("Created spec file: {output_file}");
+  println!();
+  println!("===================================================================");
+  println!("                     Spec Created Successfully!");
+  println!("===================================================================");
+  println!();
+  println!("  File:     {}", config.output_file);
+  println!("  Name:     {}", config.name);
+  println!("  Profile:  {}", config.profile);
+  println!();
+  println!("Next steps:");
+  println!("  1. Review and edit the spec file");
+  println!(
+    "  2. Run 'intent interview {}' to capture requirements",
+    config.output_file
+  );
+  println!(
+    "  3. Run 'intent validate {}' to check for issues",
+    config.output_file
+  );
+  println!();
+
   Ok(())
+}
+
+/// Parse an inline answer in format "question_id=value"
+fn parse_inline_answer(input: &str) -> Result<(String, String)> {
+  input
+    .find('=')
+    .map(|pos| {
+      let (question_id, value) = input.split_at(pos);
+      (question_id.to_string(), value[1..].to_string())
+    })
+    .ok_or_else(|| {
+      anyhow::anyhow!(
+        "Invalid answer format '{}'. Expected: question_id=value",
+        input
+      )
+    })
 }
 
 /// Run an interactive interview to capture requirements
 fn cmd_interview(
   _spec: Option<&str>,
   resume: Option<&str>,
-  answer: Option<&str>,
-  export_answers_template: Option<&str>,
+  inline_answers: &[String],
+  answer_file: Option<&str>,
+  generate_template: Option<&str>,
 ) -> Result<()> {
-  // Export answers template if requested
-  if let Some(template_path) = export_answers_template {
-    let template = r#"{
-  "answers": [
-    {
-      "question_id": "q1",
-      "response": "Your answer here"
-    }
-  ]
-}"#;
-    write_output(template, Some(template_path))?;
-    return Ok(());
+  // Generate answers template if requested
+  if let Some(template_path) = generate_template {
+    return cmd_generate_template(template_path, resume);
   }
+
+  // Parse inline answers into a map
+  let parsed_inline: HashMap<String, String> = inline_answers
+    .iter()
+    .map(|s| parse_inline_answer(s))
+    .collect::<Result<HashMap<_, _>>>()?;
 
   // Load or create session
   let mut session = load_or_create_session(resume)?;
 
-  // If answer file provided, use non-interactive mode
-  if let Some(answer_file) = answer {
-    let content = fs::read_to_string(answer_file)
-      .with_context(|| format!("Failed to read answer file: {answer_file}"))?;
+  // If answer file provided, load it
+  let file_answers: HashMap<String, String> = match answer_file {
+    Some(path) => {
+      let content =
+        fs::read_to_string(path).with_context(|| format!("Failed to read answer file: {path}"))?;
+      parse_answer_file(&content)?
+    }
+    None => HashMap::new(),
+  };
 
-    let answers: HashMap<String, String> =
-      serde_json::from_str(&content).with_context(|| "Failed to parse answer file")?;
+  // Merge inline answers with file answers (inline takes precedence)
+  let all_answers: HashMap<String, String> =
+    file_answers.into_iter().chain(parsed_inline).collect();
 
+  // If any answers provided, use non-interactive mode
+  if !all_answers.is_empty() {
     // Process answers
-    for (question_id, response) in answers {
+    for (question_id, response) in all_answers {
       session
         .answers
         .push(clarity_web::intent::interview::types::Answer {
@@ -690,6 +767,137 @@ fn cmd_interview(
   Ok(())
 }
 
+/// Generate an answer template file with all questions from the session
+fn cmd_generate_template(template_path: &str, resume: Option<&str>) -> Result<()> {
+  use clarity_web::intent::interview::interview_questions::get_questions_for_round;
+
+  // Load or create session to get profile
+  let session = load_or_create_session(resume)?;
+  let profile_str = session.profile.as_str();
+
+  // Collect all questions from all rounds
+  let mut all_questions: Vec<clarity_web::intent::interview::types::Question> = Vec::new();
+
+  // Get questions for rounds 1-5 (typical interview has 5 rounds)
+  for round in 1..=5 {
+    let questions = get_questions_for_round(profile_str, round);
+    all_questions.extend(questions);
+  }
+
+  // If no questions from CUE, use profile required fields
+  if all_questions.is_empty() {
+    let required_fields = session.profile.required_fields();
+    all_questions = required_fields
+      .into_iter()
+      .map(|field| clarity_web::intent::interview::types::Question {
+        id: format!("q-{field}"),
+        round: 1,
+        perspective: clarity_web::intent::interview::types::Perspective::User,
+        category: clarity_web::intent::interview::types::QuestionCategory::HappyPath,
+        priority: clarity_web::intent::interview::types::QuestionPriority::Critical,
+        question: format!("Enter value for '{field}'"),
+        context: String::new(),
+        example: String::new(),
+        expected_type: "text".to_string(),
+        extract_into: vec![field.to_string()],
+        depends_on: Vec::new(),
+        blocks: Vec::new(),
+      })
+      .collect();
+  }
+
+  // Generate TOML template
+  let template = generate_toml_template(&all_questions);
+
+  write_output(&template, Some(template_path))?;
+  println!(
+    "Generated template with {} questions to: {template_path}",
+    all_questions.len()
+  );
+
+  Ok(())
+}
+
+/// Generate a TOML template from questions
+fn generate_toml_template(questions: &[clarity_web::intent::interview::types::Question]) -> String {
+  let header = r#"# Interview Answer Template
+# Fill in the 'answer' field for each question and run:
+#   intent interview --answer-file <this_file>
+#
+# Lines starting with # are comments and will be ignored.
+# Question IDs in [brackets] must not be changed.
+
+"#;
+
+  let questions_str = questions
+    .iter()
+    .map(|q| {
+      let comment = format!("# Question: {}\n", q.question);
+      let section = format!("[{}]\nanswer = \"\"\n", q.id);
+      format!("{comment}{section}")
+    })
+    .join("\n");
+
+  format!("{header}{questions_str}")
+}
+
+/// Parse answers from a file (supports JSON and TOML formats)
+fn parse_answer_file(content: &str) -> Result<HashMap<String, String>> {
+  let trimmed = content.trim();
+
+  // Try JSON first (starts with {)
+  if trimmed.starts_with('{') {
+    return serde_json::from_str(trimmed)
+      .with_context(|| "Failed to parse answer file as JSON");
+  }
+
+  // Try TOML format
+  parse_toml_answers(trimmed)
+}
+
+/// Parse answers from TOML format
+fn parse_toml_answers(content: &str) -> Result<HashMap<String, String>> {
+  let mut answers = HashMap::new();
+  let mut current_section: Option<String> = None;
+
+  for line in content.lines() {
+    let trimmed = line.trim();
+
+    // Skip empty lines and comments
+    if trimmed.is_empty() || trimmed.starts_with('#') {
+      continue;
+    }
+
+    // Section header [question-id]
+    if trimmed.starts_with('[') && trimmed.ends_with(']') {
+      current_section = Some(trimmed[1..trimmed.len() - 1].to_string());
+      continue;
+    }
+
+    // Answer field: answer = "value"
+    if let Some(rest) = trimmed.strip_prefix("answer") {
+      let rest = rest.trim();
+      if let Some(rest) = rest.strip_prefix('=') {
+        let rest = rest.trim();
+        // Remove surrounding quotes if present
+        let value = if (rest.starts_with('"') && rest.ends_with('"'))
+          || (rest.starts_with('\'') && rest.ends_with('\''))
+        {
+          &rest[1..rest.len() - 1]
+        } else {
+          rest
+        };
+
+        if let Some(ref section) = current_section {
+          answers.insert(section.clone(), value.to_string());
+        }
+      }
+    }
+  }
+
+  Ok(answers)
+}
+
 /// Generate beads from a specification
 fn cmd_beads(spec: &str, format: &str, dir: Option<&str>, feature: Option<&str>) -> Result<()> {
   // Load spec (validates it exists and parses)
@@ -730,8 +938,9 @@ fn cmd_beads(spec: &str, format: &str, dir: Option<&str>, feature: Option<&str>)
     "json" => {
       beads_to_jsonl(&beads).map_err(|e| anyhow::anyhow!("Failed to format beads: {e:?}"))?
     }
-    "markdown" | "md" => beads_to_enhanced_cue(&beads)
-      .map_err(|e| anyhow::anyhow!("Failed to format beads: {e:?}"))?,
+    "markdown" | "md" => {
+      beads_to_enhanced_cue(&beads).map_err(|e| anyhow::anyhow!("Failed to format beads: {e:?}"))?
+    }
     _ => {
       return Err(anyhow::anyhow!(
         "Unknown format '{format}'. Supported: json, markdown"
@@ -743,8 +952,7 @@ fn cmd_beads(spec: &str, format: &str, dir: Option<&str>, feature: Option<&str>)
   match dir {
     Some(d) => {
       let output_dir = Path::new(d);
-      fs::create_dir_all(output_dir)
-        .with_context(|| format!("Failed to create directory: {d}"))?;
+      fs::create_dir_all(output_dir).with_context(|| format!("Failed to create directory: {d}"))?;
 
       let output_file = output_dir.join("beads.jsonl");
       fs::write(&output_file, &output)
@@ -853,8 +1061,152 @@ fn cmd_version() {
   println!("Part of the Clarity specification system");
 }
 
-/// Compare two specs or show changes
-fn cmd_diff(spec1: &str, spec2: &str) -> Result<()> {
+/// Compare two specs, sessions, or show changes
+fn cmd_diff(
+  spec1: Option<&str>,
+  spec2: Option<&str>,
+  session_id: Option<&str>,
+  snapshot_id: Option<&str>,
+  json: bool,
+) -> Result<()> {
+  // Handle session diff mode
+  if let Some(sid) = session_id {
+    return cmd_diff_session(sid, snapshot_id, json);
+  }
+
+  // Require both spec files for spec diff mode
+  match (spec1, spec2) {
+    (Some(s1), Some(s2)) => cmd_diff_specs(s1, s2),
+    _ => Err(anyhow::anyhow!(
+      "Usage: intent diff <spec1> <spec2>\n       intent diff --session <session_id>"
+    )),
+  }
+}
+
+/// Compare two interview sessions or session snapshots
+fn cmd_diff_session(session_id: &str, snapshot_id: Option<&str>, json: bool) -> Result<()> {
+  let history_path = session_history_path();
+
+  // Get session history
+  let snapshots = list_session_history(&history_path, session_id)
+    .map_err(|e| anyhow::anyhow!("Failed to list session history: {e}"))?;
+
+  if snapshots.is_empty() {
+    println!("No history found for session: {session_id}");
+    println!("Hint: Session history is created when sessions are saved.");
+    return Ok(());
+  }
+
+  // Handle specific snapshot comparison
+  if let Some(snap_id) = snapshot_id {
+    let target_snapshot = snapshots.iter().find(|s| s.snapshot_id == snap_id).cloned();
+
+    match target_snapshot {
+      Some(target) => {
+        // Find the previous snapshot
+        let target_idx = snapshots
+          .iter()
+          .position(|s| s.snapshot_id == snap_id)
+          .map_or(0, |i| if i > 0 { i - 1 } else { 0 });
+
+        let previous = if target_idx == 0 && snapshots[0].snapshot_id == snap_id {
+          // No previous snapshot, create empty one
+          SessionSnapshot {
+            session_id: session_id.to_string(),
+            snapshot_id: format!("{session_id}-initial"),
+            timestamp: String::new(),
+            description: "Initial state".to_string(),
+            answers: HashMap::new(),
+            gaps_count: 0,
+            conflicts_count: 0,
+            stage: "discovery".to_string(),
+            created_by: None,
+            version: 0,
+            tags: Vec::new(),
+          }
+        } else {
+          snapshots[target_idx].clone()
+        };
+
+        let diff = diff_snapshots(&previous, &target);
+
+        if json {
+          let json_output =
+            serde_json::to_string_pretty(&diff).with_context(|| "Failed to serialize diff")?;
+          println!("{json_output}");
+        } else {
+          print!("{}", format_diff(&diff));
+        }
+      }
+      None => {
+        println!("Snapshot '{snap_id}' not found in session {session_id}");
+        println!("Available snapshots:");
+        for snap in &snapshots {
+          println!("  - {} ({})", snap.snapshot_id, snap.timestamp);
+        }
+      }
+    }
+    return Ok(());
+  }
+
+  // Compare the two most recent snapshots
+  if snapshots.len() == 1 {
+    // Only one snapshot - compare with empty state
+    let empty_snapshot = SessionSnapshot {
+      session_id: session_id.to_string(),
+      snapshot_id: format!("{session_id}-initial"),
+      timestamp: String::new(),
+      description: "Initial state".to_string(),
+      answers: HashMap::new(),
+      gaps_count: 0,
+      conflicts_count: 0,
+      stage: "discovery".to_string(),
+      created_by: None,
+      version: 0,
+      tags: Vec::new(),
+    };
+
+    let diff = diff_snapshots(&empty_snapshot, &snapshots[0]);
+
+    println!("Session: {session_id} (comparing with initial state)");
+    println!("{}", "-".repeat(60));
+
+    if json {
+      let json_output =
+        serde_json::to_string_pretty(&diff).with_context(|| "Failed to serialize diff")?;
+      println!("{json_output}");
+    } else {
+      print!("{}", format_diff(&diff));
+    }
+  } else {
+    // Compare last two snapshots
+    let len = snapshots.len();
+    let previous = &snapshots[len - 2];
+    let current = &snapshots[len - 1];
+
+    let diff = diff_snapshots(previous, current);
+
+    println!("Session: {session_id}");
+    println!(
+      "Comparing: {} -> {}",
+      previous.snapshot_id, current.snapshot_id
+    );
+    println!("{}", "-".repeat(60));
+
+    if json {
+      let json_output =
+        serde_json::to_string_pretty(&diff).with_context(|| "Failed to serialize diff")?;
+      println!("{json_output}");
+    } else {
+      print!("{}", format_diff(&diff));
+    }
+  }
+
+  Ok(())
+}
+
+/// Compare two spec files
+fn cmd_diff_specs(spec1: &str, spec2: &str) -> Result<()> {
   // Load both specs
   let spec1_parsed = load_spec_from_cue(spec1)?;
   let spec2_parsed = load_spec_from_cue(spec2)?;
@@ -1456,21 +1808,25 @@ fn check_security(spec: &Spec) -> Vec<String> {
 
       // Check for password-related issues
       if (lower_intent.contains("password") || lower_desc.contains("password"))
-        && !lower_intent.contains("hash") && !lower_desc.contains("hash") {
-          issues.push(format!(
-            "Potential plaintext password handling in behavior '{}'",
-            behavior.name
-          ));
-        }
+        && !lower_intent.contains("hash")
+        && !lower_desc.contains("hash")
+      {
+        issues.push(format!(
+          "Potential plaintext password handling in behavior '{}'",
+          behavior.name
+        ));
+      }
 
       // Check for SQL injection risks
       if (lower_intent.contains("sql") || lower_desc.contains("sql"))
-        && !lower_intent.contains("parameterized") && !lower_desc.contains("parameterized") {
-          issues.push(format!(
-            "Potential SQL injection risk in behavior '{}'",
-            behavior.name
-          ));
-        }
+        && !lower_intent.contains("parameterized")
+        && !lower_desc.contains("parameterized")
+      {
+        issues.push(format!(
+          "Potential SQL injection risk in behavior '{}'",
+          behavior.name
+        ));
+      }
     }
   }
 

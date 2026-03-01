@@ -145,11 +145,7 @@ fn parse_invariant(data: Dynamic) -> Result(Invariant, List(DecodeError)) {
     "criteria",
     dynamic.list(dynamic.string),
   )(data))
-  Ok(Invariant(
-    name: name,
-    description: description,
-    criteria: criteria,
-  ))
+  Ok(Invariant(name: name, description: description, criteria: criteria))
 }
 
 fn parse_verification(data: Dynamic) -> Result(Verification, List(DecodeError)) {
@@ -276,7 +272,14 @@ fn parse_implementation_hints(
     "suggested_stack",
     dynamic.list(parse_sanitized_string),
   )(data))
-  Ok(ImplementationHints(suggested_stack))
+  let architecture =
+    dynamic.field("architecture", parse_sanitized_string)(data)
+    |> result.unwrap("")
+  use key_components <- result.try(dynamic.field(
+    "key_components",
+    dynamic.list(parse_sanitized_string),
+  )(data))
+  Ok(ImplementationHints(suggested_stack, architecture, key_components))
 }
 
 fn parse_entities(

@@ -174,6 +174,80 @@ fn test_create_snapshot_contents() {
 }
 
 #[test]
+fn test_snapshot_metadata_defaults() {
+  let session = create_test_session_with_answers("snap-meta-defaults");
+  let snapshot = create_snapshot(&session, "test");
+
+  // New fields should have default values
+  assert_eq!(snapshot.created_by, None);
+  assert_eq!(snapshot.version, 1);
+  assert!(snapshot.tags.is_empty());
+}
+
+#[test]
+fn test_snapshot_with_metadata() {
+  let session = create_test_session_with_answers("snap-meta-custom");
+  let snapshot = create_snapshot(&session, "test")
+    .with_created_by("user-123")
+    .with_version(2)
+    .with_tags(vec!["important".to_string(), "milestone".to_string()]);
+
+  assert_eq!(snapshot.created_by, Some("user-123".to_string()));
+  assert_eq!(snapshot.version, 2);
+  assert_eq!(snapshot.tags, vec!["important", "milestone"]);
+}
+
+#[test]
+fn test_snapshot_add_tag() {
+  let session = create_test_session_with_answers("snap-tags");
+  let snapshot = create_snapshot(&session, "test")
+    .add_tag("checkpoint")
+    .add_tag("pre-review");
+
+  assert_eq!(snapshot.tags, vec!["checkpoint", "pre-review"]);
+}
+
+#[test]
+fn test_snapshot_metadata_serialization() {
+  let session = create_test_session_with_answers("snap-serialize");
+  let snapshot = create_snapshot(&session, "test")
+    .with_created_by("system")
+    .with_version(3)
+    .with_tags(vec!["auto".to_string()]);
+
+  let json = serde_json::to_string(&snapshot).expect("should serialize");
+  let deserialized: super::models::SessionSnapshot =
+    serde_json::from_str(&json).expect("should deserialize");
+
+  assert_eq!(deserialized.created_by, Some("system".to_string()));
+  assert_eq!(deserialized.version, 3);
+  assert_eq!(deserialized.tags, vec!["auto"]);
+}
+
+#[test]
+fn test_snapshot_backward_compatibility() {
+  // JSON without the new metadata fields should deserialize with defaults
+  let json = r#"{
+    "session_id": "old-snap",
+    "snapshot_id": "old-snap-2026-02-28T00:00:00Z",
+    "timestamp": "2026-02-28T00:00:00Z",
+    "description": "legacy snapshot",
+    "answers": {"q1": "answer1"},
+    "gaps_count": 0,
+    "conflicts_count": 0,
+    "stage": "discovery"
+  }"#;
+
+  let snapshot: super::models::SessionSnapshot =
+    serde_json::from_str(json).expect("should deserialize old format");
+
+  assert_eq!(snapshot.session_id, "old-snap");
+  assert_eq!(snapshot.created_by, None);
+  assert_eq!(snapshot.version, 0);
+  assert!(snapshot.tags.is_empty());
+}
+
+#[test]
 fn test_diff_sessions_counts() {
   let mut from = create_test_session_with_answers("diff-1");
   let mut to = from.clone();
@@ -354,11 +428,20 @@ fn test_session_with_histories_update_answer() {
   let session = create_test_session_with_answers("update-test");
   let mut wrapper = SessionWithHistories::with_initial_histories(session);
 
-  let result = wrapper.update_answer("q1", "GraphQL API", "user_correction", "2026-02-28T12:00:00Z");
+  let result = wrapper.update_answer(
+    "q1",
+    "GraphQL API",
+    "user_correction",
+    "2026-02-28T12:00:00Z",
+  );
   assert!(result.is_ok());
 
   // Check the answer was updated
-  let answer = wrapper.session.answers.iter().find(|a| a.question_id == "q1");
+  let answer = wrapper
+    .session
+    .answers
+    .iter()
+    .find(|a| a.question_id == "q1");
   assert!(answer.is_some());
   assert_eq!(answer.unwrap().response, "GraphQL API");
 
@@ -378,10 +461,24 @@ fn test_session_with_histories_update_multiple_versions() {
   let mut wrapper = SessionWithHistories::with_initial_histories(session);
 
   // First update
-  wrapper.update_answer("q1", "GraphQL API", "user_correction", "2026-02-28T12:00:00Z").unwrap();
+  wrapper
+    .update_answer(
+      "q1",
+      "GraphQL API",
+      "user_correction",
+      "2026-02-28T12:00:00Z",
+    )
+    .unwrap();
 
   // Second update
-  wrapper.update_answer("q1", "gRPC API", "architecture_change", "2026-02-28T13:00:00Z").unwrap();
+  wrapper
+    .update_answer(
+      "q1",
+      "gRPC API",
+      "architecture_change",
+      "2026-02-28T13:00:00Z",
+    )
+    .unwrap();
 
   // Check version history
   let history = wrapper.get_history("q1").unwrap();
@@ -409,9 +506,17 @@ fn test_session_with_histories_update_answer_not_found() {
   let session = create_test_session("not-found");
   let mut wrapper = SessionWithHistories::new(session);
 
-  let result = wrapper.update_answer("nonexistent", "New response", "test", "2026-02-28T12:00:00Z");
+  let result = wrapper.update_answer(
+    "nonexistent",
+    "New response",
+    "test",
+    "2026-02-28T12:00:00Z",
+  );
   assert!(result.is_err());
-  assert!(matches!(result, Err(SessionWithHistoriesError::AnswerNotFound(_))));
+  assert!(matches!(
+    result,
+    Err(SessionWithHistoriesError::AnswerNotFound(_))
+  ));
 }
 
 #[test]
@@ -421,7 +526,10 @@ fn test_session_with_histories_update_empty_question_id() {
 
   let result = wrapper.update_answer("", "New response", "test", "2026-02-28T12:00:00Z");
   assert!(result.is_err());
-  assert!(matches!(result, Err(SessionWithHistoriesError::EmptyQuestionId)));
+  assert!(matches!(
+    result,
+    Err(SessionWithHistoriesError::EmptyQuestionId)
+  ));
 }
 
 #[test]
@@ -472,7 +580,14 @@ fn test_session_with_histories_add_then_update() {
   wrapper.add_answer(answer, "2026-02-28T12:00:00Z").unwrap();
 
   // Now update the answer
-  wrapper.update_answer("q-test", "Updated response", "user_correction", "2026-02-28T13:00:00Z").unwrap();
+  wrapper
+    .update_answer(
+      "q-test",
+      "Updated response",
+      "user_correction",
+      "2026-02-28T13:00:00Z",
+    )
+    .unwrap();
 
   // Check history has both versions
   let history = wrapper.get_history("q-test").unwrap();
@@ -493,7 +608,9 @@ fn test_session_with_histories_serialization() {
   let mut wrapper = SessionWithHistories::with_initial_histories(session);
 
   // Update an answer
-  wrapper.update_answer("q1", "Updated response", "test", "2026-02-28T12:00:00Z").unwrap();
+  wrapper
+    .update_answer("q1", "Updated response", "test", "2026-02-28T12:00:00Z")
+    .unwrap();
 
   // Serialize
   let json = serde_json::to_string(&wrapper).expect("should serialize");
@@ -527,7 +644,8 @@ fn test_session_with_histories_deserialization_without_histories() {
     }
   }"#;
 
-  let wrapper: SessionWithHistories = serde_json::from_str(json).expect("should deserialize old format");
+  let wrapper: SessionWithHistories =
+    serde_json::from_str(json).expect("should deserialize old format");
   assert!(wrapper.answer_histories.is_empty());
   assert_eq!(wrapper.session.id, "old-session");
 }

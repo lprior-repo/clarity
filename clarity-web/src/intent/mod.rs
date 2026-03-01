@@ -62,8 +62,8 @@ pub use loader::{
 
 // Re-export beads types (WP26)
 pub use beads::{
-  beads_to_enhanced_cue, beads_to_jsonl, generate_beads_from_session, generate_profile_beads,
-  BeadError, BeadTemplate, BeadTemplateStats,
+  beads_to_enhanced_cue, beads_to_jsonl, decode_beads_json, generate_beads_from_session,
+  generate_profile_beads, BeadError, BeadTemplate, BeadTemplateStats,
 };
 
 // Re-export templates types (WP32)

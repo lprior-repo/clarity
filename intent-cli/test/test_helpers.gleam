@@ -77,7 +77,7 @@ pub fn make_test_spec(features: List(Feature)) -> Spec {
     invariants: [],
     anti_patterns: [],
     ai_hints: AIHints(
-      implementation: ImplementationHints(suggested_stack: []),
+      implementation: ImplementationHints([], "", []),
       entities: dict.new(),
       security: SecurityHints(
         password_hashing: "",
@@ -115,7 +115,7 @@ pub fn make_test_spec_with_invariants(
     invariants: invariants,
     anti_patterns: [],
     ai_hints: AIHints(
-      implementation: ImplementationHints(suggested_stack: []),
+      implementation: ImplementationHints([], "", []),
       entities: dict.new(),
       security: SecurityHints(
         password_hashing: "",
@@ -128,39 +128,9 @@ pub fn make_test_spec_with_invariants(
   )
 }
 
-// ============================================================================
-// Verification and Invariant Factories
-// ============================================================================
-
-/// Create a minimal verification for testing
-pub fn make_test_verification(description: String) -> Verification {
-  Verification(
-    description: description,
-    criteria: [],
-    examples: [],
-  )
-}
-
-/// Create a verification with criteria
-pub fn make_test_verification_with_criteria(
-  description: String,
-  criteria: List(String),
-  examples: List(Json),
-) -> Verification {
-  Verification(
-    description: description,
-    criteria: criteria,
-    examples: examples,
-  )
-}
-
 /// Create a minimal invariant for testing
 pub fn make_test_invariant(name: String) -> Invariant {
-  Invariant(
-    name: name,
-    description: "Test invariant: " <> name,
-    criteria: [],
-  )
+  Invariant(name: name, description: "Test invariant: " <> name, criteria: [])
 }
 
 /// Create an invariant with criteria
@@ -169,11 +139,7 @@ pub fn make_test_invariant_with_criteria(
   description: String,
   criteria: List(String),
 ) -> Invariant {
-  Invariant(
-    name: name,
-    description: description,
-    criteria: criteria,
-  )
+  Invariant(name: name, description: description, criteria: criteria)
 }
 
 // ============================================================================
