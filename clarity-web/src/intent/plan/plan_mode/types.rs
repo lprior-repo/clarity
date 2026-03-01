@@ -53,7 +53,7 @@ impl PhaseStatus {
       (*self, next),
       (
         Self::Pending,
-        Self::Pending | Self::InProgress | Self::Blocked
+        Self::Pending | Self::Blocked | Self::InProgress
       ) | (
         Self::InProgress,
         Self::InProgress | Self::Blocked | Self::Complete

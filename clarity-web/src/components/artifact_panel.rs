@@ -312,7 +312,12 @@ fn build_artifact_data(answers: &[Answer]) -> ArtifactData {
     .count();
 
   let progress = if required > 0 {
-    (done * 100 / required).min(100)
+    done
+      .checked_mul(100)
+      .unwrap_or(0)
+      .checked_div(required)
+      .unwrap_or(0)
+      .min(100)
   } else {
     0
   };

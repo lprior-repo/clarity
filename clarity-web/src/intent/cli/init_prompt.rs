@@ -222,7 +222,7 @@ pub fn prompt_template() -> Result<TemplateType, InitPromptError> {
 pub fn prompt_output_filename(default_name: &str) -> Result<String, InitPromptError> {
   let suggested = generate_default_filename(default_name);
 
-  print!("Output filename (default: {}): ", suggested);
+  print!("Output filename (default: {suggested}): ");
   std::io::Write::flush(&mut std::io::stdout())
     .map_err(|e| InitPromptError::InputError(e.to_string()))?;
 

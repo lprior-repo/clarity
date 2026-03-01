@@ -11,8 +11,10 @@ pub mod config;
 pub mod env;
 pub mod flag_suggestions;
 pub mod init_prompt;
+pub mod validation;
 
 pub use config::*;
 pub use env::*;
 pub use flag_suggestions::*;
 pub use init_prompt::*;
+pub use validation::*;

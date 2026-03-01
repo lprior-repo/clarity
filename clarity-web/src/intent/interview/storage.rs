@@ -19,7 +19,10 @@ pub use history::{append_to_history, create_snapshot, list_session_history};
 pub use jsonl::{
   append_session_to_jsonl, get_session_from_jsonl, list_sessions_from_jsonl, session_to_jsonl_line,
 };
-pub use models::{AnswerChangeType, AnswerDiff, SessionDiff, SessionSnapshot};
+pub use models::{
+  answer_to_version, AnswerChangeType, AnswerDiff, AnswerVersion, AnswerWithHistory, SessionDiff,
+  SessionSnapshot,
+};
 
 #[cfg(test)]
 mod tests;

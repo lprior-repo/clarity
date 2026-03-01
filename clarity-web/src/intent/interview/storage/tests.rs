@@ -102,7 +102,9 @@ fn test_append_and_list_jsonl() {
   assert_eq!(sessions.len(), 2);
   let updated_option = sessions.iter().find(|session| session.id == "s2");
   assert!(updated_option.is_some());
-  let updated = if let Some(value) = updated_option { value } else {
+  let updated = if let Some(value) = updated_option {
+    value
+  } else {
     assert!(false, "updated session should exist");
     return;
   };
@@ -248,4 +250,73 @@ fn test_storage_error_display() {
     .to_string(),
     "invalid JSON on line 2: bad json"
   );
+}
+
+#[test]
+fn test_answer_version_creation() {
+  let version = AnswerVersion::new(
+    1,
+    "Test response".to_string(),
+    "q1".to_string(),
+    "Initial answer".to_string(),
+    "2026-02-28T00:00:00Z".to_string(),
+  );
+
+  assert_eq!(version.version, 1);
+  assert_eq!(version.response, "Test response");
+  assert_eq!(version.change_reason, "Initial answer");
+}
+
+#[test]
+fn test_answer_with_history_new() {
+  let history = AnswerWithHistory::new("q1", "First response", "Initial");
+
+  assert_eq!(history.len(), 1);
+  assert!(!history.is_empty());
+
+  let current = history.current().expect("should have current version");
+  assert_eq!(current.response, "First response");
+  assert_eq!(current.version, 1);
+}
+
+#[test]
+fn test_answer_with_history_add_version() {
+  let mut history = AnswerWithHistory::new("q1", "First", "Initial");
+  history.add_version("Second response", "User corrected");
+
+  assert_eq!(history.len(), 2);
+
+  let current = history.current().expect("should have current version");
+  assert_eq!(current.response, "Second response");
+  assert_eq!(current.version, 2);
+}
+
+#[test]
+fn test_answer_with_history_get_version() {
+  let mut history = AnswerWithHistory::new("q1", "v1", "init");
+  history.add_version("v2", "fix1");
+  history.add_version("v3", "fix2");
+
+  let v1 = history.get_version(0).expect("version 1 should exist");
+  assert_eq!(v1.response, "v1");
+  assert_eq!(v1.version, 1);
+
+  let v2 = history.get_version(1).expect("version 2 should exist");
+  assert_eq!(v2.response, "v2");
+
+  let v3 = history.get_version(2).expect("version 3 should exist");
+  assert_eq!(v3.response, "v3");
+
+  assert!(history.get_version(5).is_none());
+}
+
+#[test]
+fn test_answer_with_history_serialization() {
+  let history = AnswerWithHistory::new("q1", "response", "reason");
+
+  let json = serde_json::to_string(&history).expect("should serialize");
+  let deserialized: AnswerWithHistory = serde_json::from_str(&json).expect("should deserialize");
+
+  assert_eq!(deserialized.len(), 1);
+  assert_eq!(deserialized.current().unwrap().response, "response");
 }
