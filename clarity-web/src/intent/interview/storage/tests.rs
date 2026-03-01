@@ -320,3 +320,230 @@ fn test_answer_with_history_serialization() {
   assert_eq!(deserialized.len(), 1);
   assert_eq!(deserialized.current().unwrap().response, "response");
 }
+
+// ============================================
+// SessionWithHistories Version Tracking Tests
+// ============================================
+
+#[test]
+fn test_session_with_histories_new() {
+  let session = create_test_session("new-wrapper");
+  let wrapper = SessionWithHistories::new(session);
+
+  assert!(wrapper.answer_histories.is_empty());
+  assert_eq!(wrapper.session.id, "new-wrapper");
+}
+
+#[test]
+fn test_session_with_histories_with_initial_histories() {
+  let session = create_test_session_with_answers("initial-hist");
+  let wrapper = SessionWithHistories::with_initial_histories(session);
+
+  assert_eq!(wrapper.answer_histories.len(), 2);
+  assert!(wrapper.answer_histories.contains_key("q1"));
+  assert!(wrapper.answer_histories.contains_key("q2"));
+
+  let q1_history = wrapper.get_history("q1").unwrap();
+  assert_eq!(q1_history.len(), 1);
+  assert_eq!(q1_history.current().unwrap().response, "REST API");
+  assert_eq!(q1_history.current().unwrap().change_reason, "initial");
+}
+
+#[test]
+fn test_session_with_histories_update_answer() {
+  let session = create_test_session_with_answers("update-test");
+  let mut wrapper = SessionWithHistories::with_initial_histories(session);
+
+  let result = wrapper.update_answer("q1", "GraphQL API", "user_correction", "2026-02-28T12:00:00Z");
+  assert!(result.is_ok());
+
+  // Check the answer was updated
+  let answer = wrapper.session.answers.iter().find(|a| a.question_id == "q1");
+  assert!(answer.is_some());
+  assert_eq!(answer.unwrap().response, "GraphQL API");
+
+  // Check version history was updated
+  let history = wrapper.get_history("q1").unwrap();
+  assert_eq!(history.len(), 2);
+
+  let current = history.current().unwrap();
+  assert_eq!(current.response, "GraphQL API");
+  assert_eq!(current.change_reason, "user_correction");
+  assert_eq!(current.version, 2);
+}
+
+#[test]
+fn test_session_with_histories_update_multiple_versions() {
+  let session = create_test_session_with_answers("multi-version");
+  let mut wrapper = SessionWithHistories::with_initial_histories(session);
+
+  // First update
+  wrapper.update_answer("q1", "GraphQL API", "user_correction", "2026-02-28T12:00:00Z").unwrap();
+
+  // Second update
+  wrapper.update_answer("q1", "gRPC API", "architecture_change", "2026-02-28T13:00:00Z").unwrap();
+
+  // Check version history
+  let history = wrapper.get_history("q1").unwrap();
+  assert_eq!(history.len(), 3);
+
+  let v1 = history.get_version(0).unwrap();
+  assert_eq!(v1.response, "REST API");
+  assert_eq!(v1.change_reason, "initial");
+
+  let v2 = history.get_version(1).unwrap();
+  assert_eq!(v2.response, "GraphQL API");
+  assert_eq!(v2.change_reason, "user_correction");
+
+  let v3 = history.get_version(2).unwrap();
+  assert_eq!(v3.response, "gRPC API");
+  assert_eq!(v3.change_reason, "architecture_change");
+
+  // Current should be the latest
+  let current = history.current().unwrap();
+  assert_eq!(current.response, "gRPC API");
+}
+
+#[test]
+fn test_session_with_histories_update_answer_not_found() {
+  let session = create_test_session("not-found");
+  let mut wrapper = SessionWithHistories::new(session);
+
+  let result = wrapper.update_answer("nonexistent", "New response", "test", "2026-02-28T12:00:00Z");
+  assert!(result.is_err());
+  assert!(matches!(result, Err(SessionWithHistoriesError::AnswerNotFound(_))));
+}
+
+#[test]
+fn test_session_with_histories_update_empty_question_id() {
+  let session = create_test_session_with_answers("empty-qid");
+  let mut wrapper = SessionWithHistories::with_initial_histories(session);
+
+  let result = wrapper.update_answer("", "New response", "test", "2026-02-28T12:00:00Z");
+  assert!(result.is_err());
+  assert!(matches!(result, Err(SessionWithHistoriesError::EmptyQuestionId)));
+}
+
+#[test]
+fn test_session_with_histories_add_answer() {
+  let session = create_test_session("add-answer");
+  let mut wrapper = SessionWithHistories::new(session);
+
+  let answer = Answer {
+    question_id: "q-new".to_string(),
+    question_text: "What is new?".to_string(),
+    response: "New answer".to_string(),
+    round: 1,
+    extracted: HashMap::new(),
+    confidence: 0.9,
+    ..Answer::default()
+  };
+
+  let result = wrapper.add_answer(answer, "2026-02-28T12:00:00Z");
+  assert!(result.is_ok());
+
+  // Check answer was added
+  assert_eq!(wrapper.session.answers.len(), 1);
+  assert_eq!(wrapper.session.answers[0].question_id, "q-new");
+
+  // Check history was created
+  let history = wrapper.get_history("q-new").unwrap();
+  assert_eq!(history.len(), 1);
+  assert_eq!(history.current().unwrap().response, "New answer");
+  assert_eq!(history.current().unwrap().change_reason, "initial");
+}
+
+#[test]
+fn test_session_with_histories_add_then_update() {
+  let session = create_test_session("add-then-update");
+  let mut wrapper = SessionWithHistories::new(session);
+
+  // Add answer
+  let answer = Answer {
+    question_id: "q-test".to_string(),
+    question_text: "Test question?".to_string(),
+    response: "First response".to_string(),
+    round: 1,
+    extracted: HashMap::new(),
+    confidence: 0.9,
+    ..Answer::default()
+  };
+
+  wrapper.add_answer(answer, "2026-02-28T12:00:00Z").unwrap();
+
+  // Now update the answer
+  wrapper.update_answer("q-test", "Updated response", "user_correction", "2026-02-28T13:00:00Z").unwrap();
+
+  // Check history has both versions
+  let history = wrapper.get_history("q-test").unwrap();
+  assert_eq!(history.len(), 2);
+
+  let v1 = history.get_version(0).unwrap();
+  assert_eq!(v1.response, "First response");
+  assert_eq!(v1.change_reason, "initial");
+
+  let v2 = history.get_version(1).unwrap();
+  assert_eq!(v2.response, "Updated response");
+  assert_eq!(v2.change_reason, "user_correction");
+}
+
+#[test]
+fn test_session_with_histories_serialization() {
+  let session = create_test_session_with_answers("serialize");
+  let mut wrapper = SessionWithHistories::with_initial_histories(session);
+
+  // Update an answer
+  wrapper.update_answer("q1", "Updated response", "test", "2026-02-28T12:00:00Z").unwrap();
+
+  // Serialize
+  let json = serde_json::to_string(&wrapper).expect("should serialize");
+
+  // Deserialize
+  let deserialized: SessionWithHistories = serde_json::from_str(&json).expect("should deserialize");
+  assert_eq!(deserialized.answer_histories.len(), 2);
+
+  let history = deserialized.get_history("q1").unwrap();
+  assert_eq!(history.len(), 2);
+}
+
+#[test]
+fn test_session_with_histories_deserialization_without_histories() {
+  // Create JSON without answer_histories field (backwards compatibility)
+  let json = r#"{
+    "session": {
+      "id": "old-session",
+      "profile": "api",
+      "created_at": "2026-02-28T00:00:00Z",
+      "updated_at": "2026-02-28T00:00:00Z",
+      "completed_at": null,
+      "stage": "discovery",
+      "rounds_completed": 0,
+      "answers": [],
+      "gaps": [],
+      "conflicts": [],
+      "raw_notes": "",
+      "current_phase": 1,
+      "completed_phases": []
+    }
+  }"#;
+
+  let wrapper: SessionWithHistories = serde_json::from_str(json).expect("should deserialize old format");
+  assert!(wrapper.answer_histories.is_empty());
+  assert_eq!(wrapper.session.id, "old-session");
+}
+
+#[test]
+fn test_session_with_histories_error_display() {
+  assert_eq!(
+    SessionWithHistoriesError::AnswerNotFound("q1".to_string()).to_string(),
+    "answer not found for question: q1"
+  );
+  assert_eq!(
+    SessionWithHistoriesError::EmptyQuestionId.to_string(),
+    "answer has empty question_id"
+  );
+  assert_eq!(
+    SessionWithHistoriesError::EmptyTimestamp.to_string(),
+    "timestamp cannot be empty"
+  );
+}

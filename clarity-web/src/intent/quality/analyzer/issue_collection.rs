@@ -66,6 +66,8 @@ pub(super) fn collect_ai_readiness_issues(spec: &Spec, report: &mut QualityRepor
   let has_any_hints = !ai_hints.implementation.architecture.is_empty()
     || !ai_hints.implementation.performance_notes.is_empty()
     || !ai_hints.implementation.error_handling.is_empty()
+    || !ai_hints.implementation.suggested_stack.is_empty()
+    || !ai_hints.implementation.key_components.is_empty()
     || !ai_hints.entities.is_empty()
     || !ai_hints.preferred_libraries.is_empty()
     || !ai_hints.style_hints.is_empty()

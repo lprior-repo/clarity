@@ -141,21 +141,30 @@ fn interview_stage_as_str() {
 #[test]
 fn interview_stage_normal_workflow() {
   // Simulate a normal workflow: Discovery -> Refinement -> Validation -> Complete
-  let stage = InterviewStage::Discovery;
+  let mut stage = InterviewStage::Discovery;
 
-  let stage = stage
-    .transition_to(InterviewStage::Refinement)
-    .expect("discovery -> refinement");
+  if let Ok(new_stage) = stage.transition_to(InterviewStage::Refinement) {
+    stage = new_stage;
+  } else {
+    panic!("discovery -> refinement should succeed");
+  }
+
   assert_eq!(stage, InterviewStage::Refinement);
 
-  let stage = stage
-    .transition_to(InterviewStage::Validation)
-    .expect("refinement -> validation");
+  if let Ok(new_stage) = stage.transition_to(InterviewStage::Validation) {
+    stage = new_stage;
+  } else {
+    panic!("refinement -> validation should succeed");
+  }
+
   assert_eq!(stage, InterviewStage::Validation);
 
-  let stage = stage
-    .transition_to(InterviewStage::Complete)
-    .expect("validation -> complete");
+  if let Ok(new_stage) = stage.transition_to(InterviewStage::Complete) {
+    stage = new_stage;
+  } else {
+    panic!("validation -> complete should succeed");
+  }
+
   assert_eq!(stage, InterviewStage::Complete);
 
   // Cannot leave Complete
@@ -165,35 +174,45 @@ fn interview_stage_normal_workflow() {
 #[test]
 fn interview_stage_pause_resume_workflow() {
   // Start at Discovery
-  let stage = InterviewStage::Discovery;
+  let mut stage = InterviewStage::Discovery;
 
   // Pause
-  let stage = stage
-    .transition_to(InterviewStage::Paused)
-    .expect("discovery -> paused");
+  if let Ok(new_stage) = stage.transition_to(InterviewStage::Paused) {
+    stage = new_stage;
+  } else {
+    panic!("discovery -> paused should succeed");
+  }
   assert!(stage.is_paused());
 
   // Resume to Refinement
-  let stage = stage
-    .transition_to(InterviewStage::Refinement)
-    .expect("paused -> refinement");
+  if let Ok(new_stage) = stage.transition_to(InterviewStage::Refinement) {
+    stage = new_stage;
+  } else {
+    panic!("paused -> refinement should succeed");
+  }
   assert_eq!(stage, InterviewStage::Refinement);
 
   // Pause again
-  let stage = stage
-    .transition_to(InterviewStage::Paused)
-    .expect("refinement -> paused");
+  if let Ok(new_stage) = stage.transition_to(InterviewStage::Paused) {
+    stage = new_stage;
+  } else {
+    panic!("refinement -> paused should succeed");
+  }
   assert!(stage.is_paused());
 
   // Resume to Validation
-  let stage = stage
-    .transition_to(InterviewStage::Validation)
-    .expect("paused -> validation");
+  if let Ok(new_stage) = stage.transition_to(InterviewStage::Validation) {
+    stage = new_stage;
+  } else {
+    panic!("paused -> validation should succeed");
+  }
   assert_eq!(stage, InterviewStage::Validation);
 
   // Complete
-  let stage = stage
-    .transition_to(InterviewStage::Complete)
-    .expect("validation -> complete");
+  if let Ok(new_stage) = stage.transition_to(InterviewStage::Complete) {
+    stage = new_stage;
+  } else {
+    panic!("validation -> complete should succeed");
+  }
   assert!(stage.is_terminal());
 }

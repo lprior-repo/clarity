@@ -80,7 +80,9 @@ pub fn calculate_ai_readiness_score(spec: &Spec) -> u8 {
   let ai_hints = &spec.ai_hints;
   let has_impl_hints = !ai_hints.implementation.architecture.is_empty()
     || !ai_hints.implementation.performance_notes.is_empty()
-    || !ai_hints.implementation.error_handling.is_empty();
+    || !ai_hints.implementation.error_handling.is_empty()
+    || !ai_hints.implementation.suggested_stack.is_empty()
+    || !ai_hints.implementation.key_components.is_empty();
   let has_security_hints = !ai_hints.security.password_hashing.is_empty()
     || !ai_hints.security.jwt_algorithm.is_empty()
     || !ai_hints.security.jwt_expiry.is_empty()

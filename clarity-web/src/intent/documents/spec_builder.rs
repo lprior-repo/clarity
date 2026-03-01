@@ -267,6 +267,7 @@ pub fn create_test_spec(behavior_count: usize) -> Spec {
         performance_notes: String::new(),
         error_handling: String::new(),
         suggested_stack: Vec::new(),
+        key_components: Vec::new(),
       },
       entities: Vec::new(),
       security: SecurityHints {

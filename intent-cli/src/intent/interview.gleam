@@ -165,7 +165,7 @@ fn extract_auth_method(text: String) -> Result(String, String) {
   }
 }
 
-fn extract_entities(text: String) -> Result(String, String) {
+pub fn extract_entities(text: String) -> Result(String, String) {
   // Look for capitalized words (likely entity names)
   let words = string.split(text, " ")
   let entities =
@@ -190,7 +190,7 @@ fn extract_entities(text: String) -> Result(String, String) {
   }
 }
 
-fn extract_audience(text: String) -> Result(String, String) {
+pub fn extract_audience(text: String) -> Result(String, String) {
   let lower = string.lowercase(text)
   case string.contains(lower, "mobile") {
     True -> Ok("mobile")

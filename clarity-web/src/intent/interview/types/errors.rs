@@ -73,4 +73,6 @@ pub enum InterviewSessionError {
   BlockingGapsUnresolved { count: usize, gap_ids: Vec<String> },
   #[error("session already complete")]
   AlreadyComplete,
+  #[error("answer not found for question: {0}")]
+  AnswerNotFound(String),
 }

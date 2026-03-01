@@ -21,7 +21,7 @@ pub use jsonl::{
 };
 pub use models::{
   answer_to_version, AnswerChangeType, AnswerDiff, AnswerVersion, AnswerWithHistory, SessionDiff,
-  SessionSnapshot,
+  SessionSnapshot, SessionWithHistories, SessionWithHistoriesError,
 };
 
 #[cfg(test)]

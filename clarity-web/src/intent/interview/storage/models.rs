@@ -202,3 +202,178 @@ pub fn answer_to_version(answer: &Answer, change_reason: &str) -> Result<AnswerV
     answer.timestamp.clone(),
   ))
 }
+
+// ============================================================================
+// SessionWithHistories - Version Tracking Integration
+// ============================================================================
+
+/// Wrapper combining an interview session with answer version histories.
+///
+/// This type enables version tracking at the storage layer without
+/// modifying the core `InterviewSession` type, avoiding circular dependencies.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SessionWithHistories {
+  /// The underlying interview session.
+  pub session: crate::intent::interview::types::InterviewSession,
+  /// Version histories for each answer, keyed by question_id.
+  #[serde(default)]
+  pub answer_histories: HashMap<String, AnswerWithHistory>,
+}
+
+impl SessionWithHistories {
+  /// Create a new wrapper from an existing session with empty histories.
+  #[must_use]
+  pub fn new(session: crate::intent::interview::types::InterviewSession) -> Self {
+    Self {
+      session,
+      answer_histories: HashMap::new(),
+    }
+  }
+
+  /// Create a wrapper and initialize histories from the session's answers.
+  #[must_use]
+  pub fn with_initial_histories(session: crate::intent::interview::types::InterviewSession) -> Self {
+    let answer_histories = session
+      .answers
+      .iter()
+      .map(|answer| {
+        let history = AnswerWithHistory::new(
+          answer.question_id.clone(),
+          answer.response.clone(),
+          "initial",
+        );
+        (answer.question_id.clone(), history)
+      })
+      .collect();
+
+    Self {
+      session,
+      answer_histories,
+    }
+  }
+
+  /// Update an answer with version tracking.
+  ///
+  /// # Arguments
+  /// * `question_id` - The ID of the question whose answer should be updated
+  /// * `new_response` - The new answer response
+  /// * `change_reason` - Reason for this update (e.g., "user_correction", "ai_enhancement")
+  /// * `timestamp` - ISO 8601 timestamp for this update
+  ///
+  /// # Errors
+  /// Returns `SessionWithHistoriesError` when:
+  /// - Session is paused or complete
+  /// - `question_id` is empty
+  /// - `timestamp` is empty
+  /// - No answer exists for the given `question_id`
+  pub fn update_answer(
+    &mut self,
+    question_id: &str,
+    new_response: impl Into<String>,
+    change_reason: impl Into<String>,
+    timestamp: &str,
+  ) -> Result<(), SessionWithHistoriesError> {
+    use crate::intent::interview::types::InterviewStage;
+
+    if self.session.stage == InterviewStage::Paused {
+      return Err(SessionWithHistoriesError::SessionPaused);
+    }
+    if self.session.stage == InterviewStage::Complete {
+      return Err(SessionWithHistoriesError::AlreadyComplete);
+    }
+    if question_id.trim().is_empty() {
+      return Err(SessionWithHistoriesError::EmptyQuestionId);
+    }
+    if timestamp.is_empty() {
+      return Err(SessionWithHistoriesError::EmptyTimestamp);
+    }
+
+    let new_response = new_response.into();
+    let change_reason = change_reason.into();
+
+    // Find the existing answer
+    let answer = self
+      .session
+      .answers
+      .iter_mut()
+      .find(|a| a.question_id == question_id)
+      .ok_or_else(|| SessionWithHistoriesError::AnswerNotFound(question_id.to_string()))?;
+
+    // Update the answer response and timestamp
+    answer.response = new_response.clone();
+    answer.timestamp = timestamp.to_string();
+
+    // Update the version history
+    match self.answer_histories.get_mut(question_id) {
+      Some(history) => {
+        history.add_version(new_response, change_reason);
+      }
+      None => {
+        // No history exists yet - create one with this as initial version
+        let history = AnswerWithHistory::new(question_id, new_response, change_reason);
+        self.answer_histories.insert(question_id.to_string(), history);
+      }
+    }
+
+    self.session.updated_at = timestamp.to_string();
+    Ok(())
+  }
+
+  /// Add an answer with initial version history.
+  ///
+  /// # Arguments
+  /// * `answer` - The answer to add
+  /// * `timestamp` - ISO 8601 timestamp for this addition
+  ///
+  /// # Errors
+  /// Returns the same errors as `InterviewSession::add_answer()`.
+  pub fn add_answer(
+    &mut self,
+    answer: crate::intent::interview::types::Answer,
+    timestamp: &str,
+  ) -> Result<(), SessionWithHistoriesError> {
+    let question_id = answer.question_id.clone();
+    let response = answer.response.clone();
+
+    // Add the answer using the session's method
+    self
+      .session
+      .add_answer(answer, timestamp)
+      .map_err(SessionWithHistoriesError::from)?;
+
+    // Create initial version history
+    let history = AnswerWithHistory::new(question_id.clone(), response, "initial");
+    self.answer_histories.insert(question_id, history);
+
+    Ok(())
+  }
+
+  /// Get the version history for a specific answer.
+  #[must_use]
+  pub fn get_history(&self, question_id: &str) -> Option<&AnswerWithHistory> {
+    self.answer_histories.get(question_id)
+  }
+}
+
+/// Errors for `SessionWithHistories` operations.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum SessionWithHistoriesError {
+  /// Session is paused.
+  #[error("session is paused; call resume before modifying")]
+  SessionPaused,
+  /// Session is already complete.
+  #[error("session already complete")]
+  AlreadyComplete,
+  /// Question ID is empty.
+  #[error("answer has empty question_id")]
+  EmptyQuestionId,
+  /// Timestamp is empty.
+  #[error("timestamp cannot be empty")]
+  EmptyTimestamp,
+  /// Answer not found.
+  #[error("answer not found for question: {0}")]
+  AnswerNotFound(String),
+  /// Wrapped session error.
+  #[error("{0}")]
+  SessionError(#[from] crate::intent::interview::types::InterviewSessionError),
+}

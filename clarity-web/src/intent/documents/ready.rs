@@ -411,6 +411,7 @@ mod tests {
           performance_notes: String::new(),
           error_handling: "Result types".to_string(),
           suggested_stack: Vec::new(),
+          key_components: Vec::new(),
         },
         entities: vec![],
         security: SecurityHints {

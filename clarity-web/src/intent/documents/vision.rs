@@ -320,6 +320,7 @@ mod tests {
           performance_notes: "Cache frequently accessed data".to_string(),
           error_handling: "Use Result types".to_string(),
           suggested_stack: Vec::new(),
+          key_components: Vec::new(),
         },
         entities: vec![],
         security: SecurityHints {

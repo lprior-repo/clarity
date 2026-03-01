@@ -197,10 +197,12 @@ fn conflict_state_resolve_rejects_already_resolved() {
 fn conflict_state_resolve_succeeds_with_valid_index() {
   let state = ConflictState::Pending;
   let result = state.resolve(1, 3);
-  assert!(result.is_ok());
-  let new_state = result.unwrap();
-  assert!(new_state.is_resolved());
-  assert_eq!(new_state.chosen_index(), Some(1));
+  if let Ok(new_state) = result {
+    assert!(new_state.is_resolved());
+    assert_eq!(new_state.chosen_index(), Some(1));
+  } else {
+    panic!("resolve(1, 3) should succeed for valid index");
+  }
 }
 
 #[test]

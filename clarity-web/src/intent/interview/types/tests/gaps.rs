@@ -180,10 +180,12 @@ fn gap_state_resolve_validates_whitespace() {
 fn gap_state_resolve_succeeds_with_valid_text() {
   let state = GapState::Open;
   let result = state.resolve("valid resolution".to_string());
-  assert!(result.is_ok());
-  let new_state = result.unwrap();
-  assert!(new_state.is_resolved());
-  assert_eq!(new_state.resolution(), Some("valid resolution"));
+  if let Ok(new_state) = result {
+    assert!(new_state.is_resolved());
+    assert_eq!(new_state.resolution(), Some("valid resolution"));
+  } else {
+    panic!("resolve should succeed for valid text");
+  }
 }
 
 #[test]
