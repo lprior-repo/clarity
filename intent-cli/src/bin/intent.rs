@@ -420,7 +420,7 @@ fn generate_session_id() -> String {
   format!("session-{timestamp}")
 }
 
-/// Load a spec from a CUE file
+/// Load a spec from a CUE or JSON file
 fn load_spec_from_cue(path: &str) -> Result<Spec> {
   let spec_path = Path::new(path);
 
@@ -429,9 +429,15 @@ fn load_spec_from_cue(path: &str) -> Result<Spec> {
     return Err(anyhow::anyhow!("Spec file not found: {path}"));
   }
 
-  // Export CUE to JSON
-  let json_str = export_cue_to_json(spec_path)
-    .map_err(|e| anyhow::anyhow!("Failed to export CUE: {}", format_loader_error(&e)))?;
+  // Check if it's a JSON file - parse directly without CUE
+  let json_str = if path.to_lowercase().ends_with(".json") {
+    std::fs::read_to_string(spec_path)
+      .with_context(|| format!("Failed to read JSON file: {path}"))?
+  } else {
+    // Export CUE to JSON
+    export_cue_to_json(spec_path)
+      .map_err(|e| anyhow::anyhow!("Failed to export CUE: {}", format_loader_error(&e)))?
+  };
 
   // Parse JSON to Spec
   let spec = parse_spec(&json_str).map_err(|e| anyhow::anyhow!("Failed to parse spec: {e:?}"))?;
@@ -1714,14 +1720,17 @@ fn cmd_validate(spec: &str, json: bool, security: bool) -> Result<()> {
   let mut errors: Vec<String> = Vec::new();
   let mut warnings: Vec<String> = Vec::new();
 
-  // Validate CUE syntax
-  match validate_cue_file(spec_path) {
-    Ok(()) => {}
-    Err(e) => {
-      errors.push(format!(
-        "CUE validation failed: {}",
-        format_loader_error(&e)
-      ));
+  // Validate CUE syntax (skip for JSON files)
+  let is_json = spec.to_lowercase().ends_with(".json");
+  if !is_json {
+    match validate_cue_file(spec_path) {
+      Ok(()) => {}
+      Err(e) => {
+        errors.push(format!(
+          "CUE validation failed: {}",
+          format_loader_error(&e)
+        ));
+      }
     }
   }
 
