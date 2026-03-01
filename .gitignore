@@ -62,6 +62,7 @@ Thumbs.db
 /app_assets/
 
 # E2E test artifacts
+node_modules/
 e2e-tests/node_modules/
 e2e-tests/test-results/
 e2e-tests/playwright-report/
@@ -82,12 +83,15 @@ CONTINUOUS_*.md
 DOCUMENTATION_*.md
 REMAINING_*.md
 
-# All other markdown files except AGENTS.md, CLAUDE.md, docs/, and kitty-specs/
+# All other markdown files except AGENTS.md, CLAUDE.md, docs/, kitty-specs/, and package READMEs
 *.md
 !AGENTS.md
 !CLAUDE.md
 !docs/**/*.md
 !kitty-specs/**/*.md
+!clarity-web/README.md
+!intent-cli/README.md
+!spec-kitty/README.md
 
 # Codanna index (binary build artifacts - never commit)
 .codanna/index/
