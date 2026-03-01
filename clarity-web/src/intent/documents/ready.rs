@@ -122,19 +122,22 @@ fn generate_behavior_details(behavior: &Behavior) -> String {
     format!("\n**Postconditions:**\n{post_list}")
   };
 
-  let verification = behavior
-    .verification
-    .as_ref()
-    .map_or_else(String::new, |v| {
-      if v.description.is_empty() {
-        String::new()
-      } else {
-        format!(
-          "\n**Verification:** {description}",
-          description = v.description
-        )
-      }
-    });
+  let verification = if behavior.verifications.is_empty() {
+    String::new()
+  } else {
+    let verifs: Vec<String> = behavior
+      .verifications
+      .iter()
+      .filter(|v| !v.description.is_empty())
+      .map(|v| v.description.clone())
+      .collect();
+    if verifs.is_empty() {
+      String::new()
+    } else {
+      let verif_str = verifs.join(", ");
+      format!("\n**Verification:** {verif_str}")
+    }
+  };
 
   format!("{header}{preconditions}{postconditions}{verification}")
 }
@@ -378,11 +381,12 @@ mod tests {
           notes: String::new(),
           requires: Vec::new(),
           tags: Vec::new(),
-          verification: Some(Verification {
+          verifications: vec![Verification {
             verification_type: "unit_test".to_string(),
             description: "Test login returns token".to_string(),
             example: String::new(),
-          }),
+            criteria: Vec::new(),
+          }],
           preconditions: vec!["User exists".to_string()],
           postconditions: vec!["Session created".to_string()],
         }],
@@ -406,6 +410,7 @@ mod tests {
           architecture: "Layered".to_string(),
           performance_notes: String::new(),
           error_handling: "Result types".to_string(),
+          suggested_stack: Vec::new(),
         },
         entities: vec![],
         security: SecurityHints {

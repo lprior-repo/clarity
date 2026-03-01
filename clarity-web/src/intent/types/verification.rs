@@ -18,6 +18,9 @@ pub struct Verification {
   /// Example test case or verification steps
   #[serde(default)]
   pub example: String,
+  /// Criteria list for verification
+  #[serde(default)]
+  pub criteria: Vec<String>,
 }
 
 impl Verification {
@@ -28,6 +31,7 @@ impl Verification {
       verification_type,
       description,
       example: String::new(),
+      criteria: Vec::new(),
     }
   }
 
@@ -35,6 +39,12 @@ impl Verification {
   #[must_use]
   pub fn with_example(self, example: String) -> Self {
     Self { example, ..self }
+  }
+
+  /// Builder method to set criteria
+  #[must_use]
+  pub fn with_criteria(self, criteria: Vec<String>) -> Self {
+    Self { criteria, ..self }
   }
 }
 

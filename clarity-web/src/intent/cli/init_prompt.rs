@@ -172,6 +172,68 @@ pub fn generate_default_filename(spec_name: &str) -> String {
   format!("{compressed}.cue")
 }
 
+/// Prompt user for spec name interactively
+///
+/// # Errors
+/// Returns `InitPromptError` if input cannot be read or is invalid.
+pub fn prompt_spec_name() -> Result<String, InitPromptError> {
+  print!("Enter spec name: ");
+  std::io::Write::flush(&mut std::io::stdout())
+    .map_err(|e| InitPromptError::InputError(e.to_string()))?;
+
+  let mut input = String::new();
+  std::io::stdin()
+    .read_line(&mut input)
+    .map_err(|e| InitPromptError::InputError(e.to_string()))?;
+
+  validate_spec_name(&input)
+}
+
+/// Prompt user for template selection interactively
+///
+/// # Errors
+/// Returns `InitPromptError` if input cannot be read or is invalid.
+pub fn prompt_template() -> Result<TemplateType, InitPromptError> {
+  let templates = get_all_templates();
+
+  println!("\nAvailable templates:");
+  for (i, template) in templates.iter().enumerate() {
+    println!("  {} - {}", i + 1, template.name);
+    println!("    {}", template.description);
+  }
+
+  print!("\nSelect template (1-{}): ", templates.len());
+  std::io::Write::flush(&mut std::io::stdout())
+    .map_err(|e| InitPromptError::InputError(e.to_string()))?;
+
+  let mut input = String::new();
+  std::io::stdin()
+    .read_line(&mut input)
+    .map_err(|e| InitPromptError::InputError(e.to_string()))?;
+
+  let selection = parse_template_selection(&input)?;
+  validate_template_selection(selection, &templates)
+}
+
+/// Prompt user for output filename interactively
+///
+/// # Errors
+/// Returns `InitPromptError` if input cannot be read.
+pub fn prompt_output_filename(default_name: &str) -> Result<String, InitPromptError> {
+  let suggested = generate_default_filename(default_name);
+
+  print!("Output filename (default: {}): ", suggested);
+  std::io::Write::flush(&mut std::io::stdout())
+    .map_err(|e| InitPromptError::InputError(e.to_string()))?;
+
+  let mut input = String::new();
+  std::io::stdin()
+    .read_line(&mut input)
+    .map_err(|e| InitPromptError::InputError(e.to_string()))?;
+
+  Ok(validate_output_filename(&input, &suggested))
+}
+
 #[cfg(test)]
 mod tests {
   #![allow(clippy::unwrap_used)]

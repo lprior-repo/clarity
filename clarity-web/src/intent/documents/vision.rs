@@ -86,16 +86,22 @@ fn generate_behavior_summary(behavior: &Behavior) -> String {
     format!("\n  - Postconditions: {post}")
   };
 
-  let verification = behavior
-    .verification
-    .as_ref()
-    .map_or_else(String::new, |v| {
-      if v.description.is_empty() {
-        String::new()
-      } else {
-        format!("\n  - Verification: {}", v.description)
-      }
-    });
+  let verification = if behavior.verifications.is_empty() {
+    String::new()
+  } else {
+    let verifs: Vec<String> = behavior
+      .verifications
+      .iter()
+      .filter(|v| !v.description.is_empty())
+      .map(|v| v.description.clone())
+      .collect();
+    if verifs.is_empty() {
+      String::new()
+    } else {
+      let verif_str = verifs.join(", ");
+      format!("\n  - Verification: {verif_str}")
+    }
+  };
 
   format!("- {name}{desc}{preconditions}{postconditions}{verification}")
 }
@@ -269,8 +275,7 @@ fn libraries_section(spec: &Spec) -> String {
 mod tests {
   use super::*;
   use crate::intent::types::{
-    AIHints, AntiPattern, Behavior, Feature, ImplementationHints, Invariant,
-    SecurityHints,
+    AIHints, AntiPattern, Behavior, Feature, ImplementationHints, Invariant, SecurityHints,
   };
 
   fn make_test_spec() -> Spec {
@@ -290,7 +295,7 @@ mod tests {
           notes: String::new(),
           requires: Vec::new(),
           tags: Vec::new(),
-          verification: None,
+          verifications: Vec::new(),
           preconditions: vec!["User exists".to_string()],
           postconditions: vec!["Session created".to_string()],
         }],
@@ -314,6 +319,7 @@ mod tests {
           architecture: "Layered architecture".to_string(),
           performance_notes: "Cache frequently accessed data".to_string(),
           error_handling: "Use Result types".to_string(),
+          suggested_stack: Vec::new(),
         },
         entities: vec![],
         security: SecurityHints {

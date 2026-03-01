@@ -41,6 +41,9 @@ pub struct ImplementationHints {
   /// Error handling approach
   #[serde(default)]
   pub error_handling: String,
+  /// Suggested tech stack (libraries, frameworks, tools)
+  #[serde(default)]
+  pub suggested_stack: Vec<String>,
 }
 
 /// `EntityHint` - hint for data entity modeling
@@ -57,6 +60,9 @@ pub struct EntityHint {
   /// Relationships to other entities
   #[serde(default)]
   pub relationships: Vec<String>,
+  /// Additional properties as key-value pairs
+  #[serde(default)]
+  pub dict: std::collections::HashMap<String, serde_json::Value>,
 }
 
 /// `SecurityHints` - security-related considerations

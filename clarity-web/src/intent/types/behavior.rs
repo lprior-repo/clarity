@@ -30,7 +30,7 @@ pub struct Behavior {
   pub tags: Vec<String>,
   /// How to verify this behavior
   #[serde(default)]
-  pub verification: Option<Verification>,
+  pub verifications: Vec<Verification>,
   /// Pre-conditions for this behavior (behavior references)
   #[serde(default)]
   pub preconditions: Vec<String>,
@@ -57,7 +57,7 @@ impl Behavior {
       notes: String::new(),
       requires: Vec::new(),
       tags: Vec::new(),
-      verification: None,
+      verifications: Vec::new(),
       preconditions: Vec::new(),
       postconditions: Vec::new(),
     })
@@ -75,7 +75,7 @@ impl Behavior {
       notes: String::new(),
       requires: Vec::new(),
       tags: Vec::new(),
-      verification: None,
+      verifications: Vec::new(),
       preconditions: Vec::new(),
       postconditions: Vec::new(),
     }
@@ -122,11 +122,13 @@ impl Behavior {
     self
   }
 
-  /// Builder method to set verification
+  /// Builder method to add a verification
   #[must_use]
   pub fn with_verification(self, verification: Verification) -> Self {
+    let mut verifications = self.verifications;
+    verifications.push(verification);
     Self {
-      verification: Some(verification),
+      verifications,
       ..self
     }
   }
