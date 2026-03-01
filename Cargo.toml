@@ -2,7 +2,6 @@
 members = [
     "clarity-web",
     "e2e-tests",
-    "intent-cli",
 ]
 resolver = "2"
 
