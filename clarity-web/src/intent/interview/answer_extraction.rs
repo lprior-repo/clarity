@@ -292,9 +292,9 @@ pub fn extract_fields(response: &str, fields: &[String]) -> HashMap<String, Stri
 /// # Returns
 /// A `HashMap` of field names to extracted string values.
 #[must_use]
-pub fn extract_fields_with_types(
+pub fn extract_fields_with_types<S: std::hash::BuildHasher>(
   response: &str,
-  spec: &HashMap<String, String>,
+  spec: &HashMap<String, String, S>,
 ) -> HashMap<String, String> {
   let mut result = HashMap::new();
 
@@ -425,7 +425,7 @@ fn parse_numbered_list(s: &str) -> Vec<String> {
       let content = after_number
         .strip_prefix(['.', ')', '-', ':'])
         .map(str::trim)
-        .unwrap_or(after_number.trim());
+        .unwrap_or_else(|| after_number.trim());
 
       if !content.is_empty() {
         items.push(content.to_string());
