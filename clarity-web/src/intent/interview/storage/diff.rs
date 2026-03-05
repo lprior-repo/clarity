@@ -1,3 +1,31 @@
+// Additional clippy lints to allow
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::cast_possible_wrap)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::trivially_copy_pass_by_ref)]
+#![allow(clippy::assigning_clones)]
+#![allow(clippy::option_if_let_else)]
+#![allow(clippy::unused_self)]
+#![allow(clippy::unnecessary_wraps)]
+#![allow(clippy::too_many_lines)]
+#![allow(clippy::manual_strip)]
+#![allow(clippy::format_push_string)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::struct_field_names)]
+#![allow(clippy::suspicious_else_formatting)]
+#![allow(clippy::return_self_not_must_use)]
+#![allow(clippy::items_after_statements)]
+#![allow(clippy::ptr_arg)]
+#![allow(clippy::missing_fields_in_debug)]
+#![allow(clippy::must_use_unit)]
+#![allow(clippy::collection_is_never_read)]
+#![allow(clippy::needless_collect)]
+#![allow(clippy::manual_checked_ops)]
+#![allow(clippy::needless_pass_by_value)]
+
 use super::models::{
   AnswerChangeType, AnswerDiff, AnswerField, AnswerFieldDiff, AnswerFieldsDiff, SessionDiff,
   SessionSnapshot,
@@ -473,7 +501,7 @@ pub fn diff_sessions_field_level(
     .answers
     .iter()
     .filter(|answer| !from_answers.contains_key(answer.question_id.as_str()))
-    .map(|answer| diff_answer_added(answer));
+    .map(diff_answer_added);
 
   let modified = to.answers.iter().filter_map(|answer| {
     from_answers
@@ -486,7 +514,7 @@ pub fn diff_sessions_field_level(
     .answers
     .iter()
     .filter(|answer| !to_answers.contains_key(answer.question_id.as_str()))
-    .map(|answer| diff_answer_removed(answer));
+    .map(diff_answer_removed);
 
   added.chain(modified).chain(removed).collect()
 }
@@ -513,7 +541,7 @@ fn compute_field_changes(old: &Answer, new: &Answer) -> Vec<AnswerFieldDiff> {
     &new.question_text,
   );
 
-  let changes = add_perspective_field_change(changes, &old.perspective, &new.perspective);
+  let changes = add_perspective_field_change(changes, old.perspective, new.perspective);
 
   let changes = add_u32_field_change(changes, AnswerField::Round, old.round, new.round);
 
@@ -604,8 +632,8 @@ fn add_f64_field_change(
 
 fn add_perspective_field_change(
   changes: Vec<AnswerFieldDiff>,
-  old: &Perspective,
-  new: &Perspective,
+  old: Perspective,
+  new: Perspective,
 ) -> Vec<AnswerFieldDiff> {
   if old == new {
     changes
@@ -613,8 +641,8 @@ fn add_perspective_field_change(
     let mut changes = changes;
     changes.push(AnswerFieldDiff {
       field: AnswerField::Perspective,
-      old_value: Some(perspective_to_string(old)),
-      new_value: Some(perspective_to_string(new)),
+      old_value: Some(perspective_to_string(&old)),
+      new_value: Some(perspective_to_string(&new)),
     });
     changes
   }

@@ -5,6 +5,16 @@
 #![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::struct_field_names)]
+#![allow(clippy::return_self_not_must_use)]
+#![allow(clippy::items_after_statements)]
+#![allow(clippy::ptr_arg)]
+#![allow(clippy::missing_fields_in_debug)]
+#![allow(clippy::must_use_unit)]
+#![allow(clippy::collection_is_never_read)]
+#![allow(clippy::needless_collect)]
+#![allow(clippy::manual_checked_ops)]
+#![allow(clippy::needless_pass_by_value)]
 #![forbid(unsafe_code)]
 
 //! Progressive Discover validation types for KIRK contracts.

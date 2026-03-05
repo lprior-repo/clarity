@@ -1,0 +1,65 @@
+{
+  "id": "task-030",
+  "title": "ui-extracting: compose ExtractingPhase component",
+  "type": "feature",
+  "priority": 1,
+  "effort": "30min",
+  "description": "Compose the ExtractingPhase component that orchestrates the extracting phase UI. Integrates progress animation, status messages, and cancellation controls into a cohesive component that manages the user experience during artifact extraction.",
+  "ears": {
+    "ubiquitous": [
+      "THE SYSTEM SHALL render the extracting phase UI with all subcomponents",
+      "THE SYSTEM SHALL coordinate state between progress animation and extraction logic"
+    ],
+    "event_driven": [
+      {
+        "trigger": "WHEN extraction phase becomes active",
+        "shall": "THE SYSTEM SHALL display the ExtractingPhase component with initial state"
+      },
+      {
+        "trigger": "WHEN user clicks cancel",
+        "shall": "THE SYSTEM SHALL abort extraction and return to previous phase"
+      }
+    ],
+    "unwanted": [
+      {
+        "condition": "IF extraction fails unexpectedly",
+        "shall_not": "THE SYSTEM SHALL NOT leave the UI in an inconsistent state",
+        "because": "Users need clear feedback about extraction failures"
+      },
+      {
+        "condition": "IF component unmounts during extraction",
+        "shall_not": "THE SYSTEM SHALL NOT leave orphaned event listeners",
+        "because": "Memory leaks must be prevented on navigation"
+      }
+    ]
+  },
+  "contracts": {
+    "preconditions": [
+      "Extraction state must be available from parent context",
+      "Progress animation component must be imported and ready",
+      "Cancellation handler must be defined"
+    ],
+    "postconditions": [
+      "ExtractingPhase displays complete extraction UI",
+      "All subcomponents are properly wired to extraction state",
+      "Cleanup occurs when phase transitions"
+    ],
+    "invariants": [
+      "Phase state remains synchronized with extraction progress",
+      "User can always cancel the extraction",
+      "UI remains responsive during extraction"
+    ]
+  },
+  "tests": {
+    "happy": [
+      "Given extraction phase is active, when component mounts, then progress animation and cancel button are visible",
+      "Given extraction completes, when progress reaches 100%, then component triggers transition to next phase",
+      "Given extraction is in progress, when user hovers cancel button, then cancel action is clearly indicated"
+    ],
+    "error": [
+      "Given extraction fails, when error occurs, then component displays error message with retry option",
+      "Given extraction times out, when timeout occurs, then component shows timeout error",
+      "Given state is corrupted, when component renders, then it gracefully degrades to error state"
+    ]
+  }
+}

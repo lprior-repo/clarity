@@ -1,0 +1,92 @@
+{
+  "id": "task-017",
+  "title": "ui-confirm: create AntithesisInput component",
+  "type": "feature",
+  "priority": 1,
+  "effort": "1hr",
+  "description": "Create an interactive AntithesisInput component that allows users to propose counter-arguments or alternative perspectives to the problem statement. This component is central to the confirm phase, enabling users to stress-test their problem definition by actively trying to disprove or challenge it.",
+  "ears": {
+    "ubiquitous": [
+      "THE SYSTEM SHALL provide a text input area for antithesis entry",
+      "THE SYSTEM SHALL support markdown formatting in antithesis input"
+    ],
+    "event_driven": [
+      {
+        "trigger": "WHEN a user begins typing an antithesis",
+        "shall": "THE SYSTEM SHALL provide real-time character count and formatting assistance"
+      },
+      {
+        "trigger": "WHEN a user submits an antithesis",
+        "shall": "THE SYSTEM SHALL validate the input and store it for quality analysis"
+      },
+      {
+        "trigger": "WHEN the antithesis field loses focus",
+        "shall": "THE SYSTEM SHALL auto-save the current draft"
+      }
+    ],
+    "unwanted": [
+      {
+        "condition": "IF the antithesis input exceeds maximum length",
+        "shall_not": "THE SYSTEM SHALL NOT accept input beyond the limit",
+        "because": "excessively long inputs degrade performance and readability"
+      },
+      {
+        "condition": "IF invalid characters or scripts are detected",
+        "shall_not": "THE SYSTEM SHALL NOT process potentially malicious content",
+        "because": "security requires input sanitization"
+      }
+    ]
+  },
+  "contracts": {
+    "preconditions": [
+      "User must have an active session with edit permissions",
+      "The problem context must be loaded and available"
+    ],
+    "postconditions": [
+      "Submitted antithesis is stored and linked to the current problem",
+      "Input is sanitized and validated before storage"
+    ],
+    "invariants": [
+      "Antithesis content is never modified after submission without user action",
+      "Draft state is preserved across component re-renders"
+    ]
+  },
+  "tests": {
+    "happy": [
+      "Given an empty antithesis field, when user types valid text, then the input is captured and displayed",
+      "Given a completed antithesis, when user clicks submit, then the antithesis is saved and quality analysis is triggered",
+      "Given a partially filled form, when user navigates away and returns, then the draft is restored"
+    ],
+    "error": [
+      "Given an antithesis exceeding character limit, when user attempts to submit, then validation error is shown",
+      "Given a network failure, when user submits antithesis, then the system queues the submission for retry",
+      "Given invalid markdown syntax, when user submits, then the system provides helpful error feedback without crashing"
+    ]
+  },
+  "implementation": {
+    "phase_0": [
+      "Review input component patterns",
+      "Check markdown editor patterns"
+    ],
+    "phase_1": [
+      "Write test_captures_antithesis_input",
+      "Write test_validates_length_limit",
+      "Write test_auto_saves_on_blur"
+    ],
+    "phase_2": [
+      "Create AntithesisInput component with 3 input fields for antithesis points",
+      "Add character count display",
+      "Add markdown preview",
+      "Wire up to state management"
+    ]
+  },
+  "context": {
+    "related_files": [
+      "clarity-web/src/components/discover/confirm_phase.rs",
+      "clarity-web/src/components/discover/state.rs"
+    ],
+    "similar": [
+      "See textarea components for input patterns"
+    ]
+  }
+}

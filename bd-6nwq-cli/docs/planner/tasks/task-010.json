@@ -1,0 +1,86 @@
+{
+  "id": "task-010",
+  "title": "ui-prompt: create ExtractFieldsButton",
+  "type": "feature",
+  "priority": 1,
+  "effort": "30min",
+  "description": "Create the ExtractFieldsButton component that triggers the field extraction process from the user's prompt text. This button initiates parsing and structured data extraction to transform free-form text into actionable planning fields.",
+  "ears": {
+    "ubiquitous": [
+      "THE SYSTEM SHALL display a clear label indicating the button's extraction function",
+      "THE SYSTEM SHALL show a loading state during extraction processing"
+    ],
+    "event_driven": [
+      {
+        "trigger": "WHEN the user clicks the ExtractFieldsButton",
+        "shall": "THE SYSTEM SHALL initiate the extraction process with the current prompt text"
+      },
+      {
+        "trigger": "WHEN extraction completes successfully",
+        "shall": "THE SYSTEM SHALL display the extracted fields in the UI"
+      }
+    ],
+    "unwanted": [
+      {
+        "condition": "IF the prompt textarea is empty",
+        "shall_not": "THE SYSTEM SHALL NOT trigger the extraction process",
+        "because": "extracting from empty content would waste resources and confuse users"
+      },
+      {
+        "condition": "IF extraction is already in progress",
+        "shall_not": "THE SYSTEM SHALL NOT start a new extraction request",
+        "because": "concurrent extractions could cause race conditions and inconsistent state"
+      }
+    ]
+  },
+  "contracts": {
+    "preconditions": [
+      "The prompt text must be non-empty before extraction",
+      "The extraction service must be available and initialized"
+    ],
+    "postconditions": [
+      "After successful extraction, structured fields are populated",
+      "After failed extraction, an error message is displayed to the user"
+    ],
+    "invariants": [
+      "Button disabled state always reflects extraction eligibility",
+      "Loading indicator is shown only during active extraction"
+    ]
+  },
+  "tests": {
+    "happy": [
+      "Enter prompt text, click button, verify fields are extracted",
+      "Click button with valid prompt and verify loading state appears then resolves"
+    ],
+    "error": [
+      "Click button with empty prompt and verify it remains disabled",
+      "Trigger extraction when service fails and verify error handling"
+    ]
+  },
+  "implementation": {
+    "phase_0": [
+      "Review existing button patterns with loading states",
+      "Check extraction service API"
+    ],
+    "phase_1": [
+      "Write test_button_disabled_when_empty",
+      "Write test_click_triggers_extraction",
+      "Write test_loading_state_shown_during_extraction"
+    ],
+    "phase_2": [
+      "Create ExtractFieldsButton component with is_loading, is_disabled, on_click props",
+      "Add loading spinner animation",
+      "Wire up to extraction service",
+      "Add error handling and display"
+    ]
+  },
+  "context": {
+    "related_files": [
+      "clarity-web/src/components/discover/prompt_phase.rs",
+      "clarity-web/src/server.rs"
+    ],
+    "similar": [
+      "See Button component with loading state patterns"
+    ]
+  }
+}

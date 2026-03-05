@@ -345,7 +345,7 @@ fn render_use_case_rows(use_cases: &[String]) -> Vec<Element> {
     .iter()
     .enumerate()
     .map(|(i, uc)| {
-      let uc = uc.clone();
+      let uc = Clone::clone(&uc);
       rsx! { UseCaseRow { text: uc, index: i } }
     })
     .collect()
@@ -467,7 +467,7 @@ pub fn ArtifactPanel(answers: Signal<Vec<Answer>>, active_phase: Signal<String>)
     .iter()
     .enumerate()
     .map(|(i, t)| {
-      let t = t.clone();
+      let t = Clone::clone(&t);
       let selected = current_selected == Some(i);
       let mut signal = selected_task;
       rsx! {

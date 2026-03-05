@@ -1,0 +1,21 @@
+--- clarity-web/src/lattice/quality.rs
++++ replace > with < in calculate_consistency
+@@ -292,17 +292,17 @@
+       // Check for contradictory phrases
+       if has_contradiction(val1, val2) {
+         contradictions += 1;
+       }
+     }
+   }
+ 
+   // Score based on contradiction ratio
+-  let score = if total_pairs > 0 {
++  let score = if total_pairs < /* ~ changed by cargo-mutants ~ */ 0 {
+     let contradiction_ratio = (contradictions * 100) / total_pairs;
+     u8::try_from(100_u32.saturating_sub(contradiction_ratio as u32)).unwrap_or(0)
+   } else {
+     100
+   };
+ 
+   if contradictions > 0 {
+     issues.push(QualityIssue::new(

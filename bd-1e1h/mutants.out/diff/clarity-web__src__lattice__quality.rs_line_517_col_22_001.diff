@@ -1,0 +1,21 @@
+--- clarity-web/src/lattice/quality.rs
++++ delete ! in calculate_security
+@@ -509,17 +509,17 @@
+     issues.push(QualityIssue::new(
+       QualityDimension::Security,
+       IssueSeverity::Error,
+       "No security considerations mentioned".to_string(),
+     ));
+   } else if covered_areas.len() < 3 {
+     let missing = ["authentication", "encryption", "validation"]
+       .iter()
+-      .filter(|area| !covered_areas.contains(*area))
++      .filter(|area|  /* ~ changed by cargo-mutants ~ */covered_areas.contains(*area))
+       .join(", ");
+ 
+     issues.push(QualityIssue::new(
+       QualityDimension::Security,
+       IssueSeverity::Warning,
+       format!("Security considerations incomplete: missing {missing}"),
+     ));
+   }

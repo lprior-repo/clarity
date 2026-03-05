@@ -1,0 +1,21 @@
+--- clarity-web/src/lattice/quality.rs
++++ replace / with % in calculate_clarity
+@@ -409,17 +409,17 @@
+     jargon_count += jargon_terms
+       .iter()
+       .filter(|term| lower.contains(*term))
+       .count();
+   }
+ 
+   // Score = 100 - (complex_sentence_ratio + jargon_penalty)
+   let complex_ratio = if total_sentences > 0 {
+-    (complex_sentences * 100) / total_sentences
++    (complex_sentences * 100) % /* ~ changed by cargo-mutants ~ */ total_sentences
+   } else {
+     0
+   };
+ 
+   let jargon_penalty = (jargon_count * 5).min(50);
+ 
+   let score = u8::try_from(
+     100_u32

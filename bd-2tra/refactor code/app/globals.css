@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 4%;
+    --foreground: 0 0% 93%;
+    --card: 0 0% 6%;
+    --card-foreground: 0 0% 93%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 93%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 80%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 50%;
+    --accent: 221 83% 53%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 12%;
+    --input: 0 0% 12%;
+    --ring: 221 83% 53%;
+    --chart-1: 221 83% 53%;
+    --chart-2: 142 71% 45%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 0 72% 51%;
+    --chart-5: 262 83% 58%;
+    --radius: 0.5rem;
+    --sidebar-background: 0 0% 3%;
+    --sidebar-foreground: 0 0% 80%;
+    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 8%;
+    --sidebar-accent-foreground: 0 0% 93%;
+    --sidebar-border: 0 0% 10%;
+    --sidebar-ring: 221 83% 53%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* ── Glow & Pulse animations ─────────────── */
+@keyframes node-enter {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes edge-draw {
+  from { stroke-dashoffset: 200; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes particle-flow {
+  0% { offset-distance: 0%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { offset-distance: 100%; opacity: 0; }
+}
+@keyframes pulse-glow {
+  0%, 100% { filter: drop-shadow(0 0 4px hsl(221 83% 53% / 0.4)); }
+  50% { filter: drop-shadow(0 0 12px hsl(221 83% 53% / 0.7)); }
+}
+@keyframes terminal-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes state-active {
+  0%, 100% { box-shadow: 0 0 0 2px hsl(221 83% 53% / 0.3); }
+  50% { box-shadow: 0 0 0 6px hsl(221 83% 53% / 0.1); }
+}
+
+.animate-node-enter { animation: node-enter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.animate-edge-draw { stroke-dasharray: 200; animation: edge-draw 0.8s ease-out forwards; }
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+.animate-terminal-blink { animation: terminal-blink 1s step-end infinite; }
+.animate-fade-up { animation: fade-up 0.35s ease-out both; }
+.animate-state-active { animation: state-active 2s ease-in-out infinite; }
+
+/* ── CRT scanline overlay (use as a ::before pseudo or child div) ── */
+@keyframes scroll-scanline {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+@keyframes term-line-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes hud-flash {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+.animate-term-line { animation: term-line-in 0.2s ease-out both; }
+.animate-hud-flash { animation: hud-flash 0.6s ease-in-out 1; }

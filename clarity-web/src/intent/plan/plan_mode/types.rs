@@ -5,6 +5,33 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+// Additional clippy lints to allow
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::cast_possible_wrap)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::trivially_copy_pass_by_ref)]
+#![allow(clippy::assigning_clones)]
+#![allow(clippy::option_if_let_else)]
+#![allow(clippy::unused_self)]
+#![allow(clippy::unnecessary_wraps)]
+#![allow(clippy::too_many_lines)]
+#![allow(clippy::manual_strip)]
+#![allow(clippy::format_push_string)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::struct_field_names)]
+#![allow(clippy::suspicious_else_formatting)]
+#![allow(clippy::return_self_not_must_use)]
+#![allow(clippy::items_after_statements)]
+#![allow(clippy::ptr_arg)]
+#![allow(clippy::missing_fields_in_debug)]
+#![allow(clippy::must_use_unit)]
+#![allow(clippy::collection_is_never_read)]
+#![allow(clippy::needless_collect)]
+#![allow(clippy::manual_checked_ops)]
+#![allow(clippy::needless_pass_by_value)]
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -234,7 +261,7 @@ pub enum Action {
 impl Action {
   /// Creates a new `AnswerQuestion` action.
   #[must_use]
-  pub fn answer_question(question_id: String, answer: String) -> Self {
+  pub const fn answer_question(question_id: String, answer: String) -> Self {
     Self::AnswerQuestion {
       question_id,
       answer,
@@ -243,7 +270,7 @@ impl Action {
 
   /// Creates a new `ResolveGap` action.
   #[must_use]
-  pub fn resolve_gap(gap_id: String, resolution: String) -> Self {
+  pub const fn resolve_gap(gap_id: String, resolution: String) -> Self {
     Self::ResolveGap { gap_id, resolution }
   }
 

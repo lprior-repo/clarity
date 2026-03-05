@@ -1,0 +1,17 @@
+[package]
+name = "e2e-tests"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[lib]
+name = "e2e_tests"
+path = "lib.rs"
+
+[dev-dependencies]
+clarity-web = { path = "../clarity-web" }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }

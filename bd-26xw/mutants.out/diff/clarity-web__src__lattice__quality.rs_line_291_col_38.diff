@@ -1,0 +1,21 @@
+--- clarity-web/src/lattice/quality.rs
++++ replace + with - in calculate_consistency
+@@ -283,17 +283,17 @@
+ fn calculate_consistency(answers: &[Answer], issues: &mut Vec<QualityIssue>) -> DimensionScore {
+   let mut contradictions = 0;
+   let total_pairs = answers.len().saturating_sub(1);
+ 
+   // Simple contradiction detection: look for negations of similar concepts
+   let values: Vec<_> = answers.iter().map(|a| a.value.to_lowercase()).collect();
+ 
+   for (i, val1) in values.iter().enumerate() {
+-    for val2 in values.iter().skip(i + 1) {
++    for val2 in values.iter().skip(i - /* ~ changed by cargo-mutants ~ */ 1) {
+       // Check for contradictory phrases
+       if has_contradiction(val1, val2) {
+         contradictions += 1;
+       }
+     }
+   }
+ 
+   // Score based on contradiction ratio

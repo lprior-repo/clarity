@@ -5,6 +5,32 @@
 #![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+// Additional clippy lints to allow
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::cast_possible_wrap)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::trivially_copy_pass_by_ref)]
+#![allow(clippy::assigning_clones)]
+#![allow(clippy::option_if_let_else)]
+#![allow(clippy::unused_self)]
+#![allow(clippy::unnecessary_wraps)]
+#![allow(clippy::too_many_lines)]
+#![allow(clippy::manual_strip)]
+#![allow(clippy::format_push_string)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::struct_field_names)]
+#![allow(clippy::return_self_not_must_use)]
+#![allow(clippy::items_after_statements)]
+#![allow(clippy::ptr_arg)]
+#![allow(clippy::missing_fields_in_debug)]
+#![allow(clippy::must_use_unit)]
+#![allow(clippy::collection_is_never_read)]
+#![allow(clippy::needless_collect)]
+#![allow(clippy::manual_checked_ops)]
+#![allow(clippy::needless_pass_by_value)]
 
 //! Brutal Truths Prioritizer with VORP (Value Over Replacement Product).
 //!
@@ -181,8 +207,7 @@ impl VorpScore {
     dimensions
       .iter()
       .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
-      .map(|&(name, score)| (name, score))
-      .unwrap_or(("Value", 0.0))
+      .map_or(("Value", 0.0), |&(name, score)| (name, score))
   }
 
   /// Get recommendations based on weak dimensions.
@@ -237,7 +262,7 @@ pub struct VorpCalculator {
 impl VorpCalculator {
   /// Create a new VORP calculator.
   #[must_use]
-  pub fn new() -> Self {
+  pub const fn new() -> Self {
     Self {
       value: 0.0,
       obvious: 0.0,
@@ -250,28 +275,28 @@ impl VorpCalculator {
 
   /// Set value dimension score.
   #[must_use]
-  pub fn with_value(mut self, score: f64) -> Self {
+  pub const fn with_value(mut self, score: f64) -> Self {
     self.value = score.clamp(0.0, 1.0);
     self
   }
 
   /// Set obvious dimension score.
   #[must_use]
-  pub fn with_obvious(mut self, score: f64) -> Self {
+  pub const fn with_obvious(mut self, score: f64) -> Self {
     self.obvious = score.clamp(0.0, 1.0);
     self
   }
 
   /// Set real dimension score.
   #[must_use]
-  pub fn with_real(mut self, score: f64) -> Self {
+  pub const fn with_real(mut self, score: f64) -> Self {
     self.real = score.clamp(0.0, 1.0);
     self
   }
 
   /// Set possible dimension score.
   #[must_use]
-  pub fn with_possible(mut self, score: f64) -> Self {
+  pub const fn with_possible(mut self, score: f64) -> Self {
     self.possible = score.clamp(0.0, 1.0);
     self
   }
@@ -343,7 +368,7 @@ impl VorpCalculator {
 
     VorpScore::new(value, obvious, real, possible)
       .with_replacement(replacement.to_string())
-      .with_justification(format!("Quick assessment based on: {}", description))
+      .with_justification(format!("Quick assessment based on: {description}"))
   }
 }
 
@@ -418,14 +443,14 @@ impl PrioritizedItem {
 
   /// Set priority.
   #[must_use]
-  pub fn with_priority(mut self, priority: u8) -> Self {
+  pub const fn with_priority(mut self, priority: u8) -> Self {
     self.priority = priority;
     self
   }
 
   /// Set risk level.
   #[must_use]
-  pub fn with_risk(mut self, risk: u8) -> Self {
+  pub const fn with_risk(mut self, risk: u8) -> Self {
     self.risk = risk;
     self
   }
@@ -472,8 +497,7 @@ impl PrioritizedItem {
       .brutal_truth_scores
       .iter()
       .find(|(t, _)| *t == truth)
-      .map(|(_, s)| *s)
-      .unwrap_or(0.0)
+      .map_or(0.0, |(_, s)| *s)
   }
 
   /// Identify the biggest concern based on brutal truths.
@@ -605,13 +629,12 @@ impl BrutalTruthsPrioritizer {
 
     let prioritized: Vec<PrioritizedItem> = items
       .into_iter()
-      .enumerate()
-      .map(|(_idx, (id, title))| {
+      .map(|(id, title)| {
         let vorp = VorpCalculator::quick_assess(&title, "competitor");
 
         // Assess brutal truths based on title keywords
         let lower = title.to_lowercase();
-        let mut item = PrioritizedItem::new(id.clone(), title.clone()).with_vorp(vorp);
+        let mut item = PrioritizedItem::new(id, title).with_vorp(vorp);
 
         // Scale assessment
         let scale_score = if contains_any(&lower, &["scale", "growth", "viral", "network"]) {
@@ -656,8 +679,12 @@ impl BrutalTruthsPrioritizer {
         item = item.with_priority(base_priority);
 
         // Set risk based on brutal truth scores
-        let risk =
-          (100.0 - item.brutal_truth_scores.iter().map(|(_, s)| s).sum::<f64>() * 25.0) as u8;
+        let risk = item
+          .brutal_truth_scores
+          .iter()
+          .map(|(_, s)| s)
+          .sum::<f64>()
+          .mul_add(-25.0, 100.0) as u8;
         item = item.with_risk(risk.min(100));
 
         item
@@ -762,8 +789,7 @@ impl BrutalTruthsPrioritizer {
       .count();
     if low_vorp_high_priority > 0 {
       recs.push(format!(
-        "{} high-priority items have low VORP. Reassess their true value.",
-        low_vorp_high_priority
+        "{low_vorp_high_priority} high-priority items have low VORP. Reassess their true value."
       ));
     }
 

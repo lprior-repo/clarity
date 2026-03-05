@@ -1,7 +1,7 @@
 //! Answer File Parsing
 //!
 //! This module provides functionality to parse answer files in TOML or JSON format
-//! that can be loaded into interviews. It supports question_id to answer mapping
+//! that can be loaded into interviews. It supports `question_id` to answer mapping
 //! with optional confidence values.
 //!
 //! # File Formats
@@ -49,6 +49,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fmt::Write;
 use thiserror::Error;
 
 /// Errors that can occur when parsing answer files.
@@ -88,7 +89,7 @@ pub enum AnswerFileError {
 }
 
 /// A single parsed answer from an answer file.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct ParsedAnswer {
   /// The answer text/response.
   pub answer: String,
@@ -98,16 +99,6 @@ pub struct ParsedAnswer {
   /// Optional notes associated with this answer.
   #[serde(default)]
   pub notes: Option<String>,
-}
-
-impl Default for ParsedAnswer {
-  fn default() -> Self {
-    Self {
-      answer: String::new(),
-      confidence: None,
-      notes: None,
-    }
-  }
 }
 
 /// A collection of parsed answers from an answer file.
@@ -355,16 +346,14 @@ fn validate_and_convert_answers(
 
     // Validate answer field
     if toml_answer.answer.trim().is_empty() {
-      return Err(AnswerFileError::EmptyAnswer {
-        question_id: question_id.clone(),
-      });
+      return Err(AnswerFileError::EmptyAnswer { question_id });
     }
 
     // Validate confidence if present
     if let Some(conf) = toml_answer.confidence {
       if !(0.0..=1.0).contains(&conf) {
         return Err(AnswerFileError::InvalidConfidence {
-          question_id: question_id.clone(),
+          question_id,
           value: conf,
         });
       }
@@ -402,16 +391,14 @@ fn validate_and_convert_json_answers(
 
     // Validate answer field
     if json_answer.answer.trim().is_empty() {
-      return Err(AnswerFileError::EmptyAnswer {
-        question_id: question_id.clone(),
-      });
+      return Err(AnswerFileError::EmptyAnswer { question_id });
     }
 
     // Validate confidence if present
     if let Some(conf) = json_answer.confidence {
       if !(0.0..=1.0).contains(&conf) {
         return Err(AnswerFileError::InvalidConfidence {
-          question_id: question_id.clone(),
+          question_id,
           value: conf,
         });
       }
@@ -533,16 +520,16 @@ pub fn to_toml(file: &AnswerFile) -> Result<String, AnswerFileError> {
 
   for key in sorted_keys {
     if let Some(answer) = file.answers.get(key) {
-      output.push_str(&format!("[{}]\n", key));
-      output.push_str(&format!("answer = {:?}\n", answer.answer));
+      let _ = writeln!(output, "[{key}]");
+      let _ = writeln!(output, "answer = {:?}", answer.answer);
 
       if let Some(conf) = answer.confidence {
-        output.push_str(&format!("confidence = {}\n", conf));
+        let _ = writeln!(output, "confidence = {conf}");
       }
 
       if let Some(ref notes) = answer.notes {
         if !notes.is_empty() {
-          output.push_str(&format!("notes = {:?}\n", notes));
+          let _ = writeln!(output, "notes = {notes:?}");
         }
       }
 

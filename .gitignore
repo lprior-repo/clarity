@@ -118,3 +118,6 @@ REMAINING_*.md
 # Large test binaries (don't track - these are ~34MB each)
 test_crate_root_imports
 test_integration
+
+# Dolt database files (added by bd init)
+.dolt/

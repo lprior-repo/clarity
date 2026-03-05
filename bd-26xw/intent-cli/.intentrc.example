@@ -1,0 +1,22 @@
+# Intent CLI Configuration File
+# Copy this file to .intentrc.yaml to customize default behavior
+
+# Default profile type for interview commands
+# Valid options: api, cli, event, data, workflow, ui
+default_profile: "api"
+
+# Default output format for beads and other commands
+# Valid options: json, text, markdown
+default_output_format: "json"
+
+# Default strategy for plan-next command
+# Valid options: page_rank, effort_ease, dependency_order
+default_strategy: "page_rank"
+
+# Debounce time for file watching in milliseconds
+# Default: 500 (recommended range: 100-2000)
+watch_debounce_ms: 500
+
+# Maximum number of cache entries for spec loading
+# Default: 50 (recommended range: 10-500)
+max_cache_entries: 50

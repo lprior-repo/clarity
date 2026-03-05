@@ -1,0 +1,21 @@
+--- clarity-web/src/lattice/quality.rs
++++ replace > with < in calculate_clarity
+@@ -423,17 +423,17 @@
+ 
+   let score = u8::try_from(
+     100_u32
+       .saturating_sub(complex_ratio as u32)
+       .saturating_sub(jargon_penalty as u32),
+   )
+   .unwrap_or(0);
+ 
+-  if complex_sentences > 0 {
++  if complex_sentences < /* ~ changed by cargo-mutants ~ */ 0 {
+     issues.push(QualityIssue::new(
+       QualityDimension::Clarity,
+       IssueSeverity::Warning,
+       format!("{complex_sentences} complex sentence(s) detected (consider simplifying)"),
+     ));
+   }
+ 
+   if jargon_count > 2 {

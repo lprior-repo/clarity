@@ -1,0 +1,65 @@
+{
+  "id": "task-031",
+  "title": "ui-preview: create summary display",
+  "type": "feature",
+  "priority": 1,
+  "effort": "1hr",
+  "description": "Create a summary display component that presents extracted artifacts in a structured, reviewable format. Shows key information about discovered artifacts including names, types, relationships, and quality metrics to help users understand what was extracted before proceeding.",
+  "ears": {
+    "ubiquitous": [
+      "THE SYSTEM SHALL display a comprehensive summary of extracted artifacts",
+      "THE SYSTEM SHALL organize artifacts by type and relevance"
+    ],
+    "event_driven": [
+      {
+        "trigger": "WHEN artifacts are loaded into preview",
+        "shall": "THE SYSTEM SHALL render the summary with artifact details grouped by category"
+      },
+      {
+        "trigger": "WHEN user expands an artifact category",
+        "shall": "THE SYSTEM SHALL show detailed information for artifacts in that category"
+      }
+    ],
+    "unwanted": [
+      {
+        "condition": "IF artifact data is incomplete",
+        "shall_not": "THE SYSTEM SHALL NOT display misleading or truncated information",
+        "because": "Users need accurate information to make decisions"
+      },
+      {
+        "condition": "IF summary exceeds reasonable display length",
+        "shall_not": "THE SYSTEM SHALL NOT render an unscrollable wall of text",
+        "because": "Usability requires manageable information density"
+      }
+    ]
+  },
+  "contracts": {
+    "preconditions": [
+      "Artifacts array must be populated with valid data",
+      "Artifact types must be defined and categorizable",
+      "Display container must have sufficient space"
+    ],
+    "postconditions": [
+      "All artifacts are displayed in organized categories",
+      "Users can expand/collapse categories for detail",
+      "Summary accurately reflects extracted artifact data"
+    ],
+    "invariants": [
+      "Artifact count matches extraction results",
+      "Category groupings remain consistent",
+      "Display order is deterministic and reproducible"
+    ]
+  },
+  "tests": {
+    "happy": [
+      "Given 10 artifacts are extracted, when summary displays, then all 10 artifacts are shown grouped by type",
+      "Given artifacts with different types, when summary renders, then each type has its own expandable section",
+      "Given user clicks expand on functions category, when expanded, then all function artifacts are visible with details"
+    ],
+    "error": [
+      "Given empty artifacts array, when summary renders, then empty state message is displayed",
+      "Given artifact with missing required fields, when summary renders, then placeholder text is shown for missing fields",
+      "Given extremely large artifact dataset, when summary renders, then pagination or virtualization is applied"
+    ]
+  }
+}

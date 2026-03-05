@@ -1,0 +1,65 @@
+{
+  "id": "task-025",
+  "title": "server: implement validate_hole_punching",
+  "type": "feature",
+  "priority": 1,
+  "effort": "30min",
+  "description": "Implement server function to validate hole punching patterns in requirement specifications. Hole punching identifies gaps in coverage where edge cases or error conditions are not properly addressed.",
+  "ears": {
+    "ubiquitous": [
+      "THE SYSTEM SHALL scan all requirements for coverage gaps",
+      "THE SYSTEM SHALL report identified holes with severity classification"
+    ],
+    "event_driven": [
+      {
+        "trigger": "WHEN a complete requirement specification is submitted",
+        "shall": "THE SYSTEM SHALL execute hole punching analysis across all defined scenarios"
+      },
+      {
+        "trigger": "WHEN a coverage hole is identified",
+        "shall": "THE SYSTEM SHALL generate a hole report with suggested patches"
+      }
+    ],
+    "unwanted": [
+      {
+        "condition": "IF critical edge cases are not covered",
+        "shall_not": "THE SYSTEM SHALL NOT mark the requirement as complete",
+        "because": "uncovered edge cases lead to production failures"
+      },
+      {
+        "condition": "IF error handling paths are undefined",
+        "shall_not": "THE SYSTEM SHALL NOT approve the specification",
+        "because": "undefined error handling creates system vulnerabilities"
+      }
+    ]
+  },
+  "contracts": {
+    "preconditions": [
+      "Requirement must have defined scope boundaries",
+      "Known edge case catalog must be loaded",
+      "Error taxonomy must be available for reference"
+    ],
+    "postconditions": [
+      "Hole report lists all identified coverage gaps",
+      "Each hole includes affected requirement section",
+      "Each hole includes recommended remediation approach"
+    ],
+    "invariants": [
+      "Hole detection shall be exhaustive within defined scope",
+      "Detection shall not produce false negatives for cataloged patterns",
+      "Report format shall be consistent across all analyses"
+    ]
+  },
+  "tests": {
+    "happy": [
+      "Given a requirement with comprehensive coverage, when validate_hole_punching is called, then no holes are reported and validation passes",
+      "Given a requirement missing error handling, when validate_hole_punching is called, then the specific hole is identified with location",
+      "Given a requirement with implicit edge cases, when validate_hole_punching is called, then implicit gaps are surfaced as potential holes"
+    ],
+    "error": [
+      "Given a requirement with undefined scope, when validate_hole_punching is called, then validation returns UNDEFINED_SCOPE error",
+      "Given a requirement where analysis exceeds timeout, when validate_hole_punching is called, then validation returns ANALYSIS_TIMEOUT error with partial results",
+      "Given an unloaded edge case catalog, when validate_hole_punching is called, then validation returns CATALOG_UNAVAILABLE error"
+    ]
+  }
+}

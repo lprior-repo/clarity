@@ -45,6 +45,7 @@ dioxus-fullstack = { version = "0.7.3" }
 tempfile = "3"
 tokio = { workspace = true }
 serial_test = "3"
+futures-util = { workspace = true }
 
 [[test]]
 name = "e2e_discover_guided"
@@ -53,6 +54,14 @@ path = "tests/e2e/discover_guided.rs"
 [[test]]
 name = "server_functions_test"
 path = "tests/server_functions_test.rs"
+
+[[test]]
+name = "queue_adversarial"
+path = "tests/queue_adversarial.rs"
+
+[[test]]
+name = "empty_json_payload"
+path = "tests/empty_json_payload.rs"
 
 [features]
 default = ["fullstack"]

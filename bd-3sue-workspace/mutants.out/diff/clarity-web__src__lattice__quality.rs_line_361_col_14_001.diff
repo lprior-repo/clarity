@@ -1,0 +1,21 @@
+--- clarity-web/src/lattice/quality.rs
++++ replace > with < in calculate_testability
+@@ -353,17 +353,17 @@
+     });
+   }
+ 
+   let with_criteria = ears.iter().filter(|e| e.has_acceptance_criteria).count();
+ 
+   let score = u8::try_from((with_criteria * 100) / ears.len()).unwrap_or(100);
+ 
+   let without = ears.len() - with_criteria;
+-  if without > 0 {
++  if without < /* ~ changed by cargo-mutants ~ */ 0 {
+     issues.push(QualityIssue::new(
+       QualityDimension::Testability,
+       IssueSeverity::Warning,
+       format!("{without} requirement(s) missing acceptance criteria"),
+     ));
+   }
+ 
+   DimensionScore::new(QualityDimension::Testability, score).unwrap_or_else(|_| DimensionScore {

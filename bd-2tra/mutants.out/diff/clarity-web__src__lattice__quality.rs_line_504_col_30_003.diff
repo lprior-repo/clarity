@@ -1,0 +1,21 @@
+--- clarity-web/src/lattice/quality.rs
++++ replace + with * in calculate_security
+@@ -496,17 +496,17 @@
+         }
+       }
+     }
+   }
+ 
+   // Score based on coverage of security areas
+   let coverage_score = covered_areas.len() * 30; // max 90
+   let mention_bonus = mentions.min(5) * 2; // max 10
+-  let total = coverage_score + mention_bonus;
++  let total = coverage_score * /* ~ changed by cargo-mutants ~ */ mention_bonus;
+ 
+   let score = u8::try_from(total.min(100)).unwrap_or(100);
+ 
+   if covered_areas.is_empty() {
+     issues.push(QualityIssue::new(
+       QualityDimension::Security,
+       IssueSeverity::Error,
+       "No security considerations mentioned".to_string(),

@@ -1,0 +1,86 @@
+{
+  "id": "task-008",
+  "title": "ui-prompt: create scaffolding prompt buttons",
+  "type": "feature",
+  "priority": 1,
+  "effort": "30min",
+  "description": "Create reusable scaffolding prompt button components that allow users to quickly insert predefined prompt templates into the prompt textarea. These buttons provide common prompt structures to accelerate task definition.",
+  "ears": {
+    "ubiquitous": [
+      "THE SYSTEM SHALL display scaffolding buttons adjacent to the prompt textarea",
+      "THE SYSTEM SHALL make scaffolding buttons accessible via keyboard navigation"
+    ],
+    "event_driven": [
+      {
+        "trigger": "WHEN the user clicks a scaffolding button",
+        "shall": "THE SYSTEM SHALL insert the corresponding prompt template at the cursor position in the textarea"
+      },
+      {
+        "trigger": "WHEN the user hovers over a scaffolding button",
+        "shall": "THE SYSTEM SHALL display a tooltip preview of the prompt template"
+      }
+    ],
+    "unwanted": [
+      {
+        "condition": "IF the textarea is disabled",
+        "shall_not": "THE SYSTEM SHALL NOT allow scaffolding buttons to be clickable",
+        "because": "inserting templates into a disabled field would violate form state integrity"
+      },
+      {
+        "condition": "IF the prompt template is empty",
+        "shall_not": "THE SYSTEM SHALL NOT insert any content",
+        "because": "empty insertions would create unnecessary undo history entries"
+      }
+    ]
+  },
+  "contracts": {
+    "preconditions": [
+      "The prompt templates configuration must be loaded before rendering buttons",
+      "The parent component must provide a callback for handling template insertion"
+    ],
+    "postconditions": [
+      "After clicking, the selected template text is inserted into the textarea",
+      "The textarea focus is restored after insertion"
+    ],
+    "invariants": [
+      "Button labels always reflect their associated template name",
+      "Only valid UTF-8 template strings are inserted"
+    ]
+  },
+  "tests": {
+    "happy": [
+      "Click a scaffolding button and verify template appears in textarea",
+      "Use keyboard to navigate to button and press Enter to insert template"
+    ],
+    "error": [
+      "Click button when textarea is disabled and verify no insertion occurs",
+      "Attempt to insert template when parent callback is undefined and handle gracefully"
+    ]
+  },
+  "implementation": {
+    "phase_0": [
+      "Review existing button components in clarity-web/src/ui/",
+      "Check tooltip patterns in existing UI"
+    ],
+    "phase_1": [
+      "Write test_button_renders_with_label",
+      "Write test_click_inserts_template",
+      "Write test_disabled_state_prevents_click"
+    ],
+    "phase_2": [
+      "Create ScaffoldingButton component with label, template, and on_click props",
+      "Create ScaffoldingButtons container component",
+      "Add tooltip support using existing tooltip component",
+      "Wire up keyboard navigation"
+    ]
+  },
+  "context": {
+    "related_files": [
+      "clarity-web/src/components/discover/prompt_phase.rs",
+      "clarity-web/src/ui/button.rs"
+    ],
+    "similar": [
+      "See Button component in ui/ for button patterns"
+    ]
+  }
+}

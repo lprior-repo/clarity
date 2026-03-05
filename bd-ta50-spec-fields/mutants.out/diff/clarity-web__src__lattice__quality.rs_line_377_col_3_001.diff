@@ -1,0 +1,94 @@
+--- clarity-web/src/lattice/quality.rs
++++ replace calculate_clarity -> DimensionScore with Default::default()
+@@ -369,90 +369,17 @@
+   DimensionScore::new(QualityDimension::Testability, score).unwrap_or_else(|_| DimensionScore {
+     dimension: QualityDimension::Testability,
+     score: 0,
+   })
+ }
+ 
+ /// Calculate clarity: sentence complexity and jargon density
+ fn calculate_clarity(answers: &[Answer], issues: &mut Vec<QualityIssue>) -> DimensionScore {
+-  let mut total_sentences = 0;
+-  let mut complex_sentences = 0;
+-  let mut jargon_count = 0;
+-
+-  let jargon_terms = [
+-    "microservice",
+-    "kubernetes",
+-    "orchestration",
+-    "containerization",
+-    "blockchain",
+-    "ai/ml",
+-    "serverless",
+-    "event-driven",
+-  ];
+-
+-  for answer in answers {
+-    let text = &answer.value;
+-
+-    // Count sentences (rough heuristic by period/exclamation count)
+-    let sentence_count = text.matches(&['.', '!', '?'][..]).count().max(1);
+-    total_sentences += sentence_count;
+-
+-    // Complex sentence: more than 3 commas or 30 words
+-    let comma_count = text.matches(',').count();
+-    let word_count = text.split_whitespace().count();
+-
+-    if comma_count > 3 || word_count > 30 {
+-      complex_sentences += 1;
+-    }
+-
+-    // Count jargon terms
+-    let lower = text.to_lowercase();
+-    jargon_count += jargon_terms
+-      .iter()
+-      .filter(|term| lower.contains(*term))
+-      .count();
+-  }
+-
+-  // Score = 100 - (complex_sentence_ratio + jargon_penalty)
+-  let complex_ratio = if total_sentences > 0 {
+-    (complex_sentences * 100) / total_sentences
+-  } else {
+-    0
+-  };
+-
+-  let jargon_penalty = (jargon_count * 5).min(50);
+-
+-  let score = u8::try_from(
+-    100_u32
+-      .saturating_sub(complex_ratio as u32)
+-      .saturating_sub(jargon_penalty as u32),
+-  )
+-  .unwrap_or(0);
+-
+-  if complex_sentences > 0 {
+-    issues.push(QualityIssue::new(
+-      QualityDimension::Clarity,
+-      IssueSeverity::Warning,
+-      format!("{complex_sentences} complex sentence(s) detected (consider simplifying)"),
+-    ));
+-  }
+-
+-  if jargon_count > 2 {
+-    issues.push(QualityIssue::new(
+-      QualityDimension::Clarity,
+-      IssueSeverity::Warning,
+-      format!("High jargon density ({jargon_count} terms) - consider explaining terminology"),
+-    ));
+-  }
+-
+-  DimensionScore::new(QualityDimension::Clarity, score).unwrap_or_else(|_| DimensionScore {
+-    dimension: QualityDimension::Clarity,
+-    score: 0,
+-  })
++  Default::default() /* ~ changed by cargo-mutants ~ */
+ }
+ 
+ /// Calculate security: auth/encryption/validation mentions
+ fn calculate_security(answers: &[Answer], issues: &mut Vec<QualityIssue>) -> DimensionScore {
+   let security_keywords = [
+     "auth",
+     "authentication",
+     "authorization",

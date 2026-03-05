@@ -115,17 +115,17 @@ pub fn can_execute_phase(session: &InterviewSession, phase_number: u32) -> bool 
 
 /// Get the next unlockable phase.
 ///
-/// Finds the first phase in the range 1..=current_phase that:
+/// Finds the first phase in the range `1..=current_phase` that:
 /// 1. Can be executed (all prior phases complete)
 /// 2. Has not been completed yet
 ///
-/// If all executable phases are completed, returns current_phase.
+/// If all executable phases are completed, returns `current_phase`.
 ///
 /// # Arguments
 /// * `session` - The interview session containing completion state
 ///
 /// # Returns
-/// The phase number of the next executable phase, or current_phase if none available
+/// The phase number of the next executable phase, or `current_phase` if none available
 #[must_use]
 pub fn get_next_phase(session: &InterviewSession) -> u32 {
   let completed_phases: HashSet<u32> = session.completed_phases.iter().copied().collect();

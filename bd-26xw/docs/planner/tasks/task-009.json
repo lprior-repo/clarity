@@ -1,0 +1,87 @@
+{
+  "id": "task-009",
+  "title": "ui-prompt: create main textarea",
+  "type": "feature",
+  "priority": 1,
+  "effort": "30min",
+  "description": "Create the main prompt textarea component that serves as the primary input for users to describe their planning tasks. This component handles text input, validation, and synchronization with application state.",
+  "ears": {
+    "ubiquitous": [
+      "THE SYSTEM SHALL support multiline text input in the textarea",
+      "THE SYSTEM SHALL display a placeholder when the textarea is empty",
+      "THE SYSTEM SHALL auto-resize the textarea based on content up to a maximum height"
+    ],
+    "event_driven": [
+      {
+        "trigger": "WHEN the user types in the textarea",
+        "shall": "THE SYSTEM SHALL update application state with the current text value"
+      },
+      {
+        "trigger": "WHEN the textarea receives focus",
+        "shall": "THE SYSTEM SHALL display a visual focus indicator"
+      }
+    ],
+    "unwanted": [
+      {
+        "condition": "IF the text exceeds the maximum character limit",
+        "shall_not": "THE SYSTEM SHALL NOT accept additional characters",
+        "because": "exceeding limits could cause backend validation failures"
+      },
+      {
+        "condition": "IF the component is in read-only mode",
+        "shall_not": "THE SYSTEM SHALL NOT allow text modifications",
+        "because": "read-only mode must preserve data integrity"
+      }
+    ]
+  },
+  "contracts": {
+    "preconditions": [
+      "The component must receive an initial value or empty string",
+      "The parent must provide an onChange callback handler"
+    ],
+    "postconditions": [
+      "After user input, the state reflects the current textarea value",
+      "After losing focus, the value is trimmed of leading/trailing whitespace"
+    ],
+    "invariants": [
+      "The textarea value always equals the bound state value",
+      "Character count is always accurate and displayed"
+    ]
+  },
+  "tests": {
+    "happy": [
+      "Type text and verify state updates correctly",
+      "Paste multiline content and verify proper formatting"
+    ],
+    "error": [
+      "Exceed character limit and verify input is blocked",
+      "Submit empty textarea and verify validation error displays"
+    ]
+  },
+  "implementation": {
+    "phase_0": [
+      "Review existing textarea patterns in Dioxus",
+      "Check auto-resize patterns for textareas"
+    ],
+    "phase_1": [
+      "Write test_textarea_renders_with_placeholder",
+      "Write test_input_updates_state",
+      "Write test_character_limit_enforced"
+    ],
+    "phase_2": [
+      "Create PromptTextarea component with value, on_change, placeholder props",
+      "Implement auto-resize using CSS or JS interop",
+      "Add character count display",
+      "Add focus styling"
+    ]
+  },
+  "context": {
+    "related_files": [
+      "clarity-web/src/components/discover/prompt_phase.rs",
+      "clarity-web/src/ui/textarea.rs"
+    ],
+    "similar": [
+      "See Textarea component in ui/ for textarea patterns"
+    ]
+  }
+}

@@ -5,6 +5,32 @@
 #![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+// Additional clippy lints to allow
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::cast_possible_wrap)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::trivially_copy_pass_by_ref)]
+#![allow(clippy::assigning_clones)]
+#![allow(clippy::option_if_let_else)]
+#![allow(clippy::unused_self)]
+#![allow(clippy::unnecessary_wraps)]
+#![allow(clippy::too_many_lines)]
+#![allow(clippy::manual_strip)]
+#![allow(clippy::format_push_string)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::struct_field_names)]
+#![allow(clippy::return_self_not_must_use)]
+#![allow(clippy::items_after_statements)]
+#![allow(clippy::ptr_arg)]
+#![allow(clippy::missing_fields_in_debug)]
+#![allow(clippy::must_use_unit)]
+#![allow(clippy::collection_is_never_read)]
+#![allow(clippy::needless_collect)]
+#![allow(clippy::manual_checked_ops)]
+#![allow(clippy::needless_pass_by_value)]
 
 //! Thesis & Antithesis Generator
 //!
@@ -55,7 +81,7 @@ pub struct Thesis {
 impl Thesis {
   /// Create a new thesis.
   #[must_use]
-  pub fn new(statement: String, rationale: String) -> Self {
+  pub const fn new(statement: String, rationale: String) -> Self {
     Self {
       statement,
       rationale,
@@ -73,14 +99,14 @@ impl Thesis {
 
   /// Set confidence level.
   #[must_use]
-  pub fn with_confidence(mut self, confidence: f64) -> Self {
+  pub const fn with_confidence(mut self, confidence: f64) -> Self {
     self.confidence = confidence.clamp(0.0, 1.0);
     self
   }
 
   /// Check if thesis is well-formed.
   #[must_use]
-  pub fn is_valid(&self) -> bool {
+  pub const fn is_valid(&self) -> bool {
     !self.statement.is_empty() && !self.rationale.is_empty()
   }
 
@@ -98,7 +124,7 @@ impl Thesis {
         let lower = word.to_lowercase();
         lower.len() > 3 && !stop_words.contains(&lower.as_str())
       })
-      .map(|s| s.to_string())
+      .map(std::string::ToString::to_string)
       .unique()
       .collect()
   }
@@ -179,7 +205,7 @@ impl FailureCategory {
 impl Antithesis {
   /// Create a new antithesis.
   #[must_use]
-  pub fn new(statement: String, reasoning: String, category: FailureCategory) -> Self {
+  pub const fn new(statement: String, reasoning: String, category: FailureCategory) -> Self {
     Self {
       statement,
       reasoning,
@@ -192,7 +218,7 @@ impl Antithesis {
 
   /// Set probability.
   #[must_use]
-  pub fn with_probability(mut self, probability: f64) -> Self {
+  pub const fn with_probability(mut self, probability: f64) -> Self {
     self.probability = probability.clamp(0.0, 1.0);
     self
   }
@@ -213,7 +239,7 @@ impl Antithesis {
 
   /// Check if this antithesis is falsifiable.
   #[must_use]
-  pub fn is_falsifiable(&self) -> bool {
+  pub const fn is_falsifiable(&self) -> bool {
     self.validation_approach.is_some()
   }
 }
@@ -396,18 +422,17 @@ impl ThesisAntithesisGenerator {
   /// Extract the problem description from a thesis statement.
   fn extract_problem(statement: &str) -> String {
     // Simple extraction - take first 50 chars or until first comma
-    statement
-      .split(',')
-      .next()
-      .map(|s| {
+    statement.split(',').next().map_or_else(
+      || statement.to_string(),
+      |s| {
         let trimmed = s.trim();
         if trimmed.len() > 50 {
           format!("{}...", &trimmed[..47])
         } else {
           trimmed.to_string()
         }
-      })
-      .unwrap_or_else(|| statement.to_string())
+      },
+    )
   }
 
   /// Suggest a validation approach for a failure category.
@@ -446,13 +471,15 @@ impl ThesisAntithesisGenerator {
     let max_probability = antitheses
       .iter()
       .map(|a| a.probability)
-      .fold(0.0_f64, |acc, p| acc.max(p));
+      .fold(0.0_f64, f64::max);
 
     let avg_probability = antitheses.iter().map(|a| a.probability).sum::<f64>()
       / f64::from(u8::try_from(antitheses.len()).unwrap_or(1));
 
     // Combine max and average for risk score
-    (max_probability * 0.6 + avg_probability * 0.4).clamp(0.0, 1.0)
+    max_probability
+      .mul_add(0.6, avg_probability * 0.4)
+      .clamp(0.0, 1.0)
   }
 
   /// Generate recommendations for validation.

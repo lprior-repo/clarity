@@ -1,0 +1,65 @@
+{
+  "id": "task-040",
+  "title": "cleanup: delete old Express/Guided components",
+  "type": "chore",
+  "priority": 2,
+  "effort": "30min",
+  "description": "Remove deprecated Express Flow and Guided Discover components that have been replaced by the Progressive Discover workflow. Clean up unused imports, update component exports, and ensure no broken references remain in the codebase.",
+  "ears": {
+    "ubiquitous": [
+      "THE SYSTEM SHALL remove all deprecated Express and Guided component files",
+      "THE SYSTEM SHALL update module exports to remove deleted components"
+    ],
+    "event_driven": [
+      {
+        "trigger": "WHEN cleanup is initiated",
+        "shall": "THE SYSTEM SHALL identify and remove all Express and Guided related files"
+      },
+      {
+        "trigger": "WHEN component deletion completes",
+        "shall": "THE SYSTEM SHALL verify no broken imports remain"
+      }
+    ],
+    "unwanted": [
+      {
+        "condition": "IF other components depend on deleted code",
+        "shall_not": "THE SYSTEM SHALL NOT leave broken imports unresolved",
+        "because": "Build must succeed after cleanup"
+      },
+      {
+        "condition": "IF shared utilities are incorrectly removed",
+        "shall_not": "THE SYSTEM SHALL NOT delete code used by Progressive Discover",
+        "because": "Only truly unused code should be removed"
+      }
+    ]
+  },
+  "contracts": {
+    "preconditions": [
+      "Progressive Discover must be fully implemented and working",
+      "No active routes should reference Express or Guided components",
+      "Tests for Progressive Discover must be passing"
+    ],
+    "postconditions": [
+      "All Express and Guided component files are deleted",
+      "Module exports are updated correctly",
+      "Build and tests pass without errors"
+    ],
+    "invariants": [
+      "Shared utilities remain intact",
+      "Progressive Discover functionality is unaffected",
+      "Codebase size is reduced"
+    ]
+  },
+  "tests": {
+    "happy": [
+      "Given Express components exist, when cleanup runs, then all Express files are removed",
+      "Given Guided components exist, when cleanup runs, then all Guided files are removed",
+      "Given cleanup complete, when build runs, then build succeeds with no errors"
+    ],
+    "error": [
+      "Given component has remaining references, when cleanup runs, then references are identified before deletion",
+      "Given shared utility marked for deletion, when dependency check runs, then utility is preserved",
+      "Given import path breaks, when build runs, then clear error message identifies broken import"
+    ]
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "id": "task-016",
+  "title": "ui-confirm: create ProblemDisplay component",
+  "type": "feature",
+  "priority": 1,
+  "effort": "30min",
+  "description": "Create a reusable ProblemDisplay component that renders the problem statement and key context for the Progressive Discover confirm phase. This component displays the crystallized problem text in a visually prominent format that helps users quickly understand and validate the problem definition.",
+  "ears": {
+    "ubiquitous": [
+      "THE SYSTEM SHALL display the problem statement in a readable format",
+      "THE SYSTEM SHALL preserve all formatting from the original problem text"
+    ],
+    "event_driven": [
+      {
+        "trigger": "WHEN a problem is selected for confirmation",
+        "shall": "THE SYSTEM SHALL render the ProblemDisplay component with the current problem context"
+      },
+      {
+        "trigger": "WHEN the problem text is updated",
+        "shall": "THE SYSTEM SHALL refresh the ProblemDisplay to show the updated content"
+      }
+    ],
+    "unwanted": [
+      {
+        "condition": "IF the problem text is empty or null",
+        "shall_not": "THE SYSTEM SHALL NOT render an empty component",
+        "because": "displaying empty content confuses users and breaks the visual layout"
+      },
+      {
+        "condition": "IF the problem exceeds display limits",
+        "shall_not": "THE SYSTEM SHALL NOT truncate without indication",
+        "because": "users need to know when content is abbreviated"
+      }
+    ]
+  },
+  "contracts": {
+    "preconditions": [
+      "Problem context must be available in the application state",
+      "The component must receive a valid problem ID or object reference"
+    ],
+    "postconditions": [
+      "The problem statement is rendered with all original formatting preserved",
+      "The component emits accessibility-compliant markup"
+    ],
+    "invariants": [
+      "Problem text content is never modified by this component",
+      "Display formatting remains consistent across renders"
+    ]
+  },
+  "tests": {
+    "happy": [
+      "Given a valid problem object, when rendered, then displays the problem title and description",
+      "Given a problem with formatted text, when rendered, then preserves markdown formatting",
+      "Given a long problem statement, when rendered, then displays with appropriate overflow handling"
+    ],
+    "error": [
+      "Given a null problem reference, when rendered, then displays an appropriate placeholder or error state",
+      "Given an empty problem text, when rendered, then shows a helpful message indicating no content",
+      "Given an invalid problem ID, when rendered, then gracefully handles the error without crashing"
+    ]
+  },
+  "implementation": {
+    "phase_0": [
+      "Review existing display component patterns",
+      "Check markdown rendering patterns"
+    ],
+    "phase_1": [
+      "Write test_renders_problem_text",
+      "Write test_handles_empty_problem",
+      "Write test_preserves_formatting"
+    ],
+    "phase_2": [
+      "Create ProblemDisplay component with problem prop",
+      "Add markdown rendering support",
+      "Add empty state handling",
+      "Add overflow handling with indication"
+    ]
+  },
+  "context": {
+    "related_files": [
+      "clarity-web/src/components/discover/confirm_phase.rs",
+      "clarity-web/src/components/discover/state.rs"
+    ],
+    "similar": [
+      "See FieldCard component for display patterns"
+    ]
+  }
+}

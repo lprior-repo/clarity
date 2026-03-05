@@ -10,7 +10,7 @@
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
-use std::fmt;
+use std::fmt::{self, Write};
 use thiserror::Error;
 
 /// Maximum length for sanitized error context.
@@ -73,13 +73,13 @@ pub fn sanitize_field_name(field: &str) -> String {
   }
 }
 
-/// Extract the JSON path from a serde_json error.
+/// Extract the JSON path from a `serde_json` error.
 ///
 /// Parses the error message to find the field path where the error occurred.
 ///
 /// # Arguments
 ///
-/// * `error` - The serde_json error
+/// * `error` - The `serde_json` error
 ///
 /// # Returns
 ///
@@ -87,13 +87,13 @@ pub fn sanitize_field_name(field: &str) -> String {
 fn extract_json_path(error: &serde_json::Error) -> Option<String> {
   let message = error.to_string();
 
-  // serde_json errors often include paths like "answers[0].question_id"
+  // `serde_json` errors often include paths like "answers[0].question_id"
   if let Some(start) = message.find(':') {
     let after_colon = &message[start + 1..].trim();
     // Look for quoted field paths
     if after_colon.starts_with('"') {
       if let Some(end) = after_colon[1..].find('"') {
-        return Some(after_colon[1..end + 1].to_string());
+        return Some(after_colon[1..=end].to_string());
       }
     }
   }
@@ -105,7 +105,7 @@ fn extract_json_path(error: &serde_json::Error) -> Option<String> {
 ///
 /// # Arguments
 ///
-/// * `error` - The serde_json error
+/// * `error` - The `serde_json` error
 ///
 /// # Returns
 ///
@@ -185,11 +185,11 @@ pub struct JsonErrorContext {
 }
 
 impl JsonErrorContext {
-  /// Create a new error context from a serde_json error.
+  /// Create a new error context from a `serde_json` error.
   ///
   /// # Arguments
   ///
-  /// * `error` - The serde_json error
+  /// * `error` - The `serde_json` error
   /// * `line_number` - The line number in the file (1-indexed)
   /// * `raw_content` - The raw content that failed to parse
   ///
@@ -254,8 +254,7 @@ impl JsonErrorContext {
       field_path: Some(sanitize_field_name(field_name)),
       kind: JsonErrorKind::TypeError,
       original_message: format!(
-        "type mismatch at '{}': expected {}, found {}",
-        field_name, expected, actual
+        "type mismatch at '{field_name}': expected {expected}, found {actual}"
       ),
       context_snippet: None,
     }
@@ -300,12 +299,12 @@ impl JsonErrorContext {
     };
 
     let mut message = format!(
-      "JSON parsing error at {}:\n  Error: {}\n  Suggestion: {}",
-      location, self.original_message, suggestion
+      "JSON parsing error at {location}:\n  Error: {}\n  Suggestion: {suggestion}",
+      self.original_message
     );
 
     if let Some(ref snippet) = self.context_snippet {
-      message.push_str(&format!("\n  Content: {}", snippet));
+      let _ = writeln!(message, "\n  Content: {snippet}");
     }
 
     message
@@ -320,7 +319,7 @@ impl fmt::Display for JsonErrorContext {
       self.line_number, self.original_message
     )?;
     if let Some(ref path) = self.field_path {
-      write!(f, " (field: {})", path)?;
+      write!(f, " (field: {path})")?;
     }
     Ok(())
   }
@@ -385,11 +384,11 @@ pub enum StorageError {
 }
 
 impl StorageError {
-  /// Create a JSON parse error from a serde_json error.
+  /// Create a JSON parse error from a `serde_json` error.
   ///
   /// # Arguments
   ///
-  /// * `error` - The serde_json error
+  /// * `error` - The `serde_json` error
   /// * `line_number` - The line number in the file (1-indexed)
   /// * `raw_content` - The raw content that failed to parse
   ///
@@ -407,11 +406,11 @@ impl StorageError {
     }
   }
 
-  /// Create an invalid JSON line error from a serde_json error.
+  /// Create an invalid JSON line error from a `serde_json` error.
   ///
   /// # Arguments
   ///
-  /// * `error` - The serde_json error
+  /// * `error` - The `serde_json` error
   /// * `line_number` - The line number in the file (1-indexed)
   /// * `raw_content` - The raw content that failed to parse
   ///
@@ -513,11 +512,12 @@ impl StorageError {
   ///
   /// The line number for JSON-related errors, or `None`.
   #[must_use]
-  pub fn line_number(&self) -> Option<usize> {
+  pub const fn line_number(&self) -> Option<usize> {
     match self {
-      Self::JsonParseError { context } => Some(context.line_number),
+      Self::JsonParseError { context } | Self::InvalidJsonLineDetailed { context } => {
+        Some(context.line_number)
+      }
       Self::InvalidJsonLine { line, .. } => Some(*line),
-      Self::InvalidJsonLineDetailed { context } => Some(context.line_number),
       Self::MultipleJsonErrors { first_line, .. } => Some(*first_line),
       _ => None,
     }
@@ -536,8 +536,7 @@ impl StorageError {
       }
       Self::InvalidJsonLine { line, error } => {
         format!(
-          "JSON parsing error at line {}:\n  Error: {}\n  Suggestion: Check for syntax errors, missing fields, or type mismatches.",
-          line, error
+          "JSON parsing error at line {line}:\n  Error: {error}\n  Suggestion: Check for syntax errors, missing fields, or type mismatches."
         )
       }
       Self::MultipleJsonErrors {
@@ -619,8 +618,7 @@ pub fn validate_json_basic(content: &str) -> Result<(), StorageError> {
         brace_count -= 1;
         if brace_count < 0 {
           return Err(StorageError::JsonError(format!(
-            "unbalanced '}}' at position {}",
-            idx
+            "unbalanced '}}' at position {idx}"
           )));
         }
       }
@@ -629,8 +627,7 @@ pub fn validate_json_basic(content: &str) -> Result<(), StorageError> {
         bracket_count -= 1;
         if bracket_count < 0 {
           return Err(StorageError::JsonError(format!(
-            "unbalanced ']' at position {}",
-            idx
+            "unbalanced ']' at position {idx}"
           )));
         }
       }
@@ -641,14 +638,14 @@ pub fn validate_json_basic(content: &str) -> Result<(), StorageError> {
   if brace_count != 0 {
     return Err(StorageError::JsonError(format!(
       "unbalanced braces: {} unmatched '{{' or '}}'",
-      brace_count.abs()
+      brace_count.unsigned_abs()
     )));
   }
 
   if bracket_count != 0 {
     return Err(StorageError::JsonError(format!(
       "unbalanced brackets: {} unmatched '[' or ']'",
-      bracket_count.abs()
+      bracket_count.unsigned_abs()
     )));
   }
 

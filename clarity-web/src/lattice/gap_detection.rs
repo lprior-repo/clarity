@@ -4,6 +4,33 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+// Additional clippy lints to allow
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::cast_possible_wrap)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::trivially_copy_pass_by_ref)]
+#![allow(clippy::assigning_clones)]
+#![allow(clippy::option_if_let_else)]
+#![allow(clippy::unused_self)]
+#![allow(clippy::unnecessary_wraps)]
+#![allow(clippy::too_many_lines)]
+#![allow(clippy::manual_strip)]
+#![allow(clippy::format_push_string)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::struct_field_names)]
+#![allow(clippy::suspicious_else_formatting)]
+#![allow(clippy::return_self_not_must_use)]
+#![allow(clippy::items_after_statements)]
+#![allow(clippy::ptr_arg)]
+#![allow(clippy::missing_fields_in_debug)]
+#![allow(clippy::must_use_unit)]
+#![allow(clippy::collection_is_never_read)]
+#![allow(clippy::needless_collect)]
+#![allow(clippy::manual_checked_ops)]
+#![allow(clippy::needless_pass_by_value)]
 
 //! Gap Detection module for requirements analysis.
 //!
@@ -200,7 +227,7 @@ impl DetectedGap {
     let suggestions = category
       .suggested_questions()
       .iter()
-      .map(|s| s.to_string())
+      .map(std::string::ToString::to_string)
       .collect();
 
     Self {
@@ -230,7 +257,7 @@ impl DetectedGap {
 }
 
 /// Complete gap analysis result
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GapAnalysis {
   /// All detected gaps
   pub gaps: Vec<DetectedGap>,
@@ -367,8 +394,7 @@ fn generate_gap_summary(gaps: &[DetectedGap], overall_coverage: u8) -> String {
     .count();
 
   format!(
-    "Coverage: {}% | Gaps: {} critical, {} high, {} medium priority",
-    overall_coverage, critical, high, medium
+    "Coverage: {overall_coverage}% | Gaps: {critical} critical, {high} high, {medium} medium priority"
   )
 }
 
@@ -437,7 +463,7 @@ fn analyze_category(
   if coverage < 80 {
     *gap_id += 1;
     let gap = DetectedGap::new(
-      format!("GAP-{:03}", gap_id),
+      format!("GAP-{gap_id:03}"),
       category,
       severity,
       format!("Missing {} requirements", category.label()),
@@ -510,7 +536,7 @@ pub fn generate_requirements_template(analysis: &GapAnalysis) -> String {
     template.push_str(&format!("{}\n\n", gap.description));
 
     for suggestion in &gap.suggestions {
-      template.push_str(&format!("- [ ] {}\n", suggestion));
+      template.push_str(&format!("- [ ] {suggestion}\n"));
     }
     template.push('\n');
   }

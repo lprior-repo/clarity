@@ -1,0 +1,21 @@
+--- clarity-web/src/lattice/quality.rs
++++ replace QualityScore::passes -> bool with false
+@@ -154,17 +154,17 @@
+         issues,
+       }),
+       invalid => Err(QualityError::InvalidScore(invalid.to_string())),
+     }
+   }
+ 
+   /// Check if overall score passes threshold
+   pub fn passes(&self, threshold: u8) -> bool {
+-    self.overall >= threshold
++    false /* ~ changed by cargo-mutants ~ */
+   }
+ 
+   /// Get score for a specific dimension
+   pub fn get_dimension(&self, dimension: QualityDimension) -> Option<&DimensionScore> {
+     self.dimensions.iter().find(|d| d.dimension == dimension)
+   }
+ 
+   /// Get issues for a specific dimension

@@ -1,0 +1,91 @@
+{
+  "id": "task-012",
+  "title": "storage: create TranscriptStore trait",
+  "type": "feature",
+  "priority": 1,
+  "effort": "30min",
+  "description": "Define the TranscriptStore trait that abstracts transcript persistence operations for the Progressive Discover system. This trait will serve as the core interface for storing, retrieving, and managing conversation transcripts with support for incremental updates and atomic operations.",
+  "ears": {
+    "ubiquitous": [
+      "THE SYSTEM SHALL provide a TranscriptStore trait for all storage implementations",
+      "THE SYSTEM SHALL support async operations for non-blocking I/O"
+    ],
+    "event_driven": [
+      {
+        "trigger": "WHEN a transcript needs to be persisted",
+        "shall": "THE SYSTEM SHALL provide a save method that atomically writes the transcript to storage"
+      },
+      {
+        "trigger": "WHEN a transcript needs to be loaded",
+        "shall": "THE SYSTEM SHALL provide a load method that retrieves the transcript by its unique identifier"
+      }
+    ],
+    "unwanted": [
+      {
+        "condition": "IF the storage backend is unavailable",
+        "shall_not": "THE SYSTEM SHALL NOT silently fail or corrupt data",
+        "because": "data integrity is critical for conversation continuity"
+      },
+      {
+        "condition": "IF concurrent writes occur",
+        "shall_not": "THE SYSTEM SHALL NOT allow race conditions that result in partial or inconsistent writes",
+        "because": "transcripts must maintain consistency across all operations"
+      }
+    ]
+  },
+  "contracts": {
+    "preconditions": [
+      "The TranscriptStore trait must be defined in the storage module",
+      "All trait methods must be async and return Result types",
+      "Transcript type must already be defined with serialization support"
+    ],
+    "postconditions": [
+      "The trait provides save, load, delete, and list operations",
+      "All methods return appropriate error types for failure handling",
+      "The trait is object-safe allowing for dynamic dispatch"
+    ],
+    "invariants": [
+      "Each transcript has a unique identifier that never changes",
+      "Storage operations maintain atomicity",
+      "Transcript ordering is preserved when listing"
+    ]
+  },
+  "tests": {
+    "happy": [
+      "Verify trait compiles with a mock implementation",
+      "Verify save method signature accepts Transcript and returns Result<TranscriptId, Error>",
+      "Verify load method signature accepts TranscriptId and returns Result<Transcript, Error>",
+      "Verify delete method signature accepts TranscriptId and returns Result<(), Error>"
+    ],
+    "error": [
+      "Verify trait methods return appropriate error types for storage failures",
+      "Verify trait handles missing transcripts with dedicated error variant",
+      "Verify trait methods propagate errors from underlying storage backend"
+    ]
+  },
+  "implementation": {
+    "phase_0": [
+      "Review existing trait patterns in Rust for async storage",
+      "Check error handling patterns"
+    ],
+    "phase_1": [
+      "Write test_trait_compiles_with_mock",
+      "Write test_method_signatures_correct"
+    ],
+    "phase_2": [
+      "Define TranscriptStore trait with save, load, delete, list methods",
+      "Define TranscriptId type",
+      "Define StorageError enum",
+      "Ensure trait is object-safe"
+    ]
+  },
+  "context": {
+    "related_files": [
+      "clarity-web/src/storage/mod.rs",
+      "clarity-web/src/components/discover/state.rs"
+    ],
+    "similar": [
+      "See existing storage traits in clarity-web/src/storage/"
+    ]
+  }
+}

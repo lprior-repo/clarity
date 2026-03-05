@@ -1,0 +1,17 @@
+{
+  "name": "clarity-planner-e2e",
+  "version": "0.1.0",
+  "description": "E2E tests for Clarity Planner using Playwright",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:chromium": "playwright test --project=chromium",
+    "test:e2e:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^22.10.0"
+  }
+}

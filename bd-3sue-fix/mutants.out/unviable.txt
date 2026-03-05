@@ -1,0 +1,18 @@
+clarity-web/src/lattice/quality.rs:52:5: replace QualityDimension::all -> &'static[QualityDimension] with Vec::leak(vec![Default::default()])
+clarity-web/src/lattice/quality.rs:167:5: replace QualityScore::get_dimension -> Option<&DimensionScore> with Some(Box::leak(Box::new(Default::default())))
+clarity-web/src/lattice/quality.rs:172:5: replace QualityScore::get_issues -> Vec<&QualityIssue> with vec![Box::leak(Box::new(Default::default()))]
+clarity-web/src/lattice/quality.rs:209:3: replace calculate_quality -> Result<QualityScore, QualityError> with Ok(Default::default())
+clarity-web/src/lattice/quality.rs:236:3: replace calculate_completeness -> DimensionScore with Default::default()
+clarity-web/src/lattice/quality.rs:284:3: replace calculate_consistency -> DimensionScore with Default::default()
+clarity-web/src/lattice/quality.rs:342:3: replace calculate_testability -> DimensionScore with Default::default()
+clarity-web/src/lattice/quality.rs:377:3: replace calculate_clarity -> DimensionScore with Default::default()
+clarity-web/src/lattice/quality.rs:455:3: replace calculate_security -> DimensionScore with Default::default()
+clarity-web/src/lattice/quality.rs:52:5: replace QualityDimension::all -> &'static[QualityDimension] with Vec::leak(vec![Default::default()])
+clarity-web/src/lattice/quality.rs:167:5: replace QualityScore::get_dimension -> Option<&DimensionScore> with Some(Box::leak(Box::new(Default::default())))
+clarity-web/src/lattice/quality.rs:172:5: replace QualityScore::get_issues -> Vec<&QualityIssue> with vec![Box::leak(Box::new(Default::default()))]
+clarity-web/src/lattice/quality.rs:209:3: replace calculate_quality -> Result<QualityScore, QualityError> with Ok(Default::default())
+clarity-web/src/lattice/quality.rs:236:3: replace calculate_completeness -> DimensionScore with Default::default()
+clarity-web/src/lattice/quality.rs:284:3: replace calculate_consistency -> DimensionScore with Default::default()
+clarity-web/src/lattice/quality.rs:342:3: replace calculate_testability -> DimensionScore with Default::default()
+clarity-web/src/lattice/quality.rs:377:3: replace calculate_clarity -> DimensionScore with Default::default()
+clarity-web/src/lattice/quality.rs:455:3: replace calculate_security -> DimensionScore with Default::default()

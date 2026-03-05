@@ -1,0 +1,2194 @@
+    Checking clarity-core v0.1.0-dev (/home/lewis/src/clarity/clarity-core)
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/db/pool.rs:132:17
+    |
+132 |     let _lock = ENV_TEST_LOCK.lock().unwrap();
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+note: the lint level is defined here
+   --> clarity-core/src/db/mod.rs:1:9
+    |
+  1 | #![deny(clippy::unwrap_used)]
+    |         ^^^^^^^^^^^^^^^^^^^
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/db/pool.rs:146:17
+    |
+146 |     let _lock = ENV_TEST_LOCK.lock().unwrap();
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: consider using `expect()` to provide a better panic message
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/db/sqlite_pool.rs:206:17
+    |
+206 |     let _lock = ENV_TEST_LOCK.lock().unwrap();
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/db/sqlite_pool.rs:219:17
+    |
+219 |     let _lock = ENV_TEST_LOCK.lock().unwrap();
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: consider using `expect()` to provide a better panic message
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `expect()` on a `Result` value
+   --> clarity-core/src/db/sqlite_pool.rs:231:16
+    |
+231 |       let pool = create_sqlite_pool(&config)
+    |  ________________^
+232 | |       .await
+233 | |       .expect("Failed to create in-memory SQLite pool");
+    | |_______________________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
+note: the lint level is defined here
+   --> clarity-core/src/db/sqlite_pool.rs:1:9
+    |
+  1 | #![deny(clippy::expect_used)]
+    |         ^^^^^^^^^^^^^^^^^^^
+
+error: used `expect()` on a `Result` value
+   --> clarity-core/src/db/sqlite_pool.rs:235:5
+    |
+235 | /     test_sqlite_connection(&pool)
+236 | |       .await
+237 | |       .expect("Failed to test SQLite connection");
+    | |_________________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> clarity-core/src/db/sqlite_pool.rs:245:16
+    |
+245 |       let pool = create_sqlite_pool(&config)
+    |  ________________^
+246 | |       .await
+247 | |       .expect("Failed to create in-memory SQLite pool");
+    | |_______________________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> clarity-core/src/db/sqlite_pool.rs:249:5
+    |
+249 | /     sqlx::query(
+250 | |       r"
+251 | |       CREATE TABLE test_table (
+252 | |         id INTEGER PRIMARY KEY,
+...   |
+258 | |     .await
+259 | |     .expect("Failed to create table");
+    | |_____________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> clarity-core/src/db/sqlite_pool.rs:261:5
+    |
+261 | /     sqlx::query("INSERT INTO test_table (name) VALUES (?)")
+262 | |       .bind("test_name")
+263 | |       .execute(&pool)
+264 | |       .await
+265 | |       .expect("Failed to insert data");
+    | |______________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> clarity-core/src/db/sqlite_pool.rs:267:15
+    |
+267 |       let row = sqlx::query("SELECT name FROM test_table WHERE id = 1")
+    |  _______________^
+268 | |       .fetch_one(&pool)
+269 | |       .await
+270 | |       .expect("Failed to query data");
+    | |_____________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> clarity-core/src/db/sqlite_pool.rs:283:16
+    |
+283 |       let pool = create_sqlite_pool(&config)
+    |  ________________^
+284 | |       .await
+285 | |       .expect("Failed to create in-memory SQLite pool");
+    | |_______________________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> clarity-core/src/db/sqlite_pool.rs:288:15
+    |
+288 |       let row = sqlx::query("PRAGMA journal_mode")
+    |  _______________^
+289 | |       .fetch_one(&pool)
+290 | |       .await
+291 | |       .expect("Failed to query journal_mode");
+    | |_____________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
+
+warning: variables can be used directly in the `format!` string
+   --> clarity-core/src/db/sqlite_pool.rs:295:5
+    |
+295 | /     assert!(
+296 | |       journal_mode.to_lowercase() == "memory" || journal_mode.to_lowercase() == "wal",
+297 | |       "Journal mode should be set (got {})",
+298 | |       journal_mode
+299 | |     );
+    | |_____^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#uninlined_format_args
+note: the lint level is defined here
+   --> clarity-core/src/db/sqlite_pool.rs:3:9
+    |
+  3 | #![warn(clippy::pedantic)]
+    |         ^^^^^^^^^^^^^^^^
+    = note: `#[warn(clippy::uninlined_format_args)]` implied by `#[warn(clippy::pedantic)]`
+
+error: used `expect()` on a `Result` value
+   --> clarity-core/src/db/sqlite_pool.rs:307:16
+    |
+307 |       let pool = create_sqlite_pool(&config)
+    |  ________________^
+308 | |       .await
+309 | |       .expect("Failed to create in-memory SQLite pool");
+    | |_______________________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> clarity-core/src/db/sqlite_pool.rs:312:15
+    |
+312 |       let row = sqlx::query("PRAGMA synchronous")
+    |  _______________^
+313 | |       .fetch_one(&pool)
+314 | |       .await
+315 | |       .expect("Failed to query synchronous");
+    | |____________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> clarity-core/src/db/sqlite_pool.rs:329:16
+    |
+329 |       let pool = create_sqlite_pool(&config)
+    |  ________________^
+330 | |       .await
+331 | |       .expect("Failed to create in-memory SQLite pool");
+    | |_______________________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> clarity-core/src/db/sqlite_pool.rs:334:15
+    |
+334 |       let row = sqlx::query("PRAGMA cache_size")
+    |  _______________^
+335 | |       .fetch_one(&pool)
+336 | |       .await
+337 | |       .expect("Failed to query cache_size");
+    | |___________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> clarity-core/src/db/sqlite_pool.rs:351:16
+    |
+351 |       let pool = create_sqlite_pool(&config)
+    |  ________________^
+352 | |       .await
+353 | |       .expect("Failed to create in-memory SQLite pool");
+    | |_______________________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> clarity-core/src/db/sqlite_pool.rs:356:15
+    |
+356 |       let row = sqlx::query("PRAGMA temp_store")
+    |  _______________^
+357 | |       .fetch_one(&pool)
+358 | |       .await
+359 | |       .expect("Failed to query temp_store");
+    | |___________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
+
+    Checking clarity-client v0.1.0-dev (/home/lewis/src/clarity/clarity-client)
+    Checking clarity-server v0.1.0-dev (/home/lewis/src/clarity/clarity-server)
+warning: empty String is being created manually
+   --> clarity-core/src/formatter.rs:494:14
+    |
+494 |       .title("".to_string())
+    |              ^^^^^^^^^^^^^^ help: consider using: `String::new()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_string_new
+note: the lint level is defined here
+   --> clarity-core/src/formatter.rs:29:9
+    |
+ 29 | #![warn(clippy::pedantic)]
+    |         ^^^^^^^^^^^^^^^^
+    = note: `#[warn(clippy::manual_string_new)]` implied by `#[warn(clippy::pedantic)]`
+
+warning: variables can be used directly in the `format!` string
+   --> clarity-core/src/formatter.rs:655:15
+    |
+655 |         text: format!("Question {}", i),
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#uninlined_format_args
+help: change this to
+    |
+655 -         text: format!("Question {}", i),
+655 +         text: format!("Question {i}"),
+    |
+
+warning: variables can be used directly in the `format!` string
+   --> clarity-core/src/formatter.rs:656:25
+    |
+656 |         help_text: Some(format!("Help text for question {}", i)),
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#uninlined_format_args
+help: change this to
+    |
+656 -         help_text: Some(format!("Help text for question {}", i)),
+656 +         help_text: Some(format!("Help text for question {i}")),
+    |
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:516:5
+    |
+516 | /     let id = match result {
+517 | |       Ok(id) => id,
+518 | |       Err(_) => panic!("Expected Ok InterviewId"),
+519 | |     };
+    | |______^ help: consider writing: `let Ok(id) = result else { panic!("Expected Ok InterviewId") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+note: the lint level is defined here
+   --> clarity-core/src/interview.rs:4:9
+    |
+  4 | #![warn(clippy::pedantic)]
+    |         ^^^^^^^^^^^^^^^^
+    = note: `#[warn(clippy::manual_let_else)]` implied by `#[warn(clippy::pedantic)]`
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:518:7
+    |
+518 |       Err(_) => panic!("Expected Ok InterviewId"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+    = note: `#[warn(clippy::match_wild_err_arm)]` implied by `#[warn(clippy::pedantic)]`
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:516:14
+    |
+516 |       let id = match result {
+    |  ______________^
+517 | |       Ok(id) => id,
+518 | |       Err(_) => panic!("Expected Ok InterviewId"),
+519 | |     };
+    | |_____^ help: try: `result.map_or_else(|_| panic!("Expected Ok InterviewId"), |id| id)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+note: the lint level is defined here
+   --> clarity-core/src/interview.rs:5:9
+    |
+  5 | #![warn(clippy::nursery)]
+    |         ^^^^^^^^^^^^^^^
+    = note: `#[warn(clippy::option_if_let_else)]` implied by `#[warn(clippy::nursery)]`
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:551:5
+    |
+551 | /     let id = match id_result {
+552 | |       Ok(id) => id,
+553 | |       Err(_) => panic!("Expected Ok InterviewId"),
+554 | |     };
+    | |______^ help: consider writing: `let Ok(id) = id_result else { panic!("Expected Ok InterviewId") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:553:7
+    |
+553 |       Err(_) => panic!("Expected Ok InterviewId"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:551:14
+    |
+551 |       let id = match id_result {
+    |  ______________^
+552 | |       Ok(id) => id,
+553 | |       Err(_) => panic!("Expected Ok InterviewId"),
+554 | |     };
+    | |_____^ help: try: `id_result.map_or_else(|_| panic!("Expected Ok InterviewId"), |id| id)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:571:5
+    |
+571 | /     let id = match id_result {
+572 | |       Ok(id) => id,
+573 | |       Err(_) => panic!("Expected Ok InterviewId"),
+574 | |     };
+    | |______^ help: consider writing: `let Ok(id) = id_result else { panic!("Expected Ok InterviewId") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:573:7
+    |
+573 |       Err(_) => panic!("Expected Ok InterviewId"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:571:14
+    |
+571 |       let id = match id_result {
+    |  ______________^
+572 | |       Ok(id) => id,
+573 | |       Err(_) => panic!("Expected Ok InterviewId"),
+574 | |     };
+    | |_____^ help: try: `id_result.map_or_else(|_| panic!("Expected Ok InterviewId"), |id| id)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:580:5
+    |
+580 | /     let interview = match interview_result {
+581 | |       Ok(i) => i,
+582 | |       Err(_) => panic!("Expected Ok Interview"),
+583 | |     };
+    | |______^ help: consider writing: `let Ok(interview) = interview_result else { panic!("Expected Ok Interview") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:582:7
+    |
+582 |       Err(_) => panic!("Expected Ok Interview"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:580:21
+    |
+580 |       let interview = match interview_result {
+    |  _____________________^
+581 | |       Ok(i) => i,
+582 | |       Err(_) => panic!("Expected Ok Interview"),
+583 | |     };
+    | |_____^ help: try: `interview_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:600:5
+    |
+600 | /     let id = match id_result {
+601 | |       Ok(id) => id,
+602 | |       Err(_) => panic!("Expected Ok InterviewId"),
+603 | |     };
+    | |______^ help: consider writing: `let Ok(id) = id_result else { panic!("Expected Ok InterviewId") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:602:7
+    |
+602 |       Err(_) => panic!("Expected Ok InterviewId"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:600:14
+    |
+600 |       let id = match id_result {
+    |  ______________^
+601 | |       Ok(id) => id,
+602 | |       Err(_) => panic!("Expected Ok InterviewId"),
+603 | |     };
+    | |_____^ help: try: `id_result.map_or_else(|_| panic!("Expected Ok InterviewId"), |id| id)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:619:5
+    |
+619 | /     let id = match id_result {
+620 | |       Ok(id) => id,
+621 | |       Err(_) => panic!("Expected Ok InterviewId"),
+622 | |     };
+    | |______^ help: consider writing: `let Ok(id) = id_result else { panic!("Expected Ok InterviewId") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:621:7
+    |
+621 |       Err(_) => panic!("Expected Ok InterviewId"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:619:14
+    |
+619 |       let id = match id_result {
+    |  ______________^
+620 | |       Ok(id) => id,
+621 | |       Err(_) => panic!("Expected Ok InterviewId"),
+622 | |     };
+    | |_____^ help: try: `id_result.map_or_else(|_| panic!("Expected Ok InterviewId"), |id| id)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:642:5
+    |
+642 | /     let interview = match interview_result {
+643 | |       Ok(i) => i,
+644 | |       Err(_) => panic!("Expected Ok Interview"),
+645 | |     };
+    | |______^ help: consider writing: `let Ok(interview) = interview_result else { panic!("Expected Ok Interview") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:644:7
+    |
+644 |       Err(_) => panic!("Expected Ok Interview"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:642:21
+    |
+642 |       let interview = match interview_result {
+    |  _____________________^
+643 | |       Ok(i) => i,
+644 | |       Err(_) => panic!("Expected Ok Interview"),
+645 | |     };
+    | |_____^ help: try: `interview_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:663:5
+    |
+663 | /     let interview = match interview_result {
+664 | |       Ok(i) => i,
+665 | |       Err(_) => panic!("Expected Ok Interview"),
+666 | |     };
+    | |______^ help: consider writing: `let Ok(interview) = interview_result else { panic!("Expected Ok Interview") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:665:7
+    |
+665 |       Err(_) => panic!("Expected Ok Interview"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:663:21
+    |
+663 |       let interview = match interview_result {
+    |  _____________________^
+664 | |       Ok(i) => i,
+665 | |       Err(_) => panic!("Expected Ok Interview"),
+666 | |     };
+    | |_____^ help: try: `interview_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:696:5
+    |
+696 | /     let interview = match interview_result {
+697 | |       Ok(i) => i,
+698 | |       Err(_) => panic!("Expected Ok Interview"),
+699 | |     };
+    | |______^ help: consider writing: `let Ok(interview) = interview_result else { panic!("Expected Ok Interview") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:698:7
+    |
+698 |       Err(_) => panic!("Expected Ok Interview"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:696:21
+    |
+696 |       let interview = match interview_result {
+    |  _____________________^
+697 | |       Ok(i) => i,
+698 | |       Err(_) => panic!("Expected Ok Interview"),
+699 | |     };
+    | |_____^ help: try: `interview_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:776:5
+    |
+776 | /     let interview = match interview_result {
+777 | |       Ok(i) => i,
+778 | |       Err(_) => panic!("Expected Ok Interview"),
+779 | |     };
+    | |______^ help: consider writing: `let Ok(interview) = interview_result else { panic!("Expected Ok Interview") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:778:7
+    |
+778 |       Err(_) => panic!("Expected Ok Interview"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:776:21
+    |
+776 |       let interview = match interview_result {
+    |  _____________________^
+777 | |       Ok(i) => i,
+778 | |       Err(_) => panic!("Expected Ok Interview"),
+779 | |     };
+    | |_____^ help: try: `interview_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:787:5
+    |
+787 | /     let updated = match updated_result {
+788 | |       Ok(i) => i,
+789 | |       Err(_) => panic!("Expected Ok Interview"),
+790 | |     };
+    | |______^ help: consider writing: `let Ok(updated) = updated_result else { panic!("Expected Ok Interview") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:789:7
+    |
+789 |       Err(_) => panic!("Expected Ok Interview"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:787:19
+    |
+787 |       let updated = match updated_result {
+    |  ___________________^
+788 | |       Ok(i) => i,
+789 | |       Err(_) => panic!("Expected Ok Interview"),
+790 | |     };
+    | |_____^ help: try: `updated_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:805:5
+    |
+805 | /     let interview = match interview_result {
+806 | |       Ok(i) => i,
+807 | |       Err(_) => panic!("Expected Ok Interview"),
+808 | |     };
+    | |______^ help: consider writing: `let Ok(interview) = interview_result else { panic!("Expected Ok Interview") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:807:7
+    |
+807 |       Err(_) => panic!("Expected Ok Interview"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:805:21
+    |
+805 |       let interview = match interview_result {
+    |  _____________________^
+806 | |       Ok(i) => i,
+807 | |       Err(_) => panic!("Expected Ok Interview"),
+808 | |     };
+    | |_____^ help: try: `interview_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:816:5
+    |
+816 | /     let in_progress = match in_progress_result {
+817 | |       Ok(i) => i,
+818 | |       Err(_) => panic!("Expected Ok Interview"),
+819 | |     };
+    | |______^ help: consider writing: `let Ok(in_progress) = in_progress_result else { panic!("Expected Ok Interview") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:818:7
+    |
+818 |       Err(_) => panic!("Expected Ok Interview"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:816:23
+    |
+816 |       let in_progress = match in_progress_result {
+    |  _______________________^
+817 | |       Ok(i) => i,
+818 | |       Err(_) => panic!("Expected Ok Interview"),
+819 | |     };
+    | |_____^ help: try: `in_progress_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:827:5
+    |
+827 | /     let completed = match completed_result {
+828 | |       Ok(i) => i,
+829 | |       Err(_) => panic!("Expected Ok Interview"),
+830 | |     };
+    | |______^ help: consider writing: `let Ok(completed) = completed_result else { panic!("Expected Ok Interview") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:829:7
+    |
+829 |       Err(_) => panic!("Expected Ok Interview"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:827:21
+    |
+827 |       let completed = match completed_result {
+    |  _____________________^
+828 | |       Ok(i) => i,
+829 | |       Err(_) => panic!("Expected Ok Interview"),
+830 | |     };
+    | |_____^ help: try: `completed_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:843:5
+    |
+843 | /     let interview = match interview_result {
+844 | |       Ok(i) => i,
+845 | |       Err(_) => panic!("Expected Ok Interview"),
+846 | |     };
+    | |______^ help: consider writing: `let Ok(interview) = interview_result else { panic!("Expected Ok Interview") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:845:7
+    |
+845 |       Err(_) => panic!("Expected Ok Interview"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:843:21
+    |
+843 |       let interview = match interview_result {
+    |  _____________________^
+844 | |       Ok(i) => i,
+845 | |       Err(_) => panic!("Expected Ok Interview"),
+846 | |     };
+    | |_____^ help: try: `interview_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:854:5
+    |
+854 | /     let in_progress = match in_progress_result {
+855 | |       Ok(i) => i,
+856 | |       Err(_) => panic!("Expected Ok Interview"),
+857 | |     };
+    | |______^ help: consider writing: `let Ok(in_progress) = in_progress_result else { panic!("Expected Ok Interview") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:856:7
+    |
+856 |       Err(_) => panic!("Expected Ok Interview"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:854:23
+    |
+854 |       let in_progress = match in_progress_result {
+    |  _______________________^
+855 | |       Ok(i) => i,
+856 | |       Err(_) => panic!("Expected Ok Interview"),
+857 | |     };
+    | |_____^ help: try: `in_progress_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:863:5
+    |
+863 | /     let failed = match failed_result {
+864 | |       Ok(i) => i,
+865 | |       Err(_) => panic!("Expected Ok Interview"),
+866 | |     };
+    | |______^ help: consider writing: `let Ok(failed) = failed_result else { panic!("Expected Ok Interview") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:865:7
+    |
+865 |       Err(_) => panic!("Expected Ok Interview"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:863:18
+    |
+863 |       let failed = match failed_result {
+    |  __________________^
+864 | |       Ok(i) => i,
+865 | |       Err(_) => panic!("Expected Ok Interview"),
+866 | |     };
+    | |_____^ help: try: `failed_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:879:5
+    |
+879 | /     let interview = match interview_result {
+880 | |       Ok(i) => i,
+881 | |       Err(_) => panic!("Expected Ok Interview"),
+882 | |     };
+    | |______^ help: consider writing: `let Ok(interview) = interview_result else { panic!("Expected Ok Interview") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:881:7
+    |
+881 |       Err(_) => panic!("Expected Ok Interview"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:879:21
+    |
+879 |       let interview = match interview_result {
+    |  _____________________^
+880 | |       Ok(i) => i,
+881 | |       Err(_) => panic!("Expected Ok Interview"),
+882 | |     };
+    | |_____^ help: try: `interview_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:890:5
+    |
+890 | /     let cancelled = match cancelled_result {
+891 | |       Ok(i) => i,
+892 | |       Err(_) => panic!("Expected Ok Interview"),
+893 | |     };
+    | |______^ help: consider writing: `let Ok(cancelled) = cancelled_result else { panic!("Expected Ok Interview") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:892:7
+    |
+892 |       Err(_) => panic!("Expected Ok Interview"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:890:21
+    |
+890 |       let cancelled = match cancelled_result {
+    |  _____________________^
+891 | |       Ok(i) => i,
+892 | |       Err(_) => panic!("Expected Ok Interview"),
+893 | |     };
+    | |_____^ help: try: `cancelled_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:906:5
+    |
+906 | /     let interview = match interview_result {
+907 | |       Ok(i) => i,
+908 | |       Err(_) => panic!("Expected Ok Interview"),
+909 | |     };
+    | |______^ help: consider writing: `let Ok(interview) = interview_result else { panic!("Expected Ok Interview") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:908:7
+    |
+908 |       Err(_) => panic!("Expected Ok Interview"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:906:21
+    |
+906 |       let interview = match interview_result {
+    |  _____________________^
+907 | |       Ok(i) => i,
+908 | |       Err(_) => panic!("Expected Ok Interview"),
+909 | |     };
+    | |_____^ help: try: `interview_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:934:5
+    |
+934 | /     let interview = match interview_result {
+935 | |       Ok(i) => i,
+936 | |       Err(_) => panic!("Expected Ok Interview"),
+937 | |     };
+    | |______^ help: consider writing: `let Ok(interview) = interview_result else { panic!("Expected Ok Interview") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:936:7
+    |
+936 |       Err(_) => panic!("Expected Ok Interview"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:934:21
+    |
+934 |       let interview = match interview_result {
+    |  _____________________^
+935 | |       Ok(i) => i,
+936 | |       Err(_) => panic!("Expected Ok Interview"),
+937 | |     };
+    | |_____^ help: try: `interview_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:945:5
+    |
+945 | /     let in_progress = match in_progress_result {
+946 | |       Ok(i) => i,
+947 | |       Err(_) => panic!("Expected Ok Interview"),
+948 | |     };
+    | |______^ help: consider writing: `let Ok(in_progress) = in_progress_result else { panic!("Expected Ok Interview") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:947:7
+    |
+947 |       Err(_) => panic!("Expected Ok Interview"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:945:23
+    |
+945 |       let in_progress = match in_progress_result {
+    |  _______________________^
+946 | |       Ok(i) => i,
+947 | |       Err(_) => panic!("Expected Ok Interview"),
+948 | |     };
+    | |_____^ help: try: `in_progress_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:956:5
+    |
+956 | /     let completed = match completed_result {
+957 | |       Ok(i) => i,
+958 | |       Err(_) => panic!("Expected Ok Interview"),
+959 | |     };
+    | |______^ help: consider writing: `let Ok(completed) = completed_result else { panic!("Expected Ok Interview") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:958:7
+    |
+958 |       Err(_) => panic!("Expected Ok Interview"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:956:21
+    |
+956 |       let completed = match completed_result {
+    |  _____________________^
+957 | |       Ok(i) => i,
+958 | |       Err(_) => panic!("Expected Ok Interview"),
+959 | |     };
+    | |_____^ help: try: `completed_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:977:5
+    |
+977 | /     let interview = match interview_result {
+978 | |       Ok(i) => i,
+979 | |       Err(_) => panic!("Expected Ok Interview"),
+980 | |     };
+    | |______^ help: consider writing: `let Ok(interview) = interview_result else { panic!("Expected Ok Interview") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:979:7
+    |
+979 |       Err(_) => panic!("Expected Ok Interview"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:977:21
+    |
+977 |       let interview = match interview_result {
+    |  _____________________^
+978 | |       Ok(i) => i,
+979 | |       Err(_) => panic!("Expected Ok Interview"),
+980 | |     };
+    | |_____^ help: try: `interview_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+   --> clarity-core/src/interview.rs:988:5
+    |
+988 | /     let in_progress = match in_progress_result {
+989 | |       Ok(i) => i,
+990 | |       Err(_) => panic!("Expected Ok Interview"),
+991 | |     };
+    | |______^ help: consider writing: `let Ok(in_progress) = in_progress_result else { panic!("Expected Ok Interview") };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:990:7
+    |
+990 |       Err(_) => panic!("Expected Ok Interview"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+   --> clarity-core/src/interview.rs:988:23
+    |
+988 |       let in_progress = match in_progress_result {
+    |  _______________________^
+989 | |       Ok(i) => i,
+990 | |       Err(_) => panic!("Expected Ok Interview"),
+991 | |     };
+    | |_____^ help: try: `in_progress_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+    --> clarity-core/src/interview.rs:997:5
+     |
+ 997 | /     let failed = match failed_result {
+ 998 | |       Ok(i) => i,
+ 999 | |       Err(_) => panic!("Expected Ok Interview"),
+1000 | |     };
+     | |______^ help: consider writing: `let Ok(failed) = failed_result else { panic!("Expected Ok Interview") };`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+   --> clarity-core/src/interview.rs:999:7
+    |
+999 |       Err(_) => panic!("Expected Ok Interview"),
+    |       ^^^^^^
+    |
+    = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+    --> clarity-core/src/interview.rs:997:18
+     |
+ 997 |       let failed = match failed_result {
+     |  __________________^
+ 998 | |       Ok(i) => i,
+ 999 | |       Err(_) => panic!("Expected Ok Interview"),
+1000 | |     };
+     | |_____^ help: try: `failed_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+    --> clarity-core/src/interview.rs:1018:5
+     |
+1018 | /     let interview = match interview_result {
+1019 | |       Ok(i) => i,
+1020 | |       Err(_) => panic!("Expected Ok Interview"),
+1021 | |     };
+     | |______^ help: consider writing: `let Ok(interview) = interview_result else { panic!("Expected Ok Interview") };`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+    --> clarity-core/src/interview.rs:1020:7
+     |
+1020 |       Err(_) => panic!("Expected Ok Interview"),
+     |       ^^^^^^
+     |
+     = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+    --> clarity-core/src/interview.rs:1018:21
+     |
+1018 |       let interview = match interview_result {
+     |  _____________________^
+1019 | |       Ok(i) => i,
+1020 | |       Err(_) => panic!("Expected Ok Interview"),
+1021 | |     };
+     | |_____^ help: try: `interview_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+    --> clarity-core/src/interview.rs:1031:5
+     |
+1031 | /     let in_progress = match in_progress_result {
+1032 | |       Ok(i) => i,
+1033 | |       Err(_) => panic!("Expected Ok Interview"),
+1034 | |     };
+     | |______^ help: consider writing: `let Ok(in_progress) = in_progress_result else { panic!("Expected Ok Interview") };`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+    --> clarity-core/src/interview.rs:1033:7
+     |
+1033 |       Err(_) => panic!("Expected Ok Interview"),
+     |       ^^^^^^
+     |
+     = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+    --> clarity-core/src/interview.rs:1031:23
+     |
+1031 |       let in_progress = match in_progress_result {
+     |  _______________________^
+1032 | |       Ok(i) => i,
+1033 | |       Err(_) => panic!("Expected Ok Interview"),
+1034 | |     };
+     | |_____^ help: try: `in_progress_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+    --> clarity-core/src/interview.rs:1043:5
+     |
+1043 | /     let completed = match completed_result {
+1044 | |       Ok(i) => i,
+1045 | |       Err(_) => panic!("Expected Ok Interview"),
+1046 | |     };
+     | |______^ help: consider writing: `let Ok(completed) = completed_result else { panic!("Expected Ok Interview") };`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+    --> clarity-core/src/interview.rs:1045:7
+     |
+1045 |       Err(_) => panic!("Expected Ok Interview"),
+     |       ^^^^^^
+     |
+     = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+    --> clarity-core/src/interview.rs:1043:21
+     |
+1043 |       let completed = match completed_result {
+     |  _____________________^
+1044 | |       Ok(i) => i,
+1045 | |       Err(_) => panic!("Expected Ok Interview"),
+1046 | |     };
+     | |_____^ help: try: `completed_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+    --> clarity-core/src/interview.rs:1053:5
+     |
+1053 | /     let failed = match failed_result {
+1054 | |       Ok(i) => i,
+1055 | |       Err(_) => panic!("Expected Ok Interview"),
+1056 | |     };
+     | |______^ help: consider writing: `let Ok(failed) = failed_result else { panic!("Expected Ok Interview") };`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+    --> clarity-core/src/interview.rs:1055:7
+     |
+1055 |       Err(_) => panic!("Expected Ok Interview"),
+     |       ^^^^^^
+     |
+     = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+    --> clarity-core/src/interview.rs:1053:18
+     |
+1053 |       let failed = match failed_result {
+     |  __________________^
+1054 | |       Ok(i) => i,
+1055 | |       Err(_) => panic!("Expected Ok Interview"),
+1056 | |     };
+     | |_____^ help: try: `failed_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+    --> clarity-core/src/interview.rs:1065:5
+     |
+1065 | /     let cancelled = match cancelled_result {
+1066 | |       Ok(i) => i,
+1067 | |       Err(_) => panic!("Expected Ok Interview"),
+1068 | |     };
+     | |______^ help: consider writing: `let Ok(cancelled) = cancelled_result else { panic!("Expected Ok Interview") };`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+    --> clarity-core/src/interview.rs:1067:7
+     |
+1067 |       Err(_) => panic!("Expected Ok Interview"),
+     |       ^^^^^^
+     |
+     = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+    --> clarity-core/src/interview.rs:1065:21
+     |
+1065 |       let cancelled = match cancelled_result {
+     |  _____________________^
+1066 | |       Ok(i) => i,
+1067 | |       Err(_) => panic!("Expected Ok Interview"),
+1068 | |     };
+     | |_____^ help: try: `cancelled_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+    --> clarity-core/src/interview.rs:1080:5
+     |
+1080 | /     let interview = match interview_result {
+1081 | |       Ok(i) => i,
+1082 | |       Err(_) => panic!("Expected Ok Interview"),
+1083 | |     };
+     | |______^ help: consider writing: `let Ok(interview) = interview_result else { panic!("Expected Ok Interview") };`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+    --> clarity-core/src/interview.rs:1082:7
+     |
+1082 |       Err(_) => panic!("Expected Ok Interview"),
+     |       ^^^^^^
+     |
+     = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+    --> clarity-core/src/interview.rs:1080:21
+     |
+1080 |       let interview = match interview_result {
+     |  _____________________^
+1081 | |       Ok(i) => i,
+1082 | |       Err(_) => panic!("Expected Ok Interview"),
+1083 | |     };
+     | |_____^ help: try: `interview_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+    --> clarity-core/src/interview.rs:1093:5
+     |
+1093 | /     let in_progress = match in_progress_result {
+1094 | |       Ok(i) => i,
+1095 | |       Err(_) => panic!("Expected Ok Interview"),
+1096 | |     };
+     | |______^ help: consider writing: `let Ok(in_progress) = in_progress_result else { panic!("Expected Ok Interview") };`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+    --> clarity-core/src/interview.rs:1095:7
+     |
+1095 |       Err(_) => panic!("Expected Ok Interview"),
+     |       ^^^^^^
+     |
+     = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+    --> clarity-core/src/interview.rs:1093:23
+     |
+1093 |       let in_progress = match in_progress_result {
+     |  _______________________^
+1094 | |       Ok(i) => i,
+1095 | |       Err(_) => panic!("Expected Ok Interview"),
+1096 | |     };
+     | |_____^ help: try: `in_progress_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+    --> clarity-core/src/interview.rs:1105:5
+     |
+1105 | /     let completed = match completed_result {
+1106 | |       Ok(i) => i,
+1107 | |       Err(_) => panic!("Expected Ok Interview"),
+1108 | |     };
+     | |______^ help: consider writing: `let Ok(completed) = completed_result else { panic!("Expected Ok Interview") };`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+    --> clarity-core/src/interview.rs:1107:7
+     |
+1107 |       Err(_) => panic!("Expected Ok Interview"),
+     |       ^^^^^^
+     |
+     = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+    --> clarity-core/src/interview.rs:1105:21
+     |
+1105 |       let completed = match completed_result {
+     |  _____________________^
+1106 | |       Ok(i) => i,
+1107 | |       Err(_) => panic!("Expected Ok Interview"),
+1108 | |     };
+     | |_____^ help: try: `completed_result.map_or_else(|_| panic!("Expected Ok Interview"), |i| i)`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+    --> clarity-core/src/interview.rs:1122:5
+     |
+1122 | /     let ts1 = match ts1_result {
+1123 | |       Ok(ts) => ts,
+1124 | |       Err(_) => panic!("Expected Ok Timestamp"),
+1125 | |     };
+     | |______^ help: consider writing: `let Ok(ts1) = ts1_result else { panic!("Expected Ok Timestamp") };`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+    --> clarity-core/src/interview.rs:1124:7
+     |
+1124 |       Err(_) => panic!("Expected Ok Timestamp"),
+     |       ^^^^^^
+     |
+     = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+    --> clarity-core/src/interview.rs:1122:15
+     |
+1122 |       let ts1 = match ts1_result {
+     |  _______________^
+1123 | |       Ok(ts) => ts,
+1124 | |       Err(_) => panic!("Expected Ok Timestamp"),
+1125 | |     };
+     | |_____^ help: try: `ts1_result.map_or_else(|_| panic!("Expected Ok Timestamp"), |ts| ts)`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: this could be rewritten as `let...else`
+    --> clarity-core/src/interview.rs:1130:5
+     |
+1130 | /     let ts2 = match ts2_result {
+1131 | |       Ok(ts) => ts,
+1132 | |       Err(_) => panic!("Expected Ok Timestamp"),
+1133 | |     };
+     | |______^ help: consider writing: `let Ok(ts2) = ts2_result else { panic!("Expected Ok Timestamp") };`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_let_else
+
+warning: `Err(_)` matches all errors
+    --> clarity-core/src/interview.rs:1132:7
+     |
+1132 |       Err(_) => panic!("Expected Ok Timestamp"),
+     |       ^^^^^^
+     |
+     = note: match each error separately or use the error output, or use `.expect(msg)` if the error case is unreachable
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#match_wild_err_arm
+
+warning: use Option::map_or_else instead of an if let/else
+    --> clarity-core/src/interview.rs:1130:15
+     |
+1130 |       let ts2 = match ts2_result {
+     |  _______________^
+1131 | |       Ok(ts) => ts,
+1132 | |       Err(_) => panic!("Expected Ok Timestamp"),
+1133 | |     };
+     | |_____^ help: try: `ts2_result.map_or_else(|_| panic!("Expected Ok Timestamp"), |ts| ts)`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#option_if_let_else
+
+warning: used `expect()` on a `Result` value
+   --> clarity-core/src/json_formatter.rs:231:20
+    |
+231 |     let json_str = result.expect("format_response should return Ok");
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
+note: the lint level is defined here
+   --> clarity-core/src/lib.rs:6:9
+    |
+  6 | #![warn(clippy::expect_used)]
+    |         ^^^^^^^^^^^^^^^^^^^
+
+warning: used `expect()` on a `Result` value
+   --> clarity-core/src/json_formatter.rs:246:20
+    |
+246 |     let json_str = result.expect("format_error should return Ok");
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
+
+warning: used `expect()` on a `Result` value
+   --> clarity-core/src/json_formatter.rs:257:20
+    |
+257 |     let json_str = result.expect("format_error should return Ok");
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
+
+warning: used `expect()` on a `Result` value
+   --> clarity-core/src/json_formatter.rs:277:20
+    |
+277 |     let json_str = result.expect("format_response should return Ok");
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
+
+warning: used `expect()` on a `Result` value
+   --> clarity-core/src/json_formatter.rs:287:20
+    |
+287 |     let json_str = result.expect("format_error should return Ok");
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#expect_used
+
+warning: redundant clone
+   --> clarity-core/src/json_formatter.rs:353:66
+    |
+353 |     let response = ApiResponse::error("Validation failed", errors.clone());
+    |                                                                  ^^^^^^^^ help: remove this
+    |
+note: this value is dropped without further use
+   --> clarity-core/src/json_formatter.rs:353:60
+    |
+353 |     let response = ApiResponse::error("Validation failed", errors.clone());
+    |                                                            ^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#redundant_clone
+note: the lint level is defined here
+   --> clarity-core/src/lib.rs:3:9
+    |
+  3 | #![warn(clippy::nursery)]
+    |         ^^^^^^^^^^^^^^^
+    = note: `#[warn(clippy::redundant_clone)]` implied by `#[warn(clippy::nursery)]`
+
+warning: accessing first element with `detail.next_actions.get(0)`
+   --> clarity-core/src/json_formatter.rs:373:7
+    |
+373 |       detail.next_actions.get(0),
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `detail.next_actions.first()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#get_first
+note: the lint level is defined here
+   --> clarity-core/src/lib.rs:1:9
+    |
+  1 | #![warn(clippy::all)]
+    |         ^^^^^^^^^^^
+    = note: `#[warn(clippy::get_first)]` implied by `#[warn(clippy::all)]`
+
+error: used `unwrap_err()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:238:16
+    |
+238 |     assert_eq!(result.unwrap_err(), PathError::EmptyPath);
+    |                ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Ok`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+note: the lint level is defined here
+   --> clarity-core/src/path_utils.rs:1:9
+    |
+  1 | #![deny(clippy::unwrap_used)]
+    |         ^^^^^^^^^^^^^^^^^^^
+
+error: used `unwrap_err()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:246:7
+    |
+246 |       result.unwrap_err(),
+    |       ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Ok`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:254:16
+    |
+254 |     assert_eq!(get_extension("file.txt").unwrap(), "txt");
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:259:16
+    |
+259 |     assert_eq!(get_extension("file.tar.gz").unwrap(), "gz");
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap_err()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:267:7
+    |
+267 |       result.unwrap_err(),
+    |       ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Ok`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:274:16
+    |
+274 |     assert_eq!(get_extension("/path/to/file.txt").unwrap(), "txt");
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:275:16
+    |
+275 |     assert_eq!(get_extension("./relative/file.rs").unwrap(), "rs");
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:289:16
+    |
+289 |     assert_eq!(get_file_stem("file.txt").unwrap(), "file");
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:294:16
+    |
+294 |     assert_eq!(get_file_stem("file.tar.gz").unwrap(), "file.tar");
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap_err()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:301:16
+    |
+301 |     assert_eq!(result.unwrap_err(), PathError::EmptyPath);
+    |                ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Ok`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:306:16
+    |
+306 |     assert_eq!(get_file_stem("/path/to/file.txt").unwrap(), "file");
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:307:16
+    |
+307 |     assert_eq!(get_file_stem("./relative/file.rs").unwrap(), "file");
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:312:16
+    |
+312 |     assert_eq!(get_file_stem("file").unwrap(), "file");
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:319:7
+    |
+319 |       get_parent("/path/to/file.txt").unwrap().as_str(),
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:322:16
+    |
+322 |     assert_eq!(get_parent("/path/to/").unwrap().as_str(), "/path");
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:327:16
+    |
+327 |     assert_eq!(get_parent("path/to/file.txt").unwrap().as_str(), "path/to");
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:328:16
+    |
+328 |     assert_eq!(get_parent("file.txt").unwrap().as_str(), "");
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:333:16
+    |
+333 |     assert_eq!(get_parent("/").unwrap().as_str(), "");
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap_err()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:340:16
+    |
+340 |     assert_eq!(result.unwrap_err(), PathError::EmptyPath);
+    |                ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Ok`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:347:7
+    |
+347 |       join_paths("/path/to", "file.txt").unwrap(),
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:355:7
+    |
+355 |       join_paths("/path/to/", "file.txt").unwrap(),
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:362:16
+    |
+362 |     assert_eq!(join_paths("/path/to", "/absolute").unwrap(), "/absolute");
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap_err()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:369:16
+    |
+369 |     assert_eq!(result.unwrap_err(), PathError::EmptyPath);
+    |                ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Ok`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:374:16
+    |
+374 |     assert_eq!(join_paths("", "file.txt").unwrap(), "file.txt");
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:382:13
+    |
+382 |     assert!(result.unwrap().starts_with("/path/to"));
+    |             ^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:389:7
+    |
+389 |       normalize_path("/path/to/./file.txt").unwrap(),
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:397:7
+    |
+397 |       normalize_path("/path/to/../file.txt").unwrap(),
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:405:7
+    |
+405 |       normalize_path("/path/to/./../file.txt").unwrap(),
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap_err()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:414:16
+    |
+414 |     assert_eq!(result.unwrap_err(), PathError::EmptyPath);
+    |                ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Ok`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:420:7
+    |
+420 |       normalize_path("/path/to/file.txt").unwrap(),
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/path_utils.rs:428:7
+    |
+428 |       normalize_path("/path/to/sub/../other/../file.txt").unwrap(),
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+  --> clarity-core/tests/question_types_test.rs:15:18
+   |
+15 |   let question = result.unwrap();
+   |                  ^^^^^^^^^^^^^^^
+   |
+   = note: if this value is an `Err`, it will panic
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+note: the lint level is defined here
+  --> clarity-core/tests/question_types_test.rs:1:9
+   |
+ 1 | #![deny(clippy::unwrap_used)]
+   |         ^^^^^^^^^^^^^^^^^^^
+
+error: used `unwrap()` on a `Result` value
+  --> clarity-core/tests/question_types_test.rs:34:18
+   |
+34 |   let question = result.unwrap();
+   |                  ^^^^^^^^^^^^^^^
+   |
+   = note: if this value is an `Err`, it will panic
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+  --> clarity-core/tests/question_types_test.rs:99:5
+   |
+99 |     QuestionType::text("Text question", None).unwrap(),
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: if this value is an `Err`, it will panic
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:100:5
+    |
+100 | /     QuestionType::multiple_choice(
+101 | |       "MC question",
+102 | |       vec!["A".to_string(), "B".to_string()],
+103 | |       Some(0),
+104 | |     )
+105 | |     .unwrap(),
+    | |_____________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:106:5
+    |
+106 |     QuestionType::boolean("Boolean question", None).unwrap(),
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:113:20
+    |
+113 |     let json_str = json.unwrap();
+    |                    ^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:114:37
+    |
+114 |     let parsed: serde_json::Value = serde_json::from_str(&json_str).unwrap();
+    |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:127:18
+    |
+127 |   let original = QuestionType::text("Test question", None).unwrap();
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:128:14
+    |
+128 |   let json = serde_json::to_string(&original).unwrap();
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:133:16
+    |
+133 |   let parsed = deserialized.unwrap();
+    |                ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:146:18
+    |
+146 |   let question = result.unwrap();
+    |                  ^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:160:18
+    |
+160 |   let question = result.unwrap();
+    |                  ^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:195:18
+    |
+195 |   let question = result.unwrap();
+    |                  ^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:209:18
+    |
+209 |   let question = result.unwrap();
+    |                  ^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:220:18
+    |
+220 |   let question = QuestionType::long_text("Description", None, 10).unwrap();
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:244:18
+    |
+244 |   let question = result.unwrap();
+    |                  ^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:256:5
+    |
+256 |     QuestionType::text("Text prompt", None).unwrap(),
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:257:5
+    |
+257 | /     QuestionType::multiple_choice("MC prompt", vec!["A".to_string(), "B".to_string()], Some(0))
+258 | |       .unwrap(),
+    | |_______________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:259:5
+    |
+259 |     QuestionType::boolean("Boolean prompt", None).unwrap(),
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:260:5
+    |
+260 |     QuestionType::numeric_range("Range prompt", 1, 5, Some(3)).unwrap(),
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:283:18
+    |
+283 |   let question = result.unwrap();
+    |                  ^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:290:35
+    |
+290 |   let parsed: serde_json::Value = serde_json::from_str(&json.unwrap()).unwrap();
+    |                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:290:57
+    |
+290 |   let parsed: serde_json::Value = serde_json::from_str(&json.unwrap()).unwrap();
+    |                                                         ^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:300:12
+    |
+300 |   let q1 = QuestionType::text("Same prompt", None).unwrap();
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:301:12
+    |
+301 |   let q2 = QuestionType::text("Same prompt", None).unwrap();
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:302:12
+    |
+302 |   let q3 = QuestionType::text("Different prompt", None).unwrap();
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:318:18
+    |
+318 |   let question = result.unwrap();
+    |                  ^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:325:35
+    |
+325 |   let parsed: serde_json::Value = serde_json::from_str(&json.unwrap()).unwrap();
+    |                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:325:57
+    |
+325 |   let parsed: serde_json::Value = serde_json::from_str(&json.unwrap()).unwrap();
+    |                                                         ^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/tests/question_types_test.rs:341:18
+    |
+341 |   let question = result.unwrap();
+    |                  ^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: could not compile `clarity-core` (test "question_types_test") due to 30 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/types/question.rs:591:13
+    |
+591 |     let q = QuestionType::text("Test prompt", None).unwrap();
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+note: the lint level is defined here
+   --> clarity-core/src/types/question.rs:1:9
+    |
+  1 | #![deny(clippy::unwrap_used)]
+    |         ^^^^^^^^^^^^^^^^^^^
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/types/question.rs:597:13
+    |
+597 |     let q = QuestionType::text("Test", None).unwrap();
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/types/question.rs:605:13
+    |
+605 |     let q = QuestionType::text("Test", None).unwrap();
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/types/question.rs:611:13
+    |
+611 |     let q = QuestionType::long_text("Test", None, 10).unwrap();
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/types/question.rs:618:14
+    |
+618 |     let q1 = QuestionType::text("Same", None).unwrap();
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/types/question.rs:619:14
+    |
+619 |     let q2 = QuestionType::text("Same", None).unwrap();
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/types/question.rs:625:14
+    |
+625 |     let q1 = QuestionType::text("One", None).unwrap();
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+error: used `unwrap()` on a `Result` value
+   --> clarity-core/src/types/question.rs:626:14
+    |
+626 |     let q2 = QuestionType::text("Two", None).unwrap();
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unwrap_used
+
+warning: empty String is being created manually
+   --> clarity-client/src/app.rs:232:36
+    |
+232 |     let result = state.navigate_to("".to_string());
+    |                                    ^^^^^^^^^^^^^^ help: consider using: `String::new()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#manual_string_new
+note: the lint level is defined here
+   --> clarity-client/src/lib.rs:4:9
+    |
+  4 | #![warn(clippy::pedantic)]
+    |         ^^^^^^^^^^^^^^^^
+    = note: `#[warn(clippy::manual_string_new)]` implied by `#[warn(clippy::pedantic)]`
+
+warning: `clarity-core` (lib test) generated 119 warnings
+error: could not compile `clarity-core` (lib test) due to 57 previous errors; 119 warnings emitted
+warning: `clarity-client` (lib test) generated 1 warning (run `cargo clippy --fix --lib -p clarity-client --tests` to apply 1 suggestion)

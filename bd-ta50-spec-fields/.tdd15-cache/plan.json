@@ -1,0 +1,199 @@
+{
+  "session": "bd-2391.2",
+  "module": "clarity-client/src/shared/mental_lattice/inversion.rs",
+  "description": "First Principle: Avoid stupidity - cognitive biases and systematic methods to avoid stupid decisions",
+  
+  "types_to_create": [
+    {
+      "name": "CognitiveBias",
+      "kind": "enum",
+      "description": "Types of cognitive biases that affect decisions",
+      "variants": [
+        "ConfirmationBias",
+        "AvailabilityHeuristic", 
+        "Anchoring",
+        "RecencyBias",
+        "SurvivorshipBias",
+        "SunkCostFallacy",
+        "GamblerFallacy",
+        "OverconfidenceBias",
+        "DunningKruger",
+        "PlanningFallacy",
+        "BandwagonEffect",
+        "AuthorityBias",
+        "Groupthink",
+        "HindsightBias",
+        "FalseConsensus",
+        "AttributionError"
+      ]
+    },
+    {
+      "name": "BiasSeverity",
+      "kind": "enum",
+      "description": "How severe a bias impact is",
+      "variants": ["Low", "Moderate", "High", "Critical"]
+    },
+    {
+      "name": "AntiStupidityMethod",
+      "kind": "enum", 
+      "description": "Systematic methods to avoid stupid decisions",
+      "variants": [
+        "InversionThinking",
+        "PreMortem",
+        "ReverseBrainstorming",
+        "RedTeaming",
+        "SteelManning",
+        "NullHypothesis",
+        "FalsificationTest",
+        "BaseRateCheck",
+        "OutsideView",
+        "SecondOrderThinking",
+        "IncentiveAudit",
+        "AssumptionAudit"
+      ]
+    },
+    {
+      "name": "BiasDetection",
+      "kind": "struct",
+      "description": "Detected cognitive bias in a decision",
+      "fields": [
+        "id: Uuid",
+        "bias_type: CognitiveBias", 
+        "description: String",
+        "severity: BiasSeverity",
+        "evidence: String",
+        "mitigation: Option<String>",
+        "detected_at: DateTime<Utc>"
+      ]
+    },
+    {
+      "name": "AntiStupidityExercise",
+      "kind": "struct",
+      "description": "Systematic method to avoid stupid decisions",
+      "fields": [
+        "id: Uuid",
+        "method: AntiStupidityMethod",
+        "context: String",
+        "findings: Vec<String>",
+        "actions: Vec<String>",
+        "confidence_score: f32",
+        "created_at: DateTime<Utc>"
+      ]
+    },
+    {
+      "name": "InversionReview",
+      "kind": "struct",
+      "description": "Complete decision review with inversion analysis",
+      "fields": [
+        "id: Uuid",
+        "decision_context: String",
+        "detected_biases: Vec<BiasDetection>",
+        "exercises: Vec<AntiStupidityExercise>",
+        "stupidity_risk_score: f32",
+        "recommendations: Vec<String>",
+        "created_at: DateTime<Utc>",
+        "updated_at: DateTime<Utc>"
+      ]
+    },
+    {
+      "name": "InversionError",
+      "kind": "enum",
+      "description": "Errors for inversion domain",
+      "variants": [
+        "EmptyField(String)",
+        "InvalidSeverity(String)",
+        "InvalidScore(f32)"
+      ]
+    }
+  ],
+  
+  "tests_to_write": [
+    {
+      "name": "test_cognitive_bias_display",
+      "phase": "RED",
+      "description": "Each bias has a human-readable display"
+    },
+    {
+      "name": "test_bias_severity_ordering",
+      "phase": "RED", 
+      "description": "Severity can be compared and ordered"
+    },
+    {
+      "name": "test_anti_stupidity_method_display",
+      "phase": "RED",
+      "description": "Each method has a human-readable display"
+    },
+    {
+      "name": "test_bias_detection_new_requires_non_empty_description",
+      "phase": "RED",
+      "description": "Empty description returns error"
+    },
+    {
+      "name": "test_bias_detection_new_requires_non_empty_evidence",
+      "phase": "RED",
+      "description": "Empty evidence returns error"
+    },
+    {
+      "name": "test_bias_detection_builder_pattern",
+      "phase": "RED",
+      "description": "with_mitigation and other builder methods work"
+    },
+    {
+      "name": "test_anti_stupidity_exercise_new_requires_context",
+      "phase": "RED",
+      "description": "Empty context returns error"
+    },
+    {
+      "name": "test_anti_stupidity_exercise_builder_pattern",
+      "phase": "RED",
+      "description": "with_finding and with_action work"
+    },
+    {
+      "name": "test_anti_stupidity_exercise_confidence_clamped",
+      "phase": "RED",
+      "description": "Confidence score is clamped to [0.0, 1.0]"
+    },
+    {
+      "name": "test_inversion_review_new_requires_context",
+      "phase": "RED",
+      "description": "Empty decision context returns error"
+    },
+    {
+      "name": "test_inversion_review_stupidity_risk_clamped",
+      "phase": "RED",
+      "description": "Risk score is clamped to [0.0, 1.0]"
+    },
+    {
+      "name": "test_inversion_review_builder_pattern",
+      "phase": "RED",
+      "description": "with_bias_detection and with_exercise work"
+    },
+    {
+      "name": "test_inversion_review_calculates_risk_score",
+      "phase": "RED",
+      "description": "Risk score reflects detected biases"
+    },
+    {
+      "name": "test_inversion_review_is_stupid_threshold",
+      "phase": "RED",
+      "description": "is_likely_stupid method works with threshold"
+    },
+    {
+      "name": "test_inversion_review_generate_recommendations",
+      "phase": "RED",
+      "description": "Auto-generates recommendations from biases"
+    }
+  ],
+  
+  "implementation_order": [
+    "1. CognitiveBias enum with Display trait",
+    "2. BiasSeverity enum with Display + Ord",
+    "3. AntiStupidityMethod enum with Display trait",
+    "4. InversionError enum with thiserror",
+    "5. BiasDetection struct with new() and builders",
+    "6. AntiStupidityExercise struct with new() and builders",
+    "7. InversionReview struct with new() and builders",
+    "8. InversionReview risk calculation logic",
+    "9. InversionReview recommendation generation"
+  ]
+}

@@ -4,7 +4,7 @@
 //!
 //! # State Machines
 //!
-//! ## InterviewStage
+//! ## `InterviewStage`
 //!
 //! The [`InterviewStage`] enum represents the high-level lifecycle of an interview:
 //!
@@ -16,7 +16,7 @@
 //!
 //! See [module documentation](../index.html#phase-and-stage-management) for transition rules.
 //!
-//! ## GapState
+//! ## `GapState`
 //!
 //! [`GapState`] tracks missing required fields:
 //!
@@ -30,7 +30,7 @@
 //! assert_eq!(resolved.resolution(), Some("Provided default value"));
 //! ```
 //!
-//! ## ConflictState
+//! ## `ConflictState`
 //!
 //! [`ConflictState`] tracks conflicting answers between questions:
 //!

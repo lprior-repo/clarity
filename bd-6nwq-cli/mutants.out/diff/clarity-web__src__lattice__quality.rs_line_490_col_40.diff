@@ -1,0 +1,21 @@
+--- clarity-web/src/lattice/quality.rs
++++ replace || with && in calculate_security
+@@ -482,17 +482,17 @@
+     for keyword in &security_keywords {
+       if lower.contains(keyword) {
+         mentions += 1;
+ 
+         // Categorize into areas
+         if keyword.contains("auth") || keyword.contains("login") || keyword.contains("password") {
+           covered_areas.insert("authentication");
+         }
+-        if keyword.contains("encrypt") || keyword.contains("tls") || keyword.contains("ssl") {
++        if keyword.contains("encrypt") && /* ~ changed by cargo-mutants ~ */ keyword.contains("tls") || keyword.contains("ssl") {
+           covered_areas.insert("encryption");
+         }
+         if keyword.contains("validat") || keyword.contains("sanitiz") || keyword.contains("escape")
+         {
+           covered_areas.insert("validation");
+         }
+       }
+     }

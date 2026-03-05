@@ -1,0 +1,406 @@
+// KIRK: Knowledge-Informed Requirements & Kontract
+// Protobuf schema as source of truth for all formats (CUE, JSON, CIN)
+// Version: 1.0.0
+
+syntax = "proto3";
+
+package kirk;
+
+option go_package = "github.com/intent-cli/kirk/proto";
+
+// =============================================================================
+// CORE SPECIFICATION
+// =============================================================================
+
+// Main specification - the contract between humans and AI
+message Spec {
+  string name = 1;
+  string description = 2;
+  string audience = 3;
+  string version = 4;
+  repeated string success_criteria = 5;
+
+  Config config = 6;
+  repeated Feature features = 7;
+  repeated Rule rules = 8;
+  repeated AntiPattern anti_patterns = 9;
+  AIHints ai_hints = 10;
+
+  // KIRK Extensions - Mental Models
+  Inversions inversions = 11;
+  PreMortem pre_mortem = 12;
+  QualityScore quality_score = 13;
+  Coverage coverage = 14;
+  repeated Gap gaps = 15;
+  repeated Conflict conflicts = 16;
+}
+
+message Config {
+  string base_url = 1;
+  int32 timeout_ms = 2;
+  map<string, string> headers = 3;
+}
+
+// =============================================================================
+// FEATURES AND BEHAVIORS
+// =============================================================================
+
+message Feature {
+  string name = 1;
+  string description = 2;
+  repeated Behavior behaviors = 3;
+}
+
+message Behavior {
+  string name = 1;
+  string intent = 2;
+  string notes = 3;
+  repeated string requires = 4;
+  repeated string tags = 5;
+
+  Request request = 6;
+  Response response = 7;
+  map<string, string> captures = 8;
+
+  // KIRK Extensions - Contract Fields
+  Preconditions preconditions = 9;
+  Postconditions postconditions = 10;
+  repeated string second_order_effects = 11;
+
+  // Quality metadata
+  bool invest_valid = 12;
+}
+
+enum Method {
+  METHOD_UNSPECIFIED = 0;
+  GET = 1;
+  POST = 2;
+  PUT = 3;
+  PATCH = 4;
+  DELETE = 5;
+  HEAD = 6;
+  OPTIONS = 7;
+}
+
+message Request {
+  Method method = 1;
+  string path = 2;
+  map<string, string> headers = 3;
+  map<string, string> query = 4;
+  bytes body = 5;  // JSON encoded
+}
+
+message Response {
+  int32 status = 1;
+  bytes example = 2;  // JSON encoded
+  map<string, Check> checks = 3;
+  map<string, string> headers = 4;
+}
+
+message Check {
+  string rule = 1;
+  string why = 2;
+}
+
+// =============================================================================
+// GLOBAL RULES
+// =============================================================================
+
+message Rule {
+  string name = 1;
+  string description = 2;
+  When when = 3;
+  RuleCheck check = 4;
+  bytes example = 5;  // JSON encoded
+}
+
+message When {
+  string status = 1;  // e.g., ">= 400"
+  Method method = 2;
+  string path = 3;    // regex pattern
+}
+
+message RuleCheck {
+  repeated string body_must_not_contain = 1;
+  repeated string body_must_contain = 2;
+  repeated string fields_must_exist = 3;
+  repeated string fields_must_not_exist = 4;
+  string header_must_exist = 5;
+  string header_must_not_exist = 6;
+}
+
+// =============================================================================
+// ANTI-PATTERNS
+// =============================================================================
+
+message AntiPattern {
+  string name = 1;
+  string description = 2;
+  bytes bad_example = 3;   // JSON encoded
+  bytes good_example = 4;  // JSON encoded
+  string why = 5;
+}
+
+// =============================================================================
+// AI HINTS
+// =============================================================================
+
+message AIHints {
+  Implementation implementation = 1;
+  map<string, EntityHint> entities = 2;
+  Security security = 3;
+  repeated string pitfalls = 4;
+
+  // KIRK Extensions - Explicit patterns
+  CodePatterns code_patterns = 5;
+  TypeDefinitions type_definitions = 6;
+  DatabaseSchema database_schema = 7;
+}
+
+message Implementation {
+  repeated string suggested_stack = 1;
+  string language = 2;
+  string framework = 3;
+  string database = 4;
+}
+
+message EntityHint {
+  map<string, FieldHint> fields = 1;
+  string table = 2;
+  repeated string indexes = 3;
+}
+
+message FieldHint {
+  string description = 1;
+  string type = 2;
+  string validation = 3;
+  string example = 4;
+  bool sensitive = 5;
+}
+
+message Security {
+  string password_hashing = 1;
+  string jwt_algorithm = 2;
+  string jwt_expiry = 3;
+  string rate_limiting = 4;
+}
+
+message CodePatterns {
+  string error_handling = 1;
+  string auth_middleware = 2;
+  string validation = 3;
+}
+
+message TypeDefinitions {
+  string typescript = 1;
+  string golang = 2;
+  string python = 3;
+}
+
+message DatabaseSchema {
+  string postgresql = 1;
+  string mysql = 2;
+  string sqlite = 3;
+}
+
+// =============================================================================
+// KIRK MENTAL MODELS
+// =============================================================================
+
+// Inversion: What MUST NOT happen
+message Inversions {
+  repeated string security_failures = 1;
+  repeated string usability_failures = 2;
+  repeated string integration_failures = 3;
+}
+
+// Pre-Mortem: Imagining failure to prevent it
+message PreMortem {
+  string assumed_failure = 1;
+  repeated LikelyCause likely_causes = 2;
+}
+
+message LikelyCause {
+  string cause = 1;
+  Probability probability = 2;
+  string mitigation = 3;
+}
+
+enum Probability {
+  PROBABILITY_UNSPECIFIED = 0;
+  LOW = 1;
+  MEDIUM = 2;
+  HIGH = 3;
+}
+
+// Design by Contract: Preconditions and Postconditions
+message Preconditions {
+  bool auth_required = 1;
+  repeated string required_fields = 2;
+  map<string, string> field_constraints = 3;
+}
+
+message Postconditions {
+  repeated string state_changes = 1;
+  map<string, string> response_guarantees = 2;
+}
+
+// =============================================================================
+// QUALITY METRICS
+// =============================================================================
+
+message QualityScore {
+  float completeness = 1;
+  float consistency = 2;
+  float testability = 3;
+  float clarity = 4;
+  float security = 5;
+  float overall = 6;
+  repeated QualityIssue issues = 7;
+}
+
+message QualityIssue {
+  string field = 1;
+  string issue = 2;
+  Severity severity = 3;
+}
+
+enum Severity {
+  SEVERITY_UNSPECIFIED = 0;
+  INFO = 1;
+  WARNING = 2;
+  ERROR = 3;
+  CRITICAL = 4;
+}
+
+message Coverage {
+  map<string, int32> methods = 1;
+  map<string, int32> status_codes = 2;
+  map<string, PathCoverage> paths = 3;
+  EdgeCaseCoverage edge_cases = 4;
+  OWASPCoverage owasp = 5;
+}
+
+message PathCoverage {
+  repeated Method methods = 1;
+}
+
+message EdgeCaseCoverage {
+  repeated string tested = 1;
+  repeated string suggested = 2;
+}
+
+message OWASPCoverage {
+  map<string, bool> categories = 1;  // A01-A10
+  float score = 2;  // 0-100
+}
+
+// =============================================================================
+// GAP AND CONFLICT DETECTION
+// =============================================================================
+
+message Gap {
+  GapType type = 1;
+  string description = 2;
+  Severity severity = 3;
+  string suggestion = 4;
+  string mental_model = 5;  // Which model revealed this
+}
+
+enum GapType {
+  GAP_TYPE_UNSPECIFIED = 0;
+  INVERSION_GAP = 1;
+  SECOND_ORDER_GAP = 2;
+  CHECKLIST_GAP = 3;
+  COVERAGE_GAP = 4;
+  SECURITY_GAP = 5;
+}
+
+message Conflict {
+  ConflictType type = 1;
+  string first = 2;
+  string second = 3;
+  repeated string resolution_options = 4;
+  int32 chosen_resolution = 5;
+}
+
+enum ConflictType {
+  CONFLICT_TYPE_UNSPECIFIED = 0;
+  CAP_THEOREM = 1;
+  SCOPE_PARADOX = 2;
+  SECURITY_USABILITY = 3;
+  PERFORMANCE_CONSISTENCY = 4;
+}
+
+// =============================================================================
+// INTERVIEW SYSTEM
+// =============================================================================
+
+message InterviewSession {
+  string id = 1;
+  string profile = 2;
+  InterviewStatus status = 3;
+  repeated InterviewRound rounds = 4;
+  repeated Answer answers = 5;
+  repeated Gap detected_gaps = 6;
+  repeated Conflict detected_conflicts = 7;
+}
+
+enum InterviewStatus {
+  INTERVIEW_STATUS_UNSPECIFIED = 0;
+  IN_PROGRESS = 1;
+  COMPLETED = 2;
+  ABANDONED = 3;
+}
+
+message InterviewRound {
+  string name = 1;
+  string focus = 2;
+  map<string, QuestionSet> questions_by_perspective = 3;
+  bool completed = 4;
+}
+
+message QuestionSet {
+  repeated string questions = 1;
+}
+
+message Answer {
+  string question_id = 1;
+  string question_text = 2;
+  string answer_text = 3;
+  string perspective = 4;
+  string round = 5;
+  int64 answered_at = 6;
+}
+
+// =============================================================================
+// COMPACT INTENT NOTATION (CIN)
+// =============================================================================
+
+// Token-efficient format for AI prompts
+// Grammar: B name "intent" \\n method path body \\n status \\n checks
+message CompactSpec {
+  string header = 1;  // "SPEC name version"
+  repeated CompactFeature features = 2;
+}
+
+message CompactFeature {
+  string name = 1;
+  repeated CompactBehavior behaviors = 2;
+}
+
+message CompactBehavior {
+  string name = 1;
+  string intent = 2;
+  repeated string requires = 3;  // Prefixed with "<-"
+  string request_line = 4;  // "METHOD /path {body}"
+  int32 status = 5;
+  repeated CompactCheck checks = 6;
+  repeated string captures = 7;  // ">> var: path"
+}
+
+message CompactCheck {
+  string field = 1;
+  string rule = 2;
+  string why = 3;  // Optional in compact
+}

@@ -1,0 +1,21 @@
+--- clarity-web/src/lattice/quality.rs
++++ replace += with -= in calculate_clarity
+@@ -389,17 +389,17 @@
+     "event-driven",
+   ];
+ 
+   for answer in answers {
+     let text = &answer.value;
+ 
+     // Count sentences (rough heuristic by period/exclamation count)
+     let sentence_count = text.matches(&['.', '!', '?'][..]).count().max(1);
+-    total_sentences += sentence_count;
++    total_sentences -= /* ~ changed by cargo-mutants ~ */ sentence_count;
+ 
+     // Complex sentence: more than 3 commas or 30 words
+     let comma_count = text.matches(',').count();
+     let word_count = text.split_whitespace().count();
+ 
+     if comma_count > 3 || word_count > 30 {
+       complex_sentences += 1;
+     }

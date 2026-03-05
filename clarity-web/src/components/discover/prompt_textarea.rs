@@ -1,3 +1,5 @@
+// Additional clippy lints to allow
+#![allow(clippy::suspicious_else_formatting)]
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]

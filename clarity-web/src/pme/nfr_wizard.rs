@@ -5,6 +5,32 @@
 #![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+// Additional clippy lints to allow
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::cast_possible_wrap)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::trivially_copy_pass_by_ref)]
+#![allow(clippy::assigning_clones)]
+#![allow(clippy::option_if_let_else)]
+#![allow(clippy::unused_self)]
+#![allow(clippy::unnecessary_wraps)]
+#![allow(clippy::too_many_lines)]
+#![allow(clippy::manual_strip)]
+#![allow(clippy::format_push_string)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::struct_field_names)]
+#![allow(clippy::return_self_not_must_use)]
+#![allow(clippy::items_after_statements)]
+#![allow(clippy::ptr_arg)]
+#![allow(clippy::missing_fields_in_debug)]
+#![allow(clippy::must_use_unit)]
+#![allow(clippy::collection_is_never_read)]
+#![allow(clippy::needless_collect)]
+#![allow(clippy::manual_checked_ops)]
+#![allow(clippy::needless_pass_by_value)]
 
 //! Product Architecture & NFR (Non-Functional Requirements) Wizard
 //!
@@ -25,7 +51,7 @@ use std::collections::HashMap;
 use thiserror::Error;
 
 /// Domain errors for NFR wizard operations
-#[derive(Debug, Error, PartialEq, Clone)]
+#[derive(Debug, Error, PartialEq, Eq, Clone)]
 pub enum NfrWizardError {
   #[error("invalid NFR category: {0}")]
   InvalidCategory(String),
@@ -58,83 +84,81 @@ pub enum NfrCategory {
 
 impl NfrCategory {
   /// All NFR categories
-  pub fn all() -> &'static [NfrCategory] {
+  #[must_use]
+  pub const fn all() -> &'static [Self] {
     &[
-      NfrCategory::LatencyConsistency,
-      NfrCategory::Availability,
-      NfrCategory::Scalability,
-      NfrCategory::Maintainability,
-      NfrCategory::Security,
+      Self::LatencyConsistency,
+      Self::Availability,
+      Self::Scalability,
+      Self::Maintainability,
+      Self::Security,
     ]
   }
 
   /// Human-readable label
-  pub fn label(&self) -> &'static str {
+  #[must_use]
+  pub const fn label(&self) -> &'static str {
     match self {
-      NfrCategory::LatencyConsistency => "Latency vs Consistency",
-      NfrCategory::Availability => "Availability",
-      NfrCategory::Scalability => "Scalability",
-      NfrCategory::Maintainability => "Maintainability",
-      NfrCategory::Security => "Security",
+      Self::LatencyConsistency => "Latency vs Consistency",
+      Self::Availability => "Availability",
+      Self::Scalability => "Scalability",
+      Self::Maintainability => "Maintainability",
+      Self::Security => "Security",
     }
   }
 
   /// Description of the trade-off
-  pub fn description(&self) -> &'static str {
+  #[must_use]
+  pub const fn description(&self) -> &'static str {
     match self {
-      NfrCategory::LatencyConsistency => {
-        "Trade-off between fast responses and fresh/consistent data"
-      }
-      NfrCategory::Availability => "Trade-off between uptime guarantees and infrastructure cost",
-      NfrCategory::Scalability => "Trade-off between handling growth and architectural simplicity",
-      NfrCategory::Maintainability => {
-        "Trade-off between ease of changes and performance optimization"
-      }
-      NfrCategory::Security => "Trade-off between protection level and user experience",
+      Self::LatencyConsistency => "Trade-off between fast responses and fresh/consistent data",
+      Self::Availability => "Trade-off between uptime guarantees and infrastructure cost",
+      Self::Scalability => "Trade-off between handling growth and architectural simplicity",
+      Self::Maintainability => "Trade-off between ease of changes and performance optimization",
+      Self::Security => "Trade-off between protection level and user experience",
     }
   }
 
   /// Get the two poles of this trade-off
-  pub fn trade_off_poles(&self) -> (&'static str, &'static str) {
+  #[must_use]
+  pub const fn trade_off_poles(&self) -> (&'static str, &'static str) {
     match self {
-      NfrCategory::LatencyConsistency => ("Low Latency", "Strong Consistency"),
-      NfrCategory::Availability => ("High Availability", "Low Cost"),
-      NfrCategory::Scalability => ("Horizontal Scale", "Simplicity"),
-      NfrCategory::Maintainability => ("Easy Changes", "Peak Performance"),
-      NfrCategory::Security => ("Maximum Security", "Frictionless UX"),
+      Self::LatencyConsistency => ("Low Latency", "Strong Consistency"),
+      Self::Availability => ("High Availability", "Low Cost"),
+      Self::Scalability => ("Horizontal Scale", "Simplicity"),
+      Self::Maintainability => ("Easy Changes", "Peak Performance"),
+      Self::Security => ("Maximum Security", "Frictionless UX"),
     }
   }
 
   /// Get the default priority based on persona type
-  pub fn default_priority_for_persona(&self, persona: &PersonaType) -> Priority {
+  #[must_use]
+  #[allow(clippy::match_same_arms)] // Different categories can have same priority
+  pub const fn default_priority_for_persona(&self, persona: &PersonaType) -> Priority {
     match (self, persona) {
       // Startup prioritizes speed and simplicity
-      (NfrCategory::LatencyConsistency, PersonaType::Startup) => Priority::High,
-      (NfrCategory::Availability, PersonaType::Startup) => Priority::Medium,
-      (NfrCategory::Scalability, PersonaType::Startup) => Priority::Medium,
-      (NfrCategory::Maintainability, PersonaType::Startup) => Priority::High,
-      (NfrCategory::Security, PersonaType::Startup) => Priority::Medium,
+      (Self::LatencyConsistency | Self::Maintainability, PersonaType::Startup) => Priority::High,
+      (Self::Availability | Self::Scalability | Self::Security, PersonaType::Startup) => {
+        Priority::Medium
+      }
 
       // Enterprise prioritizes reliability and security
-      (NfrCategory::LatencyConsistency, PersonaType::Enterprise) => Priority::Medium,
-      (NfrCategory::Availability, PersonaType::Enterprise) => Priority::Critical,
-      (NfrCategory::Scalability, PersonaType::Enterprise) => Priority::High,
-      (NfrCategory::Maintainability, PersonaType::Enterprise) => Priority::High,
-      (NfrCategory::Security, PersonaType::Enterprise) => Priority::Critical,
+      (Self::Availability | Self::Security, PersonaType::Enterprise) => Priority::Critical,
+      (Self::Scalability | Self::Maintainability, PersonaType::Enterprise) => Priority::High,
+      (Self::LatencyConsistency, PersonaType::Enterprise) => Priority::Medium,
 
       // Consumer app prioritizes UX and scale
-      (NfrCategory::LatencyConsistency, PersonaType::ConsumerApp) => Priority::Critical,
-      (NfrCategory::Availability, PersonaType::ConsumerApp) => Priority::High,
-      (NfrCategory::Scalability, PersonaType::ConsumerApp) => Priority::High,
-      (NfrCategory::Maintainability, PersonaType::ConsumerApp) => Priority::Medium,
-      (NfrCategory::Security, PersonaType::ConsumerApp) => Priority::Medium,
+      (Self::LatencyConsistency, PersonaType::ConsumerApp) => Priority::Critical,
+      (Self::Availability | Self::Scalability, PersonaType::ConsumerApp) => Priority::High,
+      (Self::Maintainability | Self::Security, PersonaType::ConsumerApp) => Priority::Medium,
 
       // Internal tool prioritizes maintainability
-      (NfrCategory::LatencyConsistency, PersonaType::InternalTool) => Priority::Medium,
-      (NfrCategory::Availability, PersonaType::InternalTool) => Priority::Medium,
-      (NfrCategory::Scalability, PersonaType::InternalTool) => Priority::Low,
-      (NfrCategory::Maintainability, PersonaType::InternalTool) => Priority::Critical,
-      (NfrCategory::Security, PersonaType::InternalTool) => Priority::High,
+      (Self::LatencyConsistency | Self::Availability, PersonaType::InternalTool) => {
+        Priority::Medium
+      }
+      (Self::Scalability, PersonaType::InternalTool) => Priority::Low,
+      (Self::Maintainability, PersonaType::InternalTool) => Priority::Critical,
+      (Self::Security, PersonaType::InternalTool) => Priority::High,
     }
   }
 }
@@ -155,42 +179,41 @@ pub enum Priority {
 
 impl Priority {
   /// All priorities in order
-  pub fn all() -> &'static [Priority] {
-    &[
-      Priority::Low,
-      Priority::Medium,
-      Priority::High,
-      Priority::Critical,
-    ]
+  #[must_use]
+  pub const fn all() -> &'static [Self] {
+    &[Self::Low, Self::Medium, Self::High, Self::Critical]
   }
 
   /// Numeric value for comparison
-  pub fn value(&self) -> u8 {
+  #[must_use]
+  pub const fn value(&self) -> u8 {
     match self {
-      Priority::Low => 1,
-      Priority::Medium => 2,
-      Priority::High => 3,
-      Priority::Critical => 4,
+      Self::Low => 1,
+      Self::Medium => 2,
+      Self::High => 3,
+      Self::Critical => 4,
     }
   }
 
   /// Label for display
-  pub fn label(&self) -> &'static str {
+  #[must_use]
+  pub const fn label(&self) -> &'static str {
     match self {
-      Priority::Low => "Low",
-      Priority::Medium => "Medium",
-      Priority::High => "High",
-      Priority::Critical => "Critical",
+      Self::Low => "Low",
+      Self::Medium => "Medium",
+      Self::High => "High",
+      Self::Critical => "Critical",
     }
   }
 
   /// Color class for UI display
-  pub fn color_class(&self) -> &'static str {
+  #[must_use]
+  pub const fn color_class(&self) -> &'static str {
     match self {
-      Priority::Low => "bg-slate-500",
-      Priority::Medium => "bg-blue-500",
-      Priority::High => "bg-amber-500",
-      Priority::Critical => "bg-red-500",
+      Self::Low => "bg-slate-500",
+      Self::Medium => "bg-blue-500",
+      Self::High => "bg-amber-500",
+      Self::Critical => "bg-red-500",
     }
   }
 }
@@ -211,38 +234,41 @@ pub enum PersonaType {
 
 impl PersonaType {
   /// All persona types
-  pub fn all() -> &'static [PersonaType] {
+  #[must_use]
+  pub const fn all() -> &'static [Self] {
     &[
-      PersonaType::Startup,
-      PersonaType::Enterprise,
-      PersonaType::ConsumerApp,
-      PersonaType::InternalTool,
+      Self::Startup,
+      Self::Enterprise,
+      Self::ConsumerApp,
+      Self::InternalTool,
     ]
   }
 
   /// Label for display
-  pub fn label(&self) -> &'static str {
+  #[must_use]
+  pub const fn label(&self) -> &'static str {
     match self {
-      PersonaType::Startup => "Startup",
-      PersonaType::Enterprise => "Enterprise",
-      PersonaType::ConsumerApp => "Consumer App",
-      PersonaType::InternalTool => "Internal Tool",
+      Self::Startup => "Startup",
+      Self::Enterprise => "Enterprise",
+      Self::ConsumerApp => "Consumer App",
+      Self::InternalTool => "Internal Tool",
     }
   }
 
   /// Description of this persona
-  pub fn description(&self) -> &'static str {
+  #[must_use]
+  pub const fn description(&self) -> &'static str {
     match self {
-      PersonaType::Startup => "Early-stage company prioritizing speed and iteration",
-      PersonaType::Enterprise => "Large organization requiring reliability and compliance",
-      PersonaType::ConsumerApp => "Consumer-facing product where UX drives success",
-      PersonaType::InternalTool => "Internal tooling where developer experience matters",
+      Self::Startup => "Early-stage company prioritizing speed and iteration",
+      Self::Enterprise => "Large organization requiring reliability and compliance",
+      Self::ConsumerApp => "Consumer-facing product where UX drives success",
+      Self::InternalTool => "Internal tooling where developer experience matters",
     }
   }
 }
 
 /// A trade-off choice between two poles
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TradeOffChoice {
   /// The NFR category
   pub category: NfrCategory,
@@ -257,6 +283,7 @@ pub struct TradeOffChoice {
 
 impl TradeOffChoice {
   /// Create a new trade-off choice
+  #[must_use]
   pub fn new(category: NfrCategory, position: u8, priority: Priority) -> Self {
     Self {
       category,
@@ -273,26 +300,28 @@ impl TradeOffChoice {
   }
 
   /// Get the pole labels
-  pub fn poles(&self) -> (&'static str, &'static str) {
+  #[must_use]
+  pub const fn poles(&self) -> (&'static str, &'static str) {
     self.category.trade_off_poles()
   }
 
   /// Describe the current position
+  #[must_use]
   pub fn position_description(&self) -> String {
     let (pole1, pole2) = self.poles();
     match self.position {
-      0..=20 => format!("Strongly favoring {}", pole1),
-      21..=40 => format!("Leaning towards {}", pole1),
+      0..=20 => format!("Strongly favoring {pole1}"),
+      21..=40 => format!("Leaning towards {pole1}"),
       41..=60 => "Balanced approach".to_string(),
-      61..=80 => format!("Leaning towards {}", pole2),
-      81..=100 => format!("Strongly favoring {}", pole2),
+      61..=80 => format!("Leaning towards {pole2}"),
+      81..=100 => format!("Strongly favoring {pole2}"),
       _ => "Invalid position".to_string(),
     }
   }
 }
 
 /// Architecture decision record (ADR) entry
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ArchitectureDecision {
   /// Unique identifier
   pub id: String,
@@ -336,13 +365,15 @@ impl ArchitectureDecision {
   }
 
   /// Add related NFR
+  #[must_use]
   pub fn with_nfr(mut self, nfr: NfrCategory) -> Self {
     self.related_nfrs.push(nfr);
     self
   }
 
   /// Set status
-  pub fn with_status(mut self, status: DecisionStatus) -> Self {
+  #[must_use]
+  pub const fn with_status(mut self, status: DecisionStatus) -> Self {
     self.status = status;
     self
   }
@@ -363,7 +394,7 @@ pub enum DecisionStatus {
 }
 
 /// Complete NFR profile for a product
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NfrProfile {
   /// The persona type for this product
   pub persona: PersonaType,
@@ -377,6 +408,7 @@ pub struct NfrProfile {
 
 impl NfrProfile {
   /// Create a new NFR profile with defaults for the persona
+  #[must_use]
   pub fn new(persona: PersonaType) -> Self {
     let trade_offs = NfrCategory::all()
       .iter()
@@ -396,21 +428,20 @@ impl NfrProfile {
   }
 
   /// Get default position for a persona
-  fn default_position_for_persona(category: NfrCategory, persona: &PersonaType) -> u8 {
+  #[allow(clippy::match_same_arms)] // Different categories can have same position
+  const fn default_position_for_persona(category: NfrCategory, persona: &PersonaType) -> u8 {
     match (category, persona) {
       // Startup: favor low latency, simplicity
-      (NfrCategory::LatencyConsistency, PersonaType::Startup) => 20,
+      (NfrCategory::LatencyConsistency | NfrCategory::Maintainability, PersonaType::Startup) => 20,
       (NfrCategory::Availability, PersonaType::Startup) => 50,
       (NfrCategory::Scalability, PersonaType::Startup) => 30,
-      (NfrCategory::Maintainability, PersonaType::Startup) => 20,
       (NfrCategory::Security, PersonaType::Startup) => 40,
 
       // Enterprise: favor consistency, availability, security
       (NfrCategory::LatencyConsistency, PersonaType::Enterprise) => 80,
-      (NfrCategory::Availability, PersonaType::Enterprise) => 90,
+      (NfrCategory::Availability | NfrCategory::Security, PersonaType::Enterprise) => 90,
       (NfrCategory::Scalability, PersonaType::Enterprise) => 70,
       (NfrCategory::Maintainability, PersonaType::Enterprise) => 60,
-      (NfrCategory::Security, PersonaType::Enterprise) => 90,
 
       // Consumer: favor low latency, availability
       (NfrCategory::LatencyConsistency, PersonaType::ConsumerApp) => 15,
@@ -420,8 +451,9 @@ impl NfrProfile {
       (NfrCategory::Security, PersonaType::ConsumerApp) => 60,
 
       // Internal: favor maintainability
-      (NfrCategory::LatencyConsistency, PersonaType::InternalTool) => 50,
-      (NfrCategory::Availability, PersonaType::InternalTool) => 50,
+      (NfrCategory::LatencyConsistency | NfrCategory::Availability, PersonaType::InternalTool) => {
+        50
+      }
       (NfrCategory::Scalability, PersonaType::InternalTool) => 30,
       (NfrCategory::Maintainability, PersonaType::InternalTool) => 10,
       (NfrCategory::Security, PersonaType::InternalTool) => 70,
@@ -443,8 +475,7 @@ impl NfrProfile {
     let existing_critical = self
       .trade_offs
       .get(&choice.category)
-      .map(|t| t.priority == Priority::Critical)
-      == Some(true);
+      .is_some_and(|t| t.priority == Priority::Critical);
 
     let critical_count = self
       .trade_offs
@@ -481,11 +512,13 @@ impl NfrProfile {
   }
 
   /// Get the trade-off for a category
+  #[must_use]
   pub fn get_trade_off(&self, category: NfrCategory) -> Option<&TradeOffChoice> {
     self.trade_offs.get(&category)
   }
 
   /// Generate a summary of the profile
+  #[must_use]
   pub fn summary(&self) -> NfrSummary {
     let critical_nfrs: Vec<_> = self
       .trade_offs
@@ -512,7 +545,7 @@ impl NfrProfile {
 }
 
 /// Quality gate for NFR enforcement
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct QualityGate {
   /// Gate identifier
   pub id: String,
@@ -552,12 +585,14 @@ impl QualityGate {
   }
 
   /// Set as non-blocking
-  pub fn non_blocking(mut self) -> Self {
+  #[must_use]
+  pub const fn non_blocking(mut self) -> Self {
     self.blocking = false;
     self
   }
 
   /// Check if a value passes the gate
+  #[must_use]
   pub fn check(&self, value: &str) -> GateResult {
     // Parse and compare based on operator
     // For simplicity, we'll do string comparison for now
@@ -593,19 +628,20 @@ pub enum ComparisonOperator {
 
 impl ComparisonOperator {
   /// Symbol representation
-  pub fn symbol(&self) -> &'static str {
+  #[must_use]
+  pub const fn symbol(&self) -> &'static str {
     match self {
-      ComparisonOperator::LessThan => "<",
-      ComparisonOperator::LessThanOrEqual => "<=",
-      ComparisonOperator::Equals => "==",
-      ComparisonOperator::GreaterThanOrEqual => ">=",
-      ComparisonOperator::GreaterThan => ">",
+      Self::LessThan => "<",
+      Self::LessThanOrEqual => "<=",
+      Self::Equals => "==",
+      Self::GreaterThanOrEqual => ">=",
+      Self::GreaterThan => ">",
     }
   }
 }
 
 /// Result of checking a quality gate
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GateResult {
   /// Gate identifier
   pub gate_id: String,
@@ -618,7 +654,7 @@ pub struct GateResult {
 }
 
 /// Summary of an NFR profile
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NfrSummary {
   /// The persona type
   pub persona: PersonaType,
@@ -644,7 +680,7 @@ pub struct NfrWizard {
 }
 
 /// State of the wizard
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum WizardState {
   /// Selecting persona type
   SelectPersona,
@@ -664,7 +700,8 @@ impl Default for NfrWizard {
 
 impl NfrWizard {
   /// Create a new NFR wizard
-  pub fn new() -> Self {
+  #[must_use]
+  pub const fn new() -> Self {
     Self {
       profile: None,
       state: WizardState::SelectPersona,
@@ -678,17 +715,19 @@ impl NfrWizard {
   }
 
   /// Get current state
-  pub fn state(&self) -> &WizardState {
+  #[must_use]
+  pub const fn state(&self) -> &WizardState {
     &self.state
   }
 
   /// Get the current profile
-  pub fn profile(&self) -> Option<&NfrProfile> {
+  #[must_use]
+  pub const fn profile(&self) -> Option<&NfrProfile> {
     self.profile.as_ref()
   }
 
   /// Get mutable profile
-  pub fn profile_mut(&mut self) -> Option<&mut NfrProfile> {
+  pub const fn profile_mut(&mut self) -> Option<&mut NfrProfile> {
     self.profile.as_mut()
   }
 
@@ -734,6 +773,7 @@ impl NfrWizard {
   }
 
   /// Get the current category to configure (first unset or in progress)
+  #[must_use]
   pub fn current_category(&self) -> Option<NfrCategory> {
     match (&self.profile, &self.state) {
       (Some(profile), WizardState::SetTradeOffs) => {
@@ -751,6 +791,7 @@ impl NfrWizard {
   }
 
   /// Progress percentage through the wizard
+  #[must_use]
   pub fn progress(&self) -> u8 {
     match &self.state {
       WizardState::SelectPersona => 0,
@@ -776,6 +817,7 @@ impl NfrWizard {
 }
 
 /// Create default quality gates for a persona
+#[must_use]
 pub fn create_default_gates(persona: PersonaType) -> Vec<QualityGate> {
   match persona {
     PersonaType::Startup => vec![

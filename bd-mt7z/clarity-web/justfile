@@ -1,0 +1,66 @@
+# Clarity Web Development Commands
+# Install just: cargo install just
+
+# Default: show available commands
+default:
+    @just --list
+
+# Start development server with CSS handling
+dev:
+    #!/bin/bash
+    # Start dx serve in background
+    dx serve --platform web --package clarity-web --port 3000 &
+    DX_PID=$!
+    # Wait for initial build and copy CSS
+    sleep 8
+    just copy-css-hash
+    # Wait for dx serve to finish
+    wait $DX_PID
+
+# Copy hashed CSS file to expected filename
+copy-css-hash:
+    #!/bin/bash
+    ASSETS_DIR="target/dx/clarity-web/debug/web/public/assets"
+    if [ -d "$ASSETS_DIR" ]; then
+        for hashed in "$ASSETS_DIR"/tailwind-dx*.css; do
+            if [ -f "$hashed" ]; then
+                cp "$hashed" "$ASSETS_DIR/tailwind.css"
+                echo "✓ Copied $(basename $hashed) to tailwind.css"
+                break
+            fi
+        done
+    fi
+
+# Build for production
+build:
+    dx build --platform web --package clarity-web --release
+
+# Build for development
+build-dev:
+    dx build --platform web --package clarity-web
+
+# Copy CSS assets to build output
+copy-css:
+    mkdir -p target/dx/clarity-web/debug/web/public/assets
+    cp -f assets/tailwind.css target/dx/clarity-web/debug/web/public/assets/
+
+# Check code without building
+check:
+    cargo check --package clarity-web
+
+# Run tests
+test:
+    cargo test --package clarity-web
+
+# Format code
+fmt:
+    cargo fmt --package clarity-web
+
+# Lint code
+lint:
+    cargo clippy --package clarity-web -- -D warnings
+
+# Clean build artifacts
+clean:
+    cargo clean --package clarity-web
+    rm -rf target/dx/clarity-web

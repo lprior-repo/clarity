@@ -1,0 +1,96 @@
+{
+  "id": "task-007",
+  "title": "state: define InterrogationTranscript struct",
+  "type": "feature",
+  "priority": 0,
+  "effort": "30min",
+  "description": "Define the main InterrogationTranscript struct that holds all extracted fields, adversarial responses, and timestamps for the entire discovery flow",
+  "ears": {
+    "ubiquitous": [
+      "THE SYSTEM SHALL preserve original user prompt",
+      "THE SYSTEM SHALL track start and completion timestamps"
+    ],
+    "event_driven": [
+      {
+        "trigger": "WHEN all fields are confirmed and validated",
+        "shall": "THE SYSTEM SHALL set completed_at timestamp"
+      },
+      {
+        "trigger": "WHEN transcript is created",
+        "shall": "THE SYSTEM SHALL set started_at to current time"
+      }
+    ],
+    "unwanted": [
+      {
+        "condition": "IF required fields are missing",
+        "shall_not": "THE SYSTEM SHALL NOT mark transcript as complete",
+        "because": "Incomplete transcripts would generate invalid KIRK contracts"
+      }
+    ]
+  },
+  "contracts": {
+    "preconditions": [
+      "All dependent types exist: AntithesisResponse, StrawManValidation, ScenarioField",
+      "ExtractedField type exists or is defined"
+    ],
+    "postconditions": [
+      "InterrogationTranscript has original_prompt: String",
+      "InterrogationTranscript has problem, persona, solution, nonpersona: ExtractedField",
+      "InterrogationTranscript has antithesis: AntithesisResponse",
+      "InterrogationTranscript has straw_man_validation: StrawManValidation",
+      "InterrogationTranscript has vorp_justification: String",
+      "InterrogationTranscript has scenario: ScenarioField",
+      "InterrogationTranscript has started_at: DateTime<Utc>",
+      "InterrogationTranscript has completed_at: Option<DateTime<Utc>>",
+      "Builder pattern implemented for fluent construction"
+    ],
+    "invariants": [
+      "started_at is always set on creation",
+      "completed_at is None until all validations pass",
+      "All strings are trimmed on assignment"
+    ]
+  },
+  "tests": {
+    "happy": [
+      "Builder creates transcript with all required fields",
+      "Default has started_at set to current time"
+    ],
+    "error": [
+      "Cannot complete transcript without required fields",
+      "completed_at is None on new transcript"
+    ],
+    "edge": [
+      "Serialization preserves all nested structures",
+      "Clone creates deep copy of all fields"
+    ]
+  },
+  "implementation": {
+    "phase_0": [
+      "Review all dependent types for composition",
+      "Check chrono::DateTime patterns in existing code"
+    ],
+    "phase_1": [
+      "Write test_builder_creates_complete_transcript",
+      "Write test_default_has_started_at",
+      "Write test_serialization_roundtrip"
+    ],
+    "phase_2": [
+      "Define ExtractedField struct with id, title, content, confidence",
+      "Define InterrogationTranscript with all fields",
+      "Implement Default trait",
+      "Implement Builder pattern",
+      "Add Serialize/Deserialize derives",
+      "Add mark_complete() method that sets completed_at"
+    ]
+  },
+  "context": {
+    "related_files": [
+      "clarity-web/src/components/discover/state.rs",
+      "clarity-web/src/types.rs"
+    ],
+    "similar": [
+      "See Answer struct in types.rs for timestamp patterns",
+      "See FieldData struct in field_card.rs for field patterns"
+    ]
+  }
+}

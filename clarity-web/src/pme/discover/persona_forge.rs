@@ -207,7 +207,7 @@ impl Persona {
 
   /// Set resources.
   #[must_use]
-  pub fn with_resources(mut self, resources: Resources) -> Self {
+  pub const fn with_resources(mut self, resources: Resources) -> Self {
     self.resources = resources;
     self
   }
@@ -249,14 +249,14 @@ impl Persona {
 
   /// Set technology comfort level.
   #[must_use]
-  pub fn with_tech_comfort(mut self, level: f64) -> Self {
+  pub const fn with_tech_comfort(mut self, level: f64) -> Self {
     self.tech_comfort = level.clamp(0.0, 1.0);
     self
   }
 
   /// Set decision authority level.
   #[must_use]
-  pub fn with_decision_authority(mut self, level: f64) -> Self {
+  pub const fn with_decision_authority(mut self, level: f64) -> Self {
     self.decision_authority = level.clamp(0.0, 1.0);
     self
   }
@@ -268,8 +268,7 @@ impl Persona {
       .limitations
       .iter()
       .find(|(l, _)| *l == limitation)
-      .map(|(_, s)| *s)
-      .unwrap_or(0.5)
+      .map_or(0.5, |(_, s)| *s)
   }
 
   /// Check if persona has high severity for any limitation.
@@ -285,10 +284,16 @@ impl Persona {
       / f64::from(u8::try_from(self.limitations.len()).unwrap_or(1));
 
     let resource_friction = 1.0
-      - (self.resources.time * 0.3
-        + self.resources.budget * 0.3
-        + self.resources.skill * 0.2
-        + self.resources.social_capital * 0.2);
+      - self.resources.social_capital.mul_add(
+        0.2,
+        self.resources.skill.mul_add(
+          0.2,
+          self
+            .resources
+            .time
+            .mul_add(0.3, self.resources.budget * 0.3),
+        ),
+      );
 
     let authority_friction = 1.0 - self.decision_authority;
 
@@ -631,11 +636,11 @@ impl PersonaForge {
       return Err(PersonaError::EmptyName);
     }
 
-    let validations: Vec<ValidationResult> = personas.iter().map(|p| Self::validate(p)).collect();
+    let validations: Vec<ValidationResult> = personas.iter().map(Self::validate).collect();
 
     let stats = PersonaStats {
       total_personas: personas.len(),
-      avg_friction: personas.iter().map(|p| p.friction_score()).sum::<f64>()
+      avg_friction: personas.iter().map(Persona::friction_score).sum::<f64>()
         / f64::from(u8::try_from(personas.len()).unwrap_or(1)),
       avg_realism: validations.iter().map(|v| v.realism_score).sum::<f64>()
         / f64::from(u8::try_from(validations.len()).unwrap_or(1)),
@@ -652,7 +657,7 @@ impl PersonaForge {
     // Aggregate design recommendations
     let design_recommendations = personas
       .iter()
-      .flat_map(|p| Self::generate_design_recommendations(p))
+      .flat_map(Self::generate_design_recommendations)
       .unique()
       .take(10)
       .collect();

@@ -66,7 +66,7 @@ pub enum ConflictDetectionError {
   /// The option index is negative.
   #[error("option index cannot be negative: {0}")]
   NegativeOptionIndex(i32),
-  /// An answer has an empty question_id at the specified index.
+  /// An answer has an empty `question_id` at the specified index.
   #[error("answer has empty question_id at index {0}")]
   EmptyQuestionId(usize),
   /// Cannot resolve a conflict that has no options.
@@ -94,7 +94,7 @@ pub enum InterviewSessionError {
   /// The phase number is invalid (must be >= 1).
   #[error("invalid phase number: {phase_number}; phase must be >= 1")]
   InvalidPhaseNumber { phase_number: u32 },
-  /// The answer has an empty question_id.
+  /// The answer has an empty `question_id`.
   #[error("answer has empty question_id")]
   EmptyQuestionId,
   /// The timestamp cannot be empty.

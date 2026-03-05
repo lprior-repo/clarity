@@ -1,0 +1,65 @@
+{
+  "id": "task-024",
+  "title": "server: implement validate_vorp",
+  "type": "feature",
+  "priority": 1,
+  "effort": "30min",
+  "description": "Implement server function to validate VORP (Value of Replacement Position) calculations for task prioritization. This ensures that priority scores accurately reflect the relative value of implementing features.",
+  "ears": {
+    "ubiquitous": [
+      "THE SYSTEM SHALL calculate VORP scores for all prioritized tasks",
+      "THE SYSTEM SHALL normalize VORP scores across comparable task sets"
+    ],
+    "event_driven": [
+      {
+        "trigger": "WHEN a task priority is set or updated",
+        "shall": "THE SYSTEM SHALL recalculate the VORP score based on current context"
+      },
+      {
+        "trigger": "WHEN baseline values change",
+        "shall": "THE SYSTEM SHALL propagate VORP recalculation to affected tasks"
+      }
+    ],
+    "unwanted": [
+      {
+        "condition": "IF VORP calculation would produce a negative value",
+        "shall_not": "THE SYSTEM SHALL NOT assign the calculated value",
+        "because": "negative VORP values have no meaningful interpretation"
+      },
+      {
+        "condition": "IF required metrics for VORP are unavailable",
+        "shall_not": "THE SYSTEM SHALL NOT estimate placeholder values",
+        "because": "estimated values would compromise prioritization accuracy"
+      }
+    ]
+  },
+  "contracts": {
+    "preconditions": [
+      "Task must have defined effort estimate",
+      "Task must have defined impact estimate",
+      "Baseline replacement value must be configured"
+    ],
+    "postconditions": [
+      "VORP score is a non-negative decimal value",
+      "VORP score is persisted with the task record",
+      "VORP calculation metadata is logged for audit"
+    ],
+    "invariants": [
+      "VORP calculation shall be reproducible for identical inputs",
+      "VORP scores shall remain comparable within the same project scope",
+      "Precision shall be maintained to at least 4 decimal places"
+    ]
+  },
+  "tests": {
+    "happy": [
+      "Given a task with high impact and low effort, when validate_vorp is called, then VORP score reflects high value relative to baseline",
+      "Given a task with standard metrics, when validate_vorp is called, then the score is calculated and stored correctly",
+      "Given multiple tasks, when validate_vorp is called for each, then relative ordering matches expected priority"
+    ],
+    "error": [
+      "Given a task with zero effort, when validate_vorp is called, then validation returns DIVISION_BY_ZERO error",
+      "Given a task with missing impact metrics, when validate_vorp is called, then validation returns MISSING_METRICS error",
+      "Given an unconfigured baseline, when validate_vorp is called, then validation returns BASELINE_NOT_CONFIGURED error"
+    ]
+  }
+}

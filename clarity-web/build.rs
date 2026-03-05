@@ -33,12 +33,9 @@ fn main() {
           let hashed_file = entry.path();
           let target_file = dest_path.join("tailwind.css");
           if let Err(e) = fs::copy(&hashed_file, &target_file) {
-            println!(
-              "cargo:warning=Failed to copy {} to tailwind.css: {}",
-              name_str, e
-            );
+            println!("cargo:warning=Failed to copy {name_str} to tailwind.css: {e}");
           } else {
-            println!("cargo:warning=Copied {} to tailwind.css", name_str);
+            println!("cargo:warning=Copied {name_str} to tailwind.css");
           }
           break;
         }

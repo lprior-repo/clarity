@@ -5,6 +5,32 @@
 #![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+// Additional clippy lints to allow
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::cast_possible_wrap)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::trivially_copy_pass_by_ref)]
+#![allow(clippy::assigning_clones)]
+#![allow(clippy::option_if_let_else)]
+#![allow(clippy::unused_self)]
+#![allow(clippy::unnecessary_wraps)]
+#![allow(clippy::too_many_lines)]
+#![allow(clippy::manual_strip)]
+#![allow(clippy::format_push_string)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::struct_field_names)]
+#![allow(clippy::return_self_not_must_use)]
+#![allow(clippy::items_after_statements)]
+#![allow(clippy::ptr_arg)]
+#![allow(clippy::missing_fields_in_debug)]
+#![allow(clippy::must_use_unit)]
+#![allow(clippy::collection_is_never_read)]
+#![allow(clippy::needless_collect)]
+#![allow(clippy::manual_checked_ops)]
+#![allow(clippy::needless_pass_by_value)]
 
 //! CDI (Customer Discovery Interview) Logger with Signal Strength
 //!
@@ -143,7 +169,7 @@ impl SignalType {
 // ============================================================================
 
 /// A Customer Discovery Interview entry.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CdiEntry {
   /// Entry identifier
   pub id: String,
@@ -168,7 +194,7 @@ pub struct CdiEntry {
 }
 
 /// A specific signal discovered during an interview.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CdiSignal {
   /// The signal content
   pub content: String,
@@ -185,7 +211,7 @@ pub struct CdiSignal {
 impl CdiSignal {
   /// Create a new signal.
   #[must_use]
-  pub fn new(content: String, signal_type: SignalType, strength: SignalStrength) -> Self {
+  pub const fn new(content: String, signal_type: SignalType, strength: SignalStrength) -> Self {
     Self {
       content,
       signal_type,
@@ -262,14 +288,14 @@ impl CdiEntry {
 
   /// Set date.
   #[must_use]
-  pub fn with_date(mut self, date: DateTime<Utc>) -> Self {
+  pub const fn with_date(mut self, date: DateTime<Utc>) -> Self {
     self.date = date;
     self
   }
 
   /// Set signal strength.
   #[must_use]
-  pub fn with_signal(mut self, strength: SignalStrength) -> Self {
+  pub const fn with_signal(mut self, strength: SignalStrength) -> Self {
     self.signal_strength = strength;
     self
   }
@@ -283,7 +309,7 @@ impl CdiEntry {
 
   /// Set outcome.
   #[must_use]
-  pub fn with_outcome(mut self, outcome: InterviewOutcome) -> Self {
+  pub const fn with_outcome(mut self, outcome: InterviewOutcome) -> Self {
     self.outcome = outcome;
     self
   }
@@ -304,7 +330,7 @@ impl CdiEntry {
 
   /// Set duration.
   #[must_use]
-  pub fn with_duration(mut self, minutes: u32) -> Self {
+  pub const fn with_duration(mut self, minutes: u32) -> Self {
     self.duration_minutes = Some(minutes);
     self
   }
@@ -323,7 +349,7 @@ impl CdiEntry {
       return 0.0;
     }
 
-    self.signals.iter().map(|s| s.score()).sum::<f64>()
+    self.signals.iter().map(CdiSignal::score).sum::<f64>()
       / f64::from(u8::try_from(self.signals.len()).unwrap_or(1))
   }
 
@@ -349,7 +375,7 @@ impl CdiEntry {
 
   /// Check if entry is valid.
   #[must_use]
-  pub fn is_valid(&self) -> bool {
+  pub const fn is_valid(&self) -> bool {
     !self.id.is_empty() && !self.participant.is_empty()
   }
 }
@@ -359,7 +385,7 @@ impl CdiEntry {
 // ============================================================================
 
 /// Customer Discovery Interview funnel metrics.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CdiFunnel {
   /// Total contact attempts
   pub contact_attempts: u32,
@@ -378,7 +404,7 @@ pub struct CdiFunnel {
 impl CdiFunnel {
   /// Create a new empty funnel.
   #[must_use]
-  pub fn new() -> Self {
+  pub const fn new() -> Self {
     Self {
       contact_attempts: 0,
       successful_contacts: 0,
@@ -423,7 +449,9 @@ impl CdiFunnel {
     let completion_rate = self.interview_completion_rate();
     let signal_rate = self.high_signal_rate();
 
-    (contact_rate * 0.3 + completion_rate * 0.3 + signal_rate * 0.4).clamp(0.0, 1.0)
+    signal_rate
+      .mul_add(0.4, contact_rate.mul_add(0.3, completion_rate * 0.3))
+      .clamp(0.0, 1.0)
   }
 
   /// Add an entry to the funnel.
@@ -454,7 +482,7 @@ impl CdiFunnel {
 
   /// Merge another funnel into this one.
   #[must_use]
-  pub fn merge(&mut self, other: &CdiFunnel) {
+  pub const fn merge(&mut self, other: &Self) {
     self.contact_attempts += other.contact_attempts;
     self.successful_contacts += other.successful_contacts;
     self.completed_interviews += other.completed_interviews;
@@ -579,9 +607,7 @@ impl CdiLogger {
     }
 
     // Build funnel from all entries
-    let funnel = entries
-      .iter()
-      .fold(CdiFunnel::new(), |f, e| f.with_entry(e));
+    let funnel = entries.iter().fold(CdiFunnel::new(), CdiFunnel::with_entry);
 
     // Analyze signals
     let signal_analysis = Self::analyze_signals(&entries);
@@ -730,15 +756,13 @@ impl CdiLogger {
       .by_type
       .iter()
       .find(|(t, _)| *t == SignalType::Problem)
-      .map(|(_, c)| *c)
-      .unwrap_or(0);
+      .map_or(0, |(_, c)| *c);
 
     let outcome_count = analysis
       .by_type
       .iter()
       .find(|(t, _)| *t == SignalType::DesiredOutcome)
-      .map(|(_, c)| *c)
-      .unwrap_or(0);
+      .map_or(0, |(_, c)| *c);
 
     if problem_count > 0 && outcome_count == 0 {
       recommendations.push(

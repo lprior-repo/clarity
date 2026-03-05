@@ -1,0 +1,21 @@
+--- clarity-web/src/lattice/quality.rs
++++ replace > with >= in calculate_clarity
+@@ -431,17 +431,17 @@
+   if complex_sentences > 0 {
+     issues.push(QualityIssue::new(
+       QualityDimension::Clarity,
+       IssueSeverity::Warning,
+       format!("{complex_sentences} complex sentence(s) detected (consider simplifying)"),
+     ));
+   }
+ 
+-  if jargon_count > 2 {
++  if jargon_count >= /* ~ changed by cargo-mutants ~ */ 2 {
+     issues.push(QualityIssue::new(
+       QualityDimension::Clarity,
+       IssueSeverity::Warning,
+       format!("High jargon density ({jargon_count} terms) - consider explaining terminology"),
+     ));
+   }
+ 
+   DimensionScore::new(QualityDimension::Clarity, score).unwrap_or_else(|_| DimensionScore {

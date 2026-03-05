@@ -1,0 +1,69 @@
+{
+  "id": "task-028",
+  "title": "server: implement compile_to_kirk",
+  "type": "feature",
+  "priority": 1,
+  "effort": "1hr",
+  "description": "Implement server function to compile validated requirements and EARS patterns into KirkContract format. This compiler transforms human-readable specifications into machine-enforceable contract definitions.",
+  "ears": {
+    "ubiquitous": [
+      "THE SYSTEM SHALL compile all validated requirements to KirkContract format",
+      "THE SYSTEM SHALL preserve semantic meaning during compilation"
+    ],
+    "event_driven": [
+      {
+        "trigger": "WHEN validated EARS patterns are submitted for compilation",
+        "shall": "THE SYSTEM SHALL generate equivalent KirkContract definitions"
+      },
+      {
+        "trigger": "WHEN compilation encounters an ambiguous mapping",
+        "shall": "THE SYSTEM SHALL request clarification before proceeding"
+      },
+      {
+        "trigger": "WHEN compilation completes successfully",
+        "shall": "THE SYSTEM SHALL emit the compiled KirkContract with source traceability"
+      }
+    ],
+    "unwanted": [
+      {
+        "condition": "IF source requirements have validation errors",
+        "shall_not": "THE SYSTEM SHALL NOT proceed with compilation",
+        "because": "compiling invalid requirements produces invalid contracts"
+      },
+      {
+        "condition": "IF compilation would lose critical requirement information",
+        "shall_not": "THE SYSTEM SHALL NOT complete the compilation",
+        "because": "information loss undermines contract enforcement"
+      }
+    ]
+  },
+  "contracts": {
+    "preconditions": [
+      "Input must be validated EARS patterns",
+      "KirkContract type system must be available",
+      "Compilation rules must be loaded"
+    ],
+    "postconditions": [
+      "Output is a valid KirkContract instance",
+      "Contract includes source requirement references",
+      "Contract is immediately enforceable"
+    ],
+    "invariants": [
+      "Compilation shall be idempotent for identical inputs",
+      "Compiled contracts shall be versioned",
+      "Source traceability shall be maintained throughout"
+    ]
+  },
+  "tests": {
+    "happy": [
+      "Given validated ubiquitous EARS patterns, when compile_to_kirk runs, then a KirkContract with corresponding invariants is produced",
+      "Given validated event-driven patterns, when compile_to_kirk runs, then a KirkContract with proper trigger conditions is generated",
+      "Given validated unwanted patterns, when compile_to_kirk runs, then a KirkContract with prohibition rules is created"
+    ],
+    "error": [
+      "Given unvalidated input, when compile_to_kirk runs, then UNVALIDATED_INPUT error is returned",
+      "Given patterns with no KirkContract mapping, when compile_to_kirk runs, then NO_MAPPING_EXISTS error with pattern details is returned",
+      "Given circular dependency in patterns, when compile_to_kirk runs, then CIRCULAR_DEPENDENCY error is returned"
+    ]
+  }
+}

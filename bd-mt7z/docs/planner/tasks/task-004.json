@@ -1,0 +1,80 @@
+{
+  "id": "task-004",
+  "title": "state: define StrawMan types",
+  "type": "feature",
+  "priority": 0,
+  "effort": "15min",
+  "description": "Define StrawManTrap enum and StrawManValidation struct for detecting unrealistic user archetypes",
+  "ears": {
+    "ubiquitous": [
+      "THE SYSTEM SHALL recognize exactly 4 straw man trap types",
+      "THE SYSTEM SHALL provide clear descriptions for each trap"
+    ],
+    "event_driven": [
+      {
+        "trigger": "WHEN persona description is validated",
+        "shall": "THE SYSTEM SHALL check for all 4 straw man traps"
+      }
+    ],
+    "unwanted": [
+      {
+        "condition": "IF user description matches YourClone trap",
+        "shall_not": "THE SYSTEM SHALL NOT allow proceeding without acknowledgment",
+        "because": "Users must explicitly acknowledge traps before proceeding"
+      }
+    ]
+  },
+  "contracts": {
+    "preconditions": [
+      "state.rs file exists with StrawManTrap placeholder"
+    ],
+    "postconditions": [
+      "StrawManTrap enum has 4 variants: IrrationalActor, ManicPixieDreamUser, StoicMonk, YourClone",
+      "StrawManValidation has traps_detected: Vec<StrawManTrap> and passed: bool",
+      "Each trap has description() method"
+    ],
+    "invariants": [
+      "Trap names are in PascalCase",
+      "passed is true only when traps_detected is empty"
+    ]
+  },
+  "tests": {
+    "happy": [
+      "Default StrawManValidation has empty traps and passed=true",
+      "Each trap variant returns non-empty description"
+    ],
+    "error": [
+      "Validation with detected traps has passed=false",
+      "Cannot create invalid trap variant"
+    ],
+    "edge": [
+      "Multiple traps can be detected in single validation",
+      "Display trait shows human-readable trap names"
+    ]
+  },
+  "implementation": {
+    "phase_0": [
+      "Review enum patterns in Rust for trap types"
+    ],
+    "phase_1": [
+      "Write test_default_validation_passes",
+      "Write test_detected_traps_fails_validation",
+      "Write test_trap_descriptions_are_helpful"
+    ],
+    "phase_2": [
+      "Define StrawManTrap enum with 4 variants",
+      "Implement description() method for each variant",
+      "Define StrawManValidation struct",
+      "Implement Default trait for StrawManValidation",
+      "Add helper method is_valid() that checks traps_detected.is_empty()"
+    ]
+  },
+  "context": {
+    "related_files": [
+      "clarity-web/src/components/discover/state.rs"
+    ],
+    "similar": [
+      "See QualityDimension enum for similar enum pattern"
+    ]
+  }
+}

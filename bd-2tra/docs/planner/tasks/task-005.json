@@ -1,0 +1,80 @@
+{
+  "id": "task-005",
+  "title": "state: define HolePunchingResults struct",
+  "type": "feature",
+  "priority": 0,
+  "effort": "15min",
+  "description": "Define HolePunchingResults struct for tracking 3 types of scenario holes: discovery, edge case, and motivation drop-off",
+  "ears": {
+    "ubiquitous": [
+      "THE SYSTEM SHALL track exactly 3 types of holes",
+      "THE SYSTEM SHALL provide is_complete() method"
+    ],
+    "event_driven": [
+      {
+        "trigger": "WHEN user addresses a hole",
+        "shall": "THE SYSTEM SHALL store the explanation in the appropriate field"
+      }
+    ],
+    "unwanted": [
+      {
+        "condition": "IF user leaves discovery hole empty",
+        "shall_not": "THE SYSTEM SHALL NOT mark scenario as complete",
+        "because": "Discovery holes are critical for user acquisition understanding"
+      }
+    ]
+  },
+  "contracts": {
+    "preconditions": [
+      "state.rs file exists"
+    ],
+    "postconditions": [
+      "HolePunchingResults has discovery_hole: Option<String>",
+      "HolePunchingResults has edge_case_hole: Option<String>",
+      "HolePunchingResults has motivation_dropoff: Option<String>",
+      "is_complete() returns true only when all holes are Some"
+    ],
+    "invariants": [
+      "Empty string is treated as None",
+      "All holes must be addressed for scenario to be complete"
+    ]
+  },
+  "tests": {
+    "happy": [
+      "Default has all holes as None and is_complete()=false",
+      "Setting all holes makes is_complete()=true"
+    ],
+    "error": [
+      "Partial holes (1 or 2 filled) still returns is_complete()=false",
+      "Empty string in hole is treated as None"
+    ],
+    "edge": [
+      "Very long hole explanation is preserved",
+      "Whitespace-only explanation is treated as None"
+    ]
+  },
+  "implementation": {
+    "phase_0": [
+      "Review Option patterns for optional fields"
+    ],
+    "phase_1": [
+      "Write test_default_holes_are_none",
+      "Write test_is_complete_requires_all_holes",
+      "Write test_empty_string_treated_as_none"
+    ],
+    "phase_2": [
+      "Define HolePunchingResults struct with 3 Option<String> fields",
+      "Implement Default trait",
+      "Implement is_complete() method",
+      "Add helper to normalize empty strings to None"
+    ]
+  },
+  "context": {
+    "related_files": [
+      "clarity-web/src/components/discover/state.rs"
+    ],
+    "similar": [
+      "See Option patterns in existing validation code"
+    ]
+  }
+}

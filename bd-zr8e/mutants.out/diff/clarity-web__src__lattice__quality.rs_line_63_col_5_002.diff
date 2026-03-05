@@ -1,0 +1,27 @@
+--- clarity-web/src/lattice/quality.rs
++++ replace QualityDimension::label -> &'static str with ""
+@@ -55,23 +55,17 @@
+       QualityDimension::Testability,
+       QualityDimension::Clarity,
+       QualityDimension::Security,
+     ]
+   }
+ 
+   /// Display label
+   pub fn label(&self) -> &'static str {
+-    match self {
+-      QualityDimension::Completeness => "Completeness",
+-      QualityDimension::Consistency => "Consistency",
+-      QualityDimension::Testability => "Testability",
+-      QualityDimension::Clarity => "Clarity",
+-      QualityDimension::Security => "Security",
+-    }
++    "" /* ~ changed by cargo-mutants ~ */
+   }
+ 
+   /// Description of what this dimension measures
+   pub fn description(&self) -> &'static str {
+     match self {
+       QualityDimension::Completeness => "Percentage of required fields filled",
+       QualityDimension::Consistency => "Absence of contradictory requirements",
+       QualityDimension::Testability => "Presence of acceptance criteria",

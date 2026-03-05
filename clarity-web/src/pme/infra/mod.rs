@@ -100,7 +100,7 @@ pub enum InfraError {
 /// Initialize infrastructure with sensible defaults
 ///
 /// This sets up logging, tracing, and metrics with production-ready defaults.
-/// Returns a tuple of (logger, tracer, metrics_registry).
+/// Returns a tuple of (logger, tracer, `metrics_registry`).
 #[must_use]
 pub fn init_infra(service: &str) -> (StructuredLogger, Tracer, MetricsRegistry) {
   let logger = StructuredLogger::new()

@@ -1,0 +1,65 @@
+{
+  "id": "task-026",
+  "title": "server: create KirkContract types",
+  "type": "feature",
+  "priority": 1,
+  "effort": "30min",
+  "description": "Create type definitions for KirkContract structures used in the Progressive Discover system. These types define the contract specification format for server-side validation and enforcement.",
+  "ears": {
+    "ubiquitous": [
+      "THE SYSTEM SHALL provide KirkContract type definitions for all contract operations",
+      "THE SYSTEM SHALL ensure type safety for all contract-related data structures"
+    ],
+    "event_driven": [
+      {
+        "trigger": "WHEN a new contract type is defined",
+        "shall": "THE SYSTEM SHALL validate the type structure against the KirkContract schema"
+      },
+      {
+        "trigger": "WHEN contract types are serialized",
+        "shall": "THE SYSTEM SHALL produce deterministic JSON output"
+      }
+    ],
+    "unwanted": [
+      {
+        "condition": "IF a contract type definition is incomplete",
+        "shall_not": "THE SYSTEM SHALL NOT register the type",
+        "because": "incomplete types cause runtime validation failures"
+      },
+      {
+        "condition": "IF type constraints are contradictory",
+        "shall_not": "THE SYSTEM SHALL NOT accept the type definition",
+        "because": "contradictory constraints make validation impossible"
+      }
+    ]
+  },
+  "contracts": {
+    "preconditions": [
+      "Type system must be initialized",
+      "Base KirkContract schema must be loaded",
+      "Type registry must be available for registration"
+    ],
+    "postconditions": [
+      "All KirkContract types are registered in the type system",
+      "Types are serializable to JSON format",
+      "Types implement required traits for validation"
+    ],
+    "invariants": [
+      "Type definitions shall be immutable after registration",
+      "Type names shall be unique within the registry",
+      "Type schemas shall be versioned for compatibility"
+    ]
+  },
+  "tests": {
+    "happy": [
+      "Given valid KirkContract type parameters, when a type is created, then the type is registered and accessible",
+      "Given a registered KirkContract type, when serialization is requested, then valid JSON is produced",
+      "Given multiple related types, when they are defined, then type relationships are properly established"
+    ],
+    "error": [
+      "Given a type with duplicate name, when registration is attempted, then DUPLICATE_TYPE error is returned",
+      "Given a type with invalid schema reference, when creation is attempted, then INVALID_SCHEMA error is returned",
+      "Given a type with circular dependencies, when validation runs, then CIRCULAR_DEPENDENCY error is returned"
+    ]
+  }
+}

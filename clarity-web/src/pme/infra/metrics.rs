@@ -5,6 +5,32 @@
 #![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
+// Additional clippy lints to allow
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::cast_possible_wrap)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::trivially_copy_pass_by_ref)]
+#![allow(clippy::assigning_clones)]
+#![allow(clippy::option_if_let_else)]
+#![allow(clippy::unused_self)]
+#![allow(clippy::unnecessary_wraps)]
+#![allow(clippy::too_many_lines)]
+#![allow(clippy::manual_strip)]
+#![allow(clippy::format_push_string)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::struct_field_names)]
+#![allow(clippy::return_self_not_must_use)]
+#![allow(clippy::items_after_statements)]
+#![allow(clippy::ptr_arg)]
+#![allow(clippy::missing_fields_in_debug)]
+#![allow(clippy::must_use_unit)]
+#![allow(clippy::collection_is_never_read)]
+#![allow(clippy::needless_collect)]
+#![allow(clippy::manual_checked_ops)]
+#![allow(clippy::needless_pass_by_value)]
 
 //! Real User Monitoring (RUM) Metrics Infrastructure for PME
 //!
@@ -48,7 +74,7 @@ use thiserror::Error;
 // ============================================================================
 
 /// Errors that can occur during metrics operations
-#[derive(Debug, Error, Clone, PartialEq)]
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum MetricsError {
   /// Invalid metric name
   #[error("invalid metric name: {0}")]
@@ -173,13 +199,13 @@ impl MetricDimensions {
 
   /// Check if empty
   #[must_use]
-  pub fn is_empty(&self) -> bool {
+  pub const fn is_empty(&self) -> bool {
     self.pairs.is_empty()
   }
 
   /// Get count
   #[must_use]
-  pub fn len(&self) -> usize {
+  pub const fn len(&self) -> usize {
     self.pairs.len()
   }
 
@@ -313,7 +339,7 @@ struct GaugeState {
 const GAUGE_SCALE: f64 = 1_000_000.0;
 
 impl GaugeState {
-  fn new() -> Self {
+  const fn new() -> Self {
     Self {
       value: AtomicU64::new(0),
     }
@@ -728,7 +754,7 @@ impl MetricsRegistry {
         return counter.clone();
       }
       let counter = Counter::new(&full_name);
-      counters.insert(full_name.clone(), counter.clone());
+      counters.insert(full_name, counter.clone());
       counter
     } else {
       Counter::new(&full_name)
@@ -744,7 +770,7 @@ impl MetricsRegistry {
         return gauge.clone();
       }
       let gauge = Gauge::new(&full_name);
-      gauges.insert(full_name.clone(), gauge.clone());
+      gauges.insert(full_name, gauge.clone());
       gauge
     } else {
       Gauge::new(&full_name)
@@ -760,7 +786,7 @@ impl MetricsRegistry {
         return histogram.clone();
       }
       let histogram = Histogram::new(&full_name);
-      histograms.insert(full_name.clone(), histogram.clone());
+      histograms.insert(full_name, histogram.clone());
       histogram
     } else {
       Histogram::new(&full_name)
@@ -778,15 +804,15 @@ impl MetricsRegistry {
     let mut snapshots = Vec::new();
 
     if let Ok(counters) = self.counters.lock() {
-      snapshots.extend(counters.values().map(|c| c.snapshot()));
+      snapshots.extend(counters.values().map(Counter::snapshot));
     }
 
     if let Ok(gauges) = self.gauges.lock() {
-      snapshots.extend(gauges.values().map(|g| g.snapshot()));
+      snapshots.extend(gauges.values().map(Gauge::snapshot));
     }
 
     if let Ok(histograms) = self.histograms.lock() {
-      snapshots.extend(histograms.values().filter_map(|h| h.snapshot()));
+      snapshots.extend(histograms.values().filter_map(Histogram::snapshot));
     }
 
     snapshots

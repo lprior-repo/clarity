@@ -1,0 +1,10 @@
+{
+  "feature_number": "003",
+  "slug": "003-complete-gleam-to-rust-cli-port",
+  "friendly_name": "Complete Gleam to Rust CLI Port",
+  "mission": "software-dev",
+  "source_description": "Complete the Gleam to Rust port of intent-cli, ensuring all 44 core Gleam modules have functional Rust equivalents. Currently only 15-20% complete with critical gaps in CLI entry point, interview engine, interpolation, validation, and cli_ui module.",
+  "created_at": "2025-02-28T00:00:00Z",
+  "target_branch": "main",
+  "vcs": "git"
+}

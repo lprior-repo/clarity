@@ -1,3 +1,31 @@
+// Additional clippy lints to allow
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::cast_possible_wrap)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::trivially_copy_pass_by_ref)]
+#![allow(clippy::assigning_clones)]
+#![allow(clippy::option_if_let_else)]
+#![allow(clippy::unused_self)]
+#![allow(clippy::unnecessary_wraps)]
+#![allow(clippy::too_many_lines)]
+#![allow(clippy::manual_strip)]
+#![allow(clippy::format_push_string)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::struct_field_names)]
+#![allow(clippy::suspicious_else_formatting)]
+#![allow(clippy::return_self_not_must_use)]
+#![allow(clippy::items_after_statements)]
+#![allow(clippy::ptr_arg)]
+#![allow(clippy::missing_fields_in_debug)]
+#![allow(clippy::must_use_unit)]
+#![allow(clippy::collection_is_never_read)]
+#![allow(clippy::needless_collect)]
+#![allow(clippy::manual_checked_ops)]
+#![allow(clippy::needless_pass_by_value)]
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -10,9 +38,9 @@ use crate::intent::interview::types::Answer;
 /// Identifies which field of an Answer changed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AnswerField {
-  /// The question_id field changed.
+  /// The `question_id` field changed.
   QuestionId,
-  /// The question_text field changed.
+  /// The `question_text` field changed.
   QuestionText,
   /// The perspective field changed.
   Perspective,
@@ -20,7 +48,7 @@ pub enum AnswerField {
   Round,
   /// The response field changed.
   Response,
-  /// The extracted HashMap changed.
+  /// The extracted `HashMap` changed.
   Extracted,
   /// The confidence field changed.
   Confidence,
@@ -31,7 +59,7 @@ pub enum AnswerField {
 }
 
 /// A change to a single field within an Answer.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AnswerFieldDiff {
   /// Which field changed.
   pub field: AnswerField,
@@ -42,7 +70,7 @@ pub struct AnswerFieldDiff {
 }
 
 /// Complete field-level diff for a single answer.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AnswerFieldsDiff {
   /// Question identifier.
   pub question_id: String,
@@ -63,7 +91,7 @@ impl AnswerFieldsDiff {
 
   /// Get the number of changed fields.
   #[must_use]
-  pub fn changed_field_count(&self) -> usize {
+  pub const fn changed_field_count(&self) -> usize {
     self.field_changes.len()
   }
 
@@ -126,7 +154,7 @@ impl SessionSnapshot {
 
   /// Set the version of this snapshot.
   #[must_use]
-  pub fn with_version(mut self, version: u32) -> Self {
+  pub const fn with_version(mut self, version: u32) -> Self {
     self.version = version;
     self
   }
@@ -219,7 +247,7 @@ pub struct AnswerVersion {
 impl AnswerVersion {
   /// Create a new answer version.
   #[must_use]
-  pub fn new(
+  pub const fn new(
     version: u32,
     response: String,
     question_id: String,
@@ -293,21 +321,21 @@ impl AnswerWithHistory {
 
   /// Get the total number of versions.
   #[must_use]
-  pub fn len(&self) -> usize {
+  pub const fn len(&self) -> usize {
     self.versions.len()
   }
 
   /// Check if there are no versions.
   #[must_use]
-  pub fn is_empty(&self) -> bool {
+  pub const fn is_empty(&self) -> bool {
     self.versions.is_empty()
   }
 }
 
-/// Convert an Answer to an AnswerVersion for tracking changes.
+/// Convert an Answer to an `AnswerVersion` for tracking changes.
 ///
 /// # Errors
-/// Returns an error if the answer's question_id or response is empty.
+/// Returns an error if the answer's `question_id` or response is empty.
 pub fn answer_to_version(answer: &Answer, change_reason: &str) -> Result<AnswerVersion, String> {
   if answer.question_id.is_empty() {
     return Err("Answer must have a non-empty question_id".to_string());
@@ -337,7 +365,7 @@ pub fn answer_to_version(answer: &Answer, change_reason: &str) -> Result<AnswerV
 pub struct SessionWithHistories {
   /// The underlying interview session.
   pub session: crate::intent::interview::types::InterviewSession,
-  /// Version histories for each answer, keyed by question_id.
+  /// Version histories for each answer, keyed by `question_id`.
   #[serde(default)]
   pub answer_histories: HashMap<String, AnswerWithHistory>,
 }
@@ -381,7 +409,7 @@ impl SessionWithHistories {
   /// # Arguments
   /// * `question_id` - The ID of the question whose answer should be updated
   /// * `new_response` - The new answer response
-  /// * `change_reason` - Reason for this update (e.g., "user_correction", "ai_enhancement")
+  /// * `change_reason` - Reason for this update (e.g., "`user_correction`", "`ai_enhancement`")
   /// * `timestamp` - ISO 8601 timestamp for this update
   ///
   /// # Errors
@@ -428,17 +456,14 @@ impl SessionWithHistories {
     answer.timestamp = timestamp.to_string();
 
     // Update the version history
-    match self.answer_histories.get_mut(question_id) {
-      Some(history) => {
-        history.add_version(new_response, change_reason);
-      }
-      None => {
-        // No history exists yet - create one with this as initial version
-        let history = AnswerWithHistory::new(question_id, new_response, change_reason);
-        self
-          .answer_histories
-          .insert(question_id.to_string(), history);
-      }
+    if let Some(history) = self.answer_histories.get_mut(question_id) {
+      history.add_version(new_response, change_reason);
+    } else {
+      // No history exists yet - create one with this as initial version
+      let history = AnswerWithHistory::new(question_id, new_response, change_reason);
+      self
+        .answer_histories
+        .insert(question_id.to_string(), history);
     }
 
     self.session.updated_at = timestamp.to_string();

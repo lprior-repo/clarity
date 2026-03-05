@@ -1,0 +1,21 @@
+--- clarity-web/src/lattice/quality.rs
++++ replace < with > in calculate_security
+@@ -506,17 +506,17 @@
+   let score = u8::try_from(total.min(100)).unwrap_or(100);
+ 
+   if covered_areas.is_empty() {
+     issues.push(QualityIssue::new(
+       QualityDimension::Security,
+       IssueSeverity::Error,
+       "No security considerations mentioned".to_string(),
+     ));
+-  } else if covered_areas.len() < 3 {
++  } else if covered_areas.len() > /* ~ changed by cargo-mutants ~ */ 3 {
+     let missing = ["authentication", "encryption", "validation"]
+       .iter()
+       .filter(|area| !covered_areas.contains(*area))
+       .join(", ");
+ 
+     issues.push(QualityIssue::new(
+       QualityDimension::Security,
+       IssueSeverity::Warning,

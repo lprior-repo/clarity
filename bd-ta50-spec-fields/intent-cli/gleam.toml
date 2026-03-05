@@ -1,0 +1,23 @@
+name = "intent"
+version = "0.1.0"
+description = "Planning and bead generation tool"
+target = "erlang"
+
+[dependencies]
+gleam_stdlib = ">= 0.36.0 and < 0.40.0"
+gleam_json = ">= 2.0.0 and < 3.0.0"
+gleam_http = ">= 3.5.0 and < 4.0.0"
+gleam_httpc = ">= 2.1.0 and < 3.0.0"
+gleam_erlang = ">= 0.25.0 and < 1.0.0"
+gleam_otp = ">= 0.1.0 and < 1.0.0"
+argv = ">= 1.0.0 and < 2.0.0"
+glint = ">= 0.14.0 and < 1.0.0"
+gleam_regexp = ">= 1.1.1 and < 2.0.0"
+gleam_community_ansi = ">= 1.4.3 and < 2.0.0"
+shellout = ">= 1.6.0 and < 2.0.0"
+simplifile = ">= 1.5.0 and < 2.0.0"
+spinner = ">= 1.3.1 and < 2.0.0"
+glaml = ">= 3.0.0 and < 4.0.0"
+
+[dev-dependencies]
+gleeunit = ">= 1.0.0 and < 2.0.0"

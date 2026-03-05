@@ -1,0 +1,69 @@
+{
+  "id": "task-037",
+  "title": "ui-locked: compose LockedPhase component",
+  "type": "feature",
+  "priority": 1,
+  "effort": "30min",
+  "description": "Compose the LockedPhase component that presents the final state of Progressive Discover. Integrates completion summary, artifact browser, and workflow actions (export, share, restart) into a cohesive completion experience.",
+  "ears": {
+    "ubiquitous": [
+      "THE SYSTEM SHALL render locked phase with complete summary and actions",
+      "THE SYSTEM SHALL provide workflow completion actions"
+    ],
+    "event_driven": [
+      {
+        "trigger": "WHEN locked phase becomes active",
+        "shall": "THE SYSTEM SHALL display completion summary with export and restart actions"
+      },
+      {
+        "trigger": "WHEN user clicks export",
+        "shall": "THE SYSTEM SHALL generate and download the compiled artifacts"
+      },
+      {
+        "trigger": "WHEN user clicks restart",
+        "shall": "THE SYSTEM SHALL reset workflow and return to initial phase"
+      }
+    ],
+    "unwanted": [
+      {
+        "condition": "IF user accidentally clicks restart",
+        "shall_not": "THE SYSTEM SHALL NOT immediately discard compiled artifacts",
+        "because": "Users should confirm destructive actions"
+      },
+      {
+        "condition": "IF export fails",
+        "shall_not": "THE SYSTEM SHALL NOT silently fail without user notification",
+        "because": "Users need to know when exports are unsuccessful"
+      }
+    ]
+  },
+  "contracts": {
+    "preconditions": [
+      "Completion summary component must be ready",
+      "Export functionality must be available",
+      "Workflow reset handler must be defined"
+    ],
+    "postconditions": [
+      "Locked phase shows complete summary with all actions",
+      "Export generates valid artifact bundle",
+      "Restart clears state and returns to beginning"
+    ],
+    "invariants": [
+      "Summary remains visible until user action",
+      "Export can be triggered multiple times",
+      "Restart requires confirmation"
+    ]
+  },
+  "tests": {
+    "happy": [
+      "Given locked phase is active, when component renders, then summary and action buttons are visible",
+      "Given user clicks export, when export completes, then file downloads to user's system",
+      "Given user clicks restart, when confirmation is accepted, then workflow resets to initial state"
+    ],
+    "error": [
+      "Given export fails, when user clicks export, then error message is shown with retry option",
+      "Given restart confirmation declined, when user cancels, then workflow remains in locked phase",
+      "Given summary data corrupted, when locked phase renders, then graceful error state is displayed"
+    ]
+  }
+}

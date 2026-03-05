@@ -1,0 +1,104 @@
+# Implementation Plan: pme-lattice/inversion.rs
+
+## Module Purpose
+First Principle: Avoid Stupidity Framework
+- Defines cognitive biases and systematic methods to avoid stupid decisions in product design
+- Implements inversion thinking (think backward from failure to success)
+
+## Types to Implement
+
+### 1. CognitiveBias (Enum)
+Common cognitive biases in product decisions:
+- ConfirmationBias (seeking info that confirms beliefs)
+- SurvivorshipBias (focusing on successes, ignoring failures)
+- SunkCostFallacy (continuing due to past investment)
+- AvailabilityHeuristic (overweighting recent/vivid info)
+- AnchoringBias (over-relying on first information)
+- OptimismBias (underestimating risks)
+- BandwagonEffect (following the crowd)
+- DunningKruger (overestimating competence)
+
+### 2. InversionQuestion (Struct)
+Questions to think backward from failure:
+- id: Uuid
+- category: InversionCategory
+- question: String
+- negative_scenario: String (what failure looks like)
+- prevention_strategy: Option<String>
+
+### 3. InversionCategory (Enum)
+Categories for inversion questions:
+- MarketFailure
+- ProductFailure
+- TeamFailure
+- ExecutionFailure
+- CompetitionFailure
+
+### 4. StupidityCheck (Struct)
+Checklist to avoid stupid decisions:
+- id: Uuid
+- bias_type: CognitiveBias
+- check_question: String
+- passed: Option<bool>
+- evidence: Option<String>
+
+### 5. InversionAnalysis (Struct)
+Result of running inversion analysis:
+- id: Uuid
+- scenario_id: Option<Uuid>
+- biases_detected: Vec<CognitiveBias>
+- checks: Vec<StupidityCheck>
+- inversion_questions: Vec<InversionQuestion>
+- failure_modes_identified: Vec<String>
+- prevention_strategies: Vec<String>
+- risk_score: f32
+- created_at: DateTime<Utc>
+
+### 6. InversionError (Enum)
+Error types for inversion module
+
+## Test Plan (TDD - Write Tests First)
+
+### Test File: clarity-core/src/pme_lattice/inversion_test.rs
+
+#### CognitiveBias Tests
+- test_cognitive_bias_display_formats_correctly
+- test_all_bias_variants_exist
+
+#### InversionQuestion Tests
+- test_inversion_question_new_requires_non_empty_question
+- test_inversion_question_with_prevention_strategy
+- test_inversion_question_categories_display
+
+#### StupidityCheck Tests
+- test_stupidity_check_new_creates_unanswered_check
+- test_stupidity_check_pass_sets_passed_true
+- test_stupidity_check_fail_sets_passed_false
+- test_stupidity_check_with_evidence
+
+#### InversionAnalysis Tests
+- test_inversion_analysis_new_creates_empty_analysis
+- test_inversion_analysis_with_bias_detected
+- test_inversion_analysis_with_check
+- test_inversion_analysis_with_failure_mode
+- test_inversion_analysis_risk_score_calculation
+- test_inversion_analysis_all_checks_passed
+- test_inversion_analysis_has_blocking_issues
+
+## Implementation Steps
+
+1. Create module directory: clarity-core/src/pme_lattice/
+2. Create mod.rs with module exports
+3. Write inversion_test.rs with all failing tests (RED)
+4. Implement inversion.rs to make tests pass (GREEN)
+5. Refactor for functional purity
+6. Run moon run :ci to verify
+
+## Acceptance Criteria
+- [ ] All tests pass
+- [ ] Zero unwrap/expect/panic calls
+- [ ] All public functions return Result where fallible
+- [ ] Functional patterns used (map, and_then, ?)
+- [ ] Proper error types with thiserror
+- [ ] Serde serialization for all types
+- [ ] cargo clippy passes with -D warnings

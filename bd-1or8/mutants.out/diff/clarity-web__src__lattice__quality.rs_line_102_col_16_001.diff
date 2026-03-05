@@ -1,0 +1,21 @@
+--- clarity-web/src/lattice/quality.rs
++++ replace >= with < in DimensionScore::passes
+@@ -94,17 +94,17 @@
+     match score {
+       0..=100 => Ok(DimensionScore { dimension, score }),
+       invalid => Err(QualityError::InvalidScore(invalid.to_string())),
+     }
+   }
+ 
+   /// Check if score passes threshold
+   pub fn passes(&self, threshold: u8) -> bool {
+-    self.score >= threshold
++    self.score < /* ~ changed by cargo-mutants ~ */ threshold
+   }
+ }
+ 
+ /// Issue explaining a low score
+ #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+ pub struct QualityIssue {
+   pub dimension: QualityDimension,
+   pub severity: IssueSeverity,

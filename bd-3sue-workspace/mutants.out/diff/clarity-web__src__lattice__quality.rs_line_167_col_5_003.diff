@@ -1,0 +1,21 @@
+--- clarity-web/src/lattice/quality.rs
++++ replace QualityScore::get_dimension -> Option<&DimensionScore> with Some(Box::leak(Box::new(Default::default())))
+@@ -159,17 +159,17 @@
+ 
+   /// Check if overall score passes threshold
+   pub fn passes(&self, threshold: u8) -> bool {
+     self.overall >= threshold
+   }
+ 
+   /// Get score for a specific dimension
+   pub fn get_dimension(&self, dimension: QualityDimension) -> Option<&DimensionScore> {
+-    self.dimensions.iter().find(|d| d.dimension == dimension)
++    Some(Box::leak(Box::new(Default::default()))) /* ~ changed by cargo-mutants ~ */
+   }
+ 
+   /// Get issues for a specific dimension
+   pub fn get_issues(&self, dimension: QualityDimension) -> Vec<&QualityIssue> {
+     self
+       .issues
+       .iter()
+       .filter(|i| i.dimension == dimension)

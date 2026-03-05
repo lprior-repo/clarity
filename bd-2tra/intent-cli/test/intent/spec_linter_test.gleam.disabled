@@ -1,0 +1,1148 @@
+//// Comprehensive tests for spec_linter module
+//// Tests all linting functions and edge cases
+
+import gleam/dict
+import gleam/json
+import gleam/list
+import gleam/string
+import gleeunit/should
+import intent/spec_linter.{
+  AntiPatternDetected, DuplicateBehavior, LintValid, LintWarnings,
+  MissingExample, NamingConvention, UnusedAntiPattern, VagueRule,
+}
+import intent/types.{
+  type AIHints, type AntiPattern, type Behavior, type Verification,
+  AIHints, AntiPattern, Behavior, Feature, ImplementationHints, SecurityHints,
+  Spec, Verification,
+}
+
+// ============================================================================
+// Test Helpers
+// ============================================================================
+
+/// Create minimal AI hints
+fn make_ai_hints() -> AIHints {
+  AIHints(
+    implementation: ImplementationHints(suggested_stack: []),
+    entities: dict.new(),
+    security: SecurityHints(
+      password_hashing: "bcrypt",
+      jwt_algorithm: "HS256",
+      jwt_expiry: "1h",
+      rate_limiting: "100/min",
+    ),
+    pitfalls: [],
+  )
+}
+
+/// Create a minimal Behavior
+fn make_behavior(name: String, example: json.Json) -> Behavior {
+  Behavior(
+    name: name,
+    intent: "Test behavior",
+    notes: "",
+    requires: [],
+    tags: [],
+    preconditions: [],
+    postconditions: [],
+    verifications: [Verification(
+      description: "Example",
+      criteria: [],
+      examples: [example],
+    )],
+  )
+}
+
+/// Create a behavior with custom verifications
+fn make_behavior_with_verifications(
+  name: String,
+  verifications: List(Verification),
+) -> Behavior {
+  Behavior(
+    name: name,
+    intent: "Test behavior",
+    notes: "",
+    requires: [],
+    tags: [],
+    preconditions: [],
+    postconditions: [],
+    verifications: verifications,
+  )
+}
+
+/// Create a minimal Spec with given behaviors
+fn make_spec(
+  behaviors: List(Behavior),
+  anti_patterns: List(AntiPattern),
+) -> Spec {
+  let feature = Feature(name: "Test", description: "Test", behaviors: behaviors)
+  Spec(
+    name: "Test Spec",
+    description: "Test",
+    audience: "Developers",
+    version: "1.0.0",
+    success_criteria: [],
+    features: [feature],
+    invariants: [],
+    anti_patterns: anti_patterns,
+    ai_hints: make_ai_hints(),
+  )
+}
+
+// ============================================================================
+// Anti-Pattern Detection Tests
+// ============================================================================
+
+pub fn lint_detects_anti_pattern_in_example_test() {
+  let bad_example = json.object([#("user_id", json.int(123))])
+  let anti_pattern =
+    AntiPattern(
+      name: "Exposed IDs",
+      description: "Database IDs exposed in API",
+      bad_example: bad_example,
+      good_example: json.object([#("user_uuid", json.string("abc"))]),
+      why: "Don't expose internal IDs",
+    )
+
+  let behavior_example = json.object([#("user_id", json.int(456))])
+  let behavior =
+    make_behavior(
+      "get-user",
+      make_request(Get, "/users/1"),
+      make_response(behavior_example),
+    )
+
+  let spec = make_spec([behavior], [anti_pattern])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintWarnings(warnings) -> {
+      list.length(warnings)
+      |> should.equal(1)
+
+      case list.first(warnings) {
+        Ok(AntiPatternDetected(behavior_name, pattern_name, _details)) -> {
+          behavior_name |> should.equal("get-user")
+          pattern_name |> should.equal("Exposed IDs")
+        }
+        _ -> should.fail()
+      }
+    }
+    LintValid -> should.fail()
+  }
+}
+
+pub fn lint_no_anti_pattern_when_keys_differ_test() {
+  let bad_example = json.object([#("user_id", json.int(123))])
+  let anti_pattern =
+    AntiPattern(
+      name: "Exposed IDs",
+      description: "Database IDs exposed",
+      bad_example: bad_example,
+      good_example: json.object([#("uuid", json.string("abc"))]),
+      why: "Don't expose IDs",
+    )
+
+  let behavior_example = json.object([#("username", json.string("alice"))])
+  let behavior =
+    make_behavior(
+      "get-user",
+      make_request(Get, "/users/1"),
+      make_response(behavior_example),
+    )
+
+  let spec = make_spec([behavior], [anti_pattern])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintValid -> should.be_true(True)
+    LintWarnings(_) -> should.fail()
+  }
+}
+
+pub fn lint_no_anti_pattern_when_example_is_null_test() {
+  let anti_pattern =
+    AntiPattern(
+      name: "Bad Pattern",
+      description: "Test",
+      bad_example: json.object([#("bad_key", json.string("bad"))]),
+      good_example: json.object([#("good_key", json.string("good"))]),
+      why: "Test",
+    )
+
+  let behavior =
+    make_behavior(
+      "get-user",
+      make_request(Get, "/users/1"),
+      make_response(json.null()),
+    )
+
+  let spec = make_spec([behavior], [anti_pattern])
+  let result = spec_linter.lint_spec(spec)
+
+  // Should have missing example warning but not anti-pattern warning
+  case result {
+    LintWarnings(warnings) -> {
+      let has_anti_pattern =
+        list.any(warnings, fn(w) {
+          case w {
+            AntiPatternDetected(_, _, _) -> True
+            _ -> False
+          }
+        })
+      has_anti_pattern |> should.be_false()
+    }
+    LintValid -> should.fail()
+  }
+}
+
+pub fn lint_multiple_behaviors_with_anti_patterns_test() {
+  let bad_example = json.object([#("internal_id", json.int(1))])
+  let anti_pattern =
+    AntiPattern(
+      name: "Internal IDs",
+      description: "Internal IDs exposed",
+      bad_example: bad_example,
+      good_example: json.object([#("public_id", json.string("uuid"))]),
+      why: "Security",
+    )
+
+  let behavior1_example = json.object([#("internal_id", json.int(100))])
+  let behavior1 =
+    make_behavior(
+      "behavior-1",
+      make_request(Get, "/resource/1"),
+      make_response(behavior1_example),
+    )
+
+  let behavior2_example = json.object([#("internal_id", json.int(200))])
+  let behavior2 =
+    make_behavior(
+      "behavior-2",
+      make_request(Get, "/resource/2"),
+      make_response(behavior2_example),
+    )
+
+  let spec = make_spec([behavior1, behavior2], [anti_pattern])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintWarnings(warnings) -> {
+      let anti_pattern_count =
+        list.filter(warnings, fn(w) {
+          case w {
+            AntiPatternDetected(_, _, _) -> True
+            _ -> False
+          }
+        })
+        |> list.length
+
+      anti_pattern_count |> should.equal(2)
+    }
+    LintValid -> should.fail()
+  }
+}
+
+// ============================================================================
+// Vague Rule Detection Tests
+// ============================================================================
+
+pub fn lint_detects_vague_valid_rule_test() {
+  let checks = [#("email", Check("valid", "Email must be valid"))]
+  let response = make_response_with_checks(json.null(), checks)
+  let behavior =
+    make_behavior("check-email", make_request(Post, "/email"), response)
+
+  let spec = make_spec([behavior], [])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintWarnings(warnings) -> {
+      let vague_warnings =
+        list.filter(warnings, fn(w) {
+          case w {
+            VagueRule(_, _, _) -> True
+            _ -> False
+          }
+        })
+      list.length(vague_warnings) |> should.equal(1)
+    }
+    LintValid -> should.fail()
+  }
+}
+
+pub fn lint_allows_valid_email_rule_test() {
+  let checks = [#("email", Check("valid email", "Must be valid email"))]
+  let response = make_response_with_checks(json.null(), checks)
+  let behavior =
+    make_behavior("check-email", make_request(Post, "/email"), response)
+
+  let spec = make_spec([behavior], [])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintWarnings(warnings) -> {
+      let vague_warnings =
+        list.filter(warnings, fn(w) {
+          case w {
+            VagueRule(_, _, _) -> True
+            _ -> False
+          }
+        })
+      list.length(vague_warnings) |> should.equal(0)
+    }
+    LintValid -> should.be_true(True)
+  }
+}
+
+pub fn lint_detects_correct_format_rule_test() {
+  let checks = [#("date", Check("correct format", "Date format"))]
+  let response = make_response_with_checks(json.null(), checks)
+  let behavior =
+    make_behavior("check-date", make_request(Get, "/date"), response)
+
+  let spec = make_spec([behavior], [])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintWarnings(warnings) -> {
+      let has_vague =
+        list.any(warnings, fn(w) {
+          case w {
+            VagueRule(_, _, rule) ->
+              rule == "correct format (too vague - be specific)"
+            _ -> False
+          }
+        })
+      has_vague |> should.be_true()
+    }
+    LintValid -> should.fail()
+  }
+}
+
+pub fn lint_detects_proper_format_rule_test() {
+  let checks = [#("timestamp", Check("proper format", "Timestamp format"))]
+  let response = make_response_with_checks(json.null(), checks)
+  let behavior =
+    make_behavior("check-time", make_request(Get, "/time"), response)
+
+  let spec = make_spec([behavior], [])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintWarnings(warnings) -> {
+      let has_vague =
+        list.any(warnings, fn(w) {
+          case w {
+            VagueRule(_, _, _) -> True
+            _ -> False
+          }
+        })
+      has_vague |> should.be_true()
+    }
+    LintValid -> should.fail()
+  }
+}
+
+pub fn lint_allows_valid_uuid_rule_test() {
+  let checks = [#("id", Check("valid uuid", "Must be UUID"))]
+  let response = make_response_with_checks(json.null(), checks)
+  let behavior =
+    make_behavior("get-resource", make_request(Get, "/resource"), response)
+
+  let spec = make_spec([behavior], [])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintWarnings(warnings) -> {
+      let vague_warnings =
+        list.filter(warnings, fn(w) {
+          case w {
+            VagueRule(_, _, _) -> True
+            _ -> False
+          }
+        })
+      list.length(vague_warnings) |> should.equal(0)
+    }
+    LintValid -> should.be_true(True)
+  }
+}
+
+pub fn lint_allows_valid_iso_date_rule_test() {
+  let checks = [#("created_at", Check("valid ISO 8601 date", "ISO format"))]
+  let response = make_response_with_checks(json.null(), checks)
+  let behavior = make_behavior("get-item", make_request(Get, "/item"), response)
+
+  let spec = make_spec([behavior], [])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintWarnings(warnings) -> {
+      let vague_warnings =
+        list.filter(warnings, fn(w) {
+          case w {
+            VagueRule(_, _, _) -> True
+            _ -> False
+          }
+        })
+      list.length(vague_warnings) |> should.equal(0)
+    }
+    LintValid -> should.be_true(True)
+  }
+}
+
+pub fn lint_allows_jwt_rule_test() {
+  let checks = [#("token", Check("valid jwt", "JWT token"))]
+  let response = make_response_with_checks(json.null(), checks)
+  let behavior = make_behavior("auth", make_request(Post, "/auth"), response)
+
+  let spec = make_spec([behavior], [])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintWarnings(warnings) -> {
+      let vague_warnings =
+        list.filter(warnings, fn(w) {
+          case w {
+            VagueRule(_, _, _) -> True
+            _ -> False
+          }
+        })
+      list.length(vague_warnings) |> should.equal(0)
+    }
+    LintValid -> should.be_true(True)
+  }
+}
+
+pub fn lint_allows_uri_rule_test() {
+  let checks = [#("url", Check("valid uri", "Must be URI"))]
+  let response = make_response_with_checks(json.null(), checks)
+  let behavior = make_behavior("get-link", make_request(Get, "/link"), response)
+
+  let spec = make_spec([behavior], [])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintWarnings(warnings) -> {
+      let vague_warnings =
+        list.filter(warnings, fn(w) {
+          case w {
+            VagueRule(_, _, _) -> True
+            _ -> False
+          }
+        })
+      list.length(vague_warnings) |> should.equal(0)
+    }
+    LintValid -> should.be_true(True)
+  }
+}
+
+// ============================================================================
+// Missing Example Tests
+// ============================================================================
+
+pub fn lint_detects_missing_example_test() {
+  let behavior =
+    make_behavior(
+      "no-example",
+      make_request(Get, "/test"),
+      make_response(json.null()),
+    )
+
+  let spec = make_spec([behavior], [])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintWarnings(warnings) -> {
+      let missing_example_warnings =
+        list.filter(warnings, fn(w) {
+          case w {
+            MissingExample(_) -> True
+            _ -> False
+          }
+        })
+      list.length(missing_example_warnings) |> should.equal(1)
+
+      case list.first(missing_example_warnings) {
+        Ok(MissingExample(behavior_name)) -> {
+          behavior_name |> should.equal("no-example")
+        }
+        _ -> should.fail()
+      }
+    }
+    LintValid -> should.fail()
+  }
+}
+
+pub fn lint_allows_behavior_with_example_test() {
+  let example = json.object([#("id", json.int(1))])
+  let behavior =
+    make_behavior(
+      "has-example",
+      make_request(Get, "/test"),
+      make_response(example),
+    )
+
+  let spec = make_spec([behavior], [])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintValid -> should.be_true(True)
+    LintWarnings(warnings) -> {
+      let missing_example_warnings =
+        list.filter(warnings, fn(w) {
+          case w {
+            MissingExample(_) -> True
+            _ -> False
+          }
+        })
+      list.length(missing_example_warnings) |> should.equal(0)
+    }
+  }
+}
+
+pub fn lint_multiple_missing_examples_test() {
+  let behavior1 =
+    make_behavior(
+      "missing-1",
+      make_request(Get, "/test1"),
+      make_response(json.null()),
+    )
+  let behavior2 =
+    make_behavior(
+      "missing-2",
+      make_request(Get, "/test2"),
+      make_response(json.null()),
+    )
+
+  let spec = make_spec([behavior1, behavior2], [])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintWarnings(warnings) -> {
+      let missing_count =
+        list.filter(warnings, fn(w) {
+          case w {
+            MissingExample(_) -> True
+            _ -> False
+          }
+        })
+        |> list.length
+
+      missing_count |> should.equal(2)
+    }
+    LintValid -> should.fail()
+  }
+}
+
+// ============================================================================
+// Naming Convention Tests
+// ============================================================================
+
+pub fn lint_allows_kebab_case_names_test() {
+  let behavior =
+    make_behavior(
+      "get-user-by-id",
+      make_request(Get, "/users/1"),
+      make_response(json.object([#("id", json.int(1))])),
+    )
+
+  let spec = make_spec([behavior], [])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintValid -> should.be_true(True)
+    LintWarnings(warnings) -> {
+      let naming_warnings =
+        list.filter(warnings, fn(w) {
+          case w {
+            NamingConvention(_, _) -> True
+            _ -> False
+          }
+        })
+      list.length(naming_warnings) |> should.equal(0)
+    }
+  }
+}
+
+pub fn lint_allows_snake_case_names_test() {
+  let behavior =
+    make_behavior(
+      "get_user_by_id",
+      make_request(Get, "/users/1"),
+      make_response(json.object([#("id", json.int(1))])),
+    )
+
+  let spec = make_spec([behavior], [])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintValid -> should.be_true(True)
+    LintWarnings(warnings) -> {
+      let naming_warnings =
+        list.filter(warnings, fn(w) {
+          case w {
+            NamingConvention(_, _) -> True
+            _ -> False
+          }
+        })
+      list.length(naming_warnings) |> should.equal(0)
+    }
+  }
+}
+
+pub fn lint_detects_space_in_name_test() {
+  let behavior =
+    make_behavior(
+      "get user",
+      make_request(Get, "/users/1"),
+      make_response(json.object([#("id", json.int(1))])),
+    )
+
+  let spec = make_spec([behavior], [])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintWarnings(warnings) -> {
+      let naming_warnings =
+        list.filter(warnings, fn(w) {
+          case w {
+            NamingConvention(_, _) -> True
+            _ -> False
+          }
+        })
+      list.length(naming_warnings) |> should.equal(1)
+    }
+    LintValid -> should.fail()
+  }
+}
+
+pub fn lint_detects_uppercase_in_name_test() {
+  let behavior =
+    make_behavior(
+      "GetUser",
+      make_request(Get, "/users/1"),
+      make_response(json.object([#("id", json.int(1))])),
+    )
+
+  let spec = make_spec([behavior], [])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintWarnings(warnings) -> {
+      let naming_warnings =
+        list.filter(warnings, fn(w) {
+          case w {
+            NamingConvention(_, _) -> True
+            _ -> False
+          }
+        })
+      list.length(naming_warnings) |> should.equal(1)
+    }
+    LintValid -> should.fail()
+  }
+}
+
+pub fn lint_detects_special_chars_in_name_test() {
+  let behavior =
+    make_behavior(
+      "get.user@id",
+      make_request(Get, "/users/1"),
+      make_response(json.object([#("id", json.int(1))])),
+    )
+
+  let spec = make_spec([behavior], [])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintWarnings(warnings) -> {
+      let naming_warnings =
+        list.filter(warnings, fn(w) {
+          case w {
+            NamingConvention(_, _) -> True
+            _ -> False
+          }
+        })
+      list.length(naming_warnings) |> should.equal(1)
+    }
+    LintValid -> should.fail()
+  }
+}
+
+// ============================================================================
+// Duplicate Behavior Detection Tests
+// ============================================================================
+
+pub fn lint_detects_exact_duplicate_behaviors_test() {
+  let behavior1 =
+    make_behavior(
+      "get-user-1",
+      make_request(Get, "/users/123"),
+      make_response(json.object([#("id", json.int(1))])),
+    )
+  let behavior2 =
+    make_behavior(
+      "get-user-2",
+      make_request(Get, "/users/123"),
+      make_response(json.object([#("id", json.int(2))])),
+    )
+
+  let spec = make_spec([behavior1, behavior2], [])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintWarnings(warnings) -> {
+      let duplicate_warnings =
+        list.filter(warnings, fn(w) {
+          case w {
+            DuplicateBehavior(_, _, _) -> True
+            _ -> False
+          }
+        })
+      list.length(duplicate_warnings) |> should.equal(1)
+    }
+    LintValid -> should.fail()
+  }
+}
+
+pub fn lint_allows_different_methods_test() {
+  let behavior1 =
+    make_behavior(
+      "get-user",
+      make_request(Get, "/users/123"),
+      make_response(json.object([#("id", json.int(1))])),
+    )
+  let behavior2 =
+    make_behavior(
+      "post-user",
+      make_request(Post, "/users/123"),
+      make_response(json.object([#("id", json.int(2))])),
+    )
+
+  let spec = make_spec([behavior1, behavior2], [])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintValid -> should.be_true(True)
+    LintWarnings(warnings) -> {
+      let duplicate_warnings =
+        list.filter(warnings, fn(w) {
+          case w {
+            DuplicateBehavior(_, _, _) -> True
+            _ -> False
+          }
+        })
+      list.length(duplicate_warnings) |> should.equal(0)
+    }
+  }
+}
+
+pub fn lint_allows_different_paths_test() {
+  let behavior1 =
+    make_behavior(
+      "get-user",
+      make_request(Get, "/users/123"),
+      make_response(json.object([#("id", json.int(1))])),
+    )
+  let behavior2 =
+    make_behavior(
+      "get-order",
+      make_request(Get, "/orders/456"),
+      make_response(json.object([#("id", json.int(2))])),
+    )
+
+  let spec = make_spec([behavior1, behavior2], [])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintValid -> should.be_true(True)
+    LintWarnings(warnings) -> {
+      let duplicate_warnings =
+        list.filter(warnings, fn(w) {
+          case w {
+            DuplicateBehavior(_, _, _) -> True
+            _ -> False
+          }
+        })
+      list.length(duplicate_warnings) |> should.equal(0)
+    }
+  }
+}
+
+pub fn lint_detects_similar_paths_test() {
+  let behavior1 =
+    make_behavior(
+      "get-user-by-id",
+      make_request(Get, "/api/users/123"),
+      make_response(json.object([#("id", json.int(1))])),
+    )
+  let behavior2 =
+    make_behavior(
+      "get-user-by-identifier",
+      make_request(Get, "/api/users/456"),
+      make_response(json.object([#("id", json.int(2))])),
+    )
+
+  let spec = make_spec([behavior1, behavior2], [])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintWarnings(warnings) -> {
+      let duplicate_warnings =
+        list.filter(warnings, fn(w) {
+          case w {
+            DuplicateBehavior(_, _, _) -> True
+            _ -> False
+          }
+        })
+      // Should detect similarity due to matching method and similar path
+      { list.length(duplicate_warnings) >= 1 } |> should.be_true()
+    }
+    LintValid -> should.fail()
+  }
+}
+
+// ============================================================================
+// Unused Anti-Pattern Tests
+// ============================================================================
+
+pub fn lint_detects_unused_anti_pattern_test() {
+  let anti_pattern =
+    AntiPattern(
+      name: "Unused Pattern",
+      description: "Never used",
+      bad_example: json.object([#("bad_key", json.string("bad"))]),
+      good_example: json.object([#("good_key", json.string("good"))]),
+      why: "Test",
+    )
+
+  let behavior =
+    make_behavior(
+      "test",
+      make_request(Get, "/test"),
+      make_response(json.object([#("other_key", json.string("value"))])),
+    )
+
+  let spec = make_spec([behavior], [anti_pattern])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintWarnings(warnings) -> {
+      let unused_warnings =
+        list.filter(warnings, fn(w) {
+          case w {
+            UnusedAntiPattern(_) -> True
+            _ -> False
+          }
+        })
+      list.length(unused_warnings) |> should.equal(1)
+
+      case list.first(unused_warnings) {
+        Ok(UnusedAntiPattern(pattern_name)) -> {
+          pattern_name |> should.equal("Unused Pattern")
+        }
+        _ -> should.fail()
+      }
+    }
+    LintValid -> should.fail()
+  }
+}
+
+pub fn lint_no_unused_warning_when_pattern_used_test() {
+  let anti_pattern =
+    AntiPattern(
+      name: "Used Pattern",
+      description: "Used in behavior",
+      bad_example: json.object([#("internal_id", json.int(1))]),
+      good_example: json.object([#("public_id", json.string("uuid"))]),
+      why: "Test",
+    )
+
+  let behavior =
+    make_behavior(
+      "test",
+      make_request(Get, "/test"),
+      make_response(json.object([#("internal_id", json.int(123))])),
+    )
+
+  let spec = make_spec([behavior], [anti_pattern])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintWarnings(warnings) -> {
+      let unused_warnings =
+        list.filter(warnings, fn(w) {
+          case w {
+            UnusedAntiPattern(_) -> True
+            _ -> False
+          }
+        })
+      list.length(unused_warnings) |> should.equal(0)
+    }
+    LintValid -> should.fail()
+  }
+}
+
+pub fn lint_multiple_unused_anti_patterns_test() {
+  let anti_pattern1 =
+    AntiPattern(
+      name: "Unused 1",
+      description: "Not used",
+      bad_example: json.object([#("bad1", json.string("bad"))]),
+      good_example: json.object([#("good1", json.string("good"))]),
+      why: "Test",
+    )
+
+  let anti_pattern2 =
+    AntiPattern(
+      name: "Unused 2",
+      description: "Not used",
+      bad_example: json.object([#("bad2", json.string("bad"))]),
+      good_example: json.object([#("good2", json.string("good"))]),
+      why: "Test",
+    )
+
+  let behavior =
+    make_behavior(
+      "test",
+      make_request(Get, "/test"),
+      make_response(json.object([#("other", json.string("value"))])),
+    )
+
+  let spec = make_spec([behavior], [anti_pattern1, anti_pattern2])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintWarnings(warnings) -> {
+      let unused_count =
+        list.filter(warnings, fn(w) {
+          case w {
+            UnusedAntiPattern(_) -> True
+            _ -> False
+          }
+        })
+        |> list.length
+
+      unused_count |> should.equal(2)
+    }
+    LintValid -> should.fail()
+  }
+}
+
+// ============================================================================
+// Valid Spec Tests
+// ============================================================================
+
+pub fn lint_valid_spec_returns_lint_valid_test() {
+  let example = json.object([#("id", json.string("uuid-123"))])
+  let checks = [#("id", Check("uuid", "Must be UUID"))]
+  let response = make_response_with_checks(example, checks)
+  let behavior =
+    make_behavior(
+      "get-resource",
+      make_request(Get, "/resource/uuid-123"),
+      response,
+    )
+
+  let spec = make_spec([behavior], [])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintValid -> should.be_true(True)
+    LintWarnings(_) -> should.fail()
+  }
+}
+
+pub fn lint_empty_spec_returns_lint_valid_test() {
+  let spec = make_spec([], [])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintValid -> should.be_true(True)
+    LintWarnings(_) -> should.fail()
+  }
+}
+
+// ============================================================================
+// Format Warnings Tests
+// ============================================================================
+
+pub fn format_warnings_includes_count_test() {
+  let warnings = [MissingExample("behavior-1"), MissingExample("behavior-2")]
+  let formatted = spec_linter.format_warnings(warnings)
+
+  string.contains(formatted, "2 warning(s)")
+  |> should.be_true()
+}
+
+pub fn format_warnings_anti_pattern_test() {
+  let warning =
+    AntiPatternDetected("test-behavior", "Bad Pattern", "Details here")
+  let formatted = spec_linter.format_warnings([warning])
+
+  string.contains(formatted, "test-behavior")
+  |> should.be_true()
+
+  string.contains(formatted, "Bad Pattern")
+  |> should.be_true()
+
+  string.contains(formatted, "Details here")
+  |> should.be_true()
+}
+
+pub fn format_warnings_vague_rule_test() {
+  let warning =
+    VagueRule("test-behavior", "email", "valid (too vague - be specific)")
+  let formatted = spec_linter.format_warnings([warning])
+
+  string.contains(formatted, "test-behavior")
+  |> should.be_true()
+
+  string.contains(formatted, "email")
+  |> should.be_true()
+
+  string.contains(formatted, "too vague")
+  |> should.be_true()
+}
+
+pub fn format_warnings_missing_example_test() {
+  let warning = MissingExample("test-behavior")
+  let formatted = spec_linter.format_warnings([warning])
+
+  string.contains(formatted, "test-behavior")
+  |> should.be_true()
+
+  string.contains(formatted, "Missing response example")
+  |> should.be_true()
+}
+
+pub fn format_warnings_unused_anti_pattern_test() {
+  let warning = UnusedAntiPattern("Unused Pattern")
+  let formatted = spec_linter.format_warnings([warning])
+
+  string.contains(formatted, "Unused Pattern")
+  |> should.be_true()
+
+  string.contains(formatted, "not tested")
+  |> should.be_true()
+}
+
+pub fn format_warnings_naming_convention_test() {
+  let warning = NamingConvention("BadName", "Use kebab-case for behavior names")
+  let formatted = spec_linter.format_warnings([warning])
+
+  string.contains(formatted, "BadName")
+  |> should.be_true()
+
+  string.contains(formatted, "kebab-case")
+  |> should.be_true()
+}
+
+pub fn format_warnings_duplicate_behavior_test() {
+  let warning =
+    DuplicateBehavior("behavior-1", "behavior-2", "Similar request path")
+  let formatted = spec_linter.format_warnings([warning])
+
+  string.contains(formatted, "behavior-1")
+  |> should.be_true()
+
+  string.contains(formatted, "behavior-2")
+  |> should.be_true()
+
+  string.contains(formatted, "duplicates")
+  |> should.be_true()
+}
+
+// ============================================================================
+// Combined Warnings Tests
+// ============================================================================
+
+pub fn lint_multiple_warning_types_test() {
+  let anti_pattern =
+    AntiPattern(
+      name: "Bad IDs",
+      description: "Database IDs",
+      bad_example: json.object([#("db_id", json.int(1))]),
+      good_example: json.object([#("uuid", json.string("uuid"))]),
+      why: "Security",
+    )
+
+  let behavior1_example = json.object([#("db_id", json.int(100))])
+  let checks = [#("name", Check("valid", "Must be valid"))]
+  let behavior1 =
+    make_behavior(
+      "Get User",
+      make_request(Get, "/users/1"),
+      make_response_with_checks(behavior1_example, checks),
+    )
+
+  let behavior2 =
+    make_behavior(
+      "missing-ex",
+      make_request(Get, "/test"),
+      make_response(json.null()),
+    )
+
+  let unused_pattern =
+    AntiPattern(
+      name: "Unused",
+      description: "Never used",
+      bad_example: json.object([#("unused", json.string("unused"))]),
+      good_example: json.object([#("good", json.string("good"))]),
+      why: "Test",
+    )
+
+  let spec = make_spec([behavior1, behavior2], [anti_pattern, unused_pattern])
+  let result = spec_linter.lint_spec(spec)
+
+  case result {
+    LintWarnings(warnings) -> {
+      // Should have: anti-pattern, vague rule, naming, missing example, unused pattern
+      { list.length(warnings) >= 4 } |> should.be_true()
+
+      // Check we have different warning types
+      let has_anti_pattern =
+        list.any(warnings, fn(w) {
+          case w {
+            AntiPatternDetected(_, _, _) -> True
+            _ -> False
+          }
+        })
+      let has_vague =
+        list.any(warnings, fn(w) {
+          case w {
+            VagueRule(_, _, _) -> True
+            _ -> False
+          }
+        })
+      let has_missing =
+        list.any(warnings, fn(w) {
+          case w {
+            MissingExample(_) -> True
+            _ -> False
+          }
+        })
+      let has_naming =
+        list.any(warnings, fn(w) {
+          case w {
+            NamingConvention(_, _) -> True
+            _ -> False
+          }
+        })
+      let has_unused =
+        list.any(warnings, fn(w) {
+          case w {
+            UnusedAntiPattern(_) -> True
+            _ -> False
+          }
+        })
+
+      has_anti_pattern |> should.be_true()
+      has_vague |> should.be_true()
+      has_missing |> should.be_true()
+      has_naming |> should.be_true()
+      has_unused |> should.be_true()
+    }
+    LintValid -> should.fail()
+  }
+}

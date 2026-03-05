@@ -1,0 +1,69 @@
+{
+  "id": "task-027",
+  "title": "server: implement EARS extraction",
+  "type": "feature",
+  "priority": 1,
+  "effort": "1hr",
+  "description": "Implement server function to extract EARS (Easy Approach to Requirements Syntax) patterns from natural language requirements. This parser identifies and categorizes ubiquitous, event-driven, and unwanted behavior patterns.",
+  "ears": {
+    "ubiquitous": [
+      "THE SYSTEM SHALL parse all requirement text for EARS pattern structures",
+      "THE SYSTEM SHALL maintain pattern recognition accuracy above 95%"
+    ],
+    "event_driven": [
+      {
+        "trigger": "WHEN requirement text is submitted for extraction",
+        "shall": "THE SYSTEM SHALL identify and extract all EARS pattern types present"
+      },
+      {
+        "trigger": "WHEN an ambiguous pattern is detected",
+        "shall": "THE SYSTEM SHALL flag the ambiguity with suggested interpretations"
+      },
+      {
+        "trigger": "WHEN extraction completes",
+        "shall": "THE SYSTEM SHALL return structured EARS output with confidence scores"
+      }
+    ],
+    "unwanted": [
+      {
+        "condition": "IF pattern extraction confidence falls below threshold",
+        "shall_not": "THE SYSTEM SHALL NOT include low-confidence extractions in results",
+        "because": "uncertain extractions reduce overall output quality"
+      },
+      {
+        "condition": "IF the text contains no recognizable EARS patterns",
+        "shall_not": "THE SYSTEM SHALL NOT generate synthetic patterns",
+        "because": "fabricated patterns misrepresent the original requirements"
+      }
+    ]
+  },
+  "contracts": {
+    "preconditions": [
+      "Input text must be in a supported language (English)",
+      "NLP models must be loaded for pattern recognition",
+      "EARS pattern templates must be configured"
+    ],
+    "postconditions": [
+      "Output contains categorized EARS patterns",
+      "Each pattern includes source text location",
+      "Each pattern includes confidence score"
+    ],
+    "invariants": [
+      "Extraction shall be deterministic for identical inputs",
+      "Original text shall not be modified during extraction",
+      "Pattern categorization shall follow EARS specification strictly"
+    ]
+  },
+  "tests": {
+    "happy": [
+      "Given text with clear ubiquitous patterns, when EARS extraction runs, then all ubiquitous patterns are correctly identified",
+      "Given text with event-driven requirements, when EARS extraction runs, then trigger-shall pairs are extracted with correct structure",
+      "Given text with unwanted behaviors, when EARS extraction runs, then condition-shall_not-because structures are properly parsed"
+    ],
+    "error": [
+      "Given empty input text, when EARS extraction runs, then EMPTY_INPUT error is returned",
+      "Given text in unsupported language, when EARS extraction runs, then UNSUPPORTED_LANGUAGE error is returned",
+      "Given malformed requirement text, when EARS extraction runs, then partial results are returned with PARSE_WARNINGS"
+    ]
+  }
+}

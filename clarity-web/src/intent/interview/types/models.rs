@@ -353,7 +353,7 @@ pub enum GapStateError {
 
   /// Attempted to modify a gap that is already resolved.
   ///
-  /// GapState is a one-way state machine; once resolved, it cannot
+  /// `GapState` is a one-way state machine; once resolved, it cannot
   /// be reopened or re-resolved.
   #[error("gap is already resolved")]
   AlreadyResolved,
@@ -606,10 +606,10 @@ impl ConflictState {
   /// - Returns [`ConflictStateError::AlreadyResolved`] if attempting to
   ///   transition from Resolved back to Pending.
   /// - Returns [`ConflictStateError::NegativeIndex`] if the target state
-  ///   is Resolved with a negative chosen_index.
-  /// - Returns [`ConflictStateError::InvalidIndex`] if the chosen_index
-  ///   is out of bounds for the given option_count.
-  /// - Returns [`ConflictStateError::EmptyOptions`] if option_count is 0
+  ///   is Resolved with a negative `chosen_index`.
+  /// - Returns [`ConflictStateError::InvalidIndex`] if the `chosen_index`
+  ///   is out of bounds for the given `option_count`.
+  /// - Returns [`ConflictStateError::EmptyOptions`] if `option_count` is 0
   ///   and attempting to resolve.
   ///
   /// # Examples
@@ -674,9 +674,9 @@ impl ConflictState {
   /// # Errors
   ///
   /// - Returns [`ConflictStateError::AlreadyResolved`] if the conflict is already resolved.
-  /// - Returns [`ConflictStateError::NegativeIndex`] if chosen_index is negative.
-  /// - Returns [`ConflictStateError::InvalidIndex`] if chosen_index is out of bounds.
-  /// - Returns [`ConflictStateError::EmptyOptions`] if option_count is 0.
+  /// - Returns [`ConflictStateError::NegativeIndex`] if `chosen_index` is negative.
+  /// - Returns [`ConflictStateError::InvalidIndex`] if `chosen_index` is out of bounds.
+  /// - Returns [`ConflictStateError::EmptyOptions`] if `option_count` is 0.
   ///
   /// # Examples
   ///
@@ -737,7 +737,7 @@ impl ConflictState {
   /// # Errors
   ///
   /// Returns [`ConflictStateError::NegativeIndex`] if the state is Resolved
-  /// with a negative chosen_index.
+  /// with a negative `chosen_index`.
   ///
   /// # Examples
   ///
@@ -774,9 +774,9 @@ impl ConflictState {
   ///
   /// # Errors
   ///
-  /// - Returns [`ConflictStateError::NegativeIndex`] if the chosen_index is negative.
-  /// - Returns [`ConflictStateError::EmptyOptions`] if option_count is 0.
-  /// - Returns [`ConflictStateError::InvalidIndex`] if the chosen_index is out of bounds.
+  /// - Returns [`ConflictStateError::NegativeIndex`] if the `chosen_index` is negative.
+  /// - Returns [`ConflictStateError::EmptyOptions`] if `option_count` is 0.
+  /// - Returns [`ConflictStateError::InvalidIndex`] if the `chosen_index` is out of bounds.
   ///
   /// # Examples
   ///
@@ -852,7 +852,7 @@ pub enum ConflictStateError {
 
   /// Attempted to modify a conflict that is already resolved.
   ///
-  /// ConflictState is a one-way state machine; once resolved, it cannot
+  /// `ConflictState` is a one-way state machine; once resolved, it cannot
   /// be reopened or re-resolved.
   #[error("conflict is already resolved")]
   AlreadyResolved,
