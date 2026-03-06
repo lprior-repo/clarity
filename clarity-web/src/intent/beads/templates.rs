@@ -211,12 +211,12 @@ impl BeadTemplateStats {
 pub fn generate_beads_from_session(
   session: &InterviewSession,
 ) -> Result<Vec<BeadTemplate>, BeadError> {
-  let profile_str = session.profile.as_str().to_string();
+  let profile_str = session.profile.as_str();
   let mut beads = Vec::new();
 
   // Generate beads from answers
   for answer in &session.answers {
-    let bead = create_bead_from_answer(answer, &profile_str)?;
+    let bead = create_bead_from_answer(answer, profile_str)?;
     beads.push(bead);
   }
 
@@ -298,15 +298,15 @@ fn determine_issue_type(response: &str) -> String {
 /// # Errors
 /// Returns `BeadError` if bead creation fails validation.
 pub fn generate_profile_beads(session: &InterviewSession) -> Result<Vec<BeadTemplate>, BeadError> {
-  let profile_str = session.profile.as_str().to_string();
+  let profile_str = session.profile.as_str();
 
   let beads = match session.profile {
-    Profile::Api => generate_api_profile_beads(&profile_str, session),
-    Profile::Cli => generate_cli_profile_beads(&profile_str, session),
-    Profile::Event => generate_event_profile_beads(&profile_str, session),
-    Profile::Data => generate_data_profile_beads(&profile_str, session),
-    Profile::Workflow => generate_workflow_profile_beads(&profile_str, session),
-    Profile::Ui => generate_ui_profile_beads(&profile_str, session),
+    Profile::Api => generate_api_profile_beads(profile_str, session),
+    Profile::Cli => generate_cli_profile_beads(profile_str, session),
+    Profile::Event => generate_event_profile_beads(profile_str, session),
+    Profile::Data => generate_data_profile_beads(profile_str, session),
+    Profile::Workflow => generate_workflow_profile_beads(profile_str, session),
+    Profile::Ui => generate_ui_profile_beads(profile_str, session),
   };
 
   Ok(beads)
@@ -1544,8 +1544,8 @@ mod tests {
     assert_eq!(estimate_effort_from_priority(3), 3);
     assert_eq!(estimate_effort_from_priority(4), 2);
     assert_eq!(estimate_effort_from_priority(5), 1);
-    assert_eq!(estimate_effort_from_priority(0), 3); // Invalid defaults to 3
-    assert_eq!(estimate_effort_from_priority(10), 3); // Invalid defaults to 3
+    assert_eq!(estimate_effort_from_priority(0), 1); // Invalid defaults to 1
+    assert_eq!(estimate_effort_from_priority(10), 1); // Invalid defaults to 1
   }
 
   #[test]

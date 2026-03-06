@@ -102,6 +102,7 @@ pub async fn save_bead(bead: Bead) -> Result<Bead, ServerFnError> {
 /// Get all beads for a project
 #[server]
 pub async fn get_beads(project_id: String) -> Result<Vec<Bead>, ServerFnError> {
+  let _ = project_id;
   // In a real app, this would fetch from a database
   // For now, return sample data
   let beads = vec![
@@ -140,7 +141,7 @@ pub async fn get_beads(project_id: String) -> Result<Vec<Bead>, ServerFnError> {
 #[server]
 pub async fn delete_bead(bead_id: String) -> Result<(), ServerFnError> {
   // In a real app, this would delete from a database
-  println!("Deleting bead: {}", bead_id);
+  println!("Deleting bead: {bead_id}");
   Ok(())
 }
 
@@ -160,22 +161,18 @@ pub async fn get_coach_guidance(
 ) -> Result<CoachResponse, ServerFnError> {
   // In a real app, this would call an AI API
   let guidance = match phase {
-    Phase::Discover => format!(
-      "In the Discover phase, focus on understanding users deeply. Context: {}",
-      context
-    ),
+    Phase::Discover => {
+      format!("In the Discover phase, focus on understanding users deeply. Context: {context}")
+    }
     Phase::Define => format!(
-      "In the Define phase, synthesize your findings into a clear problem. Context: {}",
-      context
+      "In the Define phase, synthesize your findings into a clear problem. Context: {context}"
     ),
-    Phase::Develop => format!(
-      "In the Develop phase, ideate and prototype solutions. Context: {}",
-      context
-    ),
-    Phase::Deliver => format!(
-      "In the Deliver phase, test and refine your solution. Context: {}",
-      context
-    ),
+    Phase::Develop => {
+      format!("In the Develop phase, ideate and prototype solutions. Context: {context}")
+    }
+    Phase::Deliver => {
+      format!("In the Deliver phase, test and refine your solution. Context: {context}")
+    }
   };
 
   let questions = match phase {
@@ -333,8 +330,8 @@ pub async fn get_ai_provider_status_server() -> Result<AiProviderDiagnostics, Se
   Ok(AiProviderDiagnostics {
     provider: "opencode".to_string(),
     endpoint: AI_PROVIDER.endpoint().clone(),
-    model: AI_PROVIDER.model().clone(),
-    routing_provider: AI_PROVIDER.routing_provider().clone(),
+    model: AI_PROVIDER.model().cloned(),
+    routing_provider: AI_PROVIDER.routing_provider().cloned(),
   })
 }
 
@@ -462,7 +459,7 @@ pub async fn suggest_field_server(
     name: "suggestion".to_string(),
     field_type: field.clone(),
     required: true,
-    description: Some(format!("AI-suggested content for {:?} field", field)),
+    description: Some(format!("AI-suggested content for {field:?} field")),
     options: None,
   }];
 
@@ -501,17 +498,13 @@ pub async fn suggest_field_server(
   let suggestion = result
     .fields
     .first()
-    .map(|f| {
+    .and_then(|f| {
       serde_json::to_string(&f.value)
         .map(|s| s.trim_matches('"').to_string())
         .ok()
     })
-    .flatten()
     .unwrap_or_else(|| {
-      format!(
-        "Suggestion for {:?} field based on your context. Please review and edit.",
-        field
-      )
+      format!("Suggestion for {field:?} field based on your context. Please review and edit.")
     });
 
   info!(
@@ -572,7 +565,9 @@ pub async fn calculate_quality_server(
   }
 
   // Default to empty EARS if none provided
-  let ears_ref = ears.as_ref().map_or_else(Vec::new, |e| e.clone());
+  let ears_ref = ears
+    .as_ref()
+    .map_or_else(Vec::new, std::clone::Clone::clone);
 
   // Inversion control defaults (will be enhanced in future)
   let inversion = InversionControl {
@@ -748,14 +743,13 @@ pub async fn validate_straw_man_traps_server(
 
   // Build analysis prompt
   let analysis_prompt = format!(
-    "Analyze this user persona description for straw man trap patterns:\n\n{}\n\n\
+    "Analyze this user persona description for straw man trap patterns:\n\n{persona_text}\n\n\
         Detect which of the following traps are present:\n\
         1. Irrational Actor: User acts against their own motivations\n\
         2. Manic Pixie Dream User: User magically loves everything\n\
         3. Stoic Monk: User tolerates excessive friction\n\
         4. Your Clone: User has developer's system knowledge\n\n\
-        Provide specific suggestions for any detected traps.",
-    persona_text
+        Provide specific suggestions for any detected traps."
   );
 
   // Call AI provider
@@ -783,22 +777,22 @@ pub async fn validate_straw_man_traps_server(
   for field in &result.fields {
     match field.name.as_str() {
       "irrational_actor_detected" => {
-        if let Some(true) = field.value.as_bool() {
+        if field.value.as_bool() == Some(true) {
           traps_detected.push(StrawManTrap::IrrationalActor);
         }
       }
       "manic_pixie_dream_user_detected" => {
-        if let Some(true) = field.value.as_bool() {
+        if field.value.as_bool() == Some(true) {
           traps_detected.push(StrawManTrap::ManicPixieDreamUser);
         }
       }
       "stoic_monk_detected" => {
-        if let Some(true) = field.value.as_bool() {
+        if field.value.as_bool() == Some(true) {
           traps_detected.push(StrawManTrap::StoicMonk);
         }
       }
       "your_clone_detected" => {
-        if let Some(true) = field.value.as_bool() {
+        if field.value.as_bool() == Some(true) {
           traps_detected.push(StrawManTrap::YourClone);
         }
       }
@@ -1040,7 +1034,7 @@ pub async fn validate_hole_punching_server(
   for field in &result.fields {
     match field.name.as_str() {
       "discovery_hole_addressed" => {
-        if let Some(true) = field.value.as_bool() {
+        if field.value.as_bool() == Some(true) {
           // Mark as addressed if not already set
           if discovery_hole.is_none() {
             discovery_hole = Some("Addressed in scenario".to_string());
@@ -1048,17 +1042,13 @@ pub async fn validate_hole_punching_server(
         }
       }
       "edge_case_hole_addressed" => {
-        if let Some(true) = field.value.as_bool() {
-          if edge_case_hole.is_none() {
-            edge_case_hole = Some("Addressed in scenario".to_string());
-          }
+        if field.value.as_bool() == Some(true) && edge_case_hole.is_none() {
+          edge_case_hole = Some("Addressed in scenario".to_string());
         }
       }
       "motivation_dropoff_addressed" => {
-        if let Some(true) = field.value.as_bool() {
-          if motivation_dropoff.is_none() {
-            motivation_dropoff = Some("Addressed in scenario".to_string());
-          }
+        if field.value.as_bool() == Some(true) && motivation_dropoff.is_none() {
+          motivation_dropoff = Some("Addressed in scenario".to_string());
         }
       }
       _ => {}

@@ -1,4 +1,17 @@
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::float_cmp, clippy::needless_collect, clippy::unnecessary_debug_formatting, clippy::match_same_arms, clippy::option_if_let_else, clippy::suspicious_else_formatting, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro)]
+#![allow(
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::unnecessary_debug_formatting,
+  clippy::match_same_arms,
+  clippy::option_if_let_else,
+  clippy::suspicious_else_formatting,
+  clippy::manual_let_else,
+  clippy::match_wild_err_arm,
+  clippy::match_like_matches_macro
+)]
 #![forbid(unsafe_code)]
 
 //! Integration tests for quality scoring with Develop phase gate.
@@ -984,4 +997,101 @@ fn test_e2e_quality_score_cached_for_transition() {
     restored_score.passes(MINIMUM_GATE),
     "Cached score should pass gate for Develop transition"
   );
+}
+
+// ============================================
+// Property-Based Tests
+// ============================================
+
+use proptest::prelude::*;
+
+proptest! {
+    #[test]
+    fn test_evaluator_never_panics_on_any_input(
+        answers in proptest::collection::vec(
+            (
+                "[a-zA-Z0-9_]{1,50}", // step_id
+                ".*", // value (any string)
+            ),
+            0..20 // number of answers
+        )
+    ) {
+        let domain_answers: Vec<Answer> = answers.into_iter().map(|(step_id, value)| {
+            Answer {
+                step_id,
+                value,
+                timestamp: chrono::Utc::now().to_rfc3339(),
+            }
+        }).collect();
+
+        let ears: Vec<EarsRequirementRef> = vec![];
+        let inversion = InversionControl {
+            has_inversion_tests: false,
+            inverted_count: 0,
+        };
+
+        // As long as this doesn't panic, the test passes
+        let _ = calculate_quality(&domain_answers, &ears, &inversion);
+    }
+
+    #[test]
+    fn test_overall_score_is_always_in_bounds(
+        answers in proptest::collection::vec(
+            (
+                "[a-zA-Z0-9_]{1,50}", // step_id
+                ".*", // value
+            ),
+            1..20 // at least 1 answer
+        )
+    ) {
+        let domain_answers: Vec<Answer> = answers.into_iter().map(|(step_id, value)| {
+            Answer {
+                step_id,
+                value,
+                timestamp: chrono::Utc::now().to_rfc3339(),
+            }
+        }).collect();
+
+        let ears: Vec<EarsRequirementRef> = vec![];
+        let inversion = InversionControl {
+            has_inversion_tests: false,
+            inverted_count: 0,
+        };
+
+        if let Ok(score) = calculate_quality(&domain_answers, &ears, &inversion) {
+            prop_assert!(score.overall <= 100);
+        }
+    }
+
+    #[test]
+    fn test_dimensions_are_always_five_and_bounded(
+        answers in proptest::collection::vec(
+            (
+                "[a-zA-Z0-9_]{1,50}", // step_id
+                ".*", // value
+            ),
+            1..20 // at least 1 answer
+        )
+    ) {
+        let domain_answers: Vec<Answer> = answers.into_iter().map(|(step_id, value)| {
+            Answer {
+                step_id,
+                value,
+                timestamp: chrono::Utc::now().to_rfc3339(),
+            }
+        }).collect();
+
+        let ears: Vec<EarsRequirementRef> = vec![];
+        let inversion = InversionControl {
+            has_inversion_tests: false,
+            inverted_count: 0,
+        };
+
+        if let Ok(score) = calculate_quality(&domain_answers, &ears, &inversion) {
+            prop_assert_eq!(score.dimensions.len(), 5);
+            for dim in score.dimensions {
+                prop_assert!(dim.score <= 100);
+            }
+        }
+    }
 }

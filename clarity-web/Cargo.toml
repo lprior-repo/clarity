@@ -45,6 +45,7 @@ dioxus-fullstack = { version = "0.7.3" }
 tempfile = "3"
 tokio = { workspace = true }
 serial_test = "3"
+proptest = "1.10.0"
 
 [[test]]
 name = "e2e_discover_guided"

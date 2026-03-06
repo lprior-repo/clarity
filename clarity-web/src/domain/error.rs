@@ -5,7 +5,7 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-#[derive(Debug, Error, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Error, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(tag = "type", content = "data")]
 pub enum ClarityError {
   #[error("I/O Error: {0}")]
