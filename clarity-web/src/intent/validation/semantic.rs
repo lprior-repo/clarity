@@ -51,13 +51,6 @@ use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 
-// Re-export the validated name types for backwards compatibility
-// These are now defined in crate::intent::types::names
-pub use crate::intent::types::{
-  BehaviorName as ValidatedBehaviorName, FeatureName as ValidatedFeatureName,
-  SpecName as ValidatedSpecName,
-};
-
 /// Errors that can occur during semantic validation
 ///
 /// Each error variant represents a specific category of semantic issue
