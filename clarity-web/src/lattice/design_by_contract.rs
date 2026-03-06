@@ -4,33 +4,6 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
-// Additional clippy lints to allow
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::cast_sign_loss)]
-#![allow(clippy::cast_precision_loss)]
-#![allow(clippy::cast_possible_wrap)]
-#![allow(clippy::too_many_arguments)]
-#![allow(clippy::missing_errors_doc)]
-#![allow(clippy::trivially_copy_pass_by_ref)]
-#![allow(clippy::assigning_clones)]
-#![allow(clippy::option_if_let_else)]
-#![allow(clippy::unused_self)]
-#![allow(clippy::unnecessary_wraps)]
-#![allow(clippy::too_many_lines)]
-#![allow(clippy::manual_strip)]
-#![allow(clippy::format_push_string)]
-#![allow(clippy::missing_const_for_fn)]
-#![allow(clippy::struct_field_names)]
-#![allow(clippy::suspicious_else_formatting)]
-#![allow(clippy::return_self_not_must_use)]
-#![allow(clippy::items_after_statements)]
-#![allow(clippy::ptr_arg)]
-#![allow(clippy::missing_fields_in_debug)]
-#![allow(clippy::must_use_unit)]
-#![allow(clippy::collection_is_never_read)]
-#![allow(clippy::needless_collect)]
-#![allow(clippy::manual_checked_ops)]
-#![allow(clippy::needless_pass_by_value)]
 
 //! Design by Contract module for requirements validation.
 //!
@@ -42,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 /// Domain errors for design by contract
-#[derive(Debug, Error, PartialEq, Eq, Clone)]
+#[derive(Debug, Error, PartialEq, Clone)]
 pub enum ContractError {
   #[error("contract name is empty")]
   EmptyName,
@@ -205,7 +178,7 @@ pub struct ContractViolation {
 impl ContractViolation {
   /// Create a new contract violation
   #[must_use]
-  pub const fn new(contract: Contract, severity: ViolationSeverity, evidence: String) -> Self {
+  pub fn new(contract: Contract, severity: ViolationSeverity, evidence: String) -> Self {
     Self {
       contract,
       severity,
@@ -378,7 +351,7 @@ pub fn extract_contracts(text: &str) -> Vec<Contract> {
 
   let sentences: Vec<&str> = text
     .split(['.', '!', '?'])
-    .map(str::trim)
+    .map(|s| s.trim())
     .filter(|s| !s.is_empty())
     .collect();
 

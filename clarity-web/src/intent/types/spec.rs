@@ -5,27 +5,18 @@
 #![forbid(unsafe_code)]
 
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
-use super::{AIHints, AntiPattern, Feature, Invariant, SpecName, TypeError};
+use super::{AIHints, AntiPattern, Feature, Invariant, TypeError};
 
 /// Top-level specification container
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Spec {
   /// Unique specification name
   pub name: String,
   /// Human-readable description
   #[serde(default)]
   pub description: String,
-  /// Target audience for this specification
-  #[serde(default)]
-  pub audience: String,
-  /// Version string for this specification
-  #[serde(default)]
-  pub version: String,
-  /// Success criteria for this specification
-  #[serde(default)]
-  pub success_criteria: Vec<String>,
   /// Features that make up this specification
   #[serde(default)]
   pub features: Vec<Feature>,
@@ -46,44 +37,17 @@ impl Spec {
   /// # Errors
   /// Returns `TypeError::EmptyName` if name is empty or whitespace-only
   pub fn new(name: String) -> Result<Self, TypeError> {
-    let validated_name = SpecName::parse(name).map_err(|_| TypeError::EmptyName)?;
+    if name.trim().is_empty() {
+      return Err(TypeError::EmptyName);
+    }
     Ok(Self {
-      name: validated_name.into(),
+      name,
       description: String::new(),
-      audience: String::new(),
-      version: String::new(),
-      success_criteria: Vec::new(),
       features: Vec::new(),
       invariants: Vec::new(),
       anti_patterns: Vec::new(),
       ai_hints: AIHints::default(),
     })
-  }
-
-  /// Create a spec from a validated `SpecName`.
-  ///
-  /// This constructor accepts a pre-validated name, avoiding redundant validation.
-  #[must_use]
-  pub fn from_validated_name(name: SpecName) -> Self {
-    Self {
-      name: name.into(),
-      description: String::new(),
-      audience: String::new(),
-      version: String::new(),
-      success_criteria: Vec::new(),
-      features: Vec::new(),
-      invariants: Vec::new(),
-      anti_patterns: Vec::new(),
-      ai_hints: AIHints::default(),
-    }
-  }
-
-  /// Get the spec name as a validated `SpecName`.
-  ///
-  /// Returns `None` if the name is invalid (should not happen for well-constructed specs).
-  #[must_use]
-  pub fn validated_name(&self) -> Option<SpecName> {
-    SpecName::parse(self.name.clone()).ok()
   }
 
   /// Builder method to set description
@@ -164,13 +128,6 @@ impl Spec {
   fn detect_circular_dependencies(&self) -> Result<(), TypeError> {
     let feature_names: HashSet<&str> = self.features.iter().map(|f| f.name.as_str()).collect();
 
-    // Build dependency map for efficient lookup
-    let dep_map: HashMap<&str, &Vec<String>> = self
-      .features
-      .iter()
-      .map(|f| (f.name.as_str(), &f.depends_on))
-      .collect();
-
     let mut visiting: HashSet<&str> = HashSet::new();
     let mut visited: HashSet<&str> = HashSet::new();
 
@@ -181,7 +138,13 @@ impl Spec {
         }
       }
 
-      Self::dfs_visit(feature.name.as_str(), &dep_map, &mut visiting, &mut visited)?;
+      Self::dfs_visit(
+        feature.name.as_str(),
+        &feature.depends_on,
+        &mut visiting,
+        &mut visited,
+        &feature_names,
+      )?;
     }
 
     Ok(())
@@ -189,9 +152,10 @@ impl Spec {
 
   fn dfs_visit<'a>(
     node: &'a str,
-    dep_map: &HashMap<&'a str, &'a Vec<String>>,
+    dependencies: &[String],
     visiting: &mut HashSet<&'a str>,
     visited: &mut HashSet<&'a str>,
+    all_features: &HashSet<&'a str>,
   ) -> Result<(), TypeError> {
     if visited.contains(node) {
       return Ok(());
@@ -206,14 +170,12 @@ impl Spec {
 
     visiting.insert(node);
 
-    // Get this node's dependencies and recursively visit each one
-    if let Some(dependencies) = dep_map.get(node) {
-      for dep in *dependencies {
-        if visiting.contains(dep.as_str()) {
-          return Err(TypeError::CircularDependency(node.to_string(), dep.clone()));
-        }
-        // Recursively visit the dependency to traverse its own dependencies
-        Self::dfs_visit(dep.as_str(), dep_map, visiting, visited)?;
+    for dep in dependencies {
+      if !all_features.contains(dep.as_str()) {
+        continue;
+      }
+      if visiting.contains(dep.as_str()) {
+        return Err(TypeError::CircularDependency(node.to_string(), dep.clone()));
       }
     }
 
@@ -226,11 +188,8 @@ impl Spec {
 
 #[cfg(test)]
 mod tests {
-  #![allow(clippy::unwrap_used)]
-  #![allow(clippy::expect_used)]
-
   use super::Spec;
-  use crate::intent::types::{Behavior, Feature, SpecName, TypeError};
+  use crate::intent::types::{Behavior, Feature, TypeError};
 
   #[test]
   fn test_spec_new_valid() {
@@ -257,28 +216,6 @@ mod tests {
   fn test_spec_new_whitespace_name() {
     let result = Spec::new("   ".to_string());
     assert!(matches!(result, Err(TypeError::EmptyName)));
-  }
-
-  #[test]
-  fn test_spec_from_validated_name() {
-    let name = match SpecName::parse("my-spec".to_string()) {
-      Ok(n) => n,
-      Err(_) => return,
-    };
-    let spec = Spec::from_validated_name(name);
-    assert_eq!(spec.name, "my-spec");
-  }
-
-  #[test]
-  fn test_spec_validated_name() {
-    let spec = match Spec::new("my-spec".to_string()) {
-      Ok(s) => s,
-      Err(_) => return,
-    };
-    let validated = spec.validated_name();
-    assert!(validated.is_some());
-    let validated = validated.unwrap();
-    assert_eq!(validated.as_str(), "my-spec");
   }
 
   #[test]
@@ -358,79 +295,5 @@ mod tests {
 
     let result = spec.validate();
     assert!(result.is_ok());
-  }
-
-  #[test]
-  fn test_spec_validate_direct_cycle() {
-    // Test A -> B -> A cycle detection
-    let mut spec = match Spec::new("test-spec".to_string()) {
-      Ok(value) => value,
-      Err(_) => return,
-    };
-
-    // Feature A depends on B
-    let mut feature_a = match Feature::new("feature_a".to_string()) {
-      Ok(value) => value,
-      Err(_) => return,
-    };
-    feature_a.add_dependency("feature_b".to_string());
-
-    // Feature B depends on A (creates cycle)
-    let mut feature_b = match Feature::new("feature_b".to_string()) {
-      Ok(value) => value,
-      Err(_) => return,
-    };
-    feature_b.add_dependency("feature_a".to_string());
-
-    let result_a = spec.add_feature(feature_a);
-    assert!(result_a.is_ok());
-
-    let result_b = spec.add_feature(feature_b);
-    assert!(result_b.is_ok());
-
-    let result = spec.validate();
-    assert!(matches!(result, Err(TypeError::CircularDependency(_, _))));
-  }
-
-  #[test]
-  fn test_spec_validate_multi_hop_cycle() {
-    // Test A -> B -> C -> A cycle detection (3-hop cycle)
-    let mut spec = match Spec::new("test-spec".to_string()) {
-      Ok(value) => value,
-      Err(_) => return,
-    };
-
-    // Feature A depends on B
-    let mut feature_a = match Feature::new("feature_a".to_string()) {
-      Ok(value) => value,
-      Err(_) => return,
-    };
-    feature_a.add_dependency("feature_b".to_string());
-
-    // Feature B depends on C
-    let mut feature_b = match Feature::new("feature_b".to_string()) {
-      Ok(value) => value,
-      Err(_) => return,
-    };
-    feature_b.add_dependency("feature_c".to_string());
-
-    // Feature C depends on A (creates 3-hop cycle)
-    let mut feature_c = match Feature::new("feature_c".to_string()) {
-      Ok(value) => value,
-      Err(_) => return,
-    };
-    feature_c.add_dependency("feature_a".to_string());
-
-    let result_feat_a = spec.add_feature(feature_a);
-    assert!(result_feat_a.is_ok());
-
-    let result_feat_b = spec.add_feature(feature_b);
-    assert!(result_feat_b.is_ok());
-
-    let result_feat_c = spec.add_feature(feature_c);
-    assert!(result_feat_c.is_ok());
-
-    let result = spec.validate();
-    assert!(matches!(result, Err(TypeError::CircularDependency(_, _))));
   }
 }

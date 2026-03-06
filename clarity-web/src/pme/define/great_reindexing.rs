@@ -5,32 +5,6 @@
 #![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
-// Additional clippy lints to allow
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::cast_sign_loss)]
-#![allow(clippy::cast_precision_loss)]
-#![allow(clippy::cast_possible_wrap)]
-#![allow(clippy::too_many_arguments)]
-#![allow(clippy::missing_errors_doc)]
-#![allow(clippy::trivially_copy_pass_by_ref)]
-#![allow(clippy::assigning_clones)]
-#![allow(clippy::option_if_let_else)]
-#![allow(clippy::unused_self)]
-#![allow(clippy::unnecessary_wraps)]
-#![allow(clippy::too_many_lines)]
-#![allow(clippy::manual_strip)]
-#![allow(clippy::format_push_string)]
-#![allow(clippy::missing_const_for_fn)]
-#![allow(clippy::struct_field_names)]
-#![allow(clippy::return_self_not_must_use)]
-#![allow(clippy::items_after_statements)]
-#![allow(clippy::ptr_arg)]
-#![allow(clippy::missing_fields_in_debug)]
-#![allow(clippy::must_use_unit)]
-#![allow(clippy::collection_is_never_read)]
-#![allow(clippy::needless_collect)]
-#![allow(clippy::manual_checked_ops)]
-#![allow(clippy::needless_pass_by_value)]
 
 //! Great Reindexing Engine - Converts time-based stories into graph-based requirements.
 //!
@@ -72,7 +46,7 @@ pub struct StoryInput {
 impl StoryInput {
   /// Create a new story input.
   #[must_use]
-  pub const fn new(id: String, text: String) -> Self {
+  pub fn new(id: String, text: String) -> Self {
     Self {
       id,
       text,
@@ -118,7 +92,7 @@ pub struct UserStory {
 impl UserStory {
   /// Create a new user story.
   #[must_use]
-  pub const fn new(
+  pub fn new(
     id: String,
     user: String,
     action: String,
@@ -166,7 +140,7 @@ pub struct JobToBeDone {
 impl JobToBeDone {
   /// Create a new Job to Be Done.
   #[must_use]
-  pub const fn new(id: String, job_statement: String) -> Self {
+  pub fn new(id: String, job_statement: String) -> Self {
     Self {
       id,
       job_statement,
@@ -192,7 +166,7 @@ impl JobToBeDone {
 
   /// Set priority.
   #[must_use]
-  pub const fn with_priority(mut self, priority: u8) -> Self {
+  pub fn with_priority(mut self, priority: u8) -> Self {
     self.priority = priority;
     self
   }
@@ -233,7 +207,7 @@ pub enum NodeType {
 impl RequirementNode {
   /// Create a new requirement node.
   #[must_use]
-  pub const fn new(id: String, label: String, node_type: NodeType) -> Self {
+  pub fn new(id: String, label: String, node_type: NodeType) -> Self {
     Self {
       id,
       label,
@@ -279,7 +253,7 @@ pub enum EdgeRelationship {
 impl RequirementEdge {
   /// Create a new edge.
   #[must_use]
-  pub const fn new(from: String, to: String, relationship: EdgeRelationship) -> Self {
+  pub fn new(from: String, to: String, relationship: EdgeRelationship) -> Self {
     Self {
       from,
       to,
@@ -302,7 +276,7 @@ pub struct RequirementGraph {
 impl RequirementGraph {
   /// Create an empty graph.
   #[must_use]
-  pub const fn new() -> Self {
+  pub fn new() -> Self {
     Self {
       nodes: Vec::new(),
       edges: Vec::new(),
@@ -442,7 +416,7 @@ pub struct GraphRequirement {
 impl GraphRequirement {
   /// Create a new graph requirement.
   #[must_use]
-  pub const fn new(id: String, use_case: String) -> Self {
+  pub fn new(id: String, use_case: String) -> Self {
     Self {
       id,
       use_case,
@@ -476,7 +450,7 @@ impl GraphRequirement {
 
   /// Set priority.
   #[must_use]
-  pub const fn with_priority(mut self, priority: u8) -> Self {
+  pub fn with_priority(mut self, priority: u8) -> Self {
     self.priority = priority;
     self
   }
@@ -598,7 +572,7 @@ impl GreatReindexingEngine {
   fn parse_stories(stories: &[StoryInput]) -> Vec<UserStory> {
     stories
       .iter()
-      .filter_map(Self::parse_single_story)
+      .filter_map(|story| Self::parse_single_story(story))
       .collect()
   }
 
@@ -713,16 +687,17 @@ impl GreatReindexingEngine {
 
     for story in stories {
       // Create or find user node
-      let user_node_id = if let Some(id) = user_nodes.get(&story.user) {
-        id.clone()
-      } else {
-        let id = format!("user_{}", story.user.to_lowercase().replace(' ', "_"));
-        user_nodes.insert(story.user.clone(), id.clone());
-        graph = graph.with_node(
-          RequirementNode::new(id.clone(), story.user.clone(), NodeType::User)
-            .with_story(story.id.clone()),
-        );
-        id
+      let user_node_id = match user_nodes.get(&story.user) {
+        Some(id) => id.clone(),
+        None => {
+          let id = format!("user_{}", story.user.to_lowercase().replace(' ', "_"));
+          user_nodes.insert(story.user.clone(), id.clone());
+          graph = graph.with_node(
+            RequirementNode::new(id.clone(), story.user.clone(), NodeType::User)
+              .with_story(story.id.clone()),
+          );
+          id
+        }
       };
 
       // Create action node
@@ -824,7 +799,7 @@ impl GreatReindexingEngine {
         let motivations: Vec<String> = group_stories.iter().map(|s| s.motivation.clone()).collect();
 
         JobToBeDone {
-          id: format!("jtbd_{idx}"),
+          id: format!("jtbd_{}", idx),
           job_statement,
           source_story_ids: source_ids,
           motivations,

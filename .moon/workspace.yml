@@ -8,4 +8,3 @@ versionConstraint: ">=1.0.0"
 projects:
   clarity-web: "clarity-web"
   e2e-tests: "e2e-tests"
-  intent-cli: "intent-cli"

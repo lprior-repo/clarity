@@ -4,33 +4,6 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
-// Additional clippy lints to allow
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::cast_sign_loss)]
-#![allow(clippy::cast_precision_loss)]
-#![allow(clippy::cast_possible_wrap)]
-#![allow(clippy::too_many_arguments)]
-#![allow(clippy::missing_errors_doc)]
-#![allow(clippy::trivially_copy_pass_by_ref)]
-#![allow(clippy::assigning_clones)]
-#![allow(clippy::option_if_let_else)]
-#![allow(clippy::unused_self)]
-#![allow(clippy::unnecessary_wraps)]
-#![allow(clippy::too_many_lines)]
-#![allow(clippy::manual_strip)]
-#![allow(clippy::format_push_string)]
-#![allow(clippy::missing_const_for_fn)]
-#![allow(clippy::struct_field_names)]
-#![allow(clippy::suspicious_else_formatting)]
-#![allow(clippy::return_self_not_must_use)]
-#![allow(clippy::items_after_statements)]
-#![allow(clippy::ptr_arg)]
-#![allow(clippy::missing_fields_in_debug)]
-#![allow(clippy::must_use_unit)]
-#![allow(clippy::collection_is_never_read)]
-#![allow(clippy::needless_collect)]
-#![allow(clippy::manual_checked_ops)]
-#![allow(clippy::needless_pass_by_value)]
 
 //! Quality Dimensions module for extended quality analysis.
 //!
@@ -43,7 +16,7 @@ use std::collections::HashMap;
 use thiserror::Error;
 
 /// Domain errors for quality dimensions
-#[derive(Debug, Error, PartialEq, Eq, Clone)]
+#[derive(Debug, Error, PartialEq, Clone)]
 pub enum QualityDimensionError {
   #[error("dimension name is empty")]
   EmptyName,
@@ -213,7 +186,7 @@ impl DimensionScore {
     if score > 100 {
       return Err(QualityDimensionError::InvalidScore(score));
     }
-    if !(0.0..=2.0).contains(&weight) {
+    if weight < 0.0 || weight > 2.0 {
       return Err(QualityDimensionError::InvalidWeight);
     }
 
@@ -244,7 +217,7 @@ impl DimensionScore {
 
   /// Check if score passes threshold
   #[must_use]
-  pub const fn passes(&self, threshold: u8) -> bool {
+  pub fn passes(&self, threshold: u8) -> bool {
     self.score >= threshold
   }
 }
@@ -265,7 +238,7 @@ pub struct DimensionIssue {
 impl DimensionIssue {
   /// Create a new dimension issue
   #[must_use]
-  pub const fn new(dimension: CoreDimension, severity: IssueSeverity, message: String) -> Self {
+  pub fn new(dimension: CoreDimension, severity: IssueSeverity, message: String) -> Self {
     Self {
       dimension,
       severity,
@@ -424,7 +397,7 @@ fn calculate_overall_score(scores: &[DimensionScore]) -> u8 {
   }
 
   let total_weight: f32 = scores.iter().map(|s| s.weight).sum();
-  let weighted_sum: f32 = scores.iter().map(DimensionScore::weighted_score).sum();
+  let weighted_sum: f32 = scores.iter().map(|s| s.weighted_score()).sum();
 
   if total_weight > 0.0 {
     ((weighted_sum / total_weight).min(100.0)) as u8

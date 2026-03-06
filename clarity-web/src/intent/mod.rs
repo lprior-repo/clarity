@@ -13,6 +13,7 @@
 //! - [`beads`] - Bead (work item) generation
 //! - [`quality`] - Quality analysis and scoring
 //! - [`validation`] - Spec validation and linting
+//! - [`batch`] - Multi-spec batch processing
 //! - [`documents`] - Document generation (vision, ready, etc.)
 //! - [`templates`] - Spec template generation
 //! - [`formats`] - Format validators (email, UUID, URI, ISO 8601)
@@ -42,14 +43,14 @@ pub mod validation;
 
 // Re-export core types at module level for convenience
 pub use interview::types::{
-  Answer, Conflict, ConflictResolution, Gap, InterviewSession, InterviewStage, Perspective,
-  Profile, Question, QuestionCategory, QuestionPriority,
+    Answer, Conflict, ConflictResolution, Gap, InterviewSession, InterviewStage, Perspective,
+    Profile, Question, QuestionCategory, QuestionPriority,
 };
 
 // Re-export spec types
 pub use types::{
-  AIHints, AntiPattern, Behavior, EntityHint, Feature, ImplementationHints, Invariant,
-  SecurityHints, Spec, TypeError, Verification,
+    AIHints, AntiPattern, Behavior, EntityHint, Feature, ImplementationHints, Invariant,
+    SecurityHints, Spec, TypeError, Verification,
 };
 
 // Re-export parser types (WP17)
@@ -57,13 +58,13 @@ pub use parser::{parse_spec, parse_spec_from_value, sanitize_string, validate_sp
 
 // Re-export loader types (WP18)
 pub use loader::{
-  export_cue_to_json, format_loader_error, load_cue_file, validate_cue_file, LoaderError,
+    export_cue_to_json, format_loader_error, load_cue_file, validate_cue_file, LoaderError,
 };
 
 // Re-export beads types (WP26)
 pub use beads::{
-  beads_to_enhanced_cue, beads_to_jsonl, decode_beads_json, generate_beads_from_session,
-  generate_profile_beads, BeadError, BeadTemplate, BeadTemplateStats,
+    beads_to_enhanced_cue, beads_to_jsonl, generate_beads_from_session, generate_profile_beads,
+    BeadError, BeadTemplate, BeadTemplateStats,
 };
 
 // Re-export templates types (WP32)
@@ -72,6 +73,6 @@ pub use templates::{fill_template, generate_spec_template, SpecTemplateError};
 // Error types (WP04)
 pub mod errors;
 pub use errors::{
-  extract_available_fields, format_error, levenshtein, suggest_field_names, ContextualError,
-  FieldFailure, IntentError, Suggestion, ValidationError,
+    extract_available_fields, format_error, levenshtein, suggest_field_names, ContextualError,
+    FieldFailure, IntentError, Suggestion, ValidationError,
 };

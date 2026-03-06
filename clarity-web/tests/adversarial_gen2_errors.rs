@@ -106,7 +106,10 @@ fn test_quality_error_chain_integrity() {
       assert!(issue.message.contains("contradiction"));
     }
     Err(e) => {
-      panic!("Should detect contradictions via issues, not error: {e:?}");
+      panic!(
+        "Should detect contradictions via issues, not error: {:?}",
+        e
+      );
     }
   }
 }
@@ -129,11 +132,14 @@ fn test_storage_error_invalid_project_id_messages() {
       Err(StorageError::InvalidProjectId(msg)) => {
         assert!(
           msg.to_lowercase().contains(expected_keyword),
-          "Error for '{id}' should mention '{expected_keyword}', got: {msg}"
+          "Error for '{}' should mention '{}', got: {}",
+          id,
+          expected_keyword,
+          msg
         );
       }
       _ => {
-        panic!("Should return InvalidProjectId for '{id}'");
+        panic!("Should return InvalidProjectId for '{}'", id);
       }
     }
   }
@@ -145,8 +151,14 @@ fn test_storage_error_io_propagation() {
   let result = get_project_db_path("/nonexistent/path\x00project");
 
   match result {
+    Err(StorageError::InvalidProjectId(_)) => {
+      // Expected - path validation catches null byte
+    }
+    Err(StorageError::PathNotFound) | Err(StorageError::IoError(_)) => {
+      // Also acceptable
+    }
     Err(_) => {
-      // Expected - path validation catches null byte or other errors
+      // Other errors are acceptable
     }
     Ok(_) => {
       panic!("Should not succeed with invalid path");
@@ -168,7 +180,7 @@ fn test_storage_error_serialization_context() {
   let save_result = store.save_answer(&answer);
 
   match save_result {
-    Ok(()) => {
+    Ok(_) => {
       // Successfully saved
     }
     Err(e) => {
@@ -260,15 +272,18 @@ provider = "opencode"
   let result: Result<AiConfig, toml::de::Error> = toml::from_str(incomplete_toml);
 
   // Should use defaults for missing fields
-  if let Ok(config) = result {
-    assert_eq!(
-      config.provider.provider,
-      clarity_web::config::ai::ProviderType::Opencode
-    );
-    // endpoint should have default value
-    assert!(!config.provider.endpoint.is_empty());
-  } else {
-    // Also acceptable to fail
+  match result {
+    Ok(config) => {
+      assert_eq!(
+        config.provider.provider,
+        clarity_web::config::ai::ProviderType::Opencode
+      );
+      // endpoint should have default value
+      assert!(!config.provider.endpoint.is_empty());
+    }
+    Err(_) => {
+      // Also acceptable to fail
+    }
   }
 }
 
@@ -288,7 +303,8 @@ fn test_error_display_user_friendly() {
     assert!(!msg.is_empty(), "Error message should not be empty");
     assert!(
       msg.len() < 200,
-      "Error message should be concise, got: {msg}"
+      "Error message should be concise, got: {}",
+      msg
     );
 
     // Should not contain internal implementation details
@@ -333,7 +349,7 @@ fn test_quality_error_partial_failure_handling() {
       assert!(score.overall < 100);
     }
     Err(e) => {
-      panic!("Should handle partial failures gracefully: {e:?}");
+      panic!("Should handle partial failures gracefully: {:?}", e);
     }
   }
 }
@@ -347,8 +363,11 @@ fn test_storage_error_context_preservation() {
   let result = store.get_lattice_cache("nonexistent");
 
   match result {
-    Ok(_) => {
-      // Acceptable - table doesn't exist yet or was created
+    Ok(None) => {
+      // Acceptable - table doesn't exist yet
+    }
+    Ok(Some(_)) => {
+      // Also acceptable if table was created
     }
     Err(e) => {
       let msg = e.to_string();
@@ -370,7 +389,7 @@ fn test_nested_error_context_chain() {
       assert!(!msg.is_empty(), "Should have error message");
     }
     Err(e) => {
-      panic!("Unexpected error type: {e:?}");
+      panic!("Unexpected error type: {:?}", e);
     }
   }
 }
@@ -412,7 +431,7 @@ fn test_async_operation_error_handling() {
 
   // Rapidly create and drop transactions
   for i in 0..100 {
-    let answer = create_answer(&format!("key{i}"), &format!("value{i}"));
+    let answer = create_answer(&format!("key{}", i), &format!("value{}", i));
 
     let save_result = store.save_answer(&answer);
     if let Err(e) = save_result {
@@ -429,7 +448,7 @@ fn test_async_operation_error_handling() {
       assert_eq!(answers.len(), 100);
     }
     Err(e) => {
-      panic!("Should have all answers: {e:?}");
+      panic!("Should have all answers: {:?}", e);
     }
   }
 }
@@ -483,10 +502,10 @@ fn test_concurrent_error_propagation() {
     let errors_clone = Arc::clone(&errors);
 
     let handle = thread::spawn(move || {
-      let answer = create_answer(&format!("key{i}"), &format!("value{i}"));
+      let answer = create_answer(&format!("key{}", i), &format!("value{}", i));
 
       match store_clone.save_answer(&answer) {
-        Ok(()) => {}
+        Ok(_) => {}
         Err(e) => {
           let mut errors = errors_clone.lock().unwrap();
           errors.push(e.to_string());
@@ -502,10 +521,12 @@ fn test_concurrent_error_propagation() {
   }
 
   // All operations should succeed (no errors expected)
-  let errors_guard = errors.lock().unwrap();
-  let is_empty = errors_guard.is_empty();
-  drop(errors_guard);
-  assert!(is_empty, "All concurrent operations should succeed");
+  let errors = errors.lock().unwrap();
+  assert!(
+    errors.is_empty(),
+    "All concurrent operations should succeed, errors: {:?}",
+    errors
+  );
 }
 
 #[test]
@@ -520,7 +541,7 @@ fn test_partial_unicode_error_messages() {
     }
     Err(StorageError::InvalidProjectId(msg)) => {
       // Error message should handle Unicode correctly
-      assert!(msg.contains(unicode_name) || !msg.is_empty());
+      assert!(msg.contains(unicode_name) || msg.len() > 0);
     }
     _ => {
       panic!("Unexpected error type");

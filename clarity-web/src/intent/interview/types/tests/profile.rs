@@ -14,14 +14,14 @@ fn profile_roundtrip() {
   ];
 
   profiles.into_iter().for_each(|profile| {
-    let parsed = Profile::parse(profile.as_str());
+    let parsed = Profile::from_str(profile.as_str());
     assert_eq!(parsed, Ok(profile));
   });
 }
 
 #[test]
 fn profile_parse_error_is_typed() {
-  let parsed = Profile::parse("unknown");
+  let parsed = Profile::from_str("unknown");
   assert!(matches!(
       parsed,
       Err(ProfileParseError::UnknownProfile { input }) if input == "unknown"

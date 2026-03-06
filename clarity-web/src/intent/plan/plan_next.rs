@@ -1,829 +1,823 @@
+//! WP23: Plan Next - Determine the next action in an interview session
+//!
+//! This module provides functionality to determine what action should be taken
+//! next in an interview session based on the current state and execution plan.
+
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![warn(clippy::pedantic)]
+#![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
-// Additional clippy lints to allow
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::cast_sign_loss)]
-#![allow(clippy::cast_precision_loss)]
-#![allow(clippy::cast_possible_wrap)]
-#![allow(clippy::too_many_arguments)]
-#![allow(clippy::missing_errors_doc)]
-#![allow(clippy::trivially_copy_pass_by_ref)]
-#![allow(clippy::assigning_clones)]
-#![allow(clippy::option_if_let_else)]
-#![allow(clippy::unused_self)]
-#![allow(clippy::unnecessary_wraps)]
-#![allow(clippy::too_many_lines)]
-#![allow(clippy::manual_strip)]
-#![allow(clippy::format_push_string)]
-#![allow(clippy::missing_const_for_fn)]
-#![allow(clippy::struct_field_names)]
-#![allow(clippy::suspicious_else_formatting)]
-#![allow(clippy::return_self_not_must_use)]
-#![allow(clippy::items_after_statements)]
-#![allow(clippy::ptr_arg)]
-#![allow(clippy::missing_fields_in_debug)]
-#![allow(clippy::must_use_unit)]
-#![allow(clippy::collection_is_never_read)]
-#![allow(clippy::needless_collect)]
-#![allow(clippy::manual_checked_ops)]
-#![allow(clippy::needless_pass_by_value)]
 
-mod logic;
-
-use crate::intent::interview::types::{Gap, InterviewSession};
+use crate::intent::interview::types::{Gap, InterviewSession, InterviewStage};
 use crate::intent::plan::types::{ExecutionPlan, PlanBead};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
+/// Types of actions that can be recommended
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-#[derive(Default)]
 pub enum ActionType {
-  #[default]
-  AnswerQuestion,
-  ResolveGap,
-  ResolveConflict,
-  CompletePhase,
-  ReviewPlan,
+    /// Answer a pending question
+    AnswerQuestion,
+    /// Resolve a gap in requirements
+    ResolveGap,
+    /// Resolve a conflict between requirements
+    ResolveConflict,
+    /// Complete the current phase
+    CompletePhase,
+    /// Review and approve the execution plan
+    ReviewPlan,
+}
+
+impl Default for ActionType {
+    fn default() -> Self {
+        Self::AnswerQuestion
+    }
 }
 
 impl ActionType {
-  #[must_use]
-  pub const fn as_str(&self) -> &'static str {
-    match self {
-      Self::AnswerQuestion => "answer_question",
-      Self::ResolveGap => "resolve_gap",
-      Self::ResolveConflict => "resolve_conflict",
-      Self::CompletePhase => "complete_phase",
-      Self::ReviewPlan => "review_plan",
-    }
-  }
-
-  #[must_use]
-  pub const fn description(&self) -> &'static str {
-    match self {
-      Self::AnswerQuestion => "Answer pending interview question",
-      Self::ResolveGap => "Resolve missing requirement",
-      Self::ResolveConflict => "Resolve conflicting requirements",
-      Self::CompletePhase => "Complete the current phase",
-      Self::ReviewPlan => "Review and approve execution plan",
-    }
-  }
-}
-
-/// Action enum with data-carrying variants for specific operations.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case", tag = "type")]
-pub enum Action {
-  /// Resolve a gap with a specific resolution.
-  ResolveGap {
-    /// The ID of the gap to resolve.
-    gap_id: String,
-    /// The resolution text for the gap.
-    resolution: String,
-  },
-  /// Answer a pending interview question.
-  AnswerQuestion {
-    /// The ID of the question to answer.
-    question_id: String,
-    /// The answer text.
-    answer: String,
-  },
-  /// Resolve a conflict between requirements.
-  ResolveConflict {
-    /// The ID of the conflict to resolve.
-    conflict_id: String,
-    /// The resolution text for the conflict.
-    resolution: String,
-  },
-  /// Complete a phase of the execution plan.
-  CompletePhase {
-    /// The phase number to complete.
-    phase: u32,
-  },
-  /// Review and approve the execution plan.
-  ReviewPlan {
-    /// Whether the plan is approved.
-    approved: bool,
-    /// Optional feedback on the plan.
-    feedback: Option<String>,
-  },
-}
-
-impl Action {
-  /// Create a new `ResolveGap` action.
-  #[must_use]
-  pub const fn resolve_gap(gap_id: String, resolution: String) -> Self {
-    Self::ResolveGap { gap_id, resolution }
-  }
-
-  /// Create a new `AnswerQuestion` action.
-  #[must_use]
-  pub const fn answer_question(question_id: String, answer: String) -> Self {
-    Self::AnswerQuestion {
-      question_id,
-      answer,
-    }
-  }
-
-  /// Create a new `ResolveConflict` action.
-  #[must_use]
-  pub const fn resolve_conflict(conflict_id: String, resolution: String) -> Self {
-    Self::ResolveConflict {
-      conflict_id,
-      resolution,
-    }
-  }
-
-  /// Create a new `CompletePhase` action.
-  #[must_use]
-  pub const fn complete_phase(phase: u32) -> Self {
-    Self::CompletePhase { phase }
-  }
-
-  /// Create a new `ReviewPlan` action.
-  #[must_use]
-  pub const fn review_plan(approved: bool, feedback: Option<String>) -> Self {
-    Self::ReviewPlan { approved, feedback }
-  }
-
-  /// Get the action type for this action.
-  #[must_use]
-  pub const fn action_type(&self) -> ActionType {
-    match self {
-      Self::ResolveGap { .. } => ActionType::ResolveGap,
-      Self::AnswerQuestion { .. } => ActionType::AnswerQuestion,
-      Self::ResolveConflict { .. } => ActionType::ResolveConflict,
-      Self::CompletePhase { .. } => ActionType::CompletePhase,
-      Self::ReviewPlan { .. } => ActionType::ReviewPlan,
-    }
-  }
-
-  /// Get a human-readable description of the action.
-  #[must_use]
-  pub fn description(&self) -> String {
-    match self {
-      Self::ResolveGap { gap_id, resolution } => {
-        format!("Resolve gap '{gap_id}' with: {resolution}")
-      }
-      Self::AnswerQuestion {
-        question_id,
-        answer,
-      } => format!("Answer question '{question_id}' with: {answer}"),
-      Self::ResolveConflict {
-        conflict_id,
-        resolution,
-      } => format!("Resolve conflict '{conflict_id}' with: {resolution}"),
-      Self::CompletePhase { phase } => format!("Complete phase {phase}"),
-      Self::ReviewPlan { approved, feedback } => {
-        let status = if *approved { "approve" } else { "reject" };
-        match feedback {
-          Some(fb) => format!("Review plan: {status} ({fb})"),
-          None => format!("Review plan: {status}"),
+    /// Convert action type to string representation
+    #[must_use]
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            Self::AnswerQuestion => "answer_question",
+            Self::ResolveGap => "resolve_gap",
+            Self::ResolveConflict => "resolve_conflict",
+            Self::CompletePhase => "complete_phase",
+            Self::ReviewPlan => "review_plan",
         }
-      }
     }
-  }
+
+    /// Get human-readable description
+    #[must_use]
+    pub const fn description(&self) -> &'static str {
+        match self {
+            Self::AnswerQuestion => "Answer pending interview question",
+            Self::ResolveGap => "Resolve missing requirement",
+            Self::ResolveConflict => "Resolve conflicting requirements",
+            Self::CompletePhase => "Complete the current phase",
+            Self::ReviewPlan => "Review and approve execution plan",
+        }
+    }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+/// Next action recommendation
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NextAction {
-  pub action_type: ActionType,
-  pub target_id: String,
-  pub description: String,
-  pub reason: String,
-  #[serde(default)]
-  pub priority: u32,
+    /// Type of action to take
+    pub action_type: ActionType,
+    /// ID of the target entity (question, gap, conflict, phase, or plan)
+    pub target_id: String,
+    /// Human-readable description of the action
+    pub description: String,
+    /// Reason why this action is recommended
+    pub reason: String,
+    /// Priority of this action (lower = higher priority)
+    #[serde(default)]
+    pub priority: u32,
+}
+
+impl Default for NextAction {
+    fn default() -> Self {
+        Self {
+            action_type: ActionType::default(),
+            target_id: String::new(),
+            description: String::new(),
+            reason: String::new(),
+            priority: 0,
+        }
+    }
 }
 
 impl NextAction {
-  #[must_use]
-  pub const fn new(
-    action_type: ActionType,
-    target_id: String,
-    description: String,
-    reason: String,
-  ) -> Self {
-    Self {
-      action_type,
-      target_id,
-      description,
-      reason,
-      priority: 0,
+    /// Create a new next action
+    #[must_use]
+    pub fn new(action_type: ActionType, target_id: String, description: String, reason: String) -> Self {
+        Self {
+            action_type,
+            target_id,
+            description,
+            reason,
+            priority: 0,
+        }
     }
-  }
 
-  #[must_use]
-  pub fn with_priority(self, priority: u32) -> Self {
-    Self { priority, ..self }
-  }
-}
-
-/// Context information for the next action recommendation.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
-pub struct ActionContext {
-  /// Current interview stage
-  pub stage: String,
-  /// Current phase number
-  pub current_phase: u32,
-  /// Number of completed phases
-  pub completed_phases: Vec<u32>,
-  /// Number of open gaps
-  pub open_gaps: usize,
-  /// Number of pending conflicts
-  pub pending_conflicts: usize,
-  /// Whether the session can proceed
-  pub can_proceed: bool,
-  /// Additional context metadata
-  #[serde(default)]
-  pub metadata: HashMap<String, String>,
-}
-
-impl ActionContext {
-  /// Create a new `ActionContext` from an `InterviewSession`.
-  #[must_use]
-  pub fn from_session(session: &InterviewSession) -> Self {
-    Self {
-      stage: format!("{:?}", session.stage),
-      current_phase: session.current_phase,
-      completed_phases: session.completed_phases.clone(),
-      open_gaps: session.gaps.iter().filter(|g| !g.is_resolved()).count(),
-      pending_conflicts: session
-        .conflicts
-        .iter()
-        .filter(|c| !c.is_resolved())
-        .count(),
-      can_proceed: session.can_proceed().is_ok(),
-      metadata: HashMap::new(),
+    /// Builder method to set priority
+    #[must_use]
+    pub fn with_priority(mut self, priority: u32) -> Self {
+        self.priority = priority;
+        self
     }
-  }
-
-  /// Add metadata to the context.
-  #[must_use]
-  pub fn with_metadata(self, key: String, value: String) -> Self {
-    let mut metadata = self.metadata;
-    metadata.insert(key, value);
-    Self { metadata, ..self }
-  }
 }
 
-/// A suggestion for alternative actions the user could take.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ActionSuggestion {
-  /// Suggested action type
-  pub action_type: ActionType,
-  /// Brief description of the suggestion
-  pub description: String,
-  /// Why this might be relevant
-  pub rationale: String,
-}
-
-impl ActionSuggestion {
-  /// Create a new `ActionSuggestion`.
-  #[must_use]
-  pub const fn new(action_type: ActionType, description: String, rationale: String) -> Self {
-    Self {
-      action_type,
-      description,
-      rationale,
-    }
-  }
-}
-
-/// Complete JSON output for `plan_next_command` functionality.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct PlanNextJsonOutput {
-  /// The recommended next action, if any
-  pub next_action: Option<NextAction>,
-  /// Context about the current state
-  pub context: ActionContext,
-  /// Alternative suggestions
-  pub suggestions: Vec<ActionSuggestion>,
-  /// Actionable beads available
-  pub actionable_beads: Vec<String>,
-  /// Next phase to execute, if applicable
-  pub next_phase: Option<u32>,
-}
-
-impl PlanNextJsonOutput {
-  /// Create a `PlanNextJsonOutput` from session and plan.
-  #[must_use]
-  pub fn from_session_and_plan(session: &InterviewSession, plan: &ExecutionPlan) -> Self {
-    let next_action = get_next_action(session, plan);
-    let context = ActionContext::from_session(session);
-    let suggestions = generate_suggestions(session, plan);
-    let actionable_beads = get_actionable_beads(plan)
-      .into_iter()
-      .map(|bead| bead.id.clone())
-      .collect();
-    let next_phase = determine_next_phase(plan);
-
-    Self {
-      next_action,
-      context,
-      suggestions,
-      actionable_beads,
-      next_phase,
-    }
-  }
-
-  /// Serialize to JSON string.
-  ///
-  /// # Errors
-  /// Returns an error if serialization fails.
-  pub fn to_json(&self) -> Result<String, serde_json::Error> {
-    serde_json::to_string_pretty(self)
-  }
-
-  /// Serialize to compact JSON string.
-  ///
-  /// # Errors
-  /// Returns an error if serialization fails.
-  pub fn to_json_compact(&self) -> Result<String, serde_json::Error> {
-    serde_json::to_string(self)
-  }
-}
-
-/// Generate suggestions for alternative actions.
-fn generate_suggestions(session: &InterviewSession, plan: &ExecutionPlan) -> Vec<ActionSuggestion> {
-  let mut suggestions = Vec::new();
-
-  // Suggest reviewing plan if in validation stage
-  if session.stage == crate::intent::interview::types::InterviewStage::Validation {
-    suggestions.push(ActionSuggestion::new(
-      ActionType::ReviewPlan,
-      "Review the execution plan".to_string(),
-      "Session is in validation stage - plan review recommended".to_string(),
-    ));
-  }
-
-  // Suggest resolving gaps if any exist
-  let open_gaps: Vec<_> = session.gaps.iter().filter(|g| !g.is_resolved()).collect();
-  if !open_gaps.is_empty() {
-    suggestions.push(ActionSuggestion::new(
-      ActionType::ResolveGap,
-      format!("Resolve {} open gap(s)", open_gaps.len()),
-      "Unresolved gaps may block progress".to_string(),
-    ));
-  }
-
-  // Suggest resolving conflicts if any exist
-  let pending_conflicts: Vec<_> = session
-    .conflicts
-    .iter()
-    .filter(|c| !c.is_resolved())
-    .collect();
-  if !pending_conflicts.is_empty() {
-    suggestions.push(ActionSuggestion::new(
-      ActionType::ResolveConflict,
-      format!("Resolve {} pending conflict(s)", pending_conflicts.len()),
-      "Conflicts need resolution before proceeding".to_string(),
-    ));
-  }
-
-  // Suggest phase completion if actionable beads exist
-  let actionable = plan.get_actionable_beads();
-  if !actionable.is_empty() {
-    suggestions.push(ActionSuggestion::new(
-      ActionType::CompletePhase,
-      format!("Work on {} actionable item(s)", actionable.len()),
-      "Items are ready for execution".to_string(),
-    ));
-  }
-
-  suggestions
-}
-
-/// Format the plan next output as a JSON string.
+/// Get the next recommended action for a session
 ///
-/// # Errors
-/// Returns an error if JSON serialization fails.
-pub fn format_next_action_json(
-  session: &InterviewSession,
-  plan: &ExecutionPlan,
-) -> Result<String, serde_json::Error> {
-  let output = PlanNextJsonOutput::from_session_and_plan(session, plan);
-  output.to_json()
-}
-
-/// Format the plan next output as a compact JSON string.
+/// Priority order:
+/// 1. Resolve blocking gaps
+/// 2. Resolve unresolved conflicts
+/// 3. Answer questions for current round
+/// 4. Complete current phase
+/// 5. Review plan (if in validation stage)
 ///
-/// # Errors
-/// Returns an error if JSON serialization fails.
-pub fn format_next_action_json_compact(
-  session: &InterviewSession,
-  plan: &ExecutionPlan,
-) -> Result<String, serde_json::Error> {
-  let output = PlanNextJsonOutput::from_session_and_plan(session, plan);
-  output.to_json_compact()
-}
-
+/// # Arguments
+/// * `session` - The interview session
+/// * `plan` - The execution plan (optional, can be empty)
+///
+/// # Returns
+/// The next recommended action, or None if session is complete
 #[must_use]
 pub fn get_next_action(session: &InterviewSession, plan: &ExecutionPlan) -> Option<NextAction> {
-  logic::get_next_action(session, plan)
+    // If session is complete, no action needed
+    if session.stage == InterviewStage::Complete {
+        return None;
+    }
+
+    // If session is paused, recommend resuming (represented as answer question with special ID)
+    if session.stage == InterviewStage::Paused {
+        return Some(NextAction::new(
+            ActionType::AnswerQuestion,
+            "resume".to_string(),
+            "Resume the paused interview session".to_string(),
+            "Session is currently paused".to_string(),
+        ));
+    }
+
+    // Priority 1: Check for blocking gaps
+    if let Some(action) = get_blocking_gap_action(session) {
+        return Some(action);
+    }
+
+    // Priority 2: Check for unresolved conflicts
+    if let Some(action) = get_conflict_action(session) {
+        return Some(action);
+    }
+
+    // Priority 3: Check for pending questions in current round
+    if let Some(action) = get_question_action(session) {
+        return Some(action);
+    }
+
+    // Priority 4: Check for phase completion
+    if let Some(action) = get_phase_completion_action(session, plan) {
+        return Some(action);
+    }
+
+    // Priority 5: In validation stage, recommend reviewing plan
+    if session.stage == InterviewStage::Validation {
+        return Some(NextAction::new(
+            ActionType::ReviewPlan,
+            "plan".to_string(),
+            "Review and approve the execution plan".to_string(),
+            "Session is in validation stage".to_string(),
+        ));
+    }
+
+    None
 }
 
+/// Get action for blocking gaps
+fn get_blocking_gap_action(session: &InterviewSession) -> Option<NextAction> {
+    session
+        .gaps
+        .iter()
+        .filter(|g| g.blocking && !g.resolved)
+        .min_by_key(|g| g.round)
+        .map(|gap| {
+            NextAction::new(
+                ActionType::ResolveGap,
+                gap.id.clone(),
+                format!("Resolve gap: {}", gap.description),
+                format!(
+                    "Blocking gap in field '{}' must be resolved to proceed",
+                    gap.field
+                ),
+            )
+            .with_priority(1)
+        })
+}
+
+/// Get action for unresolved conflicts
+fn get_conflict_action(session: &InterviewSession) -> Option<NextAction> {
+    session
+        .conflicts
+        .iter()
+        .filter(|c| c.chosen.is_none())
+        .map(|conflict| {
+            NextAction::new(
+                ActionType::ResolveConflict,
+                conflict.id.clone(),
+                format!("Resolve conflict: {}", conflict.description),
+                format!(
+                    "Conflict between '{}' and '{}' must be resolved",
+                    conflict.between.0, conflict.between.1
+                ),
+            )
+            .with_priority(2)
+        })
+        .next()
+}
+
+/// Get action for pending questions
+fn get_question_action(session: &InterviewSession) -> Option<NextAction> {
+    // In validation stage, don't suggest new questions - review instead
+    if session.stage == InterviewStage::Validation {
+        return None;
+    }
+
+    // Check if there are answers for the current round
+    let current_round = session.get_current_round();
+    let current_round_answers: std::collections::HashSet<&str> = session
+        .answers
+        .iter()
+        .filter(|a| a.round == current_round)
+        .map(|a| a.question_id.as_str())
+        .collect();
+
+    // If we have answers in the current round but haven't completed it,
+    // suggest continuing or completing
+    if !current_round_answers.is_empty() {
+        // Check if we can complete the round
+        if session.can_proceed().is_ok() {
+            return Some(
+                NextAction::new(
+                    ActionType::AnswerQuestion,
+                    format!("round-{}-complete", current_round),
+                    format!("Complete round {} or add more answers", current_round),
+                    "You have answers ready; you can complete the round or add more details".to_string(),
+                )
+                .with_priority(3),
+            );
+        }
+    }
+
+    // If no answers yet in current round, suggest starting
+    if current_round_answers.is_empty() {
+        return Some(
+            NextAction::new(
+                ActionType::AnswerQuestion,
+                format!("round-{}-start", current_round),
+                format!("Start answering questions for round {}", current_round),
+                format!("Round {} has not started yet", current_round),
+            )
+            .with_priority(3),
+        );
+    }
+
+    None
+}
+
+/// Get action for phase completion
+fn get_phase_completion_action(session: &InterviewSession, plan: &ExecutionPlan) -> Option<NextAction> {
+    // In validation stage, skip phase completion - review plan instead
+    if session.stage == InterviewStage::Validation {
+        return None;
+    }
+
+    // Check if current phase is complete
+    let current_phase = session.current_phase;
+
+    // Get beads for current phase
+    let phase_beads = plan.get_phase_beads(current_phase);
+
+    // If there are beads in the plan for this phase
+    if !phase_beads.is_empty() {
+        let completed_count = phase_beads.iter().filter(|b| b.completed).count();
+
+        // If all beads are completed, suggest completing the phase
+        if completed_count == phase_beads.len() {
+            return Some(
+                NextAction::new(
+                    ActionType::CompletePhase,
+                    format!("phase-{}", current_phase),
+                    format!("Complete phase {} (all beads done)", current_phase),
+                    format!("All {} work items in phase {} are complete", phase_beads.len(), current_phase),
+                )
+                .with_priority(4),
+            );
+        }
+
+        // If some beads are actionable, suggest working on them
+        let actionable = plan.get_actionable_beads();
+        let actionable_in_phase: Vec<&&PlanBead> = actionable
+            .iter()
+            .filter(|b| b.phase == current_phase)
+            .collect();
+
+        if !actionable_in_phase.is_empty() {
+            let bead = actionable_in_phase[0];
+            return Some(
+                NextAction::new(
+                    ActionType::CompletePhase,
+                    bead.id.clone(),
+                    format!("Work on: {}", bead.title),
+                    format!(
+                        "{}/{} beads complete in phase {}",
+                        completed_count,
+                        phase_beads.len(),
+                        current_phase
+                    ),
+                )
+                .with_priority(4),
+            );
+        }
+    }
+
+    // If no beads in plan, check if session can proceed to next phase
+    if session.can_proceed().is_ok() && !session.completed_phases.contains(&current_phase) {
+        return Some(
+            NextAction::new(
+                ActionType::CompletePhase,
+                format!("phase-{}", current_phase),
+                format!("Complete phase {}", current_phase),
+                "Phase requirements are satisfied".to_string(),
+            )
+            .with_priority(4),
+        );
+    }
+
+    None
+}
+
+/// Determine the next phase number based on the execution plan
+///
+/// # Arguments
+/// * `plan` - The execution plan
+///
+/// # Returns
+/// The next phase number, or None if all phases are complete
 #[must_use]
 pub fn determine_next_phase(plan: &ExecutionPlan) -> Option<u32> {
-  logic::determine_next_phase(plan)
+    if plan.beads.is_empty() {
+        return None;
+    }
+
+    // Find incomplete phases
+    let mut phase_numbers: Vec<u32> = plan
+        .beads
+        .iter()
+        .filter(|b| !b.completed)
+        .map(|b| b.phase)
+        .collect();
+
+    if phase_numbers.is_empty() {
+        return None;
+    }
+
+    // Sort and deduplicate
+    phase_numbers.sort();
+    phase_numbers.dedup();
+
+    // Return the lowest incomplete phase
+    phase_numbers.into_iter().next()
 }
 
+/// Get all beads that are actionable (dependencies satisfied, not completed)
+///
+/// # Arguments
+/// * `plan` - The execution plan
+///
+/// # Returns
+/// Vector of references to actionable beads, sorted by priority
 #[must_use]
 pub fn get_actionable_beads(plan: &ExecutionPlan) -> Vec<&PlanBead> {
-  logic::get_actionable_beads(plan)
+    let mut actionable = plan.get_actionable_beads();
+    actionable.sort_by_key(|b| (b.phase, b.priority));
+    actionable
 }
 
+/// Get all blocking gaps for a session
+///
+/// # Arguments
+/// * `session` - The interview session
+///
+/// # Returns
+/// Vector of references to blocking, unresolved gaps
 #[must_use]
 pub fn get_blocking_gaps(session: &InterviewSession) -> Vec<&Gap> {
-  session.get_blocking_gaps()
+    session.get_blocking_gaps()
 }
 
+/// Check if a session can proceed (no blocking issues)
+///
+/// # Arguments
+/// * `session` - The interview session
+///
+/// # Returns
+/// true if the session can proceed
 #[must_use]
 pub fn can_proceed(session: &InterviewSession) -> bool {
-  session.can_proceed().is_ok()
+    session.can_proceed().is_ok()
 }
 
 #[cfg(test)]
 mod tests {
-  use super::*;
-  use crate::intent::interview::types::{Conflict, ConflictResolution, GapState, InterviewStage};
-  use crate::intent::plan::types::PlanBead;
+    use super::*;
+    use crate::intent::interview::types::{Answer, Conflict, ConflictResolution, Gap, Profile};
+    use std::collections::HashMap;
 
-  fn create_test_session() -> InterviewSession {
-    InterviewSession {
-      id: "test-session".to_string(),
-      stage: InterviewStage::Discovery,
-      current_phase: 1,
-      completed_phases: vec![],
-      gaps: vec![],
-      conflicts: vec![],
-      ..InterviewSession::default()
+    fn create_test_session() -> InterviewSession {
+        InterviewSession::new(
+            "test-session".to_string(),
+            Profile::Api,
+            "2026-02-27T00:00:00Z".to_string(),
+        )
     }
-  }
 
-  fn create_test_plan() -> ExecutionPlan {
-    ExecutionPlan::new("test-session".to_string())
-  }
-
-  #[test]
-  fn test_action_context_from_session() {
-    let session = create_test_session();
-    let context = ActionContext::from_session(&session);
-
-    assert_eq!(context.stage, "Discovery");
-    assert_eq!(context.current_phase, 1);
-    assert!(context.completed_phases.is_empty());
-    assert_eq!(context.open_gaps, 0);
-    assert_eq!(context.pending_conflicts, 0);
-    assert!(context.can_proceed);
-  }
-
-  #[test]
-  fn test_action_context_with_gaps() {
-    let mut session = create_test_session();
-    session.gaps.push(Gap {
-      id: "gap-1".to_string(),
-      field: "test_field".to_string(),
-      description: "Test gap".to_string(),
-      blocking: true,
-      state: GapState::Open,
-      ..Gap::default()
-    });
-
-    let context = ActionContext::from_session(&session);
-    assert_eq!(context.open_gaps, 1);
-    assert!(!context.can_proceed);
-  }
-
-  #[test]
-  fn test_action_context_with_resolved_gaps() {
-    let mut session = create_test_session();
-    session.gaps.push(Gap {
-      id: "gap-1".to_string(),
-      field: "test_field".to_string(),
-      description: "Test gap".to_string(),
-      blocking: true,
-      state: GapState::Resolved {
-        resolution: "resolved".to_string(),
-      },
-      ..Gap::default()
-    });
-
-    let context = ActionContext::from_session(&session);
-    assert_eq!(context.open_gaps, 0);
-  }
-
-  #[test]
-  fn test_action_context_with_conflicts() {
-    let mut session = create_test_session();
-    session.conflicts.push(Conflict {
-      id: "conflict-1".to_string(),
-      between: ("a".to_string(), "b".to_string()),
-      description: "Test conflict".to_string(),
-      options: vec![ConflictResolution {
-        option: "Option A".to_string(),
-        ..ConflictResolution::default()
-      }],
-      ..Conflict::default()
-    });
-
-    let context = ActionContext::from_session(&session);
-    assert_eq!(context.pending_conflicts, 1);
-  }
-
-  #[test]
-  fn test_action_context_with_metadata() {
-    let session = create_test_session();
-    let context =
-      ActionContext::from_session(&session).with_metadata("key".to_string(), "value".to_string());
-
-    assert_eq!(context.metadata.get("key"), Some(&"value".to_string()));
-  }
-
-  #[test]
-  fn test_plan_next_json_output_creation() {
-    let session = create_test_session();
-    let plan = create_test_plan();
-    let output = PlanNextJsonOutput::from_session_and_plan(&session, &plan);
-
-    assert!(output.next_action.is_some());
-    assert_eq!(output.context.stage, "Discovery");
-    assert!(output.suggestions.is_empty() || output.suggestions.len() <= 4);
-    assert!(output.actionable_beads.is_empty());
-    assert!(output.next_phase.is_none());
-  }
-
-  #[test]
-  fn test_plan_next_json_output_serialization() {
-    let session = create_test_session();
-    let plan = create_test_plan();
-    let output = PlanNextJsonOutput::from_session_and_plan(&session, &plan);
-
-    let json = output.to_json();
-    assert!(json.is_ok());
-
-    let json_str = json;
-    assert!(json_str
-      .as_ref()
-      .map_or(false, |s| s.contains("next_action")));
-    assert!(json_str.as_ref().map_or(false, |s| s.contains("context")));
-    assert!(json_str
-      .as_ref()
-      .map_or(false, |s| s.contains("suggestions")));
-  }
-
-  #[test]
-  fn test_plan_next_json_output_compact_serialization() {
-    let session = create_test_session();
-    let plan = create_test_plan();
-    let output = PlanNextJsonOutput::from_session_and_plan(&session, &plan);
-
-    let json = output.to_json_compact();
-    assert!(json.is_ok());
-
-    let json_str = json;
-    assert!(json_str
-      .as_ref()
-      .map_or(false, |s| s.contains("next_action")));
-    assert!(json_str.as_ref().map_or(false, |s| !s.contains('\n')));
-  }
-
-  #[test]
-  fn test_format_next_action_json_function() {
-    let session = create_test_session();
-    let plan = create_test_plan();
-
-    let json = format_next_action_json(&session, &plan);
-    assert!(json.is_ok());
-
-    let json_str = json;
-    assert!(json_str
-      .as_ref()
-      .map_or(false, |s| s.contains("next_action")));
-    assert!(json_str.as_ref().map_or(false, |s| s.contains("context")));
-  }
-
-  #[test]
-  fn test_format_next_action_json_compact_function() {
-    let session = create_test_session();
-    let plan = create_test_plan();
-
-    let json = format_next_action_json_compact(&session, &plan);
-    assert!(json.is_ok());
-
-    let json_str = json;
-    assert!(json_str
-      .as_ref()
-      .map_or(false, |s| s.contains("next_action")));
-    assert!(json_str.as_ref().map_or(false, |s| !s.contains('\n')));
-  }
-
-  #[test]
-  fn test_json_output_with_blocking_gap() {
-    let mut session = create_test_session();
-    session.gaps.push(Gap {
-      id: "gap-1".to_string(),
-      field: "required_field".to_string(),
-      description: "Missing required field".to_string(),
-      blocking: true,
-      state: GapState::Open,
-      ..Gap::default()
-    });
-
-    let plan = create_test_plan();
-    let output = PlanNextJsonOutput::from_session_and_plan(&session, &plan);
-
-    assert!(output.next_action.is_some());
-    let action = output.next_action;
-    assert_eq!(
-      action.as_ref().map(|a| a.action_type),
-      Some(ActionType::ResolveGap)
-    );
-
-    assert!(output
-      .suggestions
-      .iter()
-      .any(|s| matches!(s.action_type, ActionType::ResolveGap)));
-  }
-
-  #[test]
-  fn test_json_output_with_conflict() {
-    let mut session = create_test_session();
-    session.conflicts.push(Conflict {
-      id: "conflict-1".to_string(),
-      between: ("option_a".to_string(), "option_b".to_string()),
-      description: "Conflicting requirements".to_string(),
-      options: vec![
-        ConflictResolution {
-          option: "A".to_string(),
-          ..ConflictResolution::default()
-        },
-        ConflictResolution {
-          option: "B".to_string(),
-          ..ConflictResolution::default()
-        },
-      ],
-      ..Conflict::default()
-    });
-
-    let plan = create_test_plan();
-    let output = PlanNextJsonOutput::from_session_and_plan(&session, &plan);
-
-    assert!(output
-      .suggestions
-      .iter()
-      .any(|s| matches!(s.action_type, ActionType::ResolveConflict)));
-  }
-
-  #[test]
-  fn test_json_output_with_actionable_beads() {
-    let session = create_test_session();
-    let mut plan = create_test_plan();
-
-    let bead = match PlanBead::new("bead-1".to_string(), "Test bead".to_string(), 1) {
-      Ok(b) => b.mark_ready(),
-      Err(_) => return,
-    };
-    plan.beads.push(bead);
-
-    let output = PlanNextJsonOutput::from_session_and_plan(&session, &plan);
-
-    assert!(output.actionable_beads.contains(&"bead-1".to_string()));
-    assert_eq!(output.next_phase, Some(1));
-  }
-
-  #[test]
-  fn test_json_output_complete_session() {
-    let mut session = create_test_session();
-    session.stage = InterviewStage::Complete;
-
-    let plan = create_test_plan();
-    let output = PlanNextJsonOutput::from_session_and_plan(&session, &plan);
-
-    assert!(output.next_action.is_none());
-    assert_eq!(output.context.stage, "Complete");
-  }
-
-  #[test]
-  fn test_json_output_validation_stage() {
-    let mut session = create_test_session();
-    session.stage = InterviewStage::Validation;
-
-    let plan = create_test_plan();
-    let output = PlanNextJsonOutput::from_session_and_plan(&session, &plan);
-
-    assert!(output
-      .suggestions
-      .iter()
-      .any(|s| matches!(s.action_type, ActionType::ReviewPlan)));
-  }
-
-  #[test]
-  fn test_json_round_trip() {
-    let session = create_test_session();
-    let plan = create_test_plan();
-    let output = PlanNextJsonOutput::from_session_and_plan(&session, &plan);
-
-    let json = output.to_json();
-    assert!(json.is_ok());
-
-    let json_str = json;
-    let deserialized: Result<PlanNextJsonOutput, _> = match json_str.as_ref() {
-      Ok(s) => serde_json::from_str(s),
-      Err(_) => panic!("JSON serialization failed"),
-    };
-
-    assert!(deserialized.is_ok());
-    if let Ok(parsed) = deserialized {
-      assert_eq!(parsed.context.stage, "Discovery");
+    fn create_test_plan() -> ExecutionPlan {
+        ExecutionPlan::new("test-session".to_string())
     }
-  }
 
-  #[test]
-  fn test_action_suggestion_creation() {
-    let suggestion = ActionSuggestion::new(
-      ActionType::AnswerQuestion,
-      "Answer the question".to_string(),
-      "There are pending questions".to_string(),
-    );
+    #[test]
+    fn test_action_type_as_str() {
+        assert_eq!(ActionType::AnswerQuestion.as_str(), "answer_question");
+        assert_eq!(ActionType::ResolveGap.as_str(), "resolve_gap");
+        assert_eq!(ActionType::ResolveConflict.as_str(), "resolve_conflict");
+        assert_eq!(ActionType::CompletePhase.as_str(), "complete_phase");
+        assert_eq!(ActionType::ReviewPlan.as_str(), "review_plan");
+    }
 
-    assert_eq!(suggestion.action_type, ActionType::AnswerQuestion);
-    assert_eq!(suggestion.description, "Answer the question");
-    assert_eq!(suggestion.rationale, "There are pending questions");
-  }
+    #[test]
+    fn test_action_type_description() {
+        assert!(!ActionType::AnswerQuestion.description().is_empty());
+        assert!(!ActionType::ResolveGap.description().is_empty());
+    }
 
-  #[test]
-  fn test_next_action_serialization() {
-    let action = NextAction::new(
-      ActionType::ResolveGap,
-      "gap-1".to_string(),
-      "Resolve the gap".to_string(),
-      "Blocking gap found".to_string(),
-    )
-    .with_priority(1);
+    #[test]
+    fn test_next_action_new() {
+        let action = NextAction::new(
+            ActionType::ResolveGap,
+            "gap-1".to_string(),
+            "Resolve the gap".to_string(),
+            "Gap is blocking".to_string(),
+        );
 
-    let json = serde_json::to_string(&action);
-    assert!(json.is_ok());
+        assert_eq!(action.action_type, ActionType::ResolveGap);
+        assert_eq!(action.target_id, "gap-1");
+        assert_eq!(action.priority, 0);
+    }
 
-    let json_str = json;
-    assert!(json_str
-      .as_ref()
-      .map_or(false, |s| s.contains("resolve_gap")));
-    assert!(json_str.as_ref().map_or(false, |s| s.contains("gap-1")));
-    assert!(json_str.as_ref().map_or(false, |s| s.contains("priority")));
-  }
+    #[test]
+    fn test_next_action_with_priority() {
+        let action = NextAction::new(
+            ActionType::ResolveGap,
+            "gap-1".to_string(),
+            "Description".to_string(),
+            "Reason".to_string(),
+        )
+        .with_priority(5);
 
-  #[test]
-  fn test_action_enum_resolve_gap() {
-    let action = Action::resolve_gap("gap-1".to_string(), "resolution text".to_string());
-    assert_eq!(action.action_type(), ActionType::ResolveGap);
-    assert!(action.description().contains("gap-1"));
-    assert!(action.description().contains("resolution text"));
-  }
+        assert_eq!(action.priority, 5);
+    }
 
-  #[test]
-  fn test_action_enum_answer_question() {
-    let action = Action::answer_question("q-1".to_string(), "answer text".to_string());
-    assert_eq!(action.action_type(), ActionType::AnswerQuestion);
-    assert!(action.description().contains("q-1"));
-    assert!(action.description().contains("answer text"));
-  }
+    #[test]
+    fn test_get_next_action_complete_session() {
+        let mut session = create_test_session();
+        session.stage = InterviewStage::Complete;
+        let plan = create_test_plan();
 
-  #[test]
-  fn test_action_enum_resolve_conflict() {
-    let action = Action::resolve_conflict("c-1".to_string(), "chosen option".to_string());
-    assert_eq!(action.action_type(), ActionType::ResolveConflict);
-    assert!(action.description().contains("c-1"));
-  }
+        let action = get_next_action(&session, &plan);
+        assert!(action.is_none());
+    }
 
-  #[test]
-  fn test_action_enum_complete_phase() {
-    let action = Action::complete_phase(2);
-    assert_eq!(action.action_type(), ActionType::CompletePhase);
-    assert!(action.description().contains("phase 2"));
-  }
+    #[test]
+    fn test_get_next_action_paused_session() {
+        let mut session = create_test_session();
+        session.stage = InterviewStage::Paused;
+        let plan = create_test_plan();
 
-  #[test]
-  fn test_action_enum_review_plan() {
-    let action = Action::review_plan(true, Some("looks good".to_string()));
-    assert_eq!(action.action_type(), ActionType::ReviewPlan);
-    assert!(action.description().contains("approve"));
-    assert!(action.description().contains("looks good"));
-  }
+        let action = get_next_action(&session, &plan);
+        assert!(action.is_some());
+        let action = action.expect("has action");
+        assert_eq!(action.action_type, ActionType::AnswerQuestion);
+        assert_eq!(action.target_id, "resume");
+    }
 
-  #[test]
-  fn test_action_enum_serialization() {
-    let action = Action::resolve_gap("gap-1".to_string(), "fix".to_string());
-    let json = serde_json::to_string(&action);
-    assert!(json.is_ok());
+    #[test]
+    fn test_get_next_action_blocking_gap() {
+        let mut session = create_test_session();
+        session.gaps.push(Gap {
+            id: "gap-1".to_string(),
+            field: "base_url".to_string(),
+            description: "Missing base URL".to_string(),
+            blocking: true,
+            resolved: false,
+            ..Gap::default()
+        });
+        let plan = create_test_plan();
 
-    let json_str = json;
-    assert!(json_str
-      .as_ref()
-      .map_or(false, |s| s.contains("resolve_gap")));
-    assert!(json_str.as_ref().map_or(false, |s| s.contains("gap-1")));
-  }
+        let action = get_next_action(&session, &plan);
+        assert!(action.is_some());
+        let action = action.expect("has action");
+        assert_eq!(action.action_type, ActionType::ResolveGap);
+        assert_eq!(action.target_id, "gap-1");
+    }
+
+    #[test]
+    fn test_get_next_action_resolved_gap() {
+        let mut session = create_test_session();
+        session.gaps.push(Gap {
+            id: "gap-1".to_string(),
+            field: "base_url".to_string(),
+            description: "Missing base URL".to_string(),
+            blocking: true,
+            resolved: true, // Already resolved
+            ..Gap::default()
+        });
+        let plan = create_test_plan();
+
+        let action = get_next_action(&session, &plan);
+        // Should not suggest resolving an already resolved gap
+        if let Some(a) = &action {
+            assert_ne!(a.action_type, ActionType::ResolveGap);
+        }
+    }
+
+    #[test]
+    fn test_get_next_action_conflict() {
+        let mut session = create_test_session();
+        session.conflicts.push(Conflict {
+            id: "conflict-1".to_string(),
+            between: ("a".to_string(), "b".to_string()),
+            description: "CAP theorem conflict".to_string(),
+            impact: "High".to_string(),
+            options: vec![ConflictResolution {
+                option: "opt1".to_string(),
+                description: "Option 1".to_string(),
+                tradeoffs: "Tradeoffs".to_string(),
+                recommendation: true,
+            }],
+            chosen: None,
+        });
+        let plan = create_test_plan();
+
+        let action = get_next_action(&session, &plan);
+        assert!(action.is_some());
+        let action = action.expect("has action");
+        assert_eq!(action.action_type, ActionType::ResolveConflict);
+        assert_eq!(action.target_id, "conflict-1");
+    }
+
+    #[test]
+    fn test_get_next_action_resolved_conflict() {
+        let mut session = create_test_session();
+        session.conflicts.push(Conflict {
+            id: "conflict-1".to_string(),
+            between: ("a".to_string(), "b".to_string()),
+            description: "Conflict".to_string(),
+            impact: "High".to_string(),
+            options: vec![ConflictResolution::default()],
+            chosen: Some(0), // Already resolved
+        });
+        let plan = create_test_plan();
+
+        let action = get_next_action(&session, &plan);
+        if let Some(a) = &action {
+            assert_ne!(a.action_type, ActionType::ResolveConflict);
+        }
+    }
+
+    #[test]
+    fn test_get_next_action_validation_stage() {
+        let mut session = create_test_session();
+        session.stage = InterviewStage::Validation;
+        let plan = create_test_plan();
+
+        let action = get_next_action(&session, &plan);
+        assert!(action.is_some());
+        let action = action.expect("has action");
+        assert_eq!(action.action_type, ActionType::ReviewPlan);
+    }
+
+    #[test]
+    fn test_get_next_action_new_session() {
+        let session = create_test_session();
+        let plan = create_test_plan();
+
+        let action = get_next_action(&session, &plan);
+        assert!(action.is_some());
+        // New session should suggest answering questions
+        let action = action.expect("has action");
+        assert_eq!(action.action_type, ActionType::AnswerQuestion);
+    }
+
+    #[test]
+    fn test_determine_next_phase_empty_plan() {
+        let plan = create_test_plan();
+        assert!(determine_next_phase(&plan).is_none());
+    }
+
+    #[test]
+    fn test_determine_next_phase_with_beads() {
+        let mut plan = create_test_plan();
+        plan.add_bead(
+            PlanBead::new("b1".to_string(), "First".to_string(), 1).expect("valid"),
+        )
+        .expect("add");
+        plan.add_bead(
+            PlanBead::new("b2".to_string(), "Second".to_string(), 2).expect("valid"),
+        )
+        .expect("add");
+
+        assert_eq!(determine_next_phase(&plan), Some(1));
+    }
+
+    #[test]
+    fn test_determine_next_phase_phase1_complete() {
+        let mut plan = create_test_plan();
+        let mut bead1 = PlanBead::new("b1".to_string(), "First".to_string(), 1).expect("valid");
+        bead1.completed = true;
+        plan.add_bead(bead1).expect("add");
+
+        plan.add_bead(
+            PlanBead::new("b2".to_string(), "Second".to_string(), 2).expect("valid"),
+        )
+        .expect("add");
+
+        assert_eq!(determine_next_phase(&plan), Some(2));
+    }
+
+    #[test]
+    fn test_determine_next_phase_all_complete() {
+        let mut plan = create_test_plan();
+        let mut bead1 = PlanBead::new("b1".to_string(), "First".to_string(), 1).expect("valid");
+        bead1.completed = true;
+        plan.add_bead(bead1).expect("add");
+
+        let mut bead2 = PlanBead::new("b2".to_string(), "Second".to_string(), 2).expect("valid");
+        bead2.completed = true;
+        plan.add_bead(bead2).expect("add");
+
+        assert!(determine_next_phase(&plan).is_none());
+    }
+
+    #[test]
+    fn test_get_actionable_beads_empty_plan() {
+        let plan = create_test_plan();
+        let actionable = get_actionable_beads(&plan);
+        assert!(actionable.is_empty());
+    }
+
+    #[test]
+    fn test_get_actionable_beads_with_beads() {
+        let mut plan = create_test_plan();
+        plan.add_bead(
+            PlanBead::new("b1".to_string(), "First".to_string(), 1).expect("valid"),
+        )
+        .expect("add");
+        plan.add_bead(
+            PlanBead::new("b2".to_string(), "Second".to_string(), 1)
+                .expect("valid")
+                .with_dependency("b1".to_string()),
+        )
+        .expect("add");
+
+        let actionable = get_actionable_beads(&plan);
+        assert_eq!(actionable.len(), 1);
+        assert_eq!(actionable[0].id, "b1");
+    }
+
+    #[test]
+    fn test_get_actionable_beads_sorted_by_priority() {
+        let mut plan = create_test_plan();
+        plan.add_bead(
+            PlanBead::new("b1".to_string(), "First".to_string(), 1)
+                .expect("valid")
+                .with_priority(5),
+        )
+        .expect("add");
+        plan.add_bead(
+            PlanBead::new("b2".to_string(), "Second".to_string(), 1)
+                .expect("valid")
+                .with_priority(1),
+        )
+        .expect("add");
+        plan.add_bead(
+            PlanBead::new("b3".to_string(), "Third".to_string(), 1)
+                .expect("valid")
+                .with_priority(3),
+        )
+        .expect("add");
+
+        let actionable = get_actionable_beads(&plan);
+        assert_eq!(actionable.len(), 3);
+        // Should be sorted by priority
+        assert_eq!(actionable[0].id, "b2"); // priority 1
+        assert_eq!(actionable[1].id, "b3"); // priority 3
+        assert_eq!(actionable[2].id, "b1"); // priority 5
+    }
+
+    #[test]
+    fn test_can_proceed_no_gaps() {
+        let session = create_test_session();
+        assert!(can_proceed(&session));
+    }
+
+    #[test]
+    fn test_can_proceed_with_blocking_gap() {
+        let mut session = create_test_session();
+        session.gaps.push(Gap {
+            id: "gap-1".to_string(),
+            field: "test".to_string(),
+            blocking: true,
+            resolved: false,
+            ..Gap::default()
+        });
+
+        assert!(!can_proceed(&session));
+    }
+
+    #[test]
+    fn test_get_blocking_gaps_empty() {
+        let session = create_test_session();
+        let gaps = get_blocking_gaps(&session);
+        assert!(gaps.is_empty());
+    }
+
+    #[test]
+    fn test_get_blocking_gaps_with_gaps() {
+        let mut session = create_test_session();
+        session.gaps.push(Gap {
+            id: "gap-1".to_string(),
+            field: "test".to_string(),
+            blocking: true,
+            resolved: false,
+            ..Gap::default()
+        });
+        session.gaps.push(Gap {
+            id: "gap-2".to_string(),
+            field: "test2".to_string(),
+            blocking: false, // Non-blocking
+            resolved: false,
+            ..Gap::default()
+        });
+        session.gaps.push(Gap {
+            id: "gap-3".to_string(),
+            field: "test3".to_string(),
+            blocking: true,
+            resolved: true, // Resolved
+            ..Gap::default()
+        });
+
+        let gaps = get_blocking_gaps(&session);
+        assert_eq!(gaps.len(), 1);
+        assert_eq!(gaps[0].id, "gap-1");
+    }
+
+    #[test]
+    fn test_priority_ordering_gap_over_conflict() {
+        let mut session = create_test_session();
+        session.gaps.push(Gap {
+            id: "gap-1".to_string(),
+            field: "test".to_string(),
+            blocking: true,
+            resolved: false,
+            ..Gap::default()
+        });
+        session.conflicts.push(Conflict {
+            id: "conflict-1".to_string(),
+            between: ("a".to_string(), "b".to_string()),
+            description: "Conflict".to_string(),
+            impact: "High".to_string(),
+            options: vec![],
+            chosen: None,
+        });
+        let plan = create_test_plan();
+
+        let action = get_next_action(&session, &plan).expect("has action");
+        // Gap should have priority over conflict
+        assert_eq!(action.action_type, ActionType::ResolveGap);
+    }
+
+    #[test]
+    fn test_serde_roundtrip_action_type() {
+        let types = [
+            ActionType::AnswerQuestion,
+            ActionType::ResolveGap,
+            ActionType::ResolveConflict,
+            ActionType::CompletePhase,
+            ActionType::ReviewPlan,
+        ];
+
+        for action_type in types {
+            let json = serde_json::to_string(&action_type).expect("should serialize");
+            let parsed: ActionType = serde_json::from_str(&json).expect("should deserialize");
+            assert_eq!(action_type, parsed);
+        }
+    }
+
+    #[test]
+    fn test_serde_roundtrip_next_action() {
+        let action = NextAction::new(
+            ActionType::ResolveGap,
+            "gap-1".to_string(),
+            "Resolve the gap".to_string(),
+            "Gap is blocking progress".to_string(),
+        )
+        .with_priority(3);
+
+        let json = serde_json::to_string(&action).expect("should serialize");
+        let parsed: NextAction = serde_json::from_str(&json).expect("should deserialize");
+        assert_eq!(action, parsed);
+    }
 }

@@ -15,14 +15,14 @@ pub mod feedback;
 pub mod templates;
 
 // Re-export key types for convenience
-pub use feedback::BeadRecord as FeedbackBeadRecord;
 pub use feedback::{
-  collect_feedback, collect_feedback_with_reviewer, get_bead_feedback_history, update_bead_status,
-  BeadFeedback, BeadStatus, FeedbackError,
+    collect_feedback, collect_feedback_with_reviewer, get_bead_feedback_history, update_bead_status,
+    BeadFeedback, BeadStatus, FeedbackError,
 };
+pub use feedback::BeadRecord as FeedbackBeadRecord;
 
 // Re-export template types (WP26)
 pub use templates::{
-  beads_to_enhanced_cue, beads_to_jsonl, decode_beads_json, generate_beads_from_session,
-  generate_profile_beads, BeadError, BeadTemplate, BeadTemplateStats,
+    beads_to_enhanced_cue, beads_to_jsonl, generate_beads_from_session, generate_profile_beads,
+    BeadError, BeadTemplate, BeadTemplateStats,
 };

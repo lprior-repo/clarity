@@ -14,7 +14,7 @@ pub enum TypeError {
   #[error("name cannot be empty")]
   EmptyName,
 
-  /// Behavior name does not match required `snake_case` pattern
+  /// Behavior name does not match required snake_case pattern
   #[error("behavior name '{0}' must be snake_case (lowercase letters, numbers, underscores, starting with letter)")]
   InvalidBehaviorName(String),
 

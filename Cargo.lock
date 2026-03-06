@@ -427,7 +427,6 @@ dependencies = [
  "dioxus-fullstack",
  "dioxus-logger 0.5.1",
  "dirs",
- "futures-util",
  "itertools",
  "once_cell",
  "redb",

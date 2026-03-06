@@ -7,10 +7,6 @@
 
 pub mod array_indexing;
 pub mod case_insensitive;
-pub mod stdin;
 
-pub use array_indexing::{
-  navigate_path, parse_path_component, split_path, ArrayIndexError, ArraySpec,
-};
+pub use array_indexing::{ArrayIndexError, ArraySpec, navigate_path, parse_path_component, split_path};
 pub use case_insensitive::*;
-pub use stdin::*;

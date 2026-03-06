@@ -19,10 +19,6 @@ pub fn is_safe_path(path: &str) -> bool {
   validate_file_path(path).is_ok()
 }
 
-/// Validates a file path against traversal and shell-metacharacter risks.
-///
-/// # Errors
-/// Returns `SecurityError` when the path is empty, malformed, or contains unsafe characters/patterns.
 pub fn validate_file_path(path: &str) -> SecurityResult<String> {
   if path.is_empty() {
     return Err(SecurityError::EmptyInput);
@@ -64,10 +60,6 @@ pub fn validate_file_path(path: &str) -> SecurityResult<String> {
     .map_or_else(|| Ok(path.to_owned()), Err)
 }
 
-/// Validates a regex pattern and rejects known `ReDoS` signatures.
-///
-/// # Errors
-/// Returns `SecurityError` when the input is empty, contains null bytes, or matches a vulnerable pattern.
 pub fn validate_regex_pattern(pattern: &str) -> SecurityResult<String> {
   if pattern.is_empty() {
     return Err(SecurityError::EmptyInput);
@@ -83,10 +75,6 @@ pub fn validate_regex_pattern(pattern: &str) -> SecurityResult<String> {
   )
 }
 
-/// Validates a session id against length and character constraints.
-///
-/// # Errors
-/// Returns `SecurityError::SessionIdValidation` when the id is empty, too long, or contains invalid characters.
 pub fn validate_session_id(session_id: &str) -> SecurityResult<String> {
   if session_id.is_empty() {
     return Err(SecurityError::SessionIdValidation {
@@ -115,10 +103,6 @@ pub fn validate_session_id(session_id: &str) -> SecurityResult<String> {
     )
 }
 
-/// Validates a list of file paths.
-///
-/// # Errors
-/// Returns the first `SecurityError` encountered while validating the provided paths.
 pub fn validate_file_paths(paths: &[&str]) -> SecurityResult<Vec<String>> {
   paths
     .iter()

@@ -1,4 +1,3 @@
-use super::models::ConflictState;
 use super::{Answer, Conflict, ConflictResolution};
 
 const FAST_KEYWORDS: [&str; 5] = ["fast", "latency", "speed", "quick", "low-latency"];
@@ -59,7 +58,7 @@ fn detect_cap_conflict(answers: &[Answer]) -> Option<Conflict> {
                 recommendation: true,
             },
         ],
-        state: ConflictState::Pending,
+        chosen: None,
     })
 }
 
@@ -92,6 +91,6 @@ fn detect_anonymous_audit_conflict(answers: &[Answer]) -> Option<Conflict> {
                 recommendation: true,
             },
         ],
-        state: ConflictState::Pending,
+        chosen: None,
     })
 }

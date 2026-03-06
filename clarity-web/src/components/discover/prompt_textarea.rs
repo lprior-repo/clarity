@@ -1,5 +1,3 @@
-// Additional clippy lints to allow
-#![allow(clippy::suspicious_else_formatting)]
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
@@ -225,12 +223,7 @@ pub struct CharacterCountProps {
 #[component]
 pub fn CharacterCount(props: CharacterCountProps) -> Element {
   let progress_percent = if props.minimum > 0 {
-    props
-      .current
-      .saturating_mul(100)
-      .checked_div(props.minimum)
-      .unwrap_or(100)
-      .min(100)
+    (props.current.saturating_mul(100) / props.minimum).min(100)
   } else {
     100
   };

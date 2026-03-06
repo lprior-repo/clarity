@@ -62,7 +62,6 @@ Thumbs.db
 /app_assets/
 
 # E2E test artifacts
-node_modules/
 e2e-tests/node_modules/
 e2e-tests/test-results/
 e2e-tests/playwright-report/
@@ -83,13 +82,12 @@ CONTINUOUS_*.md
 DOCUMENTATION_*.md
 REMAINING_*.md
 
-# All other markdown files except AGENTS.md, CLAUDE.md, docs/, and package READMEs
+# All other markdown files except AGENTS.md, CLAUDE.md, docs/, and kitty-specs/
 *.md
 !AGENTS.md
 !CLAUDE.md
 !docs/**/*.md
-!clarity-web/README.md
-!intent-cli/README.md
+!kitty-specs/**/*.md
 
 # Codanna index (binary build artifacts - never commit)
 .codanna/index/
@@ -111,10 +109,4 @@ REMAINING_*.md
 .roo/
 .amazonq/
 .github/copilot/
-
-# Large test binaries (don't track - these are ~34MB each)
-test_crate_root_imports
-test_integration
-
-# Dolt database files (added by bd init)
-.dolt/
+.kittify/.dashboard

@@ -8,7 +8,7 @@
 
 //! `OpenCode` extraction provider implementation
 //!
-//! This module provides a client for `OpenCode` session APIs,
+//! This module provides a client for OpenCode session APIs,
 //! which extracts structured fields from unstructured text.
 
 use async_trait::async_trait;
@@ -27,12 +27,12 @@ const DEFAULT_TIMEOUT_SECS: u64 = 30;
 /// Session ID header name
 const SESSION_HEADER: &str = "X-Session-ID";
 
-/// Default agent used when invoking `OpenCode` session API.
+/// Default agent used when invoking OpenCode session API.
 const DEFAULT_AGENT: &str = "build";
 
 /// `OpenCode` session API client
 ///
-/// This client communicates with `OpenCode`
+/// This client communicates with OpenCode
 /// to extract structured fields from text input.
 #[derive(Debug, Clone)]
 pub struct OpenCodeProvider {
@@ -40,7 +40,7 @@ pub struct OpenCodeProvider {
   endpoint: String,
   /// Session identifier for request tracking
   session_id: String,
-  /// Optional model identifier passed through to `OpenCode`
+  /// Optional model identifier passed through to OpenCode
   model: Option<String>,
   /// Optional routed provider identifier for model backends
   routing_provider: Option<String>,
@@ -111,13 +111,13 @@ impl OpenCodeProvider {
   }
 
   #[must_use]
-  pub fn model(&self) -> Option<&str> {
-    self.model.as_deref()
+  pub const fn model(&self) -> &Option<String> {
+    &self.model
   }
 
   #[must_use]
-  pub fn routing_provider(&self) -> Option<&str> {
-    self.routing_provider.as_deref()
+  pub const fn routing_provider(&self) -> &Option<String> {
+    &self.routing_provider
   }
 
   /// Build the full URL for an API endpoint
@@ -416,9 +416,11 @@ Input:\n{text}"
 
     let candidate = fenced
       .map(|part| {
-        part
-          .strip_prefix("json\n")
-          .map_or_else(|| part.to_string(), |stripped| stripped.trim().to_string())
+        if let Some(stripped) = part.strip_prefix("json\n") {
+          stripped.trim().to_string()
+        } else {
+          part.to_string()
+        }
       })
       .or_else(|| {
         let start = text.find('{')?;
@@ -518,7 +520,7 @@ impl OpenCodeProvider {
   }
 }
 
-/// Session API model descriptor for `OpenCode` `/session/:id/message`.
+/// Session API model descriptor for OpenCode `/session/:id/message`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct SessionModelRef {
   #[serde(rename = "providerID")]
@@ -603,8 +605,11 @@ mod tests {
 
     assert!(provider.is_ok());
     let provider = provider.unwrap();
-    assert_eq!(provider.model(), Some("zai-coding-plan/glm-5"));
-    assert_eq!(provider.routing_provider(), Some("zai-coding-plan"));
+    assert_eq!(provider.model(), &Some("zai-coding-plan/glm-5".to_string()));
+    assert_eq!(
+      provider.routing_provider(),
+      &Some("zai-coding-plan".to_string())
+    );
   }
 
   #[test]

@@ -7,7 +7,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Invariant - a system property that must always hold
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Invariant {
   /// Invariant name/identifier
   pub name: String,
@@ -16,24 +16,34 @@ pub struct Invariant {
   pub description: String,
   /// Formal or informal specification
   #[serde(default)]
-  pub criteria: Vec<String>,
+  pub constraint: String,
+}
+
+impl Default for Invariant {
+  fn default() -> Self {
+    Self {
+      name: String::new(),
+      description: String::new(),
+      constraint: String::new(),
+    }
+  }
 }
 
 impl Invariant {
   /// Create a new invariant
   #[must_use]
-  pub const fn new(name: String, description: String) -> Self {
+  pub fn new(name: String, description: String) -> Self {
     Self {
       name,
       description,
-      criteria: Vec::new(),
+      constraint: String::new(),
     }
   }
 
-  /// Builder method to set criteria
+  /// Builder method to set constraint
   #[must_use]
-  pub fn with_criteria(self, criteria: Vec<String>) -> Self {
-    Self { criteria, ..self }
+  pub fn with_constraint(self, constraint: String) -> Self {
+    Self { constraint, ..self }
   }
 }
 
@@ -47,10 +57,10 @@ mod tests {
       "unique_email".to_string(),
       "Emails must be unique".to_string(),
     )
-    .with_criteria(vec!["email UNIQUE in users".to_string()]);
+    .with_constraint("email UNIQUE in users".to_string());
 
     assert_eq!(invariant.name, "unique_email");
     assert_eq!(invariant.description, "Emails must be unique");
-    assert_eq!(invariant.criteria, vec!["email UNIQUE in users"]);
+    assert_eq!(invariant.constraint, "email UNIQUE in users");
   }
 }

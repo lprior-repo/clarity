@@ -49,29 +49,31 @@ pub mod tracing;
 
 // Re-export logging types
 pub use logging::{
-  ErrorInfo, LogAggregator, LogContext, LogEntry, LogFormat, LogLevel, LogStats, LoggerConfig,
-  LoggingError, SourceLocation, StructuredLogger,
+    ErrorInfo, LogAggregator, LogContext, LogEntry, LogFormat, LogLevel, LoggerConfig,
+    LogStats, LoggingError, SourceLocation, StructuredLogger,
 };
 
 // Re-export tracing types
 pub use tracing::{
-  AttributeValue, Span, SpanBuilder, SpanEvent, SpanId, SpanKind, SpanState, SpanStatus,
-  TraceContext, TraceFlags, TraceId, TraceSummary, Tracer, TracerConfig, TracingError,
+    AttributeValue, Span, SpanBuilder, SpanEvent, SpanId, SpanKind,
+    SpanState, SpanStatus, TraceContext, TraceFlags, TraceId, TraceSummary, Tracer,
+    TracerConfig, TracingError,
 };
 
 // Re-export metrics types
 pub use metrics::{
-  Counter, Gauge, Histogram, HistogramStats as MetricsHistogramStats, MetricDimensions,
-  MetricSnapshot, MetricType, MetricValue, MetricsConfig, MetricsError, MetricsRegistry,
-  MetricsSummary, RumCollector,
+    Counter, Gauge, Histogram, HistogramStats as MetricsHistogramStats, MetricDimensions,
+    MetricsError, MetricSnapshot, MetricType, MetricValue, MetricsConfig, MetricsRegistry,
+    MetricsSummary, RumCollector,
 };
 
 // Re-export testing types
 pub use testing::{
-  assert_contains, assert_empty, assert_eq, assert_err, assert_false, assert_in_range, assert_ne,
-  assert_none, assert_not_empty, assert_ok, assert_some, assert_true, AssertionResult,
-  CoverageItem, CoverageReport, CoverageTracker, ModuleCoverage, ModuleReport, TestContext,
-  TestDataGenerator, TestFixture, TestResult, TestSummary, TestingError,
+    assert_contains, assert_empty, assert_eq, assert_err, assert_false, assert_in_range,
+    assert_ne, assert_none, assert_not_empty, assert_ok, assert_some, assert_true,
+    AssertionResult, CoverageItem, CoverageReport, CoverageTracker, ModuleCoverage,
+    ModuleReport, TestDataGenerator, TestContext, TestFixture, TestResult, TestSummary,
+    TestingError,
 };
 
 /// Infrastructure version
@@ -80,133 +82,133 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Infrastructure error type (union of all infra errors)
 #[derive(Debug, thiserror::Error)]
 pub enum InfraError {
-  /// Logging error
-  #[error("logging error: {0}")]
-  Logging(#[from] LoggingError),
+    /// Logging error
+    #[error("logging error: {0}")]
+    Logging(#[from] LoggingError),
 
-  /// Tracing error
-  #[error("tracing error: {0}")]
-  Tracing(#[from] TracingError),
+    /// Tracing error
+    #[error("tracing error: {0}")]
+    Tracing(#[from] TracingError),
 
-  /// Metrics error
-  #[error("metrics error: {0}")]
-  Metrics(#[from] MetricsError),
+    /// Metrics error
+    #[error("metrics error: {0}")]
+    Metrics(#[from] MetricsError),
 
-  /// Testing error
-  #[error("testing error: {0}")]
-  Testing(#[from] TestingError),
+    /// Testing error
+    #[error("testing error: {0}")]
+    Testing(#[from] TestingError),
 }
 
 /// Initialize infrastructure with sensible defaults
 ///
 /// This sets up logging, tracing, and metrics with production-ready defaults.
-/// Returns a tuple of (logger, tracer, `metrics_registry`).
+/// Returns a tuple of (logger, tracer, metrics_registry).
 #[must_use]
 pub fn init_infra(service: &str) -> (StructuredLogger, Tracer, MetricsRegistry) {
-  let logger = StructuredLogger::new()
-    .with_service(service)
-    .with_min_level(LogLevel::Info);
+    let logger = StructuredLogger::new()
+        .with_service(service)
+        .with_min_level(LogLevel::Info);
 
-  let tracer = Tracer::new(service);
+    let tracer = Tracer::new(service);
 
-  let metrics = MetricsRegistry::new(service);
+    let metrics = MetricsRegistry::new(service);
 
-  (logger, tracer, metrics)
+    (logger, tracer, metrics)
 }
 
 /// Infrastructure health check
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct HealthStatus {
-  /// Service name
-  pub service: String,
-  /// Whether logging is healthy
-  pub logging_healthy: bool,
-  /// Whether tracing is healthy
-  pub tracing_healthy: bool,
-  /// Whether metrics are healthy
-  pub metrics_healthy: bool,
-  /// Timestamp of health check
-  pub timestamp: chrono::DateTime<chrono::Utc>,
+    /// Service name
+    pub service: String,
+    /// Whether logging is healthy
+    pub logging_healthy: bool,
+    /// Whether tracing is healthy
+    pub tracing_healthy: bool,
+    /// Whether metrics are healthy
+    pub metrics_healthy: bool,
+    /// Timestamp of health check
+    pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
 impl HealthStatus {
-  /// Create a new health status
-  #[must_use]
-  pub fn new(service: impl Into<String>) -> Self {
-    Self {
-      service: service.into(),
-      logging_healthy: true,
-      tracing_healthy: true,
-      metrics_healthy: true,
-      timestamp: chrono::Utc::now(),
+    /// Create a new health status
+    #[must_use]
+    pub fn new(service: impl Into<String>) -> Self {
+        Self {
+            service: service.into(),
+            logging_healthy: true,
+            tracing_healthy: true,
+            metrics_healthy: true,
+            timestamp: chrono::Utc::now(),
+        }
     }
-  }
 
-  /// Check if all components are healthy
-  #[must_use]
-  pub const fn is_healthy(&self) -> bool {
-    self.logging_healthy && self.tracing_healthy && self.metrics_healthy
-  }
+    /// Check if all components are healthy
+    #[must_use]
+    pub const fn is_healthy(&self) -> bool {
+        self.logging_healthy && self.tracing_healthy && self.metrics_healthy
+    }
 }
 
 #[cfg(test)]
 mod tests {
-  use super::*;
+    use super::*;
 
-  #[test]
-  fn test_init_infra() {
-    let (logger, tracer, metrics) = init_infra("test-service");
+    #[test]
+    fn test_init_infra() {
+        let (logger, tracer, metrics) = init_infra("test-service");
 
-    assert_eq!(logger.config().service, "test-service");
-    assert_eq!(tracer.config().service, "test-service");
-    assert_eq!(metrics.summary().service, "test-service");
-  }
+        assert_eq!(logger.config().service, "test-service");
+        assert_eq!(tracer.config().service, "test-service");
+        assert_eq!(metrics.summary().service, "test-service");
+    }
 
-  #[test]
-  fn test_health_status() {
-    let health = HealthStatus::new("test-service");
+    #[test]
+    fn test_health_status() {
+        let health = HealthStatus::new("test-service");
 
-    assert_eq!(health.service, "test-service");
-    assert!(health.logging_healthy);
-    assert!(health.tracing_healthy);
-    assert!(health.metrics_healthy);
-    assert!(health.is_healthy());
-  }
+        assert_eq!(health.service, "test-service");
+        assert!(health.logging_healthy);
+        assert!(health.tracing_healthy);
+        assert!(health.metrics_healthy);
+        assert!(health.is_healthy());
+    }
 
-  #[test]
-  fn test_health_status_unhealthy() {
-    let mut health = HealthStatus::new("test-service");
-    health.logging_healthy = false;
+    #[test]
+    fn test_health_status_unhealthy() {
+        let mut health = HealthStatus::new("test-service");
+        health.logging_healthy = false;
 
-    assert!(!health.is_healthy());
-  }
+        assert!(!health.is_healthy());
+    }
 
-  #[test]
-  fn test_version() {
-    assert!(!VERSION.is_empty());
-  }
+    #[test]
+    fn test_version() {
+        assert!(!VERSION.is_empty());
+    }
 
-  #[test]
-  fn test_infra_error_from_logging() {
-    let logging_err = LoggingError::InvalidLevel("bad".to_string());
-    let infra_err: InfraError = logging_err.into();
+    #[test]
+    fn test_infra_error_from_logging() {
+        let logging_err = LoggingError::InvalidLevel("bad".to_string());
+        let infra_err: InfraError = logging_err.into();
 
-    assert!(matches!(infra_err, InfraError::Logging(_)));
-  }
+        assert!(matches!(infra_err, InfraError::Logging(_)));
+    }
 
-  #[test]
-  fn test_infra_error_from_tracing() {
-    let tracing_err = TracingError::InvalidTraceId("bad".to_string());
-    let infra_err: InfraError = tracing_err.into();
+    #[test]
+    fn test_infra_error_from_tracing() {
+        let tracing_err = TracingError::InvalidTraceId("bad".to_string());
+        let infra_err: InfraError = tracing_err.into();
 
-    assert!(matches!(infra_err, InfraError::Tracing(_)));
-  }
+        assert!(matches!(infra_err, InfraError::Tracing(_)));
+    }
 
-  #[test]
-  fn test_infra_error_from_testing() {
-    let testing_err = TestingError::AssertionFailed("failed".to_string());
-    let infra_err: InfraError = testing_err.into();
+    #[test]
+    fn test_infra_error_from_testing() {
+        let testing_err = TestingError::AssertionFailed("failed".to_string());
+        let infra_err: InfraError = testing_err.into();
 
-    assert!(matches!(infra_err, InfraError::Testing(_)));
-  }
+        assert!(matches!(infra_err, InfraError::Testing(_)));
+    }
 }

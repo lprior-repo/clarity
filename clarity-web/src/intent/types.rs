@@ -11,7 +11,6 @@ mod anti_pattern;
 mod behavior;
 mod feature;
 mod invariant;
-pub mod names;
 mod spec;
 mod type_error;
 mod verification;
@@ -21,9 +20,6 @@ pub use anti_pattern::AntiPattern;
 pub use behavior::Behavior;
 pub use feature::Feature;
 pub use invariant::Invariant;
-pub use names::{
-  BehaviorName, BehaviorReference, FeatureDependency, FeatureName, NameError, SpecName,
-};
 pub use spec::Spec;
 pub use type_error::TypeError;
 pub use verification::Verification;

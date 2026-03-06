@@ -113,7 +113,6 @@ fn default_endpoint() -> String {
   "https://api.opencode.ai/v1".to_string()
 }
 
-#[allow(clippy::unnecessary_wraps)]
 fn default_model() -> Option<String> {
   Some("zai-coding-plan/glm-5".to_string())
 }

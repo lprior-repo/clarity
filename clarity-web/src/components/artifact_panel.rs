@@ -312,12 +312,7 @@ fn build_artifact_data(answers: &[Answer]) -> ArtifactData {
     .count();
 
   let progress = if required > 0 {
-    done
-      .checked_mul(100)
-      .unwrap_or(0)
-      .checked_div(required)
-      .unwrap_or(0)
-      .min(100)
+    (done * 100 / required).min(100)
   } else {
     0
   };
@@ -345,7 +340,7 @@ fn render_use_case_rows(use_cases: &[String]) -> Vec<Element> {
     .iter()
     .enumerate()
     .map(|(i, uc)| {
-      let uc = Clone::clone(&uc);
+      let uc = uc.clone();
       rsx! { UseCaseRow { text: uc, index: i } }
     })
     .collect()
@@ -467,7 +462,7 @@ pub fn ArtifactPanel(answers: Signal<Vec<Answer>>, active_phase: Signal<String>)
     .iter()
     .enumerate()
     .map(|(i, t)| {
-      let t = Clone::clone(&t);
+      let t = t.clone();
       let selected = current_selected == Some(i);
       let mut signal = selected_task;
       rsx! {

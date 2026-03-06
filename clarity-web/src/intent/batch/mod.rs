@@ -4,6 +4,5 @@
 //! - Batch spec validation
 //! - Summary report generation
 
-mod processor;
-
-pub use processor::*;
+// Module will be added in WP34 (P2)
+// pub mod processor;

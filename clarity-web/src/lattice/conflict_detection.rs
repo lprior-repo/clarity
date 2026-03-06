@@ -4,33 +4,6 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
-// Additional clippy lints to allow
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::cast_sign_loss)]
-#![allow(clippy::cast_precision_loss)]
-#![allow(clippy::cast_possible_wrap)]
-#![allow(clippy::too_many_arguments)]
-#![allow(clippy::missing_errors_doc)]
-#![allow(clippy::trivially_copy_pass_by_ref)]
-#![allow(clippy::assigning_clones)]
-#![allow(clippy::option_if_let_else)]
-#![allow(clippy::unused_self)]
-#![allow(clippy::unnecessary_wraps)]
-#![allow(clippy::too_many_lines)]
-#![allow(clippy::manual_strip)]
-#![allow(clippy::format_push_string)]
-#![allow(clippy::missing_const_for_fn)]
-#![allow(clippy::struct_field_names)]
-#![allow(clippy::suspicious_else_formatting)]
-#![allow(clippy::return_self_not_must_use)]
-#![allow(clippy::items_after_statements)]
-#![allow(clippy::ptr_arg)]
-#![allow(clippy::missing_fields_in_debug)]
-#![allow(clippy::must_use_unit)]
-#![allow(clippy::collection_is_never_read)]
-#![allow(clippy::needless_collect)]
-#![allow(clippy::manual_checked_ops)]
-#![allow(clippy::needless_pass_by_value)]
 
 //! Conflict Detection module for requirements analysis.
 //!
@@ -43,7 +16,7 @@ use std::collections::HashMap;
 use thiserror::Error;
 
 /// Domain errors for conflict detection
-#[derive(Debug, Error, PartialEq, Eq, Clone)]
+#[derive(Debug, Error, PartialEq, Clone)]
 pub enum ConflictError {
   #[error("requirements list is empty")]
   EmptyRequirements,
@@ -179,7 +152,7 @@ pub struct Conflict {
 impl Conflict {
   /// Create a new conflict
   #[must_use]
-  pub const fn new(
+  pub fn new(
     id: String,
     conflict_type: ConflictType,
     severity: ConflictSeverity,
@@ -245,9 +218,9 @@ impl ConflictResolution {
     }
   }
 
-  /// Set `preserves_both` flag
+  /// Set preserves_both flag
   #[must_use]
-  pub const fn with_preserves_both(mut self, preserves: bool) -> Self {
+  pub fn with_preserves_both(mut self, preserves: bool) -> Self {
     self.preserves_both = preserves;
     self
   }
@@ -303,7 +276,7 @@ impl ResolutionStrategy {
 }
 
 /// Complete conflict analysis result
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ConflictAnalysis {
   /// All detected conflicts
   pub conflicts: Vec<Conflict>,
@@ -418,7 +391,7 @@ impl ConflictAnalysis {
 
   /// Check if requirements are conflict-free
   #[must_use]
-  pub const fn is_conflict_free(&self) -> bool {
+  pub fn is_conflict_free(&self) -> bool {
     self.conflicts.is_empty()
   }
 }
@@ -452,7 +425,8 @@ fn generate_conflict_summary(conflicts: &[Conflict], consistency_score: u8) -> S
   let total = conflicts.len();
 
   format!(
-    "Consistency: {consistency_score}% | {total} conflicts total ({critical} critical, {high} high)"
+    "Consistency: {}% | {} conflicts total ({} critical, {} high)",
+    consistency_score, total, critical, high
   )
 }
 
@@ -465,10 +439,7 @@ fn generate_conflict_summary(conflicts: &[Conflict], consistency_score: u8) -> S
 /// Complete conflict analysis with detected conflicts
 #[must_use]
 pub fn detect_conflicts(requirements: &[&str]) -> ConflictAnalysis {
-  let all_requirements: Vec<String> = requirements
-    .iter()
-    .map(std::string::ToString::to_string)
-    .collect();
+  let all_requirements: Vec<String> = requirements.iter().map(|s| s.to_string()).collect();
   let mut conflicts = Vec::new();
   let mut conflict_id = 0;
 
@@ -540,14 +511,17 @@ fn check_contradiction(
         *conflict_id += 1;
         return Some(
           Conflict::new(
-            format!("CONFLICT-{conflict_id:03}"),
+            format!("CONFLICT-{:03}", conflict_id),
             ConflictType::Contradiction,
             ConflictSeverity::Critical,
             req_a.to_string(),
             req_b.to_string(),
-            format!("Direct contradiction: '{pos}' vs '{neg}'"),
+            format!("Direct contradiction: '{}' vs '{}'", pos, neg),
           )
-          .with_evidence(format!("One requires '{pos}' while other requires '{neg}'"))
+          .with_evidence(format!(
+            "One requires '{}' while other requires '{}'",
+            pos, neg
+          ))
           .with_resolution(ConflictResolution::new(
             "Choose one requirement or add condition".to_string(),
             ResolutionStrategy::Prioritize,
@@ -597,7 +571,7 @@ fn check_mutual_exclusion(
       *conflict_id += 1;
       return Some(
         Conflict::new(
-          format!("CONFLICT-{conflict_id:03}"),
+          format!("CONFLICT-{:03}", conflict_id),
           ConflictType::MutualExclusion,
           ConflictSeverity::High,
           req_a.to_string(),
@@ -645,15 +619,16 @@ fn check_resource_conflict(
         *conflict_id += 1;
         return Some(
           Conflict::new(
-            format!("CONFLICT-{conflict_id:03}"),
+            format!("CONFLICT-{:03}", conflict_id),
             ConflictType::ResourceConflict,
             ConflictSeverity::High,
             req_a.to_string(),
             req_b.to_string(),
-            format!("Resource conflict over {resource}"),
+            format!("Resource conflict over {}", resource),
           )
           .with_evidence(format!(
-            "Both requirements demand exclusive {resource} access"
+            "Both requirements demand exclusive {} access",
+            resource
           ))
           .with_resolution(ConflictResolution::new(
             "Define resource allocation policy".to_string(),
@@ -691,7 +666,7 @@ fn check_priority_conflict(
     *conflict_id += 1;
     return Some(
       Conflict::new(
-        format!("CONFLICT-{conflict_id:03}"),
+        format!("CONFLICT-{:03}", conflict_id),
         ConflictType::PriorityConflict,
         ConflictSeverity::Medium,
         req_a.to_string(),

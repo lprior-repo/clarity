@@ -18,21 +18,22 @@
 //! - **North Star Scenario Builder**: Build and validate user journey scenarios
 //! - **CDI Logger**: Track Customer Discovery Interviews with signal strength
 
-pub mod cdi_logger;
-pub mod north_star;
-pub mod persona_forge;
 pub mod thesis_generator;
+pub mod persona_forge;
+pub mod north_star;
+pub mod cdi_logger;
 
-pub use cdi_logger::{
-  CdiEntry, CdiFunnel, CdiLogger, CdiSignal, InterviewOutcome, SignalStrength, SignalType,
-};
-pub use north_star::{
-  Character, DiscoveryMechanism, EdgeCase, NorthStarBuilder, NorthStarError, NorthStarOutput,
-  PlotHole, Scenario, SimulationResult, TimelineEvent,
+pub use thesis_generator::{
+    Antithesis, Thesis, ThesisAntithesisGenerator, ThesisError, ThesisOutput, ValidationStatus,
 };
 pub use persona_forge::{
-  HumanLimitation, Persona, PersonaError, PersonaForge, PersonaOutput, ValidationResult,
+    HumanLimitation, Persona, PersonaError, PersonaForge, PersonaOutput,
+    ValidationResult,
 };
-pub use thesis_generator::{
-  Antithesis, Thesis, ThesisAntithesisGenerator, ThesisError, ThesisOutput, ValidationStatus,
+pub use north_star::{
+    Character, DiscoveryMechanism, EdgeCase, NorthStarBuilder, NorthStarError, NorthStarOutput,
+    PlotHole, Scenario, SimulationResult, TimelineEvent,
+};
+pub use cdi_logger::{
+    CdiEntry, CdiFunnel, CdiLogger, CdiSignal, InterviewOutcome, SignalStrength, SignalType,
 };

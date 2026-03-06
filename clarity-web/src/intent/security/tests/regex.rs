@@ -51,7 +51,8 @@ fn test_validate_regex_pattern_nested_quantifiers_general() {
     result,
     Err(SecurityError::ReDoSVulnerability {
       vulnerability: RegexVulnerability::NestedQuantifiers
-        | RegexVulnerability::ExponentialBacktracking
+    }) | Err(SecurityError::ReDoSVulnerability {
+      vulnerability: RegexVulnerability::ExponentialBacktracking
     })
   ));
 }
