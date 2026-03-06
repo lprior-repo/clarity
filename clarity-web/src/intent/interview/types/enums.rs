@@ -6,7 +6,9 @@ use super::ProfileParseError;
 /// Profile type - determines which questions to ask and required fields.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum Profile {
+  #[default]
   Api,
   Cli,
   Event,
@@ -15,11 +17,6 @@ pub enum Profile {
   Ui,
 }
 
-impl Default for Profile {
-  fn default() -> Self {
-    Self::Api
-  }
-}
 
 impl Profile {
   #[must_use]
@@ -80,7 +77,9 @@ impl FromStr for Profile {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum InterviewStage {
+  #[default]
   Discovery,
   Refinement,
   Validation,
@@ -88,11 +87,6 @@ pub enum InterviewStage {
   Paused,
 }
 
-impl Default for InterviewStage {
-  fn default() -> Self {
-    Self::Discovery
-  }
-}
 
 impl InterviewStage {
   #[must_use]
@@ -109,7 +103,9 @@ impl InterviewStage {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum Perspective {
+  #[default]
   User,
   Developer,
   Ops,
@@ -117,29 +113,23 @@ pub enum Perspective {
   Business,
 }
 
-impl Default for Perspective {
-  fn default() -> Self {
-    Self::User
-  }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum QuestionPriority {
   Critical,
+  #[default]
   Important,
   NiceToHave,
 }
 
-impl Default for QuestionPriority {
-  fn default() -> Self {
-    Self::Important
-  }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum QuestionCategory {
+  #[default]
   HappyPath,
   ErrorCase,
   EdgeCase,
@@ -148,8 +138,3 @@ pub enum QuestionCategory {
   NonFunctional,
 }
 
-impl Default for QuestionCategory {
-  fn default() -> Self {
-    Self::HappyPath
-  }
-}

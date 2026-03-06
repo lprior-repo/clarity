@@ -62,6 +62,7 @@ impl Default for Gap {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct Conflict {
   pub id: String,
   pub between: (String, String),
@@ -71,20 +72,9 @@ pub struct Conflict {
   pub chosen: Option<i32>,
 }
 
-impl Default for Conflict {
-  fn default() -> Self {
-    Self {
-      id: String::new(),
-      between: (String::new(), String::new()),
-      description: String::new(),
-      impact: String::new(),
-      options: Vec::new(),
-      chosen: None,
-    }
-  }
-}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct ConflictResolution {
   pub option: String,
   pub description: String,
@@ -92,16 +82,6 @@ pub struct ConflictResolution {
   pub recommendation: bool,
 }
 
-impl Default for ConflictResolution {
-  fn default() -> Self {
-    Self {
-      option: String::new(),
-      description: String::new(),
-      tradeoffs: String::new(),
-      recommendation: false,
-    }
-  }
-}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Question {

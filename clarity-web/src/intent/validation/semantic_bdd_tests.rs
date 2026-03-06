@@ -108,18 +108,18 @@ mod dependency_validation {
     let mut spec = Spec::new("api_spec".to_string()).unwrap();
 
     let mut auth = Feature::new("auth".to_string()).unwrap();
-    auth.add_behavior(Behavior::new("login".to_string()).unwrap());
-    auth.add_behavior(Behavior::new("logout".to_string()).unwrap());
+    let _ = auth.add_behavior(Behavior::new("login".to_string()).unwrap());
+    let _ = auth.add_behavior(Behavior::new("logout".to_string()).unwrap());
 
     let mut users = Feature::new("users".to_string()).unwrap();
     users.add_dependency("auth".to_string());
-    users.add_behavior(Behavior::new("create_user".to_string()).unwrap());
-    users.add_behavior(Behavior::new("list_users".to_string()).unwrap());
+    let _ = users.add_behavior(Behavior::new("create_user".to_string()).unwrap());
+    let _ = users.add_behavior(Behavior::new("list_users".to_string()).unwrap());
 
     let mut orders = Feature::new("orders".to_string()).unwrap();
     orders.add_dependency("auth".to_string());
     orders.add_dependency("users".to_string());
-    orders.add_behavior(Behavior::new("create_order".to_string()).unwrap());
+    let _ = orders.add_behavior(Behavior::new("create_order".to_string()).unwrap());
 
     let _ = spec.add_feature(auth);
     let _ = spec.add_feature(users);

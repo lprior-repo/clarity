@@ -119,37 +119,37 @@ impl Rule {
   #[must_use]
   pub fn name(&self) -> &str {
     match self {
-      Rule::Required => "required",
-      Rule::Pattern { .. } => "pattern",
-      Rule::Range { .. } => "range",
-      Rule::Custom { name, .. } => name,
+      Self::Required => "required",
+      Self::Pattern { .. } => "pattern",
+      Self::Range { .. } => "range",
+      Self::Custom { name, .. } => name,
     }
   }
 
   /// Create a required rule
   #[must_use]
-  pub fn required() -> Self {
-    Rule::Required
+  pub const fn required() -> Self {
+    Self::Required
   }
 
   /// Create a pattern rule
   #[must_use]
   pub fn pattern(regex: impl Into<String>) -> Self {
-    Rule::Pattern {
+    Self::Pattern {
       pattern: regex.into(),
     }
   }
 
   /// Create a range rule
   #[must_use]
-  pub fn range(min: f64, max: f64) -> Self {
-    Rule::Range { min, max }
+  pub const fn range(min: f64, max: f64) -> Self {
+    Self::Range { min, max }
   }
 
   /// Create a custom rule
   #[must_use]
   pub fn custom(name: impl Into<String>, check: impl Into<String>) -> Self {
-    Rule::Custom {
+    Self::Custom {
       name: name.into(),
       check: check.into(),
     }
@@ -161,7 +161,7 @@ impl Rule {
 // =============================================================================
 
 /// Result of applying a single rule
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RuleResult {
   /// Name of the rule that was applied
   pub rule_name: String,
@@ -266,7 +266,7 @@ fn validate_required(value: &str) -> Result<RuleResult, RuleError> {
 fn validate_pattern(value: &str, pattern: &str) -> Result<RuleResult, RuleError> {
   // We need to compile the regex without using unwrap
   let regex = regex::Regex::new(pattern)
-    .map_err(|e| RuleError::InvalidPattern(format!("{}: {}", pattern, e)))?;
+    .map_err(|e| RuleError::InvalidPattern(format!("{pattern}: {e}")))?;
 
   let passed = regex.is_match(value);
 
@@ -275,7 +275,7 @@ fn validate_pattern(value: &str, pattern: &str) -> Result<RuleResult, RuleError>
   } else {
     RuleResult::failed(
       "pattern",
-      format!("value '{}' does not match pattern '{}'", value, pattern),
+      format!("value '{value}' does not match pattern '{pattern}'"),
       Some(value.to_string()),
     )
   };
@@ -298,7 +298,7 @@ fn validate_range(value: &str, min: f64, max: f64) -> Result<RuleResult, RuleErr
   } else {
     RuleResult::failed(
       "range",
-      format!("value {} is outside range [{}, {}]", num, min, max),
+      format!("value {num} is outside range [{min}, {max}]"),
       Some(value.to_string()),
     )
   };
@@ -327,7 +327,7 @@ fn validate_custom(value: &str, name: &str, check: &str) -> Result<RuleResult, R
   } else {
     RuleResult::failed(
       name,
-      format!("custom check failed: {}", check),
+      format!("custom check failed: {check}"),
       Some(value.to_string()),
     )
   };
@@ -369,7 +369,7 @@ fn evaluate_custom_check(value: &str, check: &str) -> Result<bool, RuleError> {
   // Unknown check type - default to false with error
   Err(RuleError::CustomFailed {
     name: "unknown".into(),
-    message: format!("unknown check expression: {}", check),
+    message: format!("unknown check expression: {check}"),
   })
 }
 
@@ -392,13 +392,13 @@ fn evaluate_length_check(len: usize, expr: &str) -> Result<bool, RuleError> {
   } else {
     return Err(RuleError::CustomFailed {
       name: "length".into(),
-      message: format!("invalid comparison: {}", expr),
+      message: format!("invalid comparison: {expr}"),
     });
   };
 
   let target: usize = num_str.parse().map_err(|_| RuleError::CustomFailed {
     name: "length".into(),
-    message: format!("not a valid number: {}", num_str),
+    message: format!("not a valid number: {num_str}"),
   })?;
 
   let result = match comparison {
@@ -439,7 +439,7 @@ fn extract_quoted_string(s: &str) -> Result<String, RuleError> {
   Ok(s.to_string())
 }
 
-/// Evaluate one_of check
+/// Evaluate `one_of` check
 fn evaluate_one_of(value: &str, list: &str) -> Result<bool, RuleError> {
   // Parse JSON-like array: ["a", "b", "c"]
   let list = list.trim();
@@ -447,7 +447,7 @@ fn evaluate_one_of(value: &str, list: &str) -> Result<bool, RuleError> {
   if !list.starts_with('[') || !list.ends_with(']') {
     return Err(RuleError::CustomFailed {
       name: "one_of".into(),
-      message: format!("expected array format: {}", list),
+      message: format!("expected array format: {list}"),
     });
   }
 

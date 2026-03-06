@@ -30,7 +30,7 @@ use itertools::Itertools;
 use std::collections::HashMap;
 use thiserror::Error;
 
-use crate::intent::interview::types::{Answer, InterviewSession, Profile};
+use crate::intent::interview::types::{InterviewSession, Profile};
 
 /// Error type for spec template operations
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
@@ -177,7 +177,7 @@ fn extract_field_values(session: &InterviewSession) -> HashMap<String, String> {
 
     // Add notes if present
     if !answer.notes.is_empty() {
-      values.insert(format!("{}_notes", question_key), answer.notes.clone());
+      values.insert(format!("{question_key}_notes"), answer.notes.clone());
     }
   }
 
@@ -691,7 +691,7 @@ fn generate_ui_template() -> String {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::intent::interview::types::{InterviewStage, Perspective};
+  use crate::intent::interview::types::{Answer, InterviewStage, Perspective};
   use std::collections::HashMap;
 
   fn create_test_session() -> InterviewSession {

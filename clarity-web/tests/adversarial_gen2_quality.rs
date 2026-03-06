@@ -1,3 +1,4 @@
+#![allow(unused_comparisons)]
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::expect_used)]
 #![allow(clippy::panic)]

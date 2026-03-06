@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{TypeError, Verification};
 
-/// Validate behavior names as snake_case with leading lowercase letter.
+/// Validate behavior names as `snake_case` with leading lowercase letter.
 fn is_valid_behavior_name(name: &str) -> bool {
   let mut chars = name.chars();
   match chars.next() {
@@ -20,9 +20,9 @@ fn is_valid_behavior_name(name: &str) -> bool {
 }
 
 /// Behavior - a single behavior with verification criteria
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Behavior {
-  /// Behavior name in snake_case
+  /// Behavior name in `snake_case`
   pub name: String,
   /// Human-readable description of the behavior
   #[serde(default)]
@@ -41,7 +41,7 @@ pub struct Behavior {
 impl Behavior {
   /// Create a new behavior with the given name
   ///
-  /// The name must be in snake_case format: lowercase letters, numbers,
+  /// The name must be in `snake_case` format: lowercase letters, numbers,
   /// and underscores, starting with a letter.
   ///
   /// # Errors

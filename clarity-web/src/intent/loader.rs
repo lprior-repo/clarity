@@ -47,7 +47,7 @@ use super::types::Spec;
 // =============================================================================
 
 /// Error type for CUE loading operations
-#[derive(Debug, Error, Clone, PartialEq)]
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum LoaderError {
   /// I/O error (file not found, permission denied, etc.)
   #[error("I/O error: {0}")]
@@ -108,20 +108,20 @@ pub enum LoaderError {
 impl From<ParseError> for LoaderError {
   fn from(err: ParseError) -> Self {
     match err {
-      ParseError::JsonError(msg) => LoaderError::Json(msg),
+      ParseError::JsonError(msg) => Self::Json(msg),
       ParseError::MissingField(field) => {
-        LoaderError::Validation(format!("missing required field: {field}"))
+        Self::Validation(format!("missing required field: {field}"))
       }
       ParseError::InvalidType {
         field,
         expected,
         actual,
-      } => LoaderError::InvalidSpec {
+      } => Self::InvalidSpec {
         field,
         expected,
         actual,
       },
-      ParseError::EmptyField(field) => LoaderError::EmptyField(field),
+      ParseError::EmptyField(field) => Self::EmptyField(field),
     }
   }
 }
@@ -130,23 +130,23 @@ impl From<SecurityError> for LoaderError {
   fn from(err: SecurityError) -> Self {
     match err {
       SecurityError::PathTraversal { details } => {
-        LoaderError::Security(format!("path traversal: {details}"))
+        Self::Security(format!("path traversal: {details}"))
       }
       SecurityError::EncodedPathTraversal { encoding_type } => {
-        LoaderError::Security(format!("encoded path traversal: {encoding_type}"))
+        Self::Security(format!("encoded path traversal: {encoding_type}"))
       }
       SecurityError::ShellMetacharacter { category, ch } => {
-        LoaderError::Security(format!("shell metacharacter '{ch}' ({category})"))
+        Self::Security(format!("shell metacharacter '{ch}' ({category})"))
       }
       SecurityError::ReDoSVulnerability { vulnerability } => {
-        LoaderError::Security(format!("ReDoS vulnerability: {vulnerability}"))
+        Self::Security(format!("ReDoS vulnerability: {vulnerability}"))
       }
       SecurityError::SessionIdValidation { error } => {
-        LoaderError::Security(format!("session ID validation: {error}"))
+        Self::Security(format!("session ID validation: {error}"))
       }
-      SecurityError::NullByteDetected => LoaderError::Security("null byte detected".into()),
-      SecurityError::BackslashInPath => LoaderError::Security("backslash in path".into()),
-      SecurityError::EmptyInput => LoaderError::Security("empty input".into()),
+      SecurityError::NullByteDetected => Self::Security("null byte detected".into()),
+      SecurityError::BackslashInPath => Self::Security("backslash in path".into()),
+      SecurityError::EmptyInput => Self::Security("empty input".into()),
     }
   }
 }
@@ -279,8 +279,7 @@ pub fn validate_cue_file(path: &Path) -> Result<(), LoaderError> {
   } else {
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
     Err(LoaderError::CommandFailed(format!(
-      "cue vet failed for {}: {}",
-      path_str, stderr
+      "cue vet failed for {path_str}: {stderr}"
     )))
   }
 }
@@ -321,8 +320,7 @@ pub fn export_cue_to_json(path: &Path) -> Result<String, LoaderError> {
   } else {
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
     Err(LoaderError::CommandFailed(format!(
-      "cue export failed for {}: {}",
-      path_str, stderr
+      "cue export failed for {path_str}: {stderr}"
     )))
   }
 }
@@ -346,7 +344,7 @@ fn check_cue_binary() -> Result<(), LoaderError> {
   }
 }
 
-/// Format a LoaderError as a human-readable string
+/// Format a `LoaderError` as a human-readable string
 ///
 /// # Arguments
 ///

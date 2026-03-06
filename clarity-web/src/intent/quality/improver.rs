@@ -92,7 +92,7 @@ impl ImprovementSuggestion {
 
   /// Check if this is a high-priority suggestion (priority >= 8)
   #[must_use]
-  pub fn is_high_priority(&self) -> bool {
+  pub const fn is_high_priority(&self) -> bool {
     self.priority >= 8
   }
 
@@ -104,7 +104,7 @@ impl ImprovementSuggestion {
 
   /// Check if this is a low-priority suggestion (priority 1-3)
   #[must_use]
-  pub fn is_low_priority(&self) -> bool {
+  pub const fn is_low_priority(&self) -> bool {
     self.priority <= 3
   }
 }
@@ -143,7 +143,7 @@ pub enum IssueCategory {
 impl IssueCategory {
   /// Get display label for this category
   #[must_use]
-  pub fn label(self) -> &'static str {
+  pub const fn label(self) -> &'static str {
     match self {
       Self::MissingTests => "Missing Tests",
       Self::VagueRules => "Vague Rules",
@@ -161,7 +161,7 @@ impl IssueCategory {
 
   /// Get all categories
   #[must_use]
-  pub fn all() -> &'static [IssueCategory] {
+  pub const fn all() -> &'static [Self] {
     &[
       Self::MissingTests,
       Self::VagueRules,
@@ -247,7 +247,7 @@ pub struct QualityReport {
 impl QualityReport {
   /// Create a new empty quality report
   #[must_use]
-  pub fn new() -> Self {
+  pub const fn new() -> Self {
     Self {
       overall_score: 0,
       issues: Vec::new(),
@@ -264,7 +264,7 @@ impl QualityReport {
 
   /// Create a quality report with specified values
   #[must_use]
-  pub fn with_scores(overall_score: u8, behavior_count: usize, feature_count: usize) -> Self {
+  pub const fn with_scores(overall_score: u8, behavior_count: usize, feature_count: usize) -> Self {
     Self {
       overall_score,
       issues: Vec::new(),
@@ -436,7 +436,7 @@ pub fn suggest_missing_tests(report: &QualityReport) -> Vec<ImprovementSuggestio
       issue.field.clone(),
       format!(
         "Add acceptance criteria and verification steps. {}",
-        issue.context.as_ref().map(|c| c.as_str()).unwrap_or("")
+        issue.context.as_deref().unwrap_or("")
       ),
     ) {
       Ok(s) => suggestions.push(s),
@@ -478,7 +478,7 @@ pub fn suggest_vague_rules_improvements(report: &QualityReport) -> Vec<Improveme
             format!("Clarify: {}", issue.description),
             issue.severity,
             issue.field.clone(),
-            format!("Rewrite with specific values and examples. Avoid ambiguous terms like 'fast', 'good', or 'appropriate'. {}", issue.context.as_ref().map(|c| c.as_str()).unwrap_or("Use measurable criteria.")),
+            format!("Rewrite with specific values and examples. Avoid ambiguous terms like 'fast', 'good', or 'appropriate'. {}", issue.context.as_deref().unwrap_or("Use measurable criteria.")),
         ) {
             Ok(s) => suggestions.push(s),
             Err(_) => continue,
@@ -524,9 +524,7 @@ pub fn suggest_examples_improvements(report: &QualityReport) -> Vec<ImprovementS
       format!(
         "Fill in the missing information. {}",
         issue
-          .context
-          .as_ref()
-          .map(|c| c.as_str())
+          .context.as_deref()
           .unwrap_or("Provide complete details for this field.")
       ),
     ) {
@@ -556,9 +554,7 @@ fn suggest_security_improvements(report: &QualityReport) -> Vec<ImprovementSugge
       format!(
         "Add security controls. {}",
         issue
-          .context
-          .as_ref()
-          .map(|c| c.as_str())
+          .context.as_deref()
           .unwrap_or("Consider authentication, authorization, encryption, and input validation.")
       ),
     ) {
@@ -569,16 +565,13 @@ fn suggest_security_improvements(report: &QualityReport) -> Vec<ImprovementSugge
 
   // Check for missing auth tests as security issues
   if !report.missing_auth_tests.is_empty() {
-    match ImprovementSuggestion::new(
+    if let Ok(s) = ImprovementSuggestion::new(
             "security",
             "Add comprehensive security test coverage".to_string(),
             10,
             "security".to_string(),
             format!("The following areas need security tests: {}. Include tests for authentication, authorization, input validation, and injection prevention.", report.missing_auth_tests.join(", ")),
-        ) {
-            Ok(s) => suggestions.push(s),
-            Err(_) => {}
-        }
+        ) { suggestions.push(s) }
   }
 
   suggestions
@@ -591,41 +584,32 @@ fn suggest_completeness_improvements(report: &QualityReport) -> Vec<ImprovementS
 
   // Check overall score
   if report.overall_score < 50 {
-    match ImprovementSuggestion::new(
+    if let Ok(s) = ImprovementSuggestion::new(
             "completeness",
             "Overall quality score is critically low".to_string(),
             10,
             "overall".to_string(),
             "Focus on filling in missing required fields and adding verification criteria before addressing other issues.".to_string(),
-        ) {
-            Ok(s) => suggestions.push(s),
-            Err(_) => {}
-        }
+        ) { suggestions.push(s) }
   } else if report.overall_score < 70 {
-    match ImprovementSuggestion::new(
+    if let Ok(s) = ImprovementSuggestion::new(
             "completeness",
             "Overall quality score needs improvement".to_string(),
             8,
             "overall".to_string(),
             "Address the identified gaps to improve the overall quality score. Prioritize high-severity issues first.".to_string(),
-        ) {
-            Ok(s) => suggestions.push(s),
-            Err(_) => {}
-        }
+        ) { suggestions.push(s) }
   }
 
   // Check for behaviors without verification
   if report.behavior_count > 0 && report.unverified_behaviors.len() > report.behavior_count / 2 {
-    match ImprovementSuggestion::new(
+    if let Ok(s) = ImprovementSuggestion::new(
             "completeness",
             "More than half of behaviors lack verification".to_string(),
             9,
             "verification".to_string(),
             format!("{} of {} behaviors need verification criteria. Define how each behavior will be tested and validated.", report.unverified_behaviors.len(), report.behavior_count),
-        ) {
-            Ok(s) => suggestions.push(s),
-            Err(_) => {}
-        }
+        ) { suggestions.push(s) }
   }
 
   suggestions
@@ -638,16 +622,13 @@ fn suggest_clarity_improvements(report: &QualityReport) -> Vec<ImprovementSugges
 
   // Check for common vague patterns across all vague rules
   if report.vague_rules.len() > 3 {
-    match ImprovementSuggestion::new(
+    if let Ok(s) = ImprovementSuggestion::new(
             "clarity",
             "Multiple vague rules detected - consider glossary".to_string(),
             6,
             "documentation".to_string(),
             "Create a glossary defining common terms and acceptable value ranges to ensure consistent interpretation across all rules.".to_string(),
-        ) {
-            Ok(s) => suggestions.push(s),
-            Err(_) => {}
-        }
+        ) { suggestions.push(s) }
   }
 
   suggestions
@@ -667,9 +648,7 @@ fn suggest_consistency_improvements(report: &QualityReport) -> Vec<ImprovementSu
       format!(
         "Review and resolve the contradiction. {}",
         issue
-          .context
-          .as_ref()
-          .map(|c| c.as_str())
+          .context.as_deref()
           .unwrap_or("Ensure all requirements align and do not conflict.")
       ),
     ) {

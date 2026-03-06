@@ -43,12 +43,12 @@ impl EmissionResult {
     }
 
     /// Add an emitted bead count
-    pub fn add_emitted(&mut self, count: usize) {
+    pub const fn add_emitted(&mut self, count: usize) {
         self.emitted += count;
     }
 
     /// Add a skipped bead count
-    pub fn add_skipped(&mut self, count: usize) {
+    pub const fn add_skipped(&mut self, count: usize) {
         self.skipped += count;
     }
 
@@ -216,7 +216,7 @@ fn generate_beads_from_gaps(
                 .with_tag("gap".to_string())
                 .with_tag(if gap.blocking { "blocking".to_string() } else { "optional".to_string() }),
             Err(e) => {
-                result.add_error(format!("Failed to create gap bead: {}", e));
+                result.add_error(format!("Failed to create gap bead: {e}"));
                 continue;
             }
         };
@@ -264,7 +264,7 @@ fn generate_beads_from_conflicts(
                 .with_tag("conflict".to_string())
                 .with_priority(1), // High priority
             Err(e) => {
-                result.add_error(format!("Failed to create conflict bead: {}", e));
+                result.add_error(format!("Failed to create conflict bead: {e}"));
                 continue;
             }
         };
@@ -361,10 +361,10 @@ fn update_plan_phases(plan: &mut ExecutionPlan) {
 
     // Create phases
     let mut sorted_phases: Vec<u32> = phase_numbers.drain().collect();
-    sorted_phases.sort();
+    sorted_phases.sort_unstable();
 
     for phase_num in sorted_phases {
-        let mut phase = PlanPhase::new(phase_num, format!("Phase {}", phase_num));
+        let mut phase = PlanPhase::new(phase_num, format!("Phase {phase_num}"));
 
         // Add beads to phase
         for bead in &plan.beads {
@@ -409,8 +409,8 @@ fn generate_api_beads(phase: u32) -> Vec<PlanBead> {
     tasks
         .iter()
         .filter_map(|(id, title, effort)| {
-            PlanBead::new(format!("api-{}", id), title.to_string(), phase).ok().map(|b| {
-                b.with_description(format!("API task: {}", title))
+            PlanBead::new(format!("api-{id}"), title.to_string(), phase).ok().map(|b| {
+                b.with_description(format!("API task: {title}"))
                     .with_effort(*effort)
                     .with_tag("api".to_string())
             })
@@ -429,8 +429,8 @@ fn generate_cli_beads(phase: u32) -> Vec<PlanBead> {
     tasks
         .iter()
         .filter_map(|(id, title, effort)| {
-            PlanBead::new(format!("cli-{}", id), title.to_string(), phase).ok().map(|b| {
-                b.with_description(format!("CLI task: {}", title))
+            PlanBead::new(format!("cli-{id}"), title.to_string(), phase).ok().map(|b| {
+                b.with_description(format!("CLI task: {title}"))
                     .with_effort(*effort)
                     .with_tag("cli".to_string())
             })
@@ -449,8 +449,8 @@ fn generate_event_beads(phase: u32) -> Vec<PlanBead> {
     tasks
         .iter()
         .filter_map(|(id, title, effort)| {
-            PlanBead::new(format!("event-{}", id), title.to_string(), phase).ok().map(|b| {
-                b.with_description(format!("Event task: {}", title))
+            PlanBead::new(format!("event-{id}"), title.to_string(), phase).ok().map(|b| {
+                b.with_description(format!("Event task: {title}"))
                     .with_effort(*effort)
                     .with_tag("event".to_string())
             })
@@ -469,8 +469,8 @@ fn generate_data_beads(phase: u32) -> Vec<PlanBead> {
     tasks
         .iter()
         .filter_map(|(id, title, effort)| {
-            PlanBead::new(format!("data-{}", id), title.to_string(), phase).ok().map(|b| {
-                b.with_description(format!("Data task: {}", title))
+            PlanBead::new(format!("data-{id}"), title.to_string(), phase).ok().map(|b| {
+                b.with_description(format!("Data task: {title}"))
                     .with_effort(*effort)
                     .with_tag("data".to_string())
             })
@@ -489,8 +489,8 @@ fn generate_workflow_beads(phase: u32) -> Vec<PlanBead> {
     tasks
         .iter()
         .filter_map(|(id, title, effort)| {
-            PlanBead::new(format!("workflow-{}", id), title.to_string(), phase).ok().map(|b| {
-                b.with_description(format!("Workflow task: {}", title))
+            PlanBead::new(format!("workflow-{id}"), title.to_string(), phase).ok().map(|b| {
+                b.with_description(format!("Workflow task: {title}"))
                     .with_effort(*effort)
                     .with_tag("workflow".to_string())
             })
@@ -509,8 +509,8 @@ fn generate_ui_beads(phase: u32) -> Vec<PlanBead> {
     tasks
         .iter()
         .filter_map(|(id, title, effort)| {
-            PlanBead::new(format!("ui-{}", id), title.to_string(), phase).ok().map(|b| {
-                b.with_description(format!("UI task: {}", title))
+            PlanBead::new(format!("ui-{id}"), title.to_string(), phase).ok().map(|b| {
+                b.with_description(format!("UI task: {title}"))
                     .with_effort(*effort)
                     .with_tag("ui".to_string())
             })

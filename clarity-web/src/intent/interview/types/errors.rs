@@ -41,7 +41,7 @@ pub enum ConflictDetectionError {
   EmptyQuestionId(usize),
 }
 
-#[derive(Debug, Error, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Error, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum InterviewSessionError {
   #[error("answer round {answer_round} does not match current round {current_round}")]
   RoundMismatch {

@@ -79,7 +79,7 @@ impl QualityIssue {
 }
 
 /// Quality metrics for a spec
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct QualityReport {
   /// Coverage score (0-100): error tests, auth tests, edge cases, invariants
   pub coverage_score: u8,
@@ -126,13 +126,13 @@ impl QualityReport {
 
   /// Check if the report has any issues
   #[must_use]
-  pub fn has_issues(&self) -> bool {
+  pub const fn has_issues(&self) -> bool {
     !self.issues.is_empty()
   }
 
   /// Get the number of issues
   #[must_use]
-  pub fn issue_count(&self) -> usize {
+  pub const fn issue_count(&self) -> usize {
     self.issues.len()
   }
 
@@ -145,7 +145,7 @@ impl QualityReport {
   }
 
   /// Merge another report's issues into this one
-  pub fn merge_issues(&mut self, other: &QualityReport) {
+  pub fn merge_issues(&mut self, other: &Self) {
     for issue in &other.issues {
       self.add_issue(*issue);
     }
@@ -286,7 +286,7 @@ pub fn calculate_clarity_score(spec: &Spec) -> u8 {
 
   // Check for vague language
   let vague_count = count_vague_language(spec);
-  score = score.saturating_sub(vague_count.saturating_mul(5) as u16);
+  score = score.saturating_sub(u16::from(vague_count.saturating_mul(5)));
 
   // Bonus for good documentation
   if desc_ratio >= 0.9 {
@@ -424,11 +424,11 @@ fn calculate_overall_score_from_values(
   ai_readiness: u8,
 ) -> u8 {
   // Weighted average: 30% coverage, 25% clarity, 25% testability, 20% AI readiness
-  let weighted_sum = (coverage as u16)
+  let weighted_sum = u16::from(coverage)
     .saturating_mul(30)
-    .saturating_add((clarity as u16).saturating_mul(25))
-    .saturating_add((testability as u16).saturating_mul(25))
-    .saturating_add((ai_readiness as u16).saturating_mul(20));
+    .saturating_add(u16::from(clarity).saturating_mul(25))
+    .saturating_add(u16::from(testability).saturating_mul(25))
+    .saturating_add(u16::from(ai_readiness).saturating_mul(20));
 
   (weighted_sum / 100).pipe(|s| s as u8)
 }
@@ -441,7 +441,7 @@ fn calculate_overall_score_from_values(
 fn check_has_error_tests(spec: &Spec) -> bool {
   spec.features.iter().any(|f| {
     f.behaviors.iter().any(|b| {
-      b.verification.as_ref().map_or(false, |v| {
+      b.verification.as_ref().is_some_and(|v| {
         let desc_lower = v.description.to_lowercase();
         let example_lower = v.example.to_lowercase();
         desc_lower.contains("error")
@@ -468,7 +468,7 @@ fn check_has_auth_tests(spec: &Spec) -> bool {
 
   let has_auth_verification = spec.features.iter().any(|f| {
     f.behaviors.iter().any(|b| {
-      b.verification.as_ref().map_or(false, |v| {
+      b.verification.as_ref().is_some_and(|v| {
         let desc_lower = v.description.to_lowercase();
         desc_lower.contains("auth")
           || desc_lower.contains("unauthorized")
@@ -500,7 +500,7 @@ fn check_has_edge_cases(spec: &Spec) -> bool {
       });
 
       // Check verification for edge case testing
-      let verif_has_edge = b.verification.as_ref().map_or(false, |v: &Verification| {
+      let verif_has_edge = b.verification.as_ref().is_some_and(|v: &Verification| {
         let desc_lower = v.description.to_lowercase();
         let example_lower = v.example.to_lowercase();
         desc_lower.contains("edge")
@@ -525,7 +525,7 @@ fn check_invariants_tested(spec: &Spec) -> bool {
   // Check if any verification mentions invariants
   let verif_mentions_invariant = spec.features.iter().any(|f| {
     f.behaviors.iter().any(|b| {
-      b.verification.as_ref().map_or(false, |v| {
+      b.verification.as_ref().is_some_and(|v| {
         v.description.to_lowercase().contains("invariant")
           || v.example.to_lowercase().contains("invariant")
       })
@@ -708,7 +708,7 @@ fn calculate_example_ratio(spec: &Spec) -> f64 {
         .filter(|b| {
           b.verification
             .as_ref()
-            .map_or(false, |v| !v.example.is_empty())
+            .is_some_and(|v| !v.example.is_empty())
         })
         .count()
     })

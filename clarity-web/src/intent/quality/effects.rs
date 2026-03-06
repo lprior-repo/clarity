@@ -12,11 +12,11 @@
 //!
 //! ## Effect Categories
 //!
-//! - **StateChange**: Create/update/delete operations on data
+//! - **`StateChange`**: Create/update/delete operations on data
 //! - **Notification**: Email, webhook, callback triggers
 //! - **Cascade**: Related records affected by operations
-//! - **RaceCondition**: Concurrent modification risks
-//! - **RollbackRequired**: Operations requiring reversibility
+//! - **`RaceCondition`**: Concurrent modification risks
+//! - **`RollbackRequired`**: Operations requiring reversibility
 
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]
@@ -269,7 +269,7 @@ pub struct Effect {
 impl Effect {
   /// Create a new effect
   #[must_use]
-  pub fn new(
+  pub const fn new(
     effect_type: EffectType,
     description: String,
     severity: EffectSeverity,
@@ -292,6 +292,7 @@ impl Effect {
 
 /// Summary of effects by type
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct EffectsSummary {
   /// Count of state change effects
   pub state_changes: usize,
@@ -309,19 +310,6 @@ pub struct EffectsSummary {
   pub max_severity: Option<EffectSeverity>,
 }
 
-impl Default for EffectsSummary {
-  fn default() -> Self {
-    Self {
-      state_changes: 0,
-      notifications: 0,
-      cascades: 0,
-      race_conditions: 0,
-      rollbacks: 0,
-      total: 0,
-      max_severity: None,
-    }
-  }
-}
 
 impl EffectsSummary {
   /// Create a new empty summary
@@ -1057,7 +1045,7 @@ pub fn max_effect_severity(behavior: &Behavior) -> Option<EffectSeverity> {
 ///
 /// # Returns
 ///
-/// A HashMap mapping effect types to their counts
+/// A `HashMap` mapping effect types to their counts
 #[must_use]
 pub fn count_effects_by_type(spec: &Spec) -> HashMap<EffectType, usize> {
   spec

@@ -44,7 +44,7 @@ use thiserror::Error;
 // =============================================================================
 
 /// Error taxonomy for array indexing operations
-#[derive(Debug, Error, Clone, PartialEq)]
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum ArrayIndexError {
     /// Invalid path syntax
     #[error("invalid path: {0}")]
@@ -95,8 +95,8 @@ impl ArraySpec {
     #[must_use]
     pub const fn is_array_access(self) -> bool {
         match self {
-            ArraySpec::NoArray => false,
-            ArraySpec::Index(_) | ArraySpec::NegativeIndex(_) | ArraySpec::All => true,
+            Self::NoArray => false,
+            Self::Index(_) | Self::NegativeIndex(_) | Self::All => true,
         }
     }
 
@@ -107,8 +107,8 @@ impl ArraySpec {
     /// Returns `ArrayIndexError::IndexOutOfBounds` if the index is invalid for the array
     pub fn resolve_indices(self, length: usize) -> Result<Vec<usize>, ArrayIndexError> {
         match self {
-            ArraySpec::NoArray => Ok(vec![]),
-            ArraySpec::Index(i) => {
+            Self::NoArray => Ok(vec![]),
+            Self::Index(i) => {
                 if i < length {
                     Ok(vec![i])
                 } else {
@@ -118,7 +118,7 @@ impl ArraySpec {
                     })
                 }
             }
-            ArraySpec::NegativeIndex(n) => {
+            Self::NegativeIndex(n) => {
                 // -1 maps to last element, -2 to second-to-last, etc.
                 if n == 0 || n > length {
                     Err(ArrayIndexError::IndexOutOfBounds {
@@ -129,7 +129,7 @@ impl ArraySpec {
                     Ok(vec![length - n])
                 }
             }
-            ArraySpec::All => Ok((0..length).collect()),
+            Self::All => Ok((0..length).collect()),
         }
     }
 }
@@ -137,10 +137,10 @@ impl ArraySpec {
 impl fmt::Display for ArraySpec {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ArraySpec::NoArray => write!(f, ""),
-            ArraySpec::Index(i) => write!(f, "[{i}]"),
-            ArraySpec::NegativeIndex(n) => write!(f, "[-{n}]"),
-            ArraySpec::All => write!(f, "[*]"),
+            Self::NoArray => write!(f, ""),
+            Self::Index(i) => write!(f, "[{i}]"),
+            Self::NegativeIndex(n) => write!(f, "[-{n}]"),
+            Self::All => write!(f, "[*]"),
         }
     }
 }

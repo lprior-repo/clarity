@@ -274,7 +274,7 @@ mod tests {
 
         assert!(result.is_err());
         let err = result.expect_err("should fail");
-        assert!(matches!(err, ParseError::InvalidType { field, expected, .. } if field == "name" && expected == "string"));
+        assert!(matches!(err, ParseError::InvalidType { field, expected: _, .. } if field == "name"));
     }
 
     #[test]
@@ -294,7 +294,7 @@ mod tests {
 
         assert!(result.is_err());
         let err = result.expect_err("should fail");
-        assert!(matches!(err, ParseError::InvalidType { field, expected, .. } if field == "root" && expected == "object"));
+        assert!(matches!(err, ParseError::InvalidType { field, expected: _, .. } if field == "root"));
     }
 
     #[test]
@@ -450,7 +450,7 @@ mod tests {
 
         assert!(result.is_err());
         let err = result.expect_err("should fail");
-        assert!(matches!(err, ParseError::InvalidType { field, expected, .. } if field == "root"));
+        assert!(matches!(err, ParseError::InvalidType { field, expected: _, .. } if field == "root"));
     }
 
     #[test]

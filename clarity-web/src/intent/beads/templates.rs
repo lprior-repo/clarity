@@ -88,7 +88,7 @@ impl BeadTemplate {
     /// - `BeadError::EmptyTitle` if title is empty or whitespace
     /// - `BeadError::EmptyDescription` if description is empty or whitespace
     /// - `BeadError::InvalidPriority` if priority is not 1-5
-    /// - `BeadError::MissingProfileType` if profile_type is empty
+    /// - `BeadError::MissingProfileType` if `profile_type` is empty
     pub fn new(
         title: String,
         description: String,
@@ -738,7 +738,7 @@ pub fn beads_to_enhanced_cue(beads: &[BeadTemplate]) -> Result<String, BeadError
     let profiles: std::collections::HashSet<&str> = beads.iter().map(|b| b.profile_type.as_str()).collect();
     for profile in profiles {
         let count = beads.iter().filter(|b| b.profile_type == profile).count();
-        output.push_str(&format!("    {}: {}\n", profile, count));
+        output.push_str(&format!("    {profile}: {count}\n"));
     }
     output.push_str("}\n\n");
 
@@ -748,7 +748,7 @@ pub fn beads_to_enhanced_cue(beads: &[BeadTemplate]) -> Result<String, BeadError
     let types: std::collections::HashSet<&str> = beads.iter().map(|b| b.issue_type.as_str()).collect();
     for issue_type in types {
         let count = beads.iter().filter(|b| b.issue_type == issue_type).count();
-        output.push_str(&format!("    {}: {}\n", issue_type, count));
+        output.push_str(&format!("    {issue_type}: {count}\n"));
     }
     output.push_str("}\n\n");
 
@@ -757,7 +757,7 @@ pub fn beads_to_enhanced_cue(beads: &[BeadTemplate]) -> Result<String, BeadError
     output.push_str("priority_distribution: {\n");
     for priority in 1..=5 {
         let count = beads.iter().filter(|b| b.priority == priority).count();
-        output.push_str(&format!("    p{}: {}\n", priority, count));
+        output.push_str(&format!("    p{priority}: {count}\n"));
     }
     output.push_str("}\n\n");
 
@@ -771,7 +771,7 @@ pub fn beads_to_enhanced_cue(beads: &[BeadTemplate]) -> Result<String, BeadError
         }
     }
     for label in all_labels {
-        output.push_str(&format!("    \"{}\": true\n", label));
+        output.push_str(&format!("    \"{label}\": true\n"));
     }
     output.push_str("}\n\n");
 
@@ -863,7 +863,7 @@ fn escape_cue_string(s: &str) -> String {
 }
 
 /// Estimate effort from priority.
-fn estimate_effort_from_priority(priority: u8) -> u8 {
+const fn estimate_effort_from_priority(priority: u8) -> u8 {
     match priority {
         1 => 5, // High priority = more effort
         2 => 4,
@@ -875,7 +875,7 @@ fn estimate_effort_from_priority(priority: u8) -> u8 {
 }
 
 /// Assess risk level based on bead characteristics.
-fn assess_risk_level(bead: &BeadTemplate) -> &'static str {
+const fn assess_risk_level(bead: &BeadTemplate) -> &'static str {
     if bead.priority <= 2 && bead.dependencies.len() > 2 {
         "high"
     } else if bead.priority <= 2 || bead.dependencies.len() > 1 {

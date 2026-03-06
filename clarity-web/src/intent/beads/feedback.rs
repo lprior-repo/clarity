@@ -72,8 +72,10 @@ pub enum FeedbackError {
 /// Status of a bead in lifecycle
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum BeadStatus {
     /// Not yet ready for work
+    #[default]
     Pending,
     /// Ready to be picked up
     Ready,
@@ -87,39 +89,30 @@ pub enum BeadStatus {
     Failed,
 }
 
-impl Default for BeadStatus {
-    fn default() -> Self {
-        Self::Pending
-    }
-}
 
 impl BeadStatus {
     /// Check if a transition to another status is valid
     ///
     /// Valid transitions:
     /// - Pending -> Ready, Blocked
-    /// - Ready -> InProgress, Blocked
-    /// - InProgress -> Complete, Failed, Blocked
-    /// - Blocked -> Ready, Pending, InProgress
+    /// - Ready -> `InProgress`, Blocked
+    /// - `InProgress` -> Complete, Failed, Blocked
+    /// - Blocked -> Ready, Pending, `InProgress`
     /// - Complete -> (terminal)
     /// - Failed -> Ready, Pending (for retry)
     #[must_use]
     pub fn can_transition_to(&self, to: &Self) -> bool {
         match (self, to) {
             // Pending can go to Ready or Blocked
-            (Self::Pending, Self::Ready) | (Self::Pending, Self::Blocked) => true,
+            (Self::Pending, Self::Ready | Self::Blocked) => true,
             // Ready can go to InProgress or Blocked
-            (Self::Ready, Self::InProgress) | (Self::Ready, Self::Blocked) => true,
+            (Self::Ready, Self::InProgress | Self::Blocked) => true,
             // InProgress can go to Complete, Failed, or Blocked
-            (Self::InProgress, Self::Complete)
-            | (Self::InProgress, Self::Failed)
-            | (Self::InProgress, Self::Blocked) => true,
+            (Self::InProgress, Self::Complete | Self::Failed | Self::Blocked) => true,
             // Blocked can go back to Ready, Pending, or InProgress
-            (Self::Blocked, Self::Ready)
-            | (Self::Blocked, Self::Pending)
-            | (Self::Blocked, Self::InProgress) => true,
+            (Self::Blocked, Self::Ready | Self::Pending | Self::InProgress) => true,
             // Failed can retry via Ready or Pending
-            (Self::Failed, Self::Ready) | (Self::Failed, Self::Pending) => true,
+            (Self::Failed, Self::Ready | Self::Pending) => true,
             // Complete is terminal - no transitions allowed
             (Self::Complete, _) => false,
             // Same status is always valid (no-op)
@@ -131,13 +124,13 @@ impl BeadStatus {
 
     /// Check if this status is terminal (no further transitions)
     #[must_use]
-    pub fn is_terminal(&self) -> bool {
+    pub const fn is_terminal(&self) -> bool {
         matches!(self, Self::Complete)
     }
 
     /// Check if this status indicates the bead is active
     #[must_use]
-    pub fn is_active(&self) -> bool {
+    pub const fn is_active(&self) -> bool {
         matches!(self, Self::Ready | Self::InProgress)
     }
 }
@@ -201,7 +194,7 @@ impl BeadFeedback {
 
     /// Builder method to set approved flag
     #[must_use]
-    pub fn with_approved(mut self, approved: bool) -> Self {
+    pub const fn with_approved(mut self, approved: bool) -> Self {
         self.approved = approved;
         self
     }
@@ -265,8 +258,8 @@ impl BeadRecord {
 use std::sync::{Arc, RwLock};
 
 /// Global feedback store for tracking history across all beads
-static FEEDBACK_STORE: once_cell::sync::Lazy<Arc<RwLock<HashMap<String, VecDeque<BeadFeedback>>>>> =
-    once_cell::sync::Lazy::new(|| Arc::new(RwLock::new(HashMap::new())));
+static FEEDBACK_STORE: std::sync::LazyLock<Arc<RwLock<HashMap<String, VecDeque<BeadFeedback>>>>> =
+    std::sync::LazyLock::new(|| Arc::new(RwLock::new(HashMap::new())));
 
 /// Clear the feedback store (for testing)
 #[cfg(test)]

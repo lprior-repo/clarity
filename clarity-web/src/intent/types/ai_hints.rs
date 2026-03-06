@@ -6,8 +6,9 @@
 
 use serde::{Deserialize, Serialize};
 
-/// AIHints - hints to guide AI code generation
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+/// `AIHints` - hints to guide AI code generation
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct AIHints {
   /// Implementation hints
   #[serde(default)]
@@ -26,20 +27,10 @@ pub struct AIHints {
   pub style_hints: Vec<String>,
 }
 
-impl Default for AIHints {
-  fn default() -> Self {
-    Self {
-      implementation: ImplementationHints::default(),
-      entities: Vec::new(),
-      security: SecurityHints::default(),
-      preferred_libraries: Vec::new(),
-      style_hints: Vec::new(),
-    }
-  }
-}
 
-/// ImplementationHints - hints for implementation approach
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+/// `ImplementationHints` - hints for implementation approach
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct ImplementationHints {
   /// Suggested architecture pattern
   #[serde(default)]
@@ -52,18 +43,10 @@ pub struct ImplementationHints {
   pub error_handling: String,
 }
 
-impl Default for ImplementationHints {
-  fn default() -> Self {
-    Self {
-      architecture: String::new(),
-      performance_notes: String::new(),
-      error_handling: String::new(),
-    }
-  }
-}
 
-/// EntityHint - hint for data entity modeling
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+/// `EntityHint` - hint for data entity modeling
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct EntityHint {
   /// Entity name
   pub name: String,
@@ -78,19 +61,10 @@ pub struct EntityHint {
   pub relationships: Vec<String>,
 }
 
-impl Default for EntityHint {
-  fn default() -> Self {
-    Self {
-      name: String::new(),
-      description: String::new(),
-      fields: Vec::new(),
-      relationships: Vec::new(),
-    }
-  }
-}
 
-/// SecurityHints - security-related considerations
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+/// `SecurityHints` - security-related considerations
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct SecurityHints {
   /// Authentication requirements
   #[serde(default)]
@@ -106,16 +80,6 @@ pub struct SecurityHints {
   pub concerns: Vec<String>,
 }
 
-impl Default for SecurityHints {
-  fn default() -> Self {
-    Self {
-      authentication: String::new(),
-      authorization: String::new(),
-      data_sensitivity: String::new(),
-      concerns: Vec::new(),
-    }
-  }
-}
 
 #[cfg(test)]
 mod tests {

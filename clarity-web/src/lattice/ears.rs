@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 /// Domain errors for EARS parsing.
-#[derive(Debug, Error, PartialEq, Clone)]
+#[derive(Debug, Error, PartialEq, Eq, Clone)]
 pub enum EarsError {
   #[error("empty input")]
   EmptyInput,
@@ -31,7 +31,7 @@ pub enum EarsError {
 }
 
 /// EARS requirement pattern types.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EarsRequirement {
   /// Ubiquitous: "The system shall..."
   Ubiquitous { actor: String, action: String },
@@ -66,15 +66,16 @@ pub enum EarsRequirement {
 }
 
 /// Parsed EARS output containing all recognized requirements.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EarsOutput {
   pub requirements: Vec<EarsRequirement>,
   pub errors: Vec<String>,
 }
 
 impl EarsOutput {
-  /// Create a new empty EarsOutput.
-  pub fn new() -> Self {
+  /// Create a new empty `EarsOutput`.
+  #[must_use] 
+  pub const fn new() -> Self {
     Self {
       requirements: Vec::new(),
       errors: Vec::new(),
@@ -82,12 +83,14 @@ impl EarsOutput {
   }
 
   /// Add a requirement to the output.
+  #[must_use] 
   pub fn with_requirement(mut self, requirement: EarsRequirement) -> Self {
     self.requirements.push(requirement);
     self
   }
 
   /// Add an error to the output.
+  #[must_use] 
   pub fn with_error(mut self, error: String) -> Self {
     self.errors.push(error);
     self
@@ -100,14 +103,11 @@ impl Default for EarsOutput {
   }
 }
 
-/// Parse a single requirement line into an EarsRequirement.
+/// Parse a single requirement line into an `EarsRequirement`.
 pub fn parse_requirement(input: &str) -> Result<EarsRequirement, EarsError> {
   let trimmed = input.trim();
 
-  match trimmed.is_empty() {
-    true => Err(EarsError::EmptyInput),
-    false => parse_requirement_patterns(trimmed),
-  }
+  if trimmed.is_empty() { Err(EarsError::EmptyInput) } else { parse_requirement_patterns(trimmed) }
 }
 
 /// Parse requirement text against all EARS patterns.
@@ -176,16 +176,12 @@ fn parse_ubiquitous(input: &str) -> Option<EarsRequirement> {
 
   lower
     .find(PATTERN)
-    .map(|start| {
+    .and_then(|start| {
       let actor = "system".to_string();
       let action = input[start + PATTERN.len()..].trim().to_string();
 
-      match action.is_empty() {
-        true => None,
-        false => Some(EarsRequirement::Ubiquitous { actor, action }),
-      }
+      if action.is_empty() { None } else { Some(EarsRequirement::Ubiquitous { actor, action }) }
     })
-    .flatten()
 }
 
 /// Parse state-driven: "When X, the system shall Y..."
@@ -309,6 +305,7 @@ fn parse_optional(input: &str) -> Option<EarsRequirement> {
 }
 
 /// Parse multiple requirements from multi-line input.
+#[must_use] 
 pub fn parse_requirements(input: &str) -> EarsOutput {
   input.lines().filter(|line| !line.trim().is_empty()).fold(
     EarsOutput::new(),

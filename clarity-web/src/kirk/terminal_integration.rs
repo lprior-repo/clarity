@@ -1045,7 +1045,7 @@ mod tests {
       .with_timeout(5000)
       .with_retry_delay(500);
 
-    assert_eq!(config.timeout_duration(), Duration::from_millis(5000));
+    assert_eq!(config.timeout_duration(), Duration::from_secs(5));
     assert_eq!(config.retry_delay_duration(), Duration::from_millis(500));
   }
 

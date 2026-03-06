@@ -38,7 +38,7 @@ use thiserror::Error;
 // =============================================================================
 
 /// Error taxonomy for interpolation operations
-#[derive(Debug, Error, Clone, PartialEq)]
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum InterpolationError {
   /// Variable not found in context
   #[error("variable not found: {0}")]
@@ -77,13 +77,13 @@ pub enum InterpolationError {
 impl From<ArrayIndexError> for InterpolationError {
   fn from(err: ArrayIndexError) -> Self {
     match err {
-      ArrayIndexError::InvalidPath(path) => InterpolationError::InvalidPath(path),
-      ArrayIndexError::IndexOutOfBounds { index, length } => InterpolationError::IndexOutOfBounds {
+      ArrayIndexError::InvalidPath(path) => Self::InvalidPath(path),
+      ArrayIndexError::IndexOutOfBounds { index, length } => Self::IndexOutOfBounds {
         index: index.max(0) as usize,
         length,
       },
-      ArrayIndexError::NotAnArray { field, .. } => InterpolationError::NotAnArray(field),
-      ArrayIndexError::FieldNotFound(field) => InterpolationError::VariableNotFound(field),
+      ArrayIndexError::NotAnArray { field, .. } => Self::NotAnArray(field),
+      ArrayIndexError::FieldNotFound(field) => Self::VariableNotFound(field),
     }
   }
 }
@@ -93,7 +93,7 @@ impl From<ArrayIndexError> for InterpolationError {
 // =============================================================================
 
 /// Context for variable interpolation
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Context {
   /// Simple variable substitutions
   pub variables: HashMap<String, String>,
@@ -139,12 +139,14 @@ impl Context {
   }
 
   /// Set the request body
+  #[must_use] 
   pub fn with_request_body(mut self, body: Value) -> Self {
     self.request_body = Some(body);
     self
   }
 
   /// Set the response body
+  #[must_use] 
   pub fn with_response_body(mut self, body: Value) -> Self {
     self.response_body = Some(body);
     self
@@ -157,7 +159,7 @@ impl Context {
 
 /// Find all interpolation placeholders in a string
 ///
-/// Returns a list of (start, end, variable_name) tuples
+/// Returns a list of (start, end, `variable_name`) tuples
 fn find_placeholders(input: &str) -> Vec<(usize, usize, String)> {
   let mut placeholders = Vec::new();
   let chars: Vec<char> = input.chars().collect();
@@ -266,8 +268,8 @@ pub fn interpolate_string(input: &str, context: &Context) -> Result<String, Inte
 /// Resolve a variable name to its value
 ///
 /// Handles special prefixes:
-/// - `request.` -> looks up in request_body
-/// - `response.` -> looks up in response_body
+/// - `request.` -> looks up in `request_body`
+/// - `response.` -> looks up in `response_body`
 /// - Otherwise -> checks variables first, then bodies
 fn resolve_variable(var_name: &str, context: &Context) -> Result<String, InterpolationError> {
   // Handle special prefixes

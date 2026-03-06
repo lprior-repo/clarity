@@ -110,7 +110,7 @@ const fn confidence_label(confidence: Confidence) -> &'static str {
   }
 }
 
-/// ConfidenceBadge component - displays confidence level with color coding and icons
+/// `ConfidenceBadge` component - displays confidence level with color coding and icons
 ///
 /// # Color Coding
 /// - High: Green with checkmark icon

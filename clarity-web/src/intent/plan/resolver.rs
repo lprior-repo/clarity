@@ -46,13 +46,13 @@ impl ResolutionResult {
 
     /// Get the number of resolved beads
     #[must_use]
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.sorted.len()
     }
 
     /// Check if there are no resolved beads
     #[must_use]
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.sorted.is_empty()
     }
 }
@@ -481,7 +481,7 @@ pub fn compute_parallelism(beads: &[PlanBead]) -> usize {
 
 /// Apply topological order to an execution plan
 ///
-/// Updates the plan's execution_order field with the resolved order.
+/// Updates the plan's `execution_order` field with the resolved order.
 ///
 /// # Arguments
 /// * `plan` - The execution plan to update

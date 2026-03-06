@@ -1,3 +1,4 @@
+#![allow(suspicious_double_ref_op)]
 //! Adversarial tests for queue/concurrent extraction operations.
 //!
 //! These tests validate the extraction pipeline under concurrent load,
@@ -95,7 +96,7 @@ impl ExtractionProvider for MockExtractionProvider {
     self.extract_fields(text, context).await
   }
 
-  fn provider_name(&self) -> &str {
+  fn provider_name(&self) -> &'static str {
     "mock"
   }
 
@@ -166,13 +167,13 @@ async fn queue_respects_concurrency_limits() {
     extra: json!({}),
   };
 
-  let inputs = (0..5).map(|i| format!("Input {}", i)).collect::<Vec<_>>();
+  let inputs = (0..5).map(|i| format!("Input {i}")).collect::<Vec<_>>();
 
   let start = std::time::Instant::now();
 
   // Spawn 5 concurrent requests with limit of 2
   let mut handles = Vec::new();
-  for input in inputs.iter() {
+  for input in &inputs {
     let provider = provider.clone();
     let context = context.clone();
     let input = input.clone();
@@ -209,21 +210,19 @@ async fn empty_input_in_concurrent_queue() {
 
   // Mix of valid and empty inputs - the mock provider accepts all inputs
   // but we verify the queue processes them all correctly
-  let inputs = vec![
-    "Valid input with enough text to process",
+  let inputs = ["Valid input with enough text to process",
     "",
     "   ",
     "Another valid input for testing",
-    "\t\n",
-  ];
+    "\t\n"];
 
   let mut handles = Vec::new();
-  for input in inputs.iter() {
+  for input in &inputs {
     let provider = provider.clone();
     let context = context.clone();
     let input = input.clone();
     let handle = tokio::spawn(async move {
-      let result = provider.extract_fields(&input, &context).await;
+      let result = provider.extract_fields(input, &context).await;
       match result {
         Ok(fields) => Ok((input, fields)),
         Err(e) => Err((input, e)),
@@ -246,7 +245,7 @@ async fn empty_input_in_concurrent_queue() {
           }
         }
         Err((_, e)) => {
-          panic!("Unexpected error: {:?}", e);
+          panic!("Unexpected error: {e:?}");
         }
       }
     }
@@ -269,10 +268,10 @@ async fn rapid_queue_load_doesnt_cause_race_conditions() {
   };
 
   // Create 100 rapid concurrent requests
-  let inputs: Vec<_> = (0..100).map(|i| format!("Request {}", i)).collect();
+  let inputs: Vec<_> = (0..100).map(|i| format!("Request {i}")).collect();
 
   let mut handles = Vec::new();
-  for input in inputs.iter() {
+  for input in &inputs {
     let provider = provider.clone();
     let context = context.clone();
     let input = input.clone();
@@ -343,11 +342,11 @@ async fn queue_handles_cancellation_mid_stream() {
     extra: json!({}),
   };
 
-  let inputs: Vec<_> = (0..10).map(|i| format!("Input {}", i)).collect();
+  let inputs: Vec<_> = (0..10).map(|i| format!("Input {i}")).collect();
 
   // Create tasks but don't await all of them
   let mut handles = Vec::new();
-  for input in inputs.iter() {
+  for input in &inputs {
     let provider = provider.clone();
     let context = context.clone();
     let input = input.clone();
@@ -378,10 +377,10 @@ async fn stress_test_queue_capacity() {
   };
 
   // Create 1000 concurrent requests
-  let inputs: Vec<_> = (0..1000).map(|i| format!("Input {}", i)).collect();
+  let inputs: Vec<_> = (0..1000).map(|i| format!("Input {i}")).collect();
 
   let mut handles = Vec::new();
-  for input in inputs.iter() {
+  for input in &inputs {
     let provider = provider.clone();
     let context = context.clone();
     let input = input.clone();

@@ -131,7 +131,7 @@ impl PlanBead {
 
     /// Builder method to set priority
     #[must_use]
-    pub fn with_priority(mut self, priority: u32) -> Self {
+    pub const fn with_priority(mut self, priority: u32) -> Self {
         self.priority = priority;
         self
     }
@@ -147,7 +147,7 @@ impl PlanBead {
 
     /// Builder method to set effort
     #[must_use]
-    pub fn with_effort(mut self, effort: u32) -> Self {
+    pub const fn with_effort(mut self, effort: u32) -> Self {
         self.effort = effort;
         self
     }
@@ -320,7 +320,7 @@ impl ExecutionPlan {
     ///
     /// # Errors
     /// Returns `PlanError::EmptyBeadId` if id is empty
-    /// Returns error if bead not found (via get_bead_mut)
+    /// Returns error if bead not found (via `get_bead_mut`)
     pub fn complete_bead(&mut self, id: &str) -> Result<(), PlanError> {
         if id.trim().is_empty() {
             return Err(PlanError::EmptyBeadId);

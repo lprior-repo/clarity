@@ -81,7 +81,7 @@ pub enum SpecValidationError {
     /// Number of errors
     count: usize,
     /// The individual errors
-    errors: Vec<SpecValidationError>,
+    errors: Vec<Self>,
   },
 }
 
@@ -103,7 +103,7 @@ pub struct ValidationResult {
 impl ValidationResult {
   /// Create a new validation result
   #[must_use]
-  pub fn new() -> Self {
+  pub const fn new() -> Self {
     Self {
       is_valid: true,
       errors: Vec::new(),
@@ -123,7 +123,7 @@ impl ValidationResult {
   }
 
   /// Merge another validation result into this one
-  pub fn merge(&mut self, other: ValidationResult) {
+  pub fn merge(&mut self, other: Self) {
     if !other.is_valid {
       self.is_valid = false;
     }
@@ -133,13 +133,13 @@ impl ValidationResult {
 
   /// Check if there are any errors
   #[must_use]
-  pub fn has_errors(&self) -> bool {
+  pub const fn has_errors(&self) -> bool {
     !self.errors.is_empty()
   }
 
   /// Check if there are any warnings
   #[must_use]
-  pub fn has_warnings(&self) -> bool {
+  pub const fn has_warnings(&self) -> bool {
     !self.warnings.is_empty()
   }
 }
@@ -151,7 +151,7 @@ impl Default for ValidationResult {
 }
 
 /// Warning type for non-fatal validation issues
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValidationWarning {
   /// Warning message
   pub message: String,
@@ -162,7 +162,7 @@ pub struct ValidationWarning {
 impl ValidationWarning {
   /// Create a new warning
   #[must_use]
-  pub fn new(message: String, context: Option<String>) -> Self {
+  pub const fn new(message: String, context: Option<String>) -> Self {
     Self { message, context }
   }
 }
@@ -264,7 +264,7 @@ impl DependencyGraph {
   pub fn topological_sort(&self) -> Option<Vec<String>> {
     let mut in_degree: HashMap<String, usize> = self.nodes.iter().map(|n| (n.clone(), 0)).collect();
 
-    for (_, deps) in &self.adjacency {
+    for deps in self.adjacency.values() {
       for dep in deps {
         if let Some(count) = in_degree.get_mut(dep) {
           *count += 1;
@@ -330,7 +330,7 @@ pub struct SpecValidator {
 impl SpecValidator {
   /// Create a new spec validator with default settings
   #[must_use]
-  pub fn new() -> Self {
+  pub const fn new() -> Self {
     Self {
       check_duplicates: true,
       check_cycles: true,
@@ -340,21 +340,21 @@ impl SpecValidator {
 
   /// Disable duplicate checking
   #[must_use]
-  pub fn without_duplicate_checking(mut self) -> Self {
+  pub const fn without_duplicate_checking(mut self) -> Self {
     self.check_duplicates = false;
     self
   }
 
   /// Disable cycle checking
   #[must_use]
-  pub fn without_cycle_checking(mut self) -> Self {
+  pub const fn without_cycle_checking(mut self) -> Self {
     self.check_cycles = false;
     self
   }
 
   /// Disable required field checking
   #[must_use]
-  pub fn without_required_field_checking(mut self) -> Self {
+  pub const fn without_required_field_checking(mut self) -> Self {
     self.check_required_fields = false;
     self
   }
@@ -524,7 +524,7 @@ impl SpecValidator {
       .collect();
 
     // Add all behaviors as nodes
-    for (_, path) in &behavior_paths {
+    for path in behavior_paths.values() {
       graph.add_node(path.clone());
     }
 
@@ -651,9 +651,7 @@ impl SpecValidator {
   fn infer_category(&self, name: &str) -> String {
     name
       .split('_')
-      .next()
-      .map(|s| s.to_string())
-      .unwrap_or_else(|| "other".to_string())
+      .next().map_or_else(|| "other".to_string(), std::string::ToString::to_string)
   }
 }
 
@@ -668,7 +666,7 @@ impl Default for SpecValidator {
 // =============================================================================
 
 /// Priority information for a behavior
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BehaviorPriority {
   /// Full path to the behavior (feature.behavior)
   pub path: String,

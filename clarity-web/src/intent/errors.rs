@@ -28,7 +28,7 @@ use thiserror::Error;
 // =============================================================================
 
 /// Top-level error enum for all intent module operations
-#[derive(Debug, Error, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Error, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum IntentError {
     /// JSON parsing failed
     #[error("JSON parse error: {0}")]
@@ -96,7 +96,7 @@ pub enum IntentError {
 }
 
 /// Contextual error with rich information for debugging and user feedback
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ContextualError {
     /// The underlying error
     pub error: IntentError,
@@ -148,14 +148,14 @@ impl ContextualError {
 
     /// Add line number
     #[must_use]
-    pub fn with_line(mut self, line: usize) -> Self {
+    pub const fn with_line(mut self, line: usize) -> Self {
         self.line = Some(line);
         self
     }
 
     /// Add column number
     #[must_use]
-    pub fn with_column(mut self, column: usize) -> Self {
+    pub const fn with_column(mut self, column: usize) -> Self {
         self.column = Some(column);
         self
     }
@@ -190,7 +190,7 @@ impl ContextualError {
 
     /// Check if this error has location information
     #[must_use]
-    pub fn has_location(&self) -> bool {
+    pub const fn has_location(&self) -> bool {
         self.source_file.is_some() || self.line.is_some() || self.json_path.is_some()
     }
 
@@ -223,13 +223,13 @@ impl std::error::Error for ContextualError {
 }
 
 /// Structured validation error with multiple field failures
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ValidationError {
     /// Overall validation message
     pub message: String,
     /// Individual field failures
     pub field_failures: Vec<FieldFailure>,
-    /// Total number of errors (may exceed field_failures.len() if truncated)
+    /// Total number of errors (may exceed `field_failures.len()` if truncated)
     pub total_errors: usize,
 }
 
@@ -265,7 +265,7 @@ impl ValidationError {
 
     /// Check if validation has any failures
     #[must_use]
-    pub fn has_failures(&self) -> bool {
+    pub const fn has_failures(&self) -> bool {
         !self.field_failures.is_empty()
     }
 
@@ -297,11 +297,11 @@ impl fmt::Display for ValidationError {
 }
 
 /// Individual field-level validation failure
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FieldFailure {
     /// Field name that failed validation
     pub field: String,
-    /// Error code (e.g., "required", "invalid_type", "out_of_range")
+    /// Error code (e.g., "required", "`invalid_type`", "`out_of_range`")
     pub code: String,
     /// Human-readable error message
     pub message: String,
@@ -425,8 +425,8 @@ impl fmt::Display for Suggestion {
 /// Compute the Levenshtein edit distance between two strings.
 ///
 /// Uses the Wagner-Fischer algorithm with Unicode support via chars.
-/// Time complexity: O(a.len() * b.len())
-/// Space complexity: O(min(a.len(), b.len()))
+/// Time complexity: `O(a.len()` * `b.len()`)
+/// Space complexity: `O(min(a.len()`, `b.len()`))
 ///
 /// # Examples
 ///
@@ -473,7 +473,7 @@ pub fn levenshtein(a: &str, b: &str) -> usize {
         curr_row[0] = i + 1;
 
         for (j, short_char) in shorter.iter().enumerate() {
-            let cost = if long_char == short_char { 0 } else { 1 };
+            let cost = usize::from(long_char != short_char);
 
             curr_row[j + 1] = (prev_row[j + 1] + 1) // deletion
                 .min(curr_row[j] + 1) // insertion

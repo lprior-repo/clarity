@@ -143,6 +143,7 @@ impl Default for Phase {
 
 /// Complete execution plan for a session
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct ExecutionPlan {
     /// Session ID this plan is for
     pub session_id: String,
@@ -154,16 +155,6 @@ pub struct ExecutionPlan {
     pub created_at: String,
 }
 
-impl Default for ExecutionPlan {
-    fn default() -> Self {
-        Self {
-            session_id: String::new(),
-            phases: Vec::new(),
-            blockers: Vec::new(),
-            created_at: String::new(),
-        }
-    }
-}
 
 /// Compute an execution plan from an interview session.
 ///
@@ -323,9 +314,9 @@ fn generate_beads_from_session(session: &InterviewSession) -> Vec<PlanBead> {
             id: bead_id,
             title: format!("Define {}", field.replace('_', " ")),
             description: if is_answered {
-                format!("Review and validate the {} specification", field)
+                format!("Review and validate the {field} specification")
             } else {
-                format!("Define the {} for the system", field)
+                format!("Define the {field} for the system")
             },
             priority: if is_answered { 50 } else { 200 },
             status: if is_answered {
@@ -485,7 +476,7 @@ fn apply_bead_gating(beads: &[PlanBead], completed_phases: &HashSet<u32>) -> Vec
             let deps_satisfied = bead
                 .depends_on
                 .iter()
-                .all(|_dep_id| completed_phases.len() > 0); // Simplified check
+                .all(|_dep_id| !completed_phases.is_empty()); // Simplified check
 
             let new_status = if bead.status == BeadStatus::Pending && deps_satisfied {
                 BeadStatus::Ready

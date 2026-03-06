@@ -17,8 +17,10 @@ use serde::{Deserialize, Serialize};
 /// Types of actions that can be recommended
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum ActionType {
     /// Answer a pending question
+    #[default]
     AnswerQuestion,
     /// Resolve a gap in requirements
     ResolveGap,
@@ -30,11 +32,6 @@ pub enum ActionType {
     ReviewPlan,
 }
 
-impl Default for ActionType {
-    fn default() -> Self {
-        Self::AnswerQuestion
-    }
-}
 
 impl ActionType {
     /// Convert action type to string representation
@@ -64,6 +61,7 @@ impl ActionType {
 
 /// Next action recommendation
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct NextAction {
     /// Type of action to take
     pub action_type: ActionType,
@@ -78,22 +76,11 @@ pub struct NextAction {
     pub priority: u32,
 }
 
-impl Default for NextAction {
-    fn default() -> Self {
-        Self {
-            action_type: ActionType::default(),
-            target_id: String::new(),
-            description: String::new(),
-            reason: String::new(),
-            priority: 0,
-        }
-    }
-}
 
 impl NextAction {
     /// Create a new next action
     #[must_use]
-    pub fn new(action_type: ActionType, target_id: String, description: String, reason: String) -> Self {
+    pub const fn new(action_type: ActionType, target_id: String, description: String, reason: String) -> Self {
         Self {
             action_type,
             target_id,
@@ -105,7 +92,7 @@ impl NextAction {
 
     /// Builder method to set priority
     #[must_use]
-    pub fn with_priority(mut self, priority: u32) -> Self {
+    pub const fn with_priority(mut self, priority: u32) -> Self {
         self.priority = priority;
         self
     }
@@ -242,8 +229,8 @@ fn get_question_action(session: &InterviewSession) -> Option<NextAction> {
             return Some(
                 NextAction::new(
                     ActionType::AnswerQuestion,
-                    format!("round-{}-complete", current_round),
-                    format!("Complete round {} or add more answers", current_round),
+                    format!("round-{current_round}-complete"),
+                    format!("Complete round {current_round} or add more answers"),
                     "You have answers ready; you can complete the round or add more details".to_string(),
                 )
                 .with_priority(3),
@@ -256,9 +243,9 @@ fn get_question_action(session: &InterviewSession) -> Option<NextAction> {
         return Some(
             NextAction::new(
                 ActionType::AnswerQuestion,
-                format!("round-{}-start", current_round),
-                format!("Start answering questions for round {}", current_round),
-                format!("Round {} has not started yet", current_round),
+                format!("round-{current_round}-start"),
+                format!("Start answering questions for round {current_round}"),
+                format!("Round {current_round} has not started yet"),
             )
             .with_priority(3),
         );
@@ -289,8 +276,8 @@ fn get_phase_completion_action(session: &InterviewSession, plan: &ExecutionPlan)
             return Some(
                 NextAction::new(
                     ActionType::CompletePhase,
-                    format!("phase-{}", current_phase),
-                    format!("Complete phase {} (all beads done)", current_phase),
+                    format!("phase-{current_phase}"),
+                    format!("Complete phase {current_phase} (all beads done)"),
                     format!("All {} work items in phase {} are complete", phase_beads.len(), current_phase),
                 )
                 .with_priority(4),
@@ -328,8 +315,8 @@ fn get_phase_completion_action(session: &InterviewSession, plan: &ExecutionPlan)
         return Some(
             NextAction::new(
                 ActionType::CompletePhase,
-                format!("phase-{}", current_phase),
-                format!("Complete phase {}", current_phase),
+                format!("phase-{current_phase}"),
+                format!("Complete phase {current_phase}"),
                 "Phase requirements are satisfied".to_string(),
             )
             .with_priority(4),
@@ -365,7 +352,7 @@ pub fn determine_next_phase(plan: &ExecutionPlan) -> Option<u32> {
     }
 
     // Sort and deduplicate
-    phase_numbers.sort();
+    phase_numbers.sort_unstable();
     phase_numbers.dedup();
 
     // Return the lowest incomplete phase
@@ -413,9 +400,8 @@ pub fn can_proceed(session: &InterviewSession) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::intent::interview::types::{Answer, Conflict, ConflictResolution, Gap, Profile};
-    use std::collections::HashMap;
-
+    use crate::intent::interview::types::{Conflict, ConflictResolution, Gap, Profile};
+    
     fn create_test_session() -> InterviewSession {
         InterviewSession::new(
             "test-session".to_string(),
