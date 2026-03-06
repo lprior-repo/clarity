@@ -926,19 +926,19 @@ mod tests {
     #[test]
     fn test_bead_error_display() {
         let err = BeadError::EmptyTitle;
-        assert!(format!("{}", err).contains("empty"));
+        assert!(format!("{err}").contains("empty"));
 
         let err = BeadError::EmptyDescription;
-        assert!(format!("{}", err).contains("empty"));
+        assert!(format!("{err}").contains("empty"));
 
         let err = BeadError::InvalidPriority(10);
-        assert!(format!("{}", err).contains("10"));
+        assert!(format!("{err}").contains("10"));
 
         let err = BeadError::MissingProfileType;
-        assert!(format!("{}", err).contains("profile"));
+        assert!(format!("{err}").contains("profile"));
 
         let err = BeadError::JsonError("test error".to_string());
-        assert!(format!("{}", err).contains("test error"));
+        assert!(format!("{err}").contains("test error"));
     }
 
     #[test]
@@ -1621,10 +1621,10 @@ mod tests {
             );
 
             let result = generate_profile_beads(&session);
-            assert!(result.is_ok(), "Profile {:?} should generate beads", profile);
+            assert!(result.is_ok(), "Profile {profile:?} should generate beads");
 
             let beads = result.expect("beads");
-            assert!(!beads.is_empty(), "Profile {:?} should have non-empty beads", profile);
+            assert!(!beads.is_empty(), "Profile {profile:?} should have non-empty beads");
 
             // All beads should have the correct profile type
             for bead in &beads {

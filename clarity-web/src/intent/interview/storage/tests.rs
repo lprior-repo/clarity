@@ -97,12 +97,9 @@ fn test_append_and_list_jsonl() {
   assert_eq!(sessions.len(), 2);
   let updated_option = sessions.iter().find(|session| session.id == "s2");
   assert!(updated_option.is_some());
-  let updated = match updated_option {
-    Some(value) => value,
-    None => {
-      assert!(false, "updated session should exist");
-      return;
-    }
+  let updated = if let Some(value) = updated_option { value } else {
+    assert!(false, "updated session should exist");
+    return;
   };
   assert_eq!(updated.raw_notes, "updated");
 }

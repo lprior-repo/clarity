@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use super::{Behavior, TypeError};
 
 /// Feature - a named collection of behaviors
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Feature {
   /// Unique feature name
   pub name: String,

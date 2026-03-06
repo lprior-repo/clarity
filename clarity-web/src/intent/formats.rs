@@ -852,8 +852,7 @@ mod tests {
         for email in valid_emails {
             assert!(
                 validate_email(email).is_ok(),
-                "Expected '{}' to be valid",
-                email
+                "Expected '{email}' to be valid"
             );
         }
     }
@@ -882,11 +881,10 @@ mod tests {
         for (email, expected_error) in invalid_emails {
             let result = validate_email(email);
             if let Err(FormatError::Email(err)) = result {
-                assert_eq!(err, expected_error, "For email '{}'", email);
+                assert_eq!(err, expected_error, "For email '{email}'");
             } else {
                 panic!(
-                    "Expected EmailError::{:?} for '{}', got {:?}",
-                    expected_error, email, result
+                    "Expected EmailError::{expected_error:?} for '{email}', got {result:?}"
                 );
             }
         }
@@ -911,8 +909,7 @@ mod tests {
         for uuid in valid_uuids {
             assert!(
                 validate_uuid(uuid).is_ok(),
-                "Expected '{}' to be valid",
-                uuid
+                "Expected '{uuid}' to be valid"
             );
         }
     }
@@ -932,11 +929,10 @@ mod tests {
         for (uuid, expected_error) in invalid_uuids {
             let result = validate_uuid(uuid);
             if let Err(FormatError::Uuid(err)) = result {
-                assert_eq!(err, expected_error, "For uuid '{}'", uuid);
+                assert_eq!(err, expected_error, "For uuid '{uuid}'");
             } else {
                 panic!(
-                    "Expected UuidError::{:?} for '{}', got {:?}",
-                    expected_error, uuid, result
+                    "Expected UuidError::{expected_error:?} for '{uuid}', got {result:?}"
                 );
             }
         }
@@ -965,8 +961,7 @@ mod tests {
         for uri in valid_uris {
             assert!(
                 validate_uri(uri).is_ok(),
-                "Expected '{}' to be valid",
-                uri
+                "Expected '{uri}' to be valid"
             );
         }
     }
@@ -985,11 +980,10 @@ mod tests {
         for (uri, expected_error) in invalid_uris {
             let result = validate_uri(uri);
             if let Err(FormatError::Uri(err)) = result {
-                assert_eq!(err, expected_error, "For uri '{}'", uri);
+                assert_eq!(err, expected_error, "For uri '{uri}'");
             } else {
                 panic!(
-                    "Expected UriError::{:?} for '{}', got {:?}",
-                    expected_error, uri, result
+                    "Expected UriError::{expected_error:?} for '{uri}', got {result:?}"
                 );
             }
         }
@@ -1014,8 +1008,7 @@ mod tests {
         for date in valid_dates {
             assert!(
                 validate_iso8601(date).is_ok(),
-                "Expected '{}' to be valid",
-                date
+                "Expected '{date}' to be valid"
             );
         }
     }
@@ -1035,11 +1028,10 @@ mod tests {
         for (date, expected_error) in invalid_dates {
             let result = validate_iso8601(date);
             if let Err(FormatError::Iso8601(err)) = result {
-                assert_eq!(err, expected_error, "For date '{}'", date);
+                assert_eq!(err, expected_error, "For date '{date}'");
             } else {
                 panic!(
-                    "Expected Iso8601Error::{:?} for '{}', got {:?}",
-                    expected_error, date, result
+                    "Expected Iso8601Error::{expected_error:?} for '{date}', got {result:?}"
                 );
             }
         }
@@ -1062,8 +1054,7 @@ mod tests {
         for time in valid_times {
             assert!(
                 validate_iso8601(time).is_ok(),
-                "Expected '{}' to be valid",
-                time
+                "Expected '{time}' to be valid"
             );
         }
     }
@@ -1079,11 +1070,10 @@ mod tests {
         for (time, expected_error) in invalid_times {
             let result = validate_iso8601(time);
             if let Err(FormatError::Iso8601(err)) = result {
-                assert_eq!(err, expected_error, "For time '{}'", time);
+                assert_eq!(err, expected_error, "For time '{time}'");
             } else {
                 panic!(
-                    "Expected Iso8601Error::{:?} for '{}', got {:?}",
-                    expected_error, time, result
+                    "Expected Iso8601Error::{expected_error:?} for '{time}', got {result:?}"
                 );
             }
         }
@@ -1102,8 +1092,7 @@ mod tests {
         for dt in valid_datetimes {
             assert!(
                 validate_iso8601(dt).is_ok(),
-                "Expected '{}' to be valid",
-                dt
+                "Expected '{dt}' to be valid"
             );
         }
     }

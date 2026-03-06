@@ -169,14 +169,11 @@ mod all_rules_tests {
 
     // THEN: It should report issues (may be Ok with warnings or Err)
     // The important thing is there are issues detected
-    match result {
-      Ok(report) => {
-        // Has warnings or errors
-        assert!(report.error_count > 0 || report.warning_count > 0);
-      }
-      Err(_) => {
-        // Linting failed - that's also acceptable for empty spec
-      }
+    if let Ok(report) = result {
+      // Has warnings or errors
+      assert!(report.error_count > 0 || report.warning_count > 0);
+    } else {
+      // Linting failed - that's also acceptable for empty spec
     }
   }
 }

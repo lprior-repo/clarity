@@ -738,22 +738,22 @@ mod tests {
   #[test]
   fn test_spec_template_error_display() {
     let err = SpecTemplateError::PlaceholderNotFound("base_url".to_string());
-    assert!(format!("{}", err).contains("base_url"));
+    assert!(format!("{err}").contains("base_url"));
 
     let err = SpecTemplateError::EmptyTemplate;
-    assert!(format!("{}", err).contains("empty"));
+    assert!(format!("{err}").contains("empty"));
 
     let err = SpecTemplateError::NoAnswers;
-    assert!(format!("{}", err).contains("no answers"));
+    assert!(format!("{err}").contains("no answers"));
 
     let err = SpecTemplateError::MissingField("auth".to_string());
-    assert!(format!("{}", err).contains("auth"));
+    assert!(format!("{err}").contains("auth"));
 
     let err = SpecTemplateError::JsonError("parse error".to_string());
-    assert!(format!("{}", err).contains("parse error"));
+    assert!(format!("{err}").contains("parse error"));
 
     let err = SpecTemplateError::RenderingError("failed".to_string());
-    assert!(format!("{}", err).contains("failed"));
+    assert!(format!("{err}").contains("failed"));
   }
 
   #[test]
@@ -851,35 +851,29 @@ mod tests {
       let result = generate_spec_template(profile);
       assert!(
         result.is_ok(),
-        "Profile {:?} should generate template",
-        profile
+        "Profile {profile:?} should generate template"
       );
 
       let template = result.expect("template");
       assert!(
         !template.is_empty(),
-        "Profile {:?} template should not be empty",
-        profile
+        "Profile {profile:?} template should not be empty"
       );
       assert!(
         template.contains("{{spec_name}}"),
-        "Profile {:?} should have spec_name placeholder",
-        profile
+        "Profile {profile:?} should have spec_name placeholder"
       );
       assert!(
         template.contains("{{description}}"),
-        "Profile {:?} should have description placeholder",
-        profile
+        "Profile {profile:?} should have description placeholder"
       );
       assert!(
         template.contains("invariants"),
-        "Profile {:?} should have invariants section",
-        profile
+        "Profile {profile:?} should have invariants section"
       );
       assert!(
         template.contains("ai_hints"),
-        "Profile {:?} should have ai_hints section",
-        profile
+        "Profile {profile:?} should have ai_hints section"
       );
     }
   }
@@ -1328,45 +1322,37 @@ mod tests {
       // All templates should be valid JSON-like structure
       assert!(
         template.contains("\"name\":"),
-        "Profile {:?} should have name field",
-        profile
+        "Profile {profile:?} should have name field"
       );
       assert!(
         template.contains("\"description\":"),
-        "Profile {:?} should have description field",
-        profile
+        "Profile {profile:?} should have description field"
       );
       assert!(
         template.contains("\"profile\":"),
-        "Profile {:?} should have profile field",
-        profile
+        "Profile {profile:?} should have profile field"
       );
       assert!(
         template.contains("\"features\":"),
-        "Profile {:?} should have features field",
-        profile
+        "Profile {profile:?} should have features field"
       );
       assert!(
         template.contains("\"invariants\":"),
-        "Profile {:?} should have invariants field",
-        profile
+        "Profile {profile:?} should have invariants field"
       );
       assert!(
         template.contains("\"ai_hints\":"),
-        "Profile {:?} should have ai_hints field",
-        profile
+        "Profile {profile:?} should have ai_hints field"
       );
 
       // All templates should have common placeholders
       assert!(
         template.contains("{{spec_name}}"),
-        "Profile {:?} should have spec_name placeholder",
-        profile
+        "Profile {profile:?} should have spec_name placeholder"
       );
       assert!(
         template.contains("{{description}}"),
-        "Profile {:?} should have description placeholder",
-        profile
+        "Profile {profile:?} should have description placeholder"
       );
     }
   }

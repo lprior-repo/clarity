@@ -89,8 +89,7 @@ fn test_quality_boundary_maximum_score_edge_case() {
     }
     Err(e) => {
       panic!(
-        "Quality calculation should succeed with valid input: {:?}",
-        e
+        "Quality calculation should succeed with valid input: {e:?}"
       );
     }
   }
@@ -124,7 +123,7 @@ fn test_quality_division_by_zero_protection() {
       assert!(!completeness_issues.is_empty());
     }
     Err(e) => {
-      panic!("Should handle missing fields gracefully: {:?}", e);
+      panic!("Should handle missing fields gracefully: {e:?}");
     }
   }
 }
@@ -171,7 +170,7 @@ fn test_quality_overflow_in_calculation() {
       // This is acceptable - overflow is detected
     }
     Err(e) => {
-      panic!("Unexpected error: {:?}", e);
+      panic!("Unexpected error: {e:?}");
     }
   }
 }
@@ -213,7 +212,7 @@ fn test_quality_single_answer() {
       assert_eq!(testability.unwrap().score, 0);
     }
     Err(e) => {
-      panic!("Should handle single answer: {:?}", e);
+      panic!("Should handle single answer: {e:?}");
     }
   }
 }
@@ -238,7 +237,7 @@ fn test_quality_consistency_single_answer() {
       assert_eq!(consistency.unwrap().score, 100);
     }
     Err(e) => {
-      panic!("Should handle single answer: {:?}", e);
+      panic!("Should handle single answer: {e:?}");
     }
   }
 }
@@ -268,7 +267,7 @@ fn test_quality_testability_empty_ears() {
       assert!(testability_issues[0].message.contains("No EARS"));
     }
     Err(e) => {
-      panic!("Should handle empty EARS: {:?}", e);
+      panic!("Should handle empty EARS: {e:?}");
     }
   }
 }
@@ -404,7 +403,7 @@ fn test_quality_completeness_with_whitespace_only() {
       assert!(!completeness_issues.is_empty());
     }
     Err(e) => {
-      panic!("Should handle whitespace: {:?}", e);
+      panic!("Should handle whitespace: {e:?}");
     }
   }
 }
@@ -434,7 +433,7 @@ fn test_quality_consistency_contradiction_self() {
       assert_eq!(consistency.unwrap().score, 100); // No pairs to compare
     }
     Err(e) => {
-      panic!("Should handle self-contradiction: {:?}", e);
+      panic!("Should handle self-contradiction: {e:?}");
     }
   }
 }
@@ -465,7 +464,7 @@ fn test_quality_clarity_extremely_long_sentence() {
       assert!(clarity.unwrap().score < 100);
     }
     Err(e) => {
-      panic!("Should handle long sentences: {:?}", e);
+      panic!("Should handle long sentences: {e:?}");
     }
   }
 }
@@ -493,7 +492,7 @@ fn test_quality_security_all_keywords_repeated() {
       assert_eq!(security.unwrap().score, 100);
     }
     Err(e) => {
-      panic!("Should handle repeated keywords: {:?}", e);
+      panic!("Should handle repeated keywords: {e:?}");
     }
   }
 }
@@ -528,7 +527,7 @@ fn test_quality_testability_mixed_criteria() {
       assert_eq!(testability_issues.len(), 1);
     }
     Err(e) => {
-      panic!("Should handle mixed criteria: {:?}", e);
+      panic!("Should handle mixed criteria: {e:?}");
     }
   }
 }

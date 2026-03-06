@@ -1621,8 +1621,7 @@ mod tests {
     for window in suggestions.windows(2) {
       assert!(
         window[0].priority >= window[1].priority,
-        "Suggestions must be sorted by priority descending: {:?}",
-        window
+        "Suggestions must be sorted by priority descending: {window:?}"
       );
     }
   }

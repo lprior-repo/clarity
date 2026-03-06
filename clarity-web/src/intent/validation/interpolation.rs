@@ -760,18 +760,18 @@ mod tests {
   #[test]
   fn test_error_display() {
     let err = InterpolationError::VariableNotFound("foo".into());
-    assert!(format!("{}", err).contains("foo"));
+    assert!(format!("{err}").contains("foo"));
 
     let err = InterpolationError::InvalidPath("bad.path".into());
-    assert!(format!("{}", err).contains("bad.path"));
+    assert!(format!("{err}").contains("bad.path"));
 
     let err = InterpolationError::IndexOutOfBounds {
       index: 5,
       length: 3,
     };
-    let msg = format!("{}", err);
-    assert!(msg.contains("5"));
-    assert!(msg.contains("3"));
+    let msg = format!("{err}");
+    assert!(msg.contains('5'));
+    assert!(msg.contains('3'));
   }
 
   // -------------------------------------------------------------------------

@@ -728,7 +728,7 @@ mod tests {
   fn create_test_behavior(name: &str) -> Behavior {
     Behavior::new(name.to_string())
       .expect("valid behavior name")
-      .with_description(format!("Behavior: {}", name))
+      .with_description(format!("Behavior: {name}"))
   }
 
   fn create_test_feature(name: &str, behaviors: Vec<Behavior>) -> Feature {
@@ -1137,14 +1137,14 @@ mod tests {
   #[test]
   fn test_spec_validation_error_display() {
     let err = SpecValidationError::MissingRequiredField("name".to_string());
-    assert!(format!("{}", err).contains("name"));
+    assert!(format!("{err}").contains("name"));
 
     let err = SpecValidationError::InvalidFieldType {
       field: "count".to_string(),
       expected: "number".to_string(),
       actual: "string".to_string(),
     };
-    let msg = format!("{}", err);
+    let msg = format!("{err}");
     assert!(msg.contains("count"));
     assert!(msg.contains("number"));
     assert!(msg.contains("string"));
@@ -1153,9 +1153,9 @@ mod tests {
       behavior_a: "A".to_string(),
       behavior_b: "B".to_string(),
     };
-    let msg = format!("{}", err);
-    assert!(msg.contains("A"));
-    assert!(msg.contains("B"));
+    let msg = format!("{err}");
+    assert!(msg.contains('A'));
+    assert!(msg.contains('B'));
   }
 
   #[test]

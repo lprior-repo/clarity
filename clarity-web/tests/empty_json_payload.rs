@@ -51,7 +51,7 @@ impl JsonHandlingProvider {
 
     // Attempt to parse as JSON
     let parsed = serde_json::from_str::<serde_json::Value>(trimmed)
-      .map_err(|e| ExtractionError::ParseError(format!("Invalid JSON: {}", e)))?;
+      .map_err(|e| ExtractionError::ParseError(format!("Invalid JSON: {e}")))?;
 
     // Extract fields based on JSON type
     let fields = match parsed {
@@ -124,7 +124,7 @@ impl JsonHandlingProvider {
         field_type: Self::infer_field_type(&value),
         value,
         confidence: 1.0,
-        justification: Some(format!("Extracted from object field '{}'", key)),
+        justification: Some(format!("Extracted from object field '{key}'")),
       })
       .collect()
   }
@@ -134,16 +134,16 @@ impl JsonHandlingProvider {
       .into_iter()
       .enumerate()
       .map(|(idx, value)| FieldExtraction {
-        name: format!("item_{}", idx),
+        name: format!("item_{idx}"),
         field_type: Self::infer_field_type(&value),
         value,
         confidence: 1.0,
-        justification: Some(format!("Extracted from array index {}", idx)),
+        justification: Some(format!("Extracted from array index {idx}")),
       })
       .collect()
   }
 
-  fn infer_field_type(value: &serde_json::Value) -> FieldType {
+  const fn infer_field_type(value: &serde_json::Value) -> FieldType {
     match value {
       serde_json::Value::String(_) => FieldType::Text,
       serde_json::Value::Number(_) => FieldType::Number,
@@ -211,7 +211,7 @@ impl ExtractionProvider for JsonHandlingProvider {
     self.extract_fields(text, context).await
   }
 
-  fn provider_name(&self) -> &str {
+  fn provider_name(&self) -> &'static str {
     "json_handler"
   }
 
@@ -297,8 +297,7 @@ async fn whitespace_only_json_returns_error() {
     let result = provider.extract_fields(input, &context).await;
     assert!(
       result.is_err(),
-      "Should reject whitespace-only input: {:?}",
-      input
+      "Should reject whitespace-only input: {input:?}"
     );
   }
 }
@@ -342,7 +341,7 @@ async fn malformed_json_returns_parse_error() {
 
   for input in malformed_json_cases {
     let result = provider.extract_fields(input, &context).await;
-    assert!(result.is_err(), "Should reject malformed JSON: {}", input);
+    assert!(result.is_err(), "Should reject malformed JSON: {input}");
     assert!(matches!(result, Err(ExtractionError::ParseError(_))));
   }
 
@@ -354,8 +353,7 @@ async fn malformed_json_returns_parse_error() {
     // Should succeed as plain text extraction
     assert!(
       result.is_ok(),
-      "Should accept non-JSON as plain text: {}",
-      input
+      "Should accept non-JSON as plain text: {input}"
     );
     let extracted = result.unwrap();
     assert_eq!(extracted.fields[0].name, "text");
@@ -434,7 +432,7 @@ async fn json_with_nested_empty_structures() {
   assert_eq!(extracted.fields[0].value, json!({}));
 
   // Array with nested empty array
-  let json_input2 = r#"[[[]]]"#;
+  let json_input2 = r"[[[]]]";
 
   let result = provider.extract_fields(json_input2, &context).await;
   assert!(result.is_ok());
@@ -465,8 +463,7 @@ async fn mixed_whitespace_with_valid_json() {
     let result = provider.extract_fields(input, &context).await;
     assert!(
       result.is_ok(),
-      "Should accept valid JSON with whitespace: {}",
-      input
+      "Should accept valid JSON with whitespace: {input}"
     );
   }
 }
@@ -535,7 +532,7 @@ async fn json_number_values_extracted_correctly() {
 
   for (input, _expected) in test_cases {
     let result = provider.extract_fields(input, &context).await;
-    assert!(result.is_ok(), "Should parse number: {}", input);
+    assert!(result.is_ok(), "Should parse number: {input}");
     let extracted = result.unwrap();
     assert_eq!(extracted.fields[0].field_type, FieldType::Number);
   }

@@ -930,13 +930,13 @@ mod tests {
   #[test]
   fn test_error_display() {
     let err = RuleError::RuleFailed("test".into(), "failed".into());
-    assert!(format!("{}", err).contains("test"));
+    assert!(format!("{err}").contains("test"));
 
     let err = RuleError::PatternMismatch {
       pattern: r"\d+".into(),
       value: "abc".into(),
     };
-    let msg = format!("{}", err);
+    let msg = format!("{err}");
     assert!(msg.contains(r"\d+"));
     assert!(msg.contains("abc"));
 
@@ -945,9 +945,9 @@ mod tests {
       min: 0.0,
       max: 100.0,
     };
-    let msg = format!("{}", err);
+    let msg = format!("{err}");
     assert!(msg.contains("150"));
-    assert!(msg.contains("0"));
+    assert!(msg.contains('0'));
     assert!(msg.contains("100"));
   }
 

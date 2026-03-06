@@ -509,12 +509,12 @@ mod tests {
     use super::*;
 
     fn create_test_bead(id: &str, phase: u32, dependencies: Vec<&str>) -> PlanBead {
-        PlanBead::new(id.to_string(), format!("Bead {}", id), phase)
+        PlanBead::new(id.to_string(), format!("Bead {id}"), phase)
             .expect("valid bead")
             .with_dependencies(
                 dependencies
                     .iter()
-                    .map(|s| s.to_string())
+                    .map(std::string::ToString::to_string)
                     .collect(),
             )
     }

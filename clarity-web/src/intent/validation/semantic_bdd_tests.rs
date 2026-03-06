@@ -11,7 +11,7 @@
 use crate::intent::types::{Behavior, Feature, Spec};
 use crate::intent::validation::semantic::{SemanticError, SemanticValidator};
 
-/// Helper to create a valid spec with one feature and behavior (snake_case names)
+/// Helper to create a valid spec with one feature and behavior (`snake_case` names)
 fn create_valid_spec() -> Spec {
   let mut spec = Spec::new("test_api".to_string()).unwrap();
   let mut feature = Feature::new("test_feature".to_string()).unwrap();

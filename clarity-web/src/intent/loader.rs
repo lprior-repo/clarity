@@ -410,7 +410,7 @@ mod tests {
       .arg("version")
       .output()
       .map(|o| o.status.success())
-      .map_or(false, |v| v)
+      .is_ok_and(|v| v)
   }
 
   // =========================================================================

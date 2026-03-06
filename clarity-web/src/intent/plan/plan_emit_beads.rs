@@ -840,7 +840,7 @@ mod tests {
 
         for profile in profiles {
             let beads = generate_profile_beads(profile, 1);
-            assert!(!beads.is_empty(), "Profile {:?} should generate beads", profile);
+            assert!(!beads.is_empty(), "Profile {profile:?} should generate beads");
         }
     }
 
@@ -877,11 +877,11 @@ mod tests {
         // Add answers in different rounds
         for round in 1..=4 {
             session.answers.push(Answer {
-                question_id: format!("q{}", round),
-                question_text: format!("Question {}", round),
+                question_id: format!("q{round}"),
+                question_text: format!("Question {round}"),
                 perspective: Perspective::User,
                 round,
-                response: format!("Answer {}", round),
+                response: format!("Answer {round}"),
                 extracted: HashMap::new(),
                 confidence: 0.8,
                 notes: String::new(),

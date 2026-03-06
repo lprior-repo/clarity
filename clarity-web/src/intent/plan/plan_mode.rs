@@ -920,10 +920,10 @@ mod tests {
         assert!(format!("{err}").contains("circular"));
 
         let err = PlanError::InvalidPhase(0);
-        assert!(format!("{err}").contains("0"));
+        assert!(format!("{err}").contains('0'));
 
         let err = PlanError::PhaseNotComplete(1);
-        assert!(format!("{err}").contains("1"));
+        assert!(format!("{err}").contains('1'));
 
         let err = PlanError::NoActionableBeads;
         assert!(format!("{err}").contains("no actionable beads"));
@@ -932,8 +932,8 @@ mod tests {
         assert!(format!("{err}").contains("empty"));
 
         let err = PlanError::CircularDependency("a".to_string(), "b".to_string());
-        assert!(format!("{err}").contains("a"));
-        assert!(format!("{err}").contains("b"));
+        assert!(format!("{err}").contains('a'));
+        assert!(format!("{err}").contains('b'));
     }
 
     #[test]

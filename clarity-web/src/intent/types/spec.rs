@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use super::{AIHints, AntiPattern, Feature, Invariant, TypeError};
 
 /// Top-level specification container
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Spec {
   /// Unique specification name
   pub name: String,

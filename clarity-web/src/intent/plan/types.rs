@@ -490,7 +490,7 @@ mod tests {
 
         let result = plan.complete_bead("b1");
         assert!(result.is_ok());
-        assert!(plan.get_bead("b1").map_or(false, |b| b.completed));
+        assert!(plan.get_bead("b1").is_some_and(|b| b.completed));
     }
 
     #[test]

@@ -856,7 +856,7 @@ mod tests {
             "Name is required",
         );
         assert!(error.is_ok());
-        let ctx = error.map_err(|_| ()).map_err(|_| "").ok();
+        let ctx = error.map_err(|_| ()).map_err(|()| "").ok();
         if let Some(ctx) = ctx {
             assert_eq!(ctx.message, "Name is required");
         }
@@ -882,16 +882,11 @@ mod tests {
             "Type mismatch",
         )
         .map_err(|_| ())
-        .map_err(|_| "")
-        .ok()
-        .and_then(|e| {
-            Some(
-                e.with_source_file("test.json")
+        .map_err(|()| "")
+        .ok().map(|e| e.with_source_file("test.json")
                     .with_line(42)
                     .with_column(10)
-                    .with_json_path("items[0].count"),
-            )
-        });
+                    .with_json_path("items[0].count"));
 
         if let Some(error) = error {
             assert_eq!(error.source_file, Some("test.json".to_string()));
@@ -910,13 +905,8 @@ mod tests {
             "Unknown field",
         )
         .map_err(|_| ())
-        .map_err(|_| "")
-        .ok()
-        .and_then(|e| {
-            Some(
-                e.with_suggestion(Suggestion::new("name", 2)),
-            )
-        });
+        .map_err(|()| "")
+        .ok().map(|e| e.with_suggestion(Suggestion::new("name", 2)));
 
         if let Some(error) = error {
             assert_eq!(error.suggestions.len(), 1);
@@ -987,7 +977,7 @@ mod tests {
             "Name field is required",
         )
         .map_err(|_| ())
-        .map_err(|_| "")
+        .map_err(|()| "")
         .ok();
 
         if let Some(error) = error {
@@ -1004,15 +994,10 @@ mod tests {
             "Failed to parse JSON",
         )
         .map_err(|_| ())
-        .map_err(|_| "")
-        .ok()
-        .and_then(|e| {
-            Some(
-                e.with_source_file("spec.json")
+        .map_err(|()| "")
+        .ok().map(|e| e.with_source_file("spec.json")
                     .with_line(10)
-                    .with_json_path("$.beads[0].name"),
-            )
-        });
+                    .with_json_path("$.beads[0].name"));
 
         if let Some(error) = error {
             let formatted = format_error(&error);
@@ -1029,15 +1014,10 @@ mod tests {
             "Unknown field",
         )
         .map_err(|_| ())
-        .map_err(|_| "")
-        .ok()
-        .and_then(|e| {
-            Some(
-                e.with_suggestions(vec![
+        .map_err(|()| "")
+        .ok().map(|e| e.with_suggestions(vec![
                     Suggestion::new("name", 2),
-                ]),
-            )
-        });
+                ]));
 
         if let Some(error) = error {
             let formatted = format_error(&error);

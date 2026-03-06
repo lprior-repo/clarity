@@ -373,7 +373,7 @@ fn test_storage_unicode_keys() {
   let save_result = store.save_answer(&answer);
 
   // May fail depending on redb's unicode support
-  if let Ok(()) = save_result {
+  if matches!(save_result, Ok(())) {
     let load_result = store.get_answer("用户目标");
     assert!(load_result.is_ok());
     assert!(load_result.unwrap().is_some());
@@ -391,7 +391,7 @@ fn test_storage_null_byte_in_key() {
   let save_result = store.save_answer(&answer);
 
   // Should handle gracefully (likely fail or sanitize)
-  if let Ok(()) = save_result {
+  if matches!(save_result, Ok(())) {
     // If saved, should be retrievable
     let load_result = store.get_answer("key\0with\0null");
     assert!(load_result.is_ok());
