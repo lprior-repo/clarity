@@ -1,0 +1,146 @@
+[
+  {
+    "id": "task-075",
+    "title": "rigor: update onboarding guide",
+    "type": "task",
+    "priority": 2,
+    "effort": "1hr",
+    "description": "Update AGENTS.md and the project onboarding guide to reflect the new src/domain and src/lattice architecture.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL provide clear onboarding for new agents and developers."],
+      "event_driven": [{"trigger": "WHEN a new developer joins", "shall": "THE SYSTEM SHALL present the unified architectural doctrine."}],
+      "unwanted": [{"condition": "IF the onboarding guide still references intent/interview", "shall_not": "THE SYSTEM SHALL NOT pass documentation review", "because": "outdated guides cause developer friction."}]
+    },
+    "contracts": {
+      "preconditions": ["Doctrine.md is complete"],
+      "postconditions": ["AGENTS.md is synchronized with the new code structure"],
+      "invariants": ["The onboarding guide is accessible from the root"]
+    },
+    "tests": {
+      "happy": ["test_ag_onboarding_links_are_functional"],
+      "error": ["test_detects_broken_module_references_in_md"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Audit AGENTS.md"], "phase_1": ["Update module paths"]}
+  },
+  {
+    "id": "task-076",
+    "title": "rigor: final binary size check",
+    "type": "chore",
+    "priority": 3,
+    "effort": "30min",
+    "description": "Verify the release binary size and ensure that flattening/unification has not introduced bloat. Target: < 20MB.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL maintain a minimal binary footprint."],
+      "event_driven": [{"trigger": "WHEN a release build completes", "shall": "THE SYSTEM SHALL report the binary size in bytes."}],
+      "unwanted": [{"condition": "IF size exceeds 25MB", "shall_not": "THE SYSTEM SHALL NOT allow the release to proceed", "because": "we prioritize lean distribution."}]
+    },
+    "contracts": {
+      "preconditions": ["Cargo release profile is configured"],
+      "postconditions": ["Size report is generated"],
+      "invariants": ["Binary size is measured without debug symbols"]
+    },
+    "tests": {
+      "happy": ["test_binary_under_limit"],
+      "error": ["test_fails_if_debug_symbols_present_in_release"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Run cargo build --release"], "phase_1": ["Measure binary size"]}
+  },
+  {
+    "id": "task-077",
+    "title": "rigor: verify error User experience",
+    "type": "task",
+    "priority": 2,
+    "effort": "1hr",
+    "description": "Perform a manual walkthrough of failure modes to ensure that ClarityError variants are human-friendly and actionable in the UI.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL provide actionable error feedback."],
+      "event_driven": [{"trigger": "WHEN an error card is rendered", "shall": "THE SYSTEM SHALL include a 'Why' and 'How to fix' message."}],
+      "unwanted": [{"condition": "IF an error message contains raw stack traces", "shall_not": "THE SYSTEM SHALL NOT be considered user-friendly", "because": "non-developers should understand failures."}]
+    },
+    "contracts": {
+      "preconditions": ["ErrorBoundary components are active"],
+      "postconditions": ["UX audit report created"],
+      "invariants": ["No error variants display raw internal paths"]
+    },
+    "tests": {
+      "happy": ["test_error_messages_are_descriptive"],
+      "error": ["test_detects_leakage_of_internal_ids"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Trigger synthetic errors in UI"], "phase_1": ["Update ClarityError Display impls"]}
+  },
+  {
+    "id": "task-078",
+    "title": "rigor: prepare release notes",
+    "type": "chore",
+    "priority": 1,
+    "effort": "1hr",
+    "description": "Consolidate the results of the 80 beads into a formal set of Release Notes for version 1.1.0.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL communicate changes to stakeholders."],
+      "event_driven": [{"trigger": "WHEN the release is cut", "shall": "THE SYSTEM SHALL generate a CHANGELOG entry."}],
+      "unwanted": [{"condition": "IF major refactors are omitted", "shall_not": "THE SYSTEM SHALL NOT pass release gate", "because": "transparency is part of rigor."}]
+    },
+    "contracts": {
+      "preconditions": ["Epic closeout task is imminent"],
+      "postconditions": ["CHANGELOG.md updated"],
+      "invariants": ["Release notes are based on bead completion summaries"]
+    },
+    "tests": {
+      "happy": ["test_changelog_matches_completed_beads"],
+      "error": ["test_detects_missing_milestones_in_notes"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Summarize bead outcomes"], "phase_1": ["Update CHANGELOG.md"]}
+  },
+  {
+    "id": "task-079",
+    "title": "rigor: session post-mortem",
+    "type": "decision",
+    "priority": 2,
+    "effort": "1hr",
+    "description": "Reflect on the unification refactor process. Identify what went well and where architectural drift might recur.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL improve its own engineering process."],
+      "event_driven": [{"trigger": "WHEN the project is closed", "shall": "THE SYSTEM SHALL record a Post-Mortem ADR."}],
+      "unwanted": [{"condition": "IF lessons are not recorded", "shall_not": "THE SYSTEM SHALL NOT be considered a learning system", "because": "continuous improvement requires reflection."}]
+    },
+    "contracts": {
+      "preconditions": ["All implementation work is done"],
+      "postconditions": ["docs/decisions/unification-post-mortem.md exists"],
+      "invariants": ["Post-mortem identifies at least 3 anti-patterns found"]
+    },
+    "tests": {
+      "happy": ["test_post_mortem_contains_learnings"],
+      "error": ["test_fails_if_post_mortem_is_superficial"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Reflect on development velocity"], "phase_1": ["Draft post-mortem document"]}
+  },
+  {
+    "id": "task-080",
+    "title": "rigor: cleanup planning artifacts",
+    "type": "chore",
+    "priority": 1,
+    "effort": "15min",
+    "description": "Delete all temporary task JSON files and planning session logs from the project root.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL maintain a pristine workspace."],
+      "event_driven": [{"trigger": "WHEN all beads are closed", "shall": "THE SYSTEM SHALL purge the root directory of temp files."}],
+      "unwanted": [{"condition": "IF batch_tasks_*.json files remain", "shall_not": "THE SYSTEM SHALL NOT pass final audit", "because": "clutter is an anti-pattern."}]
+    },
+    "contracts": {
+      "preconditions": ["Post-mortem is complete"],
+      "postconditions": ["Root directory is clean"],
+      "invariants": ["Git history is preserved, but workspace is fresh"]
+    },
+    "tests": {
+      "happy": ["test_no_temp_json_files_remain"],
+      "error": ["test_detects_hidden_backup_files"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Run rm task-*.json batch_tasks_*.json"]}
+  }
+]

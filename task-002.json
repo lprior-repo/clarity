@@ -1,0 +1,68 @@
+{
+  "id": "task-002",
+  "title": "domain: define ClarityError taxonomy",
+  "type": "task",
+  "priority": 2,
+  "effort": "1hr",
+  "description": "Implement the core ClarityError enum using thiserror in src/domain/error.rs. This enum will unify all domain-level errors for storage, analysis, and planning.",
+  "ears": {
+    "ubiquitous": [
+      "THE SYSTEM SHALL provide a single error taxonomy for all domain logic."
+    ],
+    "event_driven": [
+      {
+        "trigger": "WHEN a domain operation fails",
+        "shall": "THE SYSTEM SHALL return a Result containing a ClarityError variant."
+      }
+    ],
+    "unwanted": [
+      {
+        "condition": "IF a domain error is converted to a string",
+        "shall_not": "THE SYSTEM SHALL NOT lose the underlying semantic cause",
+        "because": "scientific rigor requires precise error diagnostics."
+      }
+    ]
+  },
+  "contracts": {
+    "preconditions": [
+      "File src/domain/error.rs exists (from task-001)",
+      "thiserror crate is available in Cargo.toml"
+    ],
+    "postconditions": [
+      "ClarityError enum is defined with variants for Storage, Analysis, and Planning",
+      "Display and Error traits are implemented via thiserror"
+    ],
+    "invariants": [
+      "All error variants MUST be serializable",
+      "No panics during error construction or formatting"
+    ]
+  },
+  "tests": {
+    "happy": [
+      "test_error_variants_are_defined_and_reachable",
+      "test_error_display_formatting_is_correct"
+    ],
+    "error": [
+      "test_fails_to_compile_if_thiserror_not_imported",
+      "test_error_conversion_preserves_context"
+    ],
+    "edge": [
+      "test_handles_very_long_error_messages_without_stack_overflow"
+    ]
+  },
+  "research": {
+    "files": ["src/intent/errors.rs"],
+    "patterns": ["thiserror", "derive(Error)"],
+    "questions": ["Which existing errors should be ported first?"]
+  },
+  "context": {
+    "related_files": ["src/intent/errors.rs"],
+    "similar": []
+  },
+  "implementation": {
+    "phase_0": ["Read existing error implementations in intent/ and lattice/"],
+    "phase_1": ["Define unified ClarityError variants"],
+    "phase_2": ["Implement From conversions for external errors (Io, Serde)"],
+    "phase_3": ["Verify serialization logic"]
+  }
+}

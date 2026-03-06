@@ -1,0 +1,21 @@
+{
+  "goals": [
+    "Unify Quality scoring models across Lattice, Intent, and UI into a single trait-based engine.",
+    "Flatten src/intent module structure to a maximum depth of 3 levels.",
+    "Implement Typestate-based phase gating between Discovery and Planning.",
+    "Centralize causal tracing and requirement analysis in a side-effect-free lattice module.",
+    "Establish a canonical src/domain crate for all shared types and errors."
+  ],
+  "constraints": [
+    "Zero-panic architecture (deny unwrap/expect).",
+    "Maximum module depth of 3.",
+    "Functional Rust patterns (Railway-Oriented Programming).",
+    "Design by Contract (KIRK invariants).",
+    "Single-binary distribution compatibility."
+  ],
+  "technical_details": {
+    "languages": ["Rust"],
+    "frameworks": ["Dioxus 0.7", "redb", "thiserror"],
+    "tools": ["bd (beads)", "moon", "cue"]
+  }
+}

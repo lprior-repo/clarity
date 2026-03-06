@@ -1,0 +1,122 @@
+[
+  {
+    "id": "task-043",
+    "title": "intent: remove legacy ImproverQualityReport",
+    "type": "task",
+    "priority": 3,
+    "effort": "1hr",
+    "description": "Delete the ImproverQualityReport type and all its usages. Replace with the unified domain::QualityReport.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL have zero redundant quality types."],
+      "event_driven": [{"trigger": "WHEN the project is compiled", "shall": "THE SYSTEM SHALL verify zero references to legacy report types."}],
+      "unwanted": [{"condition": "IF a legacy type survives", "shall_not": "THE SYSTEM SHALL NOT be considered clean", "because": "drift starts with redundancy."}]
+    },
+    "contracts": {
+      "preconditions": ["Domain report is fully integrated"],
+      "postconditions": ["ImproverQualityReport deleted"],
+      "invariants": ["All suggestions are still correctly mapped to issues"]
+    },
+    "tests": {
+      "happy": ["test_compilation_succeeds_without_legacy_types", "test_suggestions_still_render_correctly"],
+      "error": ["test_fails_if_any_module_still_imports_legacy", "test_fails_if_conversion_logic_is_broken"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Search for legacy usages"], "phase_1": ["Replace with domain types"], "phase_2": ["Delete file"]}
+  },
+  {
+    "id": "task-044",
+    "title": "intent: refactor BeadTemplates to use domain Spec",
+    "type": "task",
+    "priority": 2,
+    "effort": "2hr",
+    "description": "Update the bead generation engine to consume the unified domain::Spec type instead of ad-hoc internal types.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL generate work items from the unified specification model."],
+      "event_driven": [{"trigger": "WHEN beads are emitted", "shall": "THE SYSTEM SHALL map Spec behaviors to BeadRecords."}],
+      "unwanted": [{"condition": "IF the spec contains invalid characters", "shall_not": "THE SYSTEM SHALL NOT produce malformed JSONL", "because": "persistence requires schema adherence."}]
+    },
+    "contracts": {
+      "preconditions": ["domain::Spec is fully defined"],
+      "postconditions": ["BeadTemplates::generate takes &Spec"],
+      "invariants": ["The number of beads matches the number of behaviors + features"]
+    },
+    "tests": {
+      "happy": ["test_generates_beads_from_valid_spec", "test_bead_titles_follow_component_convention"],
+      "error": ["test_fails_on_empty_spec", "test_handles_missing_acceptance_criteria_gracefully"],
+      "edge": ["test_handles_spec_with_1000_behaviors"]
+    },
+    "implementation": {"phase_0": ["Map domain types to bead fields"], "phase_1": ["Update generator loop"]}
+  },
+  {
+    "id": "task-045",
+    "title": "intent: refactor Resolver to use domain Spec",
+    "type": "task",
+    "priority": 2,
+    "effort": "2hr",
+    "description": "Update the dependency resolver to build its graph from the domain::Spec model.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL resolve work dependencies based on the specification graph."],
+      "event_driven": [{"trigger": "WHEN a plan is resolved", "shall": "THE SYSTEM SHALL verify the DAG of the domain::Spec."}],
+      "unwanted": [{"condition": "IF a cycle is detected in the spec", "shall_not": "THE SYSTEM SHALL NOT allow plan generation", "because": "cyclic work is unimplementable."}]
+    },
+    "contracts": {
+      "preconditions": ["domain::Spec supports depends_on fields"],
+      "postconditions": ["Resolver::resolve returns a sorted execution plan"],
+      "invariants": ["Graph resolution is topologically sorted"]
+    },
+    "tests": {
+      "happy": ["test_resolver_produces_valid_dag", "test_resolver_respects_explicit_dependencies"],
+      "error": ["test_fails_on_cyclic_dependency", "test_fails_on_missing_dependency_target"],
+      "edge": ["test_handles_disconnected_forest_of_tasks"]
+    },
+    "implementation": {"phase_0": ["Extract dependency graph from Spec"], "phase_1": ["Update Petgraph implementation"]}
+  },
+  {
+    "id": "task-046",
+    "title": "intent: standardize SessionId newtype",
+    "type": "task",
+    "priority": 2,
+    "effort": "30min",
+    "description": "Implement a SessionId(String) newtype in domain/types.rs and use it throughout the intent module.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL use a distinct type for session identification."],
+      "event_driven": [{"trigger": "WHEN a session is created", "shall": "THE SYSTEM SHALL wrap the ID in the SessionId type."}],
+      "unwanted": [{"condition": "IF a raw string is passed as an ID", "shall_not": "THE SYSTEM SHALL NOT allow the call to compile", "because": "type safety prevents ID mixing."}]
+    },
+    "contracts": {
+      "preconditions": ["domain/types.rs exists"],
+      "postconditions": ["SessionId newtype is exported", "All intent functions use SessionId"],
+      "invariants": ["SessionId is always serializable to a string"]
+    },
+    "tests": {
+      "happy": ["test_session_id_serialization", "test_session_id_equality"],
+      "error": ["test_fails_on_empty_id_string", "test_fails_on_invalid_character_id"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Define newtype"], "phase_1": ["Refactor call sites in intent/"]}
+  },
+  {
+    "id": "task-047",
+    "title": "intent: migration for old JSONL records",
+    "type": "task",
+    "priority": 2,
+    "effort": "2hr",
+    "description": "Implement a migration layer to load legacy intent-cli JSONL records into the new unified domain types.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL maintain backwards compatibility with existing project data."],
+      "event_driven": [{"trigger": "WHEN an old record is loaded", "shall": "THE SYSTEM SHALL perform a lossless upgrade to the domain schema."}],
+      "unwanted": [{"condition": "IF migration fails", "shall_not": "THE SYSTEM SHALL NOT corrupt the database", "because": "user data safety is a priority."}]
+    },
+    "contracts": {
+      "preconditions": ["Legacy JSONL samples are available"],
+      "postconditions": ["Old data maps correctly to DiscoverySession"],
+      "invariants": ["Migration is idempotent"]
+    },
+    "tests": {
+      "happy": ["test_migrates_v0_record_to_v1", "test_migration_preserves_all_answer_text"],
+      "error": ["test_fails_on_invalid_legacy_json", "test_reports_unsupported_version_error"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Define legacy schema mapping"], "phase_1": ["Implement TryFrom<LegacyRecord> for DiscoverySession"]}
+  }
+]

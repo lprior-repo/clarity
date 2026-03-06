@@ -1,0 +1,127 @@
+[
+  {
+    "id": "task-026",
+    "title": "intent: flatten interview into discovery",
+    "type": "task",
+    "priority": 2,
+    "effort": "2hr",
+    "description": "Collapse src/intent/interview hierarchy into discovery.rs. Remove redundant nesting and one-struct-per-file patterns.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL maintain a flat module structure for intent logic."],
+      "event_driven": [{"trigger": "WHEN discovery logic is accessed", "shall": "THE SYSTEM SHALL provide it via src/intent/discovery.rs."}],
+      "unwanted": [{"condition": "IF the directory depth exceeds 3", "shall_not": "THE SYSTEM SHALL NOT pass architectural linting", "because": "deep hierarchies increase cognitive load."}]
+    },
+    "contracts": {
+      "preconditions": ["intent/interview exists"],
+      "postconditions": ["discovery.rs contains all necessary logic", "interview directory deleted"],
+      "invariants": ["No change in external discovery API behavior"]
+    },
+    "tests": {
+      "happy": ["test_discovery_logic_still_functional", "test_module_path_resolution"],
+      "error": ["test_fails_if_required_discovery_types_missing", "test_fails_on_broken_imports"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Identify core interview types"], "phase_1": ["Merge files into discovery.rs"]},
+    "context": {"related_files": ["src/intent/interview/mod.rs"]}
+  },
+  {
+    "id": "task-027",
+    "title": "intent: flatten plan into planning",
+    "type": "task",
+    "priority": 2,
+    "effort": "2hr",
+    "description": "Collapse src/intent/plan into planning.rs. Consolidate Resolver and Bead generation logic.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL consolidate planning logic into a single module."],
+      "event_driven": [{"trigger": "WHEN a plan is resolved", "shall": "THE SYSTEM SHALL use the src/intent/planning.rs module."}],
+      "unwanted": [{"condition": "IF planning logic is fragmented", "shall_not": "THE SYSTEM SHALL NOT allow it to remain distributed", "because": "cohesion is required for rigor."}]
+    },
+    "contracts": {
+      "preconditions": ["intent/plan exists"],
+      "postconditions": ["planning.rs is the single source of planning logic"],
+      "invariants": ["Graph resolution remains deterministic"]
+    },
+    "tests": {
+      "happy": ["test_planning_logic_still_functional", "test_resolver_output_consistency"],
+      "error": ["test_fails_if_plan_types_missing", "test_fails_on_broken_imports"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Audit plan/ contents"], "phase_1": ["Merge into planning.rs"]},
+    "context": {"related_files": ["src/intent/plan/mod.rs"]}
+  },
+  {
+    "id": "task-028",
+    "title": "intent: flatten quality module",
+    "type": "task",
+    "priority": 2,
+    "effort": "1hr",
+    "description": "Delete ad-hoc quality scoring logic in intent and flatten remaining context handlers into quality.rs.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL delegate quality math to the lattice module."],
+      "event_driven": [{"trigger": "WHEN intent/quality is called", "shall": "THE SYSTEM SHALL call domain::QualityEvaluator."}],
+      "unwanted": [{"condition": "IF intent attempts to re-calculate score math", "shall_not": "THE SYSTEM SHALL NOT permit ad-hoc logic", "because": "math must be unified."}]
+    },
+    "contracts": {
+      "preconditions": ["Lattice quality implementation is complete"],
+      "postconditions": ["Intent quality logic is a thin wrapper"],
+      "invariants": ["No scoring math exists in the intent module"]
+    },
+    "tests": {
+      "happy": ["test_intent_delegates_to_domain_report", "test_unified_report_returned"],
+      "error": ["test_fails_if_lattice_engine_fails", "test_fails_on_type_mismatch"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Remove intent/quality/analyzer.rs"], "phase_1": ["Update handlers to use domain traits"]},
+    "context": {"related_files": ["src/intent/quality/mod.rs"]}
+  },
+  {
+    "id": "task-029",
+    "title": "intent: unify storage with src/storage",
+    "type": "task",
+    "priority": 2,
+    "effort": "2hr",
+    "description": "Redirect intent persistence to use the centralized redb storage layer. Remove intent-specific storage logic.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL use a single storage engine for all persistence."],
+      "event_driven": [{"trigger": "WHEN intent data is saved", "shall": "THE SYSTEM SHALL use src/storage handlers."}],
+      "unwanted": [{"condition": "IF intent data is stored in isolated files", "shall_not": "THE SYSTEM SHALL NOT allow disparate storage patterns", "because": "ACID guarantees must be project-wide."}]
+    },
+    "contracts": {
+      "preconditions": ["src/storage supports project metadata and answers"],
+      "postconditions": ["Intent module has no direct file I/O"],
+      "invariants": ["Storage integrity is maintained across migrations"]
+    },
+    "tests": {
+      "happy": ["test_intent_data_persists_to_redb", "test_data_recovery_on_load"],
+      "error": ["test_fails_on_storage_read_error", "test_fails_on_serialization_error"],
+      "edge": ["test_handles_concurrent_writes_gracefully"]
+    },
+    "implementation": {"phase_0": ["Identify all I/O points in intent"], "phase_1": ["Swap file calls for redb calls"]},
+    "context": {"related_files": ["src/intent/interview/storage.rs", "src/storage/mod.rs"]}
+  },
+  {
+    "id": "task-030",
+    "title": "intent: implement typestate sessions",
+    "type": "task",
+    "priority": 2,
+    "effort": "2hr",
+    "description": "Define DiscoverySession and ValidatedSession types to enforce phase gating at the type level.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL represent workflow phases as distinct types."],
+      "event_driven": [{"trigger": "WHEN a session transitions", "shall": "THE SYSTEM SHALL return a new session type."}],
+      "unwanted": [{"condition": "IF an unvalidated session is used for planning", "shall_not": "THE SYSTEM SHALL NOT compile", "because": "phase gating must be absolute."}]
+    },
+    "contracts": {
+      "preconditions": ["Domain types are available"],
+      "postconditions": ["Typestate structs are defined"],
+      "invariants": ["ValidatedSession always contains a QualityReport >= 70%"]
+    },
+    "tests": {
+      "happy": ["test_discovery_session_creation", "test_transition_to_validated"],
+      "error": ["test_fails_transition_if_quality_insufficient", "test_cannot_create_validated_manually"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Design session state machine"], "phase_1": ["Implement DiscoverySession and ValidatedSession"]},
+    "context": {"related_files": ["src/intent/discovery.rs"]}
+  }
+]

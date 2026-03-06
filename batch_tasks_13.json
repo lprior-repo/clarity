@@ -1,0 +1,122 @@
+[
+  {
+    "id": "task-066",
+    "title": "rigor: automated playground benchmark",
+    "type": "chore",
+    "priority": 3,
+    "effort": "2hr",
+    "description": "Create a benchmark suite to measure LatticeEngine latency across a range of requirement volumes (10 to 1000). Ensure linear scalability.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL maintain high performance under load."],
+      "event_driven": [{"trigger": "WHEN benchmarks are run", "shall": "THE SYSTEM SHALL report ms per requirement parsed."}],
+      "unwanted": [{"condition": "IF latency exceeds 50ms for 100 requirements", "shall_not": "THE SYSTEM SHALL NOT be considered release-ready", "because": "real-time feedback requires low latency."}]
+    },
+    "contracts": {
+      "preconditions": ["LatticeEngine is side-effect-free"],
+      "postconditions": ["Benchmark results are persisted to docs/benchmarks/"],
+      "invariants": ["The benchmark does not modify project state"]
+    },
+    "tests": {
+      "happy": ["test_benchmark_completes_successfully", "test_scaling_is_sub_quadratic"],
+      "error": ["test_fails_if_performance_regresses_by_20_percent", "test_detects_bottlenecks_in_regex"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Implement Criterion benchmarks"], "phase_1": ["Run against synthetic requirement sets"]}
+  },
+  {
+    "id": "task-067",
+    "title": "rigor: documentation clarity architectural doctrine",
+    "type": "task",
+    "priority": 1,
+    "effort": "2hr",
+    "description": "Finalize the comprehensive architecture guide covering the Functional Core, Typestate Sessions, and Quality Algebra.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL be fully documented for future maintainers."],
+      "event_driven": [{"trigger": "WHEN the documentation is built", "shall": "THE SYSTEM SHALL include the unified structural blueprint."}],
+      "unwanted": [{"condition": "IF ad-hoc patterns are documented", "shall_not": "THE SYSTEM SHALL NOT pass documentation review", "because": "rigor requires adherence to established doctrine."}]
+    },
+    "contracts": {
+      "preconditions": ["Unification refactor is complete"],
+      "postconditions": ["docs/architecture/doctrine.md exists"],
+      "invariants": ["Documentation matches the current code implementation 100%"]
+    },
+    "tests": {
+      "happy": ["test_doc_links_are_valid", "test_code_examples_compile"],
+      "error": ["test_fails_if_major_modules_undocumented", "test_detects_outdated_diagrams"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Draft doctrine.md"], "phase_1": ["Sync diagrams with final module tree"]}
+  },
+  {
+    "id": "task-068",
+    "title": "rigor: verify zero dead code",
+    "type": "chore",
+    "priority": 2,
+    "effort": "1hr",
+    "description": "Use cargo-deadlinks and cargo-unused-features to ensure no legacy code or unused dependencies remain after flattening.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL be minimal and efficient."],
+      "event_driven": [{"trigger": "WHEN dead code analysis is run", "shall": "THE SYSTEM SHALL identify orphaned structs and functions."}],
+      "unwanted": [{"condition": "IF dead code is retained", "shall_not": "THE SYSTEM SHALL NOT pass final release check", "because": "dead code increases binary size and maintenance surface."}]
+    },
+    "contracts": {
+      "preconditions": ["Refactor is feature-complete"],
+      "postconditions": ["Zero unused public items detected"],
+      "invariants": ["Public API surface is minimal"]
+    },
+    "tests": {
+      "happy": ["test_zero_unused_dependencies", "test_zero_unreachable_code"],
+      "error": ["test_fails_if_legacy_types_still_exist", "test_detects_unused_macros"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Run dead code scanners"], "phase_1": ["Prune confirmed dead code"]}
+  },
+  {
+    "id": "task-069",
+    "title": "rigor: release closeout and cleanup",
+    "type": "chore",
+    "priority": 1,
+    "effort": "1hr",
+    "description": "Perform final cleanup of the workspace, including deletion of migration scripts, test artifacts, and temporary task files.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL be production-ready and clean."],
+      "event_driven": [{"trigger": "WHEN release is finalized", "shall": "THE SYSTEM SHALL purge all non-source artifacts."}],
+      "unwanted": [{"condition": "IF temporary JSON files are committed", "shall_not": "THE SYSTEM SHALL NOT be considered a clean release", "because": "workspace hygiene is mandatory."}]
+    },
+    "contracts": {
+      "preconditions": ["All beads are closed"],
+      "postconditions": ["Temporary files are deleted", "git status is clean"],
+      "invariants": ["The project builds from a fresh clone without extra files"]
+    },
+    "tests": {
+      "happy": ["test_build_from_clean_clone", "test_no_temp_files_found"],
+      "error": ["test_fails_if_git_ignored_files_exist_in_source", "test_detects_untracked_migration_artifacts"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Run git clean -fd"], "phase_1": ["Verify release build artifacts"]}
+  },
+  {
+    "id": "task-070",
+    "title": "rigor: epic closeout",
+    "type": "task",
+    "priority": 1,
+    "effort": "15min",
+    "description": "Formally close the Epic oya-lf6 after verifying all child beads and architectural invariants are satisfied.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL record the successful completion of major milestones."],
+      "event_driven": [{"trigger": "WHEN all child tasks are closed", "shall": "THE SYSTEM SHALL close the Epic."}],
+      "unwanted": [{"condition": "IF any child task remains open", "shall_not": "THE SYSTEM SHALL NOT allow Epic closeout", "because": "completeness must be verified."}]
+    },
+    "contracts": {
+      "preconditions": ["All beads in oya-lf6 are closed"],
+      "postconditions": ["Epic oya-lf6 is closed", "Release summary is generated"],
+      "invariants": ["The project has reached the target architecture state"]
+    },
+    "tests": {
+      "happy": ["test_epic_status_is_closed", "test_all_children_are_closed"],
+      "error": ["test_fails_closeout_if_tasks_orphaned", "test_reports_unmet_invariants"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Verify bd status"], "phase_1": ["Close oya-lf6"]}
+  }
+]

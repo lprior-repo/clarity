@@ -1,0 +1,42 @@
+{
+  "id": "oya-yoz3",
+  "title": "Foundation: Create domain crate structure",
+  "type": "task",
+  "priority": 2,
+  "effort": "30min",
+  "description": "Create clarity-web/src/domain/ and initialize mod.rs, types.rs, error.rs, and quality.rs.",
+  "clarifications": {
+    "resolved": ["Directory is src/domain"],
+    "open": [],
+    "assumptions": ["Root is clarity-web"]
+  },
+  "ears": {
+    "ubiquitous": ["THE SYSTEM SHALL provide a unified domain layer for shared types."],
+    "event_driven": [],
+    "unwanted": [{"condition": "IF the domain module depends on intent", "shall_not": "THE SYSTEM SHALL NOT compile", "because": "it breaks the functional core isolation"}]
+  },
+  "contracts": {
+    "preconditions": ["clarity-web/src/ exists", "domain/ does not exist"],
+    "postconditions": ["src/domain/mod.rs exists", "src/domain/types.rs exists"],
+    "invariants": ["Zero internal dependencies in domain"]
+  },
+  "tests": {
+    "happy": ["test_domain_structure_initialization_succeeds"],
+    "error": ["test_returns_error_when_src_missing"],
+    "edge": []
+  },
+  "research": {
+    "files": ["clarity-web/src/lib.rs"],
+    "patterns": ["module exports"],
+    "questions": []
+  },
+  "implementation": {
+    "phase_0": ["Create directory structure"],
+    "phase_1": ["Add mod.rs and submodules"],
+    "phase_2": ["Update lib.rs to export domain"]
+  },
+  "context": {
+    "related_files": ["clarity-web/src/lib.rs"],
+    "similar": []
+  }
+}

@@ -1,0 +1,127 @@
+[
+  {
+    "id": "task-031",
+    "title": "ui: delete ui-only quality structs",
+    "type": "task",
+    "priority": 2,
+    "effort": "30min",
+    "description": "Remove QualityScore and QualityDimension from src/components/discover/quality_score.rs. Replace with domain types.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL render domain quality models directly in the UI."],
+      "event_driven": [{"trigger": "WHEN quality data is rendered", "shall": "THE SYSTEM SHALL use the domain::QualityReport type."}],
+      "unwanted": [{"condition": "IF the UI defines its own quality data structures", "shall_not": "THE SYSTEM SHALL NOT allow them to coexist", "because": "it causes schema skew."}]
+    },
+    "contracts": {
+      "preconditions": ["Domain quality types are available"],
+      "postconditions": ["UI-only structs are deleted"],
+      "invariants": ["The UI remains visually identical"]
+    },
+    "tests": {
+      "happy": ["test_ui_renders_with_domain_types", "test_report_binding_succeeds"],
+      "error": ["test_fails_if_domain_report_missing_dimensions", "test_fails_on_type_mismatch"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Audit quality_score.rs imports"], "phase_1": ["Delete redundant structs"]},
+    "context": {"related_files": ["src/components/discover/quality_score.rs"]}
+  },
+  {
+    "id": "task-032",
+    "title": "ui: update quality bar to use domain report",
+    "type": "task",
+    "priority": 2,
+    "effort": "1hr",
+    "description": "Refactor QualityScoreBar component to accept domain::QualityReport as a prop. Standardize dimension rendering.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL display quality scores based on the unified math engine."],
+      "event_driven": [{"trigger": "WHEN the overall score changes", "shall": "THE SYSTEM SHALL update the progress bar color."}],
+      "unwanted": [{"condition": "IF a dimension is missing from the report", "shall_not": "THE SYSTEM SHALL NOT crash the UI", "because": "UI resilience is required."}]
+    },
+    "contracts": {
+      "preconditions": ["QualityScoreBar exists"],
+      "postconditions": ["Component takes &QualityReport"],
+      "invariants": ["Scores in UI match logic scores 1:1"]
+    },
+    "tests": {
+      "happy": ["test_bar_renders_green_above_70", "test_bar_renders_red_below_50"],
+      "error": ["test_handles_empty_report_gracefully", "test_handles_nan_scores"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Update Props definition"], "phase_1": ["Update rsx! macros"]},
+    "context": {"related_files": ["src/components/discover/quality_score.rs"]}
+  },
+  {
+    "id": "task-033",
+    "title": "ui: update field card to use domain answer",
+    "type": "task",
+    "priority": 2,
+    "effort": "1hr",
+    "description": "Refactor FieldCard component to use the canonical domain::Answer type. Ensure field locking works with unified types.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL use the canonical Answer type for all field cards."],
+      "event_driven": [{"trigger": "WHEN a field is edited", "shall": "THE SYSTEM SHALL update the domain::Answer value."}],
+      "unwanted": [{"condition": "IF an answer is partially updated", "shall_not": "THE SYSTEM SHALL NOT allow out-of-sync state", "because": "integrity is paramount."}]
+    },
+    "contracts": {
+      "preconditions": ["FieldCard exists"],
+      "postconditions": ["Component uses domain::Answer"],
+      "invariants": ["Field IDs must match step IDs in DiscoverySession"]
+    },
+    "tests": {
+      "happy": ["test_field_card_updates_answer_signal", "test_locking_persists_to_storage"],
+      "error": ["test_fails_on_empty_answer_id", "test_fails_on_invalid_timestamp"],
+      "edge": ["test_handles_long_field_content_without_layout_break"]
+    },
+    "implementation": {"phase_0": ["Update FieldCard props"], "phase_1": ["Wire locking signals to redb"]},
+    "context": {"related_files": ["src/components/discover/field_card.rs"]}
+  },
+  {
+    "id": "task-034",
+    "title": "ui: implement unified quality tooltip",
+    "type": "task",
+    "priority": 2,
+    "effort": "1hr",
+    "description": "Create a shared tooltip component for displaying QualityIssue reports across the UI. Ensures consistent error messaging.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL provide descriptive feedback for all quality issues."],
+      "event_driven": [{"trigger": "WHEN a user hovers over a low score", "shall": "THE SYSTEM SHALL show the QualityIssue description and suggestion."}],
+      "unwanted": [{"condition": "IF multiple issues exist", "shall_not": "THE SYSTEM SHALL NOT overlap tooltips", "because": "readability is a design goal."}]
+    },
+    "contracts": {
+      "preconditions": ["Dioxus tooltip infra is available"],
+      "postconditions": ["QualityTooltip component is created"],
+      "invariants": ["Tooltip content is derived directly from QualityIssue variants"]
+    },
+    "tests": {
+      "happy": ["test_tooltip_shows_correct_suggestion", "test_tooltip_appears_on_hover"],
+      "error": ["test_handles_no_issues_without_displaying_empty_box", "test_handles_broken_links_in_suggestions"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Design tooltip UI"], "phase_1": ["Implement shared component"]},
+    "context": {"related_files": ["src/ui/mod.rs"]}
+  },
+  {
+    "id": "task-035",
+    "title": "ui: wire lattice engine to server functions",
+    "type": "task",
+    "priority": 2,
+    "effort": "2hr",
+    "description": "Expose the side-effect-free LatticeEngine to the Dioxus frontend via server functions. Allow async analysis triggering.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL perform complex analysis on the server-side."],
+      "event_driven": [{"trigger": "WHEN requirements change", "shall": "THE SYSTEM SHALL trigger an async lattice analysis call."}],
+      "unwanted": [{"condition": "IF the analysis takes too long", "shall_not": "THE SYSTEM SHALL NOT block the UI thread", "because": "responsiveness is a डिजाइन mandate."}]
+    },
+    "contracts": {
+      "preconditions": ["LatticeEngine is functional", "Server functions are configured"],
+      "postconditions": ["analyze_session function is available to frontend"],
+      "invariants": ["Server functions must return domain types only"]
+    },
+    "tests": {
+      "happy": ["test_server_function_returns_valid_report", "test_async_frontend_call_succeeds"],
+      "error": ["test_handles_network_latency_gracefully", "test_handles_server_crash_without_unmount"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Define server function signature"], "phase_1": ["Implement wrapper logic"]},
+    "context": {"related_files": ["src/server.rs"]}
+  }
+]

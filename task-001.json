@@ -1,0 +1,70 @@
+{
+  "id": "task-001",
+  "title": "domain: create crate structure",
+  "type": "task",
+  "priority": 2,
+  "effort": "30min",
+  "description": "Initialize the clarity-web/src/domain directory and its core modules (types, error, quality) to centralize the shared data models and unify the quality algebra.",
+  "ears": {
+    "ubiquitous": [
+      "THE SYSTEM SHALL provide a unified domain layer for shared types."
+    ],
+    "event_driven": [
+      {
+        "trigger": "WHEN the project is compiled",
+        "shall": "THE SYSTEM SHALL include the src/domain module in the crate root."
+      }
+    ],
+    "unwanted": [
+      {
+        "condition": "IF the src/domain module attempts to import from src/intent or src/lattice",
+        "shall_not": "THE SYSTEM SHALL NOT allow the dependency to exist",
+        "because": "it violates the functional core isolation principle."
+      }
+    ]
+  },
+  "contracts": {
+    "preconditions": [
+      "Directory clarity-web/src exists",
+      "No existing src/domain module is defined in lib.rs"
+    ],
+    "postconditions": [
+      "File clarity-web/src/domain/mod.rs exists",
+      "File clarity-web/src/domain/types.rs exists",
+      "File clarity-web/src/domain/error.rs exists",
+      "File clarity-web/src/domain/quality.rs exists"
+    ],
+    "invariants": [
+      "All types in src/domain MUST derive Serialize and Deserialize",
+      "The domain module has zero internal crate dependencies"
+    ]
+  },
+  "tests": {
+    "happy": [
+      "test_domain_directory_creation_succeeds",
+      "test_domain_modules_are_reachable_from_crate_root"
+    ],
+    "error": [
+      "test_fails_if_src_directory_is_missing",
+      "test_fails_if_domain_already_exists"
+    ],
+    "edge": [
+      "test_handles_read_only_filesystem_gracefully"
+    ]
+  },
+  "research": {
+    "files": ["clarity-web/src/lib.rs"],
+    "patterns": ["pub mod"],
+    "questions": ["Should we move existing types in this step? (Assumption: No, that is task-002+)"]
+  },
+  "context": {
+    "related_files": ["clarity-web/src/lib.rs"],
+    "similar": []
+  },
+  "implementation": {
+    "phase_0": ["Verify src/ exists"],
+    "phase_1": ["Create src/domain directory"],
+    "phase_2": ["Initialize mod.rs, types.rs, error.rs, quality.rs"],
+    "phase_3": ["Add 'pub mod domain;' to lib.rs"]
+  }
+}

@@ -1,0 +1,122 @@
+[
+  {
+    "id": "task-036",
+    "title": "rigor: architectural unit test",
+    "type": "task",
+    "priority": 1,
+    "effort": "1hr",
+    "description": "Implement a build-time test that inspects the module tree and asserts a maximum directory depth of 3.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL enforce structural module limits."],
+      "event_driven": [{"trigger": "WHEN tests are run", "shall": "THE SYSTEM SHALL fail if any module path depth > 3."}],
+      "unwanted": [{"condition": "IF a deep hierarchy is introduced", "shall_not": "THE SYSTEM SHALL NOT allow the build to pass", "because": "we must prevent structural drift."}]
+    },
+    "contracts": {
+      "preconditions": ["Cargo test environment is active"],
+      "postconditions": ["Build fails on depth violation"],
+      "invariants": ["The test itself must not be deeper than the limit"]
+    },
+    "tests": {
+      "happy": ["test_asserts_depth_3_succeeds", "test_detects_depth_4_failure"],
+      "error": ["test_handles_empty_src_without_false_positives", "test_handles_symlinks_safely"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Write recursive path walker"], "phase_1": ["Integrate with cargo test"]}
+  },
+  {
+    "id": "task-037",
+    "title": "rigor: dependency linter for lattice",
+    "type": "task",
+    "priority": 1,
+    "effort": "1hr",
+    "description": "Implement a test that forbids src/lattice from importing from src/intent or src/app.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL maintain lattice as a pure, dependency-free engine."],
+      "event_driven": [{"trigger": "WHEN lattice files are scanned", "shall": "THE SYSTEM SHALL verify zero imports of intent/ or app/."}],
+      "unwanted": [{"condition": "IF a cyclic or illegal dependency is added", "shall_not": "THE SYSTEM SHALL NOT allow the commit", "because": "isolation is critical for rigor."}]
+    },
+    "contracts": {
+      "preconditions": ["Source scanner is functional"],
+      "postconditions": ["Cyclic dependencies are caught"],
+      "invariants": ["Domain imports ARE allowed in lattice"]
+    },
+    "tests": {
+      "happy": ["test_allows_pure_lattice_imports", "test_blocks_intent_imports_in_lattice"],
+      "error": ["test_handles_relative_path_imports", "test_detects_hidden_imports"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Define forbidden import patterns"], "phase_1": ["Add check to CI pipeline"]}
+  },
+  {
+    "id": "task-038",
+    "title": "rigor: zero-panic linter enforcement",
+    "type": "task",
+    "priority": 1,
+    "effort": "1hr",
+    "description": "Ensure clippy::unwrap_used and clippy::expect_used are denied across all core and domain modules.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL follow a zero-panic architecture."],
+      "event_driven": [{"trigger": "WHEN clippy is run", "shall": "THE SYSTEM SHALL fail on any unwrap or expect call."}],
+      "unwanted": [{"condition": "IF a panic is introduced", "shall_not": "THE SYSTEM SHALL NOT reach production", "because": "reliability is non-negotiable."}]
+    },
+    "contracts": {
+      "preconditions": ["clippy is available"],
+      "postconditions": ["Lints are applied to domain/, lattice/, and intent/"],
+      "invariants": ["Errors MUST use Result variants instead of panics"]
+    },
+    "tests": {
+      "happy": ["test_clippy_passes_on_pure_code", "test_clippy_fails_on_unwrap"],
+      "error": ["test_detects_expect_in_nested_functions", "test_enforces_panic_denial"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Update file headers with lint denials"], "phase_1": ["Fix any existing violations"]}
+  },
+  {
+    "id": "task-039",
+    "title": "rigor: mutation testing for quality engine",
+    "type": "task",
+    "priority": 1,
+    "effort": "2hr",
+    "description": "Run cargo-mutants on the unified quality module to verify test suite effectiveness. Goal: zero missed mutants.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL verify test rigor via mutation testing."],
+      "event_driven": [{"trigger": "WHEN mutation tests are run", "shall": "THE SYSTEM SHALL catch 100% of arithmetic mutants in quality scoring."}],
+      "unwanted": [{"condition": "IF a mutant survives", "shall_not": "THE SYSTEM SHALL NOT consider the test suite complete", "because": "surviving mutants indicate weak coverage."}]
+    },
+    "contracts": {
+      "preconditions": ["cargo-mutants is installed"],
+      "postconditions": ["Mutation report shows 0 survivors in domain/quality.rs"],
+      "invariants": ["The score math is tested against sign-flips and boundary shifts"]
+    },
+    "tests": {
+      "happy": ["test_catches_sign_flip_in_weighting", "test_catches_boundary_shift_in_gating"],
+      "error": ["test_fails_if_coverage_is_superficial", "test_detects_unreachable_branches"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Configure cargo-mutants"], "phase_1": ["Add specific tests for boundary mutants"]}
+  },
+  {
+    "id": "task-040",
+    "title": "rigor: cue schema round-trip validation",
+    "type": "task",
+    "priority": 1,
+    "effort": "2hr",
+    "description": "Perform property-based testing of domain types against CUE schema definitions using proptest.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL maintain 100% alignment between CUE schemas and Rust types."],
+      "event_driven": [{"trigger": "WHEN a type is serialized", "shall": "THE SYSTEM SHALL pass 'cue vet' against its schema."}],
+      "unwanted": [{"condition": "IF the schema and code diverge", "shall_not": "THE SYSTEM SHALL NOT allow deployment", "because": "schema skew is a catastrophic failure mode."}]
+    },
+    "contracts": {
+      "preconditions": ["CUE CLI is available"],
+      "postconditions": ["Rust types match CUE constraints exactly"],
+      "invariants": ["Serialized JSON is always valid CUE"]
+    },
+    "tests": {
+      "happy": ["test_proptest_serialization_validates_against_cue", "test_roundtrip_data_loss_prevention"],
+      "error": ["test_fails_on_illegal_fields", "test_detects_range_violations_in_cue"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Set up proptest infra"], "phase_1": ["Write CUE validation test runner"]}
+  }
+]

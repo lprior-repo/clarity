@@ -1,0 +1,74 @@
+[
+  {
+    "id": "task-058",
+    "title": "rigor: mathematical consistency audit",
+    "type": "task",
+    "priority": 1,
+    "effort": "2hr",
+    "description": "Perform an audit to ensure that identical requirements produce the same quality score in both Discovery (Answer-based) and Planning (Spec-based) phases.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL maintain score parity across workflow phases."],
+      "event_driven": [{"trigger": "WHEN identical data is processed", "shall": "THE SYSTEM SHALL return identical scores for both Answer and Spec evaluators."}],
+      "unwanted": [{"condition": "IF the scores diverge", "shall_not": "THE SYSTEM SHALL NOT allow the audit to pass", "because": "mathematical inconsistency breaks user trust."}]
+    },
+    "contracts": {
+      "preconditions": ["Lattice and Intent scoring implementations are active"],
+      "postconditions": ["Audit report verifies zero divergence"],
+      "invariants": ["The math engine uses the same weights and thresholds in all phases"]
+    },
+    "tests": {
+      "happy": ["test_score_parity_for_simple_input", "test_score_parity_for_complex_input"],
+      "error": ["test_detects_weight_mismatch", "test_detects_jargon_list_mismatch"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Write cross-phase test suite"], "phase_1": ["Synchronize constants in domain/quality.rs"]}
+  },
+  {
+    "id": "task-059",
+    "title": "rigor: e2e test discovery to planning",
+    "type": "task",
+    "priority": 1,
+    "effort": "4hr",
+    "description": "Implement a full Playwright E2E test that covers the journey from initial Express input to bead generation.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL support the complete user journey without error."],
+      "event_driven": [{"trigger": "WHEN the E2E test runs", "shall": "THE SYSTEM SHALL navigate through Discovery, gating, and Planning."}],
+      "unwanted": [{"condition": "IF a UI element blocks the flow", "shall_not": "THE SYSTEM SHALL NOT hide the failure in logs", "because": "automated validation is the final gate for release."}]
+    },
+    "contracts": {
+      "preconditions": ["Clarity web server is running", "Playwright is configured"],
+      "postconditions": ["Test creates valid beads in the database"],
+      "invariants": ["The test environment is cleaned up after each run"]
+    },
+    "tests": {
+      "happy": ["test_happy_path_discovery_to_beads", "test_guided_mode_e2e_completion"],
+      "error": ["test_fails_if_quality_gate_bypassed", "test_handles_server_disconnection"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Write Playwright script"], "phase_1": ["Integrate with Moon runner"]}
+  },
+  {
+    "id": "task-060",
+    "title": "rigor: security audit auth and validation",
+    "type": "task",
+    "priority": 1,
+    "effort": "2hr",
+    "description": "Perform a security audit of the quality engine to verify that it correctly identifies and weights authentication, encryption, and validation requirements.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL prioritize security-critical requirements."],
+      "event_driven": [{"trigger": "WHEN security keywords are present", "shall": "THE SYSTEM SHALL assign maximum weight to the Security dimension."}],
+      "unwanted": [{"condition": "IF a security requirement is missed", "shall_not": "THE SYSTEM SHALL NOT allow a high overall score", "because": "security is a primary quality dimension."}]
+    },
+    "contracts": {
+      "preconditions": ["Security keyword list is defined in domain"],
+      "postconditions": ["Audit verifies 100% detection rate for known security patterns"],
+      "invariants": ["No security bypass exists in the scoring algebra"]
+    },
+    "tests": {
+      "happy": ["test_detects_all_auth_variants", "test_weights_encryption_correctly"],
+      "error": ["test_penalizes_missing_validation", "test_fails_on_obfuscated_security_threats"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Update security keyword list"], "phase_1": ["Write adversarial security tests"]}
+  }
+]

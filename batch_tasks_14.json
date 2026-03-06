@@ -1,0 +1,98 @@
+[
+  {
+    "id": "task-071",
+    "title": "lattice: implement coverage analyzer",
+    "type": "task",
+    "priority": 2,
+    "effort": "2hr",
+    "description": "Refactor the coverage analysis logic into a pure lattice function. Detect missing components or behaviors based on the intent context.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL identify missing requirement areas."],
+      "event_driven": [{"trigger": "WHEN coverage is analyzed", "shall": "THE SYSTEM SHALL return a list of CoverageGaps."}],
+      "unwanted": [{"condition": "IF a required field is not covered by any behavior", "shall_not": "THE SYSTEM SHALL NOT assign a 100% coverage score", "because": "completeness must be factual."}]
+    },
+    "contracts": {
+      "preconditions": ["Input consists of a list of Behaviors and a list of expected Components"],
+      "postconditions": ["Output is a pure data structure representing coverage state"],
+      "invariants": ["The analyzer does not perform any I/O"]
+    },
+    "tests": {
+      "happy": ["test_detects_complete_coverage", "test_identifies_missing_security_component"],
+      "error": ["test_handles_empty_expected_list_gracefully", "test_returns_error_on_invalid_requirement_refs"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Move logic from intent/quality/analyzer.rs to lattice/coverage.rs"], "phase_1": ["Update QualityEvaluator impl"]}
+  },
+  {
+    "id": "task-072",
+    "title": "lattice: implement artifact compaction",
+    "type": "task",
+    "priority": 3,
+    "effort": "1hr",
+    "description": "Implement a pure function to compact multiple requirements and answers into a summarized artifact for the Planning phase.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL provide summarized context for complex specifications."],
+      "event_driven": [{"trigger": "WHEN compaction is triggered", "shall": "THE SYSTEM SHALL reduce redundant text while preserving semantic meaning."}],
+      "unwanted": [{"condition": "IF critical requirements are pruned", "shall_not": "THE SYSTEM SHALL NOT allow the compaction to be used as a source of truth", "because": "compaction is for context, not for definition."}]
+    },
+    "contracts": {
+      "preconditions": ["Input is a list of Answer objects"],
+      "postconditions": ["Output is a single summarized string"],
+      "invariants": ["The output size is strictly less than or equal to the input size"]
+    },
+    "tests": {
+      "happy": ["test_summarizes_simple_answers", "test_preserves_ears_patterns_in_summary"],
+      "error": ["test_fails_on_empty_input", "test_handles_malformed_utf8_in_answers"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Refactor lattice/compact.rs to be generic"], "phase_1": ["Expose via LatticeEngine"]}
+  },
+  {
+    "id": "task-073",
+    "title": "intent: implement batch requirement processor",
+    "type": "task",
+    "priority": 2,
+    "effort": "2hr",
+    "description": "Implement a batch processor in src/intent/batch.rs to handle bulk requirement updates and large-scale spec refactors efficiently.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL support high-volume requirement operations."],
+      "event_driven": [{"trigger": "WHEN a batch of changes is submitted", "shall": "THE SYSTEM SHALL process them in a single database transaction."}],
+      "unwanted": [{"condition": "IF a batch fails mid-way", "shall_not": "THE SYSTEM SHALL NOT leave orphaned work items", "because": "batch atomic integrity is required."}]
+    },
+    "contracts": {
+      "preconditions": ["DiscoverySession is in a writeable state"],
+      "postconditions": ["All items in the batch are committed or none are"],
+      "invariants": ["The session version is incremented once per batch"]
+    },
+    "tests": {
+      "happy": ["test_batch_processes_all_items", "test_batch_respects_transaction_boundaries"],
+      "error": ["test_fails_batch_on_first_error", "test_reports_exact_index_of_failure"],
+      "edge": ["test_handles_batch_of_1000_updates"]
+    },
+    "implementation": {"phase_0": ["Design BatchCommand enum"], "phase_1": ["Implement processor using redb wrappers"]}
+  },
+  {
+    "id": "task-074",
+    "title": "intent: implement phase completion logic",
+    "type": "task",
+    "priority": 2,
+    "effort": "1hr",
+    "description": "Formalize the logic for marking Discovery and Planning phases as 'Complete' in the project metadata and redb store.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL track the current project phase."],
+      "event_driven": [{"trigger": "WHEN a phase meets all exit criteria", "shall": "THE SYSTEM SHALL update completed_phases in project_metadata."}],
+      "unwanted": [{"condition": "IF exit criteria are not met", "shall_not": "THE SYSTEM SHALL NOT allow the phase to be marked complete", "because": "phase rigor prevents skipping steps."}]
+    },
+    "contracts": {
+      "preconditions": ["DiscoverySession is Validated"],
+      "postconditions": ["completed_phases contains 'discovery'"],
+      "invariants": ["Phase completion is irreversible without explicit 'reset'"]
+    },
+    "tests": {
+      "happy": ["test_discovery_marks_as_complete", "test_planning_unlocks_after_discovery"],
+      "error": ["test_fails_completion_if_quality_under_threshold", "test_fails_if_metadata_write_locked"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Define ExitCriteria check function"], "phase_1": ["Update completion signal handler"]}
+  }
+]

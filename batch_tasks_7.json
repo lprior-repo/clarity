@@ -1,0 +1,74 @@
+[
+  {
+    "id": "task-041",
+    "title": "intent: refactor ExpressFlow to use typestates",
+    "type": "task",
+    "priority": 2,
+    "effort": "2hr",
+    "description": "Update the Express mode state machine to use DiscoverySession and ValidatedSession. Enforce type-safe transitions.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL manage user input via type-safe session states."],
+      "event_driven": [{"trigger": "WHEN all fields are locked", "shall": "THE SYSTEM SHALL attempt to transition to ValidatedSession."}],
+      "unwanted": [{"condition": "IF the transition fails", "shall_not": "THE SYSTEM SHALL NOT permit the user to proceed to Planning", "because": "quality standards must be met."}]
+    },
+    "contracts": {
+      "preconditions": ["DiscoverySession is defined"],
+      "postconditions": ["ExpressFlow uses try_gate() for phase progression"],
+      "invariants": ["UI state is always in sync with the session type"]
+    },
+    "tests": {
+      "happy": ["test_express_flow_successful_gate", "test_express_flow_preserves_answers_on_failure"],
+      "error": ["test_express_flow_blocks_invalid_gate", "test_handles_backend_errors_during_gate"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Refactor internal state signals"], "phase_1": ["Update transition logic"]}
+  },
+  {
+    "id": "task-042",
+    "title": "intent: refactor GuidedFlow to use typestates",
+    "type": "task",
+    "priority": 2,
+    "effort": "2hr",
+    "description": "Update the Guided mode state machine to use DiscoverySession. Ensure consistency with Express mode gating.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL maintain consistent phase gating across all input modes."],
+      "event_driven": [{"trigger": "WHEN the final question is answered", "shall": "THE SYSTEM SHALL calculate the quality report."}],
+      "unwanted": [{"condition": "IF quality is below 70%", "shall_not": "THE SYSTEM SHALL NOT show the 'Continue' button", "because": "UI must reflect type-level constraints."}]
+    },
+    "contracts": {
+      "preconditions": ["GuidedFlow state exists"],
+      "postconditions": ["GuidedFlow transitions to Planning via ValidatedSession"],
+      "invariants": ["The session ID is preserved across mode switches"]
+    },
+    "tests": {
+      "happy": ["test_guided_flow_successful_completion", "test_mode_switch_preserves_state"],
+      "error": ["test_guided_flow_blocks_on_low_quality", "test_handles_missing_questions_gracefully"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Refactor GuidedFlow signals"], "phase_1": ["Implement completion logic"]}
+  },
+  {
+    "id": "task-043",
+    "title": "intent: remove legacy ImproverQualityReport",
+    "type": "task",
+    "priority": 3,
+    "effort": "1hr",
+    "description": "Delete the ImproverQualityReport type and all its usages. Replace with the unified domain::QualityReport.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL have zero redundant quality types."],
+      "event_driven": [{"trigger": "WHEN the project is compiled", "shall": "THE SYSTEM SHALL verify zero references to legacy report types."}],
+      "unwanted": [{"condition": "IF a legacy type survives", "shall_not": "THE SYSTEM SHALL NOT be considered clean", "because": "drift starts with redundancy."}]
+    },
+    "contracts": {
+      "preconditions": ["Domain report is fully integrated"],
+      "postconditions": ["ImproverQualityReport deleted"],
+      "invariants": ["All suggestions are still correctly mapped to issues"]
+    },
+    "tests": {
+      "happy": ["test_compilation_succeeds_without_legacy_types", "test_suggestions_still_render_correctly"],
+      "error": ["test_fails_if_any_module_still_imports_legacy"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Search for legacy usages"], "phase_1": ["Replace with domain types"], "phase_2": ["Delete file"]}
+  }
+]

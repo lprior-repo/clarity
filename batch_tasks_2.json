@@ -1,0 +1,86 @@
+[
+  {
+    "id": "task-003",
+    "title": "domain: unify QualityReport types",
+    "type": "task",
+    "priority": 2,
+    "effort": "1hr",
+    "description": "Consolidate QualityReport, QualityDimension, and QualityIssue into src/domain/quality.rs. This removes the triplication between Lattice, Intent, and UI.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL have one canonical QualityReport for all phases."],
+      "event_driven": [{"trigger": "WHEN a report is generated", "shall": "THE SYSTEM SHALL use the src/domain/quality.rs types."}],
+      "unwanted": [{"condition": "IF a new dimension is added", "shall_not": "THE SYSTEM SHALL NOT require changes in more than one location", "because": "centralization prevents drift."}]
+    },
+    "contracts": {
+      "preconditions": ["src/domain/quality.rs exists"],
+      "postconditions": ["QualityReport struct is defined in domain"],
+      "invariants": ["QualityReport is the only allowed report type in the system"]
+    },
+    "tests": {
+      "happy": ["test_report_serialization", "test_report_dimension_access"],
+      "error": ["test_fails_on_invalid_dimension_score", "test_fails_on_empty_issues"],
+      "edge": ["test_handles_max_scores_correctly"]
+    },
+    "implementation": {
+      "phase_0": ["Read existing Lattice and Intent report types"],
+      "phase_1": ["Define unified structs in domain/quality.rs"]
+    },
+    "context": {"related_files": ["src/lattice/quality.rs", "src/intent/quality/analyzer.rs"]}
+  },
+  {
+    "id": "task-004",
+    "title": "domain: implement QualityEvaluator trait",
+    "type": "task",
+    "priority": 2,
+    "effort": "1hr",
+    "description": "Define the QualityEvaluator<T> trait to provide a generic interface for scoring different input types (Answers, Specs).",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL support generic quality evaluation via traits."],
+      "event_driven": [{"trigger": "WHEN evaluate is called", "shall": "THE SYSTEM SHALL return a Result<QualityReport, ClarityError>."}],
+      "unwanted": [{"condition": "IF the evaluator fails", "shall_not": "THE SYSTEM SHALL NOT return a partial or invalid report", "because": "gating requires absolute accuracy."}]
+    },
+    "contracts": {
+      "preconditions": ["QualityReport type is defined"],
+      "postconditions": ["QualityEvaluator trait is defined"],
+      "invariants": ["The trait method MUST be pure (no &mut self)"]
+    },
+    "tests": {
+      "happy": ["test_trait_signature_is_correct", "test_mock_evaluator_succeeds"],
+      "error": ["test_evaluator_returns_error_on_invalid_input", "test_evaluator_fails_if_dependency_missing"],
+      "edge": []
+    },
+    "implementation": {
+      "phase_0": ["Design trait signature"],
+      "phase_1": ["Define trait in domain/quality.rs"]
+    },
+    "context": {"related_files": ["src/domain/quality.rs"]}
+  },
+  {
+    "id": "task-005",
+    "title": "domain: define unified Answer type",
+    "type": "task",
+    "priority": 2,
+    "effort": "1hr",
+    "description": "Define the canonical Answer type in src/domain/types.rs to replace all ad-hoc implementations.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL use a single Answer type for all requirements capture."],
+      "event_driven": [{"trigger": "WHEN an answer is created", "shall": "THE SYSTEM SHALL store it using the domain::Answer struct."}],
+      "unwanted": [{"condition": "IF an answer has no timestamp", "shall_not": "THE SYSTEM SHALL NOT allow creation", "because": "history tracking is mandatory."}]
+    },
+    "contracts": {
+      "preconditions": ["src/domain/types.rs exists"],
+      "postconditions": ["Answer struct is defined"],
+      "invariants": ["Answer IDs must be unique within a session"]
+    },
+    "tests": {
+      "happy": ["test_answer_instantiation", "test_answer_json_roundtrip"],
+      "error": ["test_fails_if_step_id_empty", "test_fails_if_timestamp_invalid"],
+      "edge": ["test_handles_unicode_in_answer_value"]
+    },
+    "implementation": {
+      "phase_0": ["Identify existing Answer fields in storage and UI"],
+      "phase_1": ["Define Answer struct in domain/types.rs"]
+    },
+    "context": {"related_files": ["src/storage/types.rs", "src/types.rs"]}
+  }
+]

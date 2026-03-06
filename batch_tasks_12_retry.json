@@ -1,0 +1,77 @@
+[
+  {
+    "id": "task-063",
+    "title": "intent: cleanup util module",
+    "type": "task",
+    "priority": 3,
+    "effort": "1hr",
+    "description": "Remove redundant and over-nested utility functions from src/intent/util. Standardize on domain types where possible.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL provide a minimal, high-value utility set."],
+      "event_driven": [{"trigger": "WHEN a utility is called", "shall": "THE SYSTEM SHALL provide it via a flat src/intent/util.rs module."}],
+      "unwanted": [{"condition": "IF a utility duplicates standard library logic", "shall_not": "THE SYSTEM SHALL NOT be retained", "because": "bloat is an anti-pattern."}]
+    },
+    "contracts": {
+      "preconditions": ["intent/util/ is deeply nested"],
+      "postconditions": ["Redundant array indexing and case-insensitive utils are removed or flattened"],
+      "invariants": ["Remaining utilities are pure functions"]
+    },
+    "tests": {
+      "happy": ["test_remaining_utils_are_functional", "test_zero_duplication_with_std"],
+      "error": ["test_fails_on_hidden_dependencies_in_util", "test_fails_if_required_util_deleted"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Audit util/ contents"], "phase_1": ["Delete/Flatten files"]},
+    "context": {"related_files": ["src/intent/util/mod.rs"]}
+  },
+  {
+    "id": "task-064",
+    "title": "intent: remove orphaned gleam erlang refs",
+    "type": "task",
+    "priority": 1,
+    "effort": "1hr",
+    "description": "Scan and remove all remaining Gleam, Erlang, or BEAM-related configuration and build files to complete the single-binary migration.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL have zero external runtime dependencies beyond the Rust binary."],
+      "event_driven": [{"trigger": "WHEN the project is scanned", "shall": "THE SYSTEM SHALL verify zero .gleam or .erl files."}],
+      "unwanted": [{"condition": "IF a gleam config survives", "shall_not": "THE SYSTEM SHALL NOT be considered a single-binary distribution", "because": "cleanliness is rigor."}]
+    },
+    "contracts": {
+      "preconditions": ["Port is functionally complete"],
+      "postconditions": ["Zero non-Rust source files in src/"],
+      "invariants": ["The build system (Moon) no longer references gleam"]
+    },
+    "tests": {
+      "happy": ["test_scan_returns_zero_gleam_files", "test_cargo_build_succeeds_without_erlang"],
+      "error": ["test_fails_if_gleam_path_referenced_in_env", "test_fails_if_erlang_detected_in_lockfile"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Run find for .gleam, .beam, gleam.toml"], "phase_1": ["Remove found files and update moon.yml"]},
+    "context": {"related_files": ["package.json", "moon.yml"]}
+  },
+  {
+    "id": "task-065",
+    "title": "intent: implement execution plan resolver",
+    "type": "task",
+    "priority": 2,
+    "effort": "2hr",
+    "description": "Refactor the Resolver to produce a linear ExecutionPlan from the Spec DAG, ensuring work is ordered by dependencies.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL produce a valid execution order for all work items."],
+      "event_driven": [{"trigger": "WHEN a spec is resolved", "shall": "THE SYSTEM SHALL return an ExecutionPlan containing ordered task IDs."}],
+      "unwanted": [{"condition": "IF a task is placed before its dependency", "shall_not": "THE SYSTEM SHALL NOT allow the plan to be saved", "because": "out-of-order execution causes build failure."}]
+    },
+    "contracts": {
+      "preconditions": ["DAG resolution is functional"],
+      "postconditions": ["ExecutionPlan is topologically sorted"],
+      "invariants": ["Every task in the plan is reachable from the root"]
+    },
+    "tests": {
+      "happy": ["test_produces_sorted_plan", "test_plan_contains_all_tasks"],
+      "error": ["test_fails_on_unresolvable_dependencies", "test_detects_self_referential_tasks"],
+      "edge": ["test_handles_large_spec_resolution_in_ms"]
+    },
+    "implementation": {"phase_0": ["Define ExecutionPlan type"], "phase_1": ["Update Resolver implementation"]},
+    "context": {"related_files": ["src/intent/plan/resolver.rs"]}
+  }
+]

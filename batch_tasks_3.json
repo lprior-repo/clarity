@@ -1,0 +1,87 @@
+[
+  {
+    "id": "task-011",
+    "title": "lattice: refactor quality logic",
+    "type": "task",
+    "priority": 2,
+    "effort": "2hr",
+    "description": "Refactor src/lattice/quality.rs to implement the QualityEvaluator trait and use unified domain types. Ensure logic is purely functional.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL perform quality analysis using side-effect-free logic."],
+      "event_driven": [{"trigger": "WHEN quality is calculated", "shall": "THE SYSTEM SHALL return a domain::QualityReport."}],
+      "unwanted": [{"condition": "IF the calculation panics", "shall_not": "THE SYSTEM SHALL NOT crash the application", "because": "we follow zero-panic architecture."}]
+    },
+    "contracts": {
+      "preconditions": ["domain::QualityEvaluator trait is available"],
+      "postconditions": ["quality.rs implements QualityEvaluator<Vec<Answer>>"],
+      "invariants": ["The calculation produces deterministic results for identical inputs"]
+    },
+    "tests": {
+      "happy": ["test_quality_calculation_is_accurate", "test_report_contains_all_dimensions"],
+      "error": ["test_fails_gracefully_on_empty_input", "test_returns_error_on_invalid_scores"],
+      "edge": ["test_handles_maximum_complexity_requirements"]
+    },
+    "implementation": {
+      "phase_0": ["Audit existing quality math"],
+      "phase_1": ["Implement trait for Vec<Answer>"]
+    },
+    "context": {"related_files": ["src/lattice/quality.rs"]}
+  },
+  {
+    "id": "task-012",
+    "title": "lattice: pure ears parsing",
+    "type": "task",
+    "priority": 2,
+    "effort": "2hr",
+    "description": "Refactor lattice/ears.rs to be side-effect-free and independent of intent modules.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL parse EARS patterns from raw text into structured requirements."],
+      "event_driven": [{"trigger": "WHEN text is parsed", "shall": "THE SYSTEM SHALL identify ubiquitous, event-driven, and unwanted patterns."}],
+      "unwanted": [{"condition": "IF text contains malformed EARS", "shall_not": "THE SYSTEM SHALL NOT halt processing", "because": "partial parsing is better than failure."}]
+    },
+    "contracts": {
+      "preconditions": ["Input is a valid UTF-8 string"],
+      "postconditions": ["Output is a Vec of parsed requirements"],
+      "invariants": ["Parsing never modifies the input string"]
+    },
+    "tests": {
+      "happy": ["test_parses_ubiquitous_requirement", "test_parses_unwanted_requirement"],
+      "error": ["test_handles_garbage_input_without_panic", "test_returns_empty_on_no_matches"],
+      "edge": ["test_parses_very_long_multiline_requirements"]
+    },
+    "implementation": {
+      "phase_0": ["Remove intent imports"],
+      "phase_1": ["Refactor regex logic into pure functions"]
+    },
+    "context": {"related_files": ["src/lattice/ears.rs"]}
+  },
+  {
+    "id": "task-013",
+    "title": "lattice: consolidate causal patterns",
+    "type": "task",
+    "priority": 2,
+    "effort": "1hr",
+    "description": "Merge duplicate dependency and effect tracing logic from intent/quality/effects.rs into lattice/effects.rs.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL maintain a single library of causal patterns."],
+      "event_driven": [{"trigger": "WHEN effects are traced", "shall": "THE SYSTEM SHALL use the unified lattice::effects module."}],
+      "unwanted": [{"condition": "IF a pattern is duplicated", "shall_not": "THE SYSTEM SHALL NOT allow both versions to coexist", "because": "divergence creates inconsistent analysis."}]
+    },
+    "contracts": {
+      "preconditions": ["Lattice effects module is functional"],
+      "postconditions": ["Intent duplicate code is removed"],
+      "invariants": ["The unified module supports all existing pattern matches"]
+    },
+    "tests": {
+      "happy": ["test_unified_tracer_detects_all_patterns", "test_graph_cycle_detection"],
+      "error": ["test_fails_on_self_referential_effects", "test_handles_disconnected_graphs"],
+      "edge": []
+    },
+    "implementation": {
+      "phase_0": ["Identify patterns in intent/"],
+      "phase_1": ["Move patterns to lattice/"],
+      "phase_2": ["Delete intent/ quality/effects.rs"]
+    },
+    "context": {"related_files": ["src/lattice/effects.rs", "src/intent/quality/effects.rs"]}
+  }
+]

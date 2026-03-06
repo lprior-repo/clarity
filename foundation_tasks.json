@@ -1,0 +1,82 @@
+[
+  {
+    "id": "task-001",
+    "title": "Foundation: Create domain crate structure",
+    "type": "task",
+    "priority": 2,
+    "effort": "30min",
+    "description": "Create clarity-web/src/domain/ and initialize mod.rs, types.rs, error.rs, and quality.rs.",
+    "clarifications": {
+      "resolved": ["Domain module should be in src/domain"],
+      "open": [],
+      "assumptions": ["Project root is clarity-web"]
+    },
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL have a unified domain module for all shared types."],
+      "event_driven": [],
+      "unwanted": []
+    },
+    "contracts": {
+      "preconditions": ["clarity-web/src/ exists"],
+      "postconditions": ["src/domain/mod.rs exists"],
+      "invariants": ["Domain module has no internal dependencies"]
+    },
+    "tests": {
+      "happy": ["test_domain_module_exists"],
+      "error": []
+    },
+    "research": {
+      "files": ["src/lib.rs"],
+      "patterns": [],
+      "questions": []
+    },
+    "implementation": {
+      "phase_0": ["mkdir src/domain"],
+      "phase_1": ["touch src/domain/mod.rs"]
+    },
+    "context": {
+      "related_files": ["src/lib.rs"],
+      "similar": []
+    }
+  },
+  {
+    "id": "task-002",
+    "title": "Foundation: Define unified ClarityError taxonomy",
+    "type": "task",
+    "priority": 2,
+    "effort": "1hr",
+    "description": "Implement ClarityError enum using thiserror in src/domain/error.rs. Include variants for Storage, Analysis, and Planning.",
+    "clarifications": {
+      "resolved": ["Use thiserror"],
+      "open": [],
+      "assumptions": []
+    },
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL use a single error taxonomy for all domain logic."],
+      "event_driven": [],
+      "unwanted": []
+    },
+    "contracts": {
+      "preconditions": ["src/domain/error.rs exists"],
+      "postconditions": ["ClarityError enum is defined"],
+      "invariants": ["No panics in error formatting"]
+    },
+    "tests": {
+      "happy": ["test_error_variants_exist"],
+      "error": []
+    },
+    "research": {
+      "files": ["src/intent/errors.rs"],
+      "patterns": ["thiserror usage"],
+      "questions": []
+    },
+    "implementation": {
+      "phase_0": ["Read existing error types"],
+      "phase_1": ["Define ClarityError enum"]
+    },
+    "context": {
+      "related_files": ["src/intent/errors.rs"],
+      "similar": []
+    }
+  }
+]

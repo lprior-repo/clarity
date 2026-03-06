@@ -1,0 +1,122 @@
+[
+  {
+    "id": "task-048",
+    "title": "intent: implement redb transaction wrappers",
+    "type": "task",
+    "priority": 2,
+    "effort": "2hr",
+    "description": "Implement high-level ACID transaction wrappers for complex state transitions in the intent module.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL provide atomic storage operations for session transitions."],
+      "event_driven": [{"trigger": "WHEN a session is gated", "shall": "THE SYSTEM SHALL commit the report and metadata in a single transaction."}],
+      "unwanted": [{"condition": "IF a partial write occurs", "shall_not": "THE SYSTEM SHALL NOT allow the session to remain in an inconsistent state", "because": "data integrity is a non-negotiable invariant."}]
+    },
+    "contracts": {
+      "preconditions": ["redb engine is initialized"],
+      "postconditions": ["Transactions ensure all-or-nothing writes"],
+      "invariants": ["The database remains valid even after a crash during write"]
+    },
+    "tests": {
+      "happy": ["test_transaction_commits_all_changes", "test_transaction_rollbacks_on_error"],
+      "error": ["test_fails_if_database_locked", "test_detects_serialization_failure_before_commit"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Design transaction closure API"], "phase_1": ["Implement wrappers using redb::WriteTransaction"]}
+  },
+  {
+    "id": "task-049",
+    "title": "intent: fix circular dependencies",
+    "type": "task",
+    "priority": 3,
+    "effort": "1hr",
+    "description": "Audit src/intent/mod.rs and break any circular imports introduced during flattening.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL maintain a directed acyclic module graph."],
+      "event_driven": [{"trigger": "WHEN the project is compiled", "shall": "THE SYSTEM SHALL verify zero cyclic dependencies."}],
+      "unwanted": [{"condition": "IF a cycle is detected", "shall_not": "THE SYSTEM SHALL NOT pass CI", "because": "cyclic dependencies prevent modular testing."}]
+    },
+    "contracts": {
+      "preconditions": ["Intent module flattening is underway"],
+      "postconditions": ["Cargo check passes without warning"],
+      "invariants": ["Module imports follow a clear hierarchy"]
+    },
+    "tests": {
+      "happy": ["test_intent_compiles_cleanly", "test_import_graph_is_acyclic"],
+      "error": ["test_fails_on_illegal_cross_module_import", "test_fails_on_hidden_re_exports"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Run cargo-modules to visualize graph"], "phase_1": ["Refactor imports to use domain crate as intermediary"]}
+  },
+  {
+    "id": "task-050",
+    "title": "ui: reactive quality score memo",
+    "type": "task",
+    "priority": 2,
+    "effort": "1hr",
+    "description": "Implement a Dioxus Memo that automatically recalculates the unified quality score when answers change.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL provide real-time quality feedback in the UI."],
+      "event_driven": [{"trigger": "WHEN the answers signal updates", "shall": "THE SYSTEM SHALL trigger the memoized quality calculation."}],
+      "unwanted": [{"condition": "IF the calculation is too slow", "shall_not": "THE SYSTEM SHALL NOT freeze the UI", "because": "reactivity must be optimized."}]
+    },
+    "contracts": {
+      "preconditions": ["Answers signal is available", "Lattice engine is wired"],
+      "postconditions": ["QualityScore signal is always current"],
+      "invariants": ["The score memo is the single source of truth for the UI"]
+    },
+    "tests": {
+      "happy": ["test_memo_updates_on_answer_change", "test_memo_returns_valid_report"],
+      "error": ["test_handles_rapid_typing_without_overload", "test_handles_empty_answers_gracefully"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Define use_memo closure"], "phase_1": ["Connect to server functions"]}
+  },
+  {
+    "id": "task-051",
+    "title": "ui: enforce continue button typestate",
+    "type": "task",
+    "priority": 2,
+    "effort": "30min",
+    "description": "Disable the 'Continue to Define' button unless the DiscoverySession can successfully transition to ValidatedSession.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL physically block phase progression on low quality."],
+      "event_driven": [{"trigger": "WHEN overall score < 70", "shall": "THE SYSTEM SHALL disable the Continue button."}],
+      "unwanted": [{"condition": "IF the user attempts to bypass via JS", "shall_not": "THE SYSTEM SHALL NOT allow the backend to accept the request", "because": "rigor is enforced at all layers."}]
+    },
+    "contracts": {
+      "preconditions": ["QualityScore memo is functional"],
+      "postconditions": ["Button 'enabled' state matches gate_passes()"],
+      "invariants": ["Phase gating is consistent with the domain logic"]
+    },
+    "tests": {
+      "happy": ["test_button_enabled_at_70_percent", "test_button_disabled_at_69_percent"],
+      "error": ["test_handles_api_failure_by_disabling_button", "test_prevents_navigation_on_click_if_disabled"],
+      "edge": []
+    },
+    "implementation": {"phase_0": ["Bind button props to score memo"], "phase_1": ["Add backend validation to transition function"]}
+  },
+  {
+    "id": "task-052",
+    "title": "ui: scientific rigor dashboard",
+    "type": "task",
+    "priority": 3,
+    "effort": "2hr",
+    "description": "Create a developer dashboard to inspect the raw mathematical components of the quality score and EARS parsing results.",
+    "ears": {
+      "ubiquitous": ["THE SYSTEM SHALL provide deep visibility into the analysis engine."],
+      "event_driven": [{"trigger": "WHEN dev-mode is active", "shall": "THE SYSTEM SHALL render the rigor dashboard."}],
+      "unwanted": [{"condition": "IF the dashboard leaks to production", "shall_not": "THE SYSTEM SHALL NOT allow unauthorized access", "because": "internal diagnostics are for developers only."}]
+    },
+    "contracts": {
+      "preconditions": ["QualityReport contains debug metadata"],
+      "postconditions": ["Dashboard renders raw JSON and graph data"],
+      "invariants": ["Dashboard has zero impact on core performance when hidden"]
+    },
+    "tests": {
+      "happy": ["test_dashboard_renders_raw_report", "test_dashboard_toggles_correctly"],
+      "error": ["test_fails_to_render_if_no_report_available", "test_prevents_rendering_in_release_build"],
+      "edge": ["test_handles_very_large_reports_with_scroll"]
+    },
+    "implementation": {"phase_0": ["Design debug UI components"], "phase_1": ["Implement dev-only feature flag gating"]}
+  }
+]
