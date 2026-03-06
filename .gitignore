@@ -83,15 +83,13 @@ CONTINUOUS_*.md
 DOCUMENTATION_*.md
 REMAINING_*.md
 
-# All other markdown files except AGENTS.md, CLAUDE.md, docs/, kitty-specs/, and package READMEs
+# All other markdown files except AGENTS.md, CLAUDE.md, docs/, and package READMEs
 *.md
 !AGENTS.md
 !CLAUDE.md
 !docs/**/*.md
-!kitty-specs/**/*.md
 !clarity-web/README.md
 !intent-cli/README.md
-!spec-kitty/README.md
 
 # Codanna index (binary build artifacts - never commit)
 .codanna/index/
@@ -113,7 +111,6 @@ REMAINING_*.md
 .roo/
 .amazonq/
 .github/copilot/
-.kittify/.dashboard
 
 # Large test binaries (don't track - these are ~34MB each)
 test_crate_root_imports

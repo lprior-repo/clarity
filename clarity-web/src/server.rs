@@ -382,7 +382,7 @@ pub async fn get_ai_provider_status_server() -> Result<AiProviderDiagnostics, Se
   use crate::config::ai::load_ai_config;
   use crate::providers::resolution::resolve_provider_config;
 
-  let config = load_ai_config().map_err(|e| ServerFnError::new("config", e.to_string()))?;
+  let config = load_ai_config().map_err(|e| ServerFnError::new(e.to_string()))?;
   let resolved = resolve_provider_config(&config);
 
   Ok(AiProviderDiagnostics {
