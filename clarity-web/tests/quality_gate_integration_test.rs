@@ -1,11 +1,25 @@
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::float_cmp, clippy::needless_collect, clippy::unnecessary_debug_formatting, clippy::match_same_arms, clippy::option_if_let_else, clippy::suspicious_else_formatting, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro)]
+#![allow(
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::unnecessary_debug_formatting,
+  clippy::match_same_arms,
+  clippy::option_if_let_else,
+  clippy::suspicious_else_formatting,
+  clippy::manual_let_else,
+  clippy::match_wild_err_arm,
+  clippy::match_like_matches_macro,
+  clippy::useless_vec
+)]
 #![forbid(unsafe_code)]
 
 //! Integration tests for quality scoring with Develop phase gate.
 //!
 //! Tests:
 //! - Quality score calculation on answer updates
-//! - `QualityScoreBar` display in both Express and Guided flows
+//! - `QualityReportBar` display in both Express and Guided flows
 //! - Develop phase button disabled when score < `minimum_gate`
 //! - Tooltip on disabled Develop button
 //! - Quality score caching to `lattice_cache` table
@@ -14,9 +28,9 @@
 //! - Debounce with 500ms delay
 
 use clarity_web::components::quality::MINIMUM_GATE;
-use clarity_web::lattice::quality::{
-  calculate_quality, Answer, EarsRequirementRef, InversionControl, QualityScore,
-};
+use clarity_web::domain::quality::{QualityDimension, QualityEvaluator, QualityReport};
+use clarity_web::domain::types::{Answer, EarsRequirementRef, InversionControl};
+use clarity_web::lattice::quality::LatticeQualityEvaluator;
 use clarity_web::storage::types::LatticeCache;
 use clarity_web::types::Answer as TypesAnswer;
 
@@ -57,18 +71,18 @@ fn test_quality_score_calculation_with_answers() {
     },
   ];
 
-  let ears = vec![EarsRequirementRef {
+  let _ears = vec![EarsRequirementRef {
     id: "1".to_string(),
     text: "User shall authenticate".to_string(),
     has_acceptance_criteria: true,
   }];
 
-  let inversion = InversionControl {
+  let _inversion = InversionControl {
     has_inversion_tests: false,
     inverted_count: 0,
   };
 
-  let result = calculate_quality(&answers, &ears, &inversion);
+  let result = LatticeQualityEvaluator.evaluate(&answers);
 
   assert!(result.is_ok());
 
@@ -77,15 +91,14 @@ fn test_quality_score_calculation_with_answers() {
   assert_eq!(score.dimensions.len(), 5);
 
   // Completeness should be 100% (all required fields)
-  let completeness =
-    score.get_dimension(clarity_web::lattice::quality::QualityDimension::Completeness);
+  let completeness = score.get_dimension(QualityDimension::Completeness);
   assert!(completeness.is_some());
   if let Some(c) = completeness {
     assert_eq!(c.score, 100);
   }
 
   // Overall should be calculated
-  assert!(score.overall <= 100);
+  assert!(score.overall_score <= 100);
 }
 
 #[test]
@@ -97,21 +110,21 @@ fn test_quality_score_below_gate_disables_develop() {
     timestamp: chrono::Utc::now().to_rfc3339(),
   }];
 
-  let ears = vec![];
+  let _ears: Vec<EarsRequirementRef> = vec![];
 
-  let inversion = InversionControl {
+  let _inversion = InversionControl {
     has_inversion_tests: false,
     inverted_count: 0,
   };
 
-  let result = calculate_quality(&answers, &ears, &inversion);
+  let result = LatticeQualityEvaluator.evaluate(&answers);
 
   assert!(result.is_ok());
 
   let score = result.unwrap();
   // Score should be below minimum gate
-  assert!(!score.passes(MINIMUM_GATE));
-  assert!(score.overall < MINIMUM_GATE);
+  assert!(!score.overall_score >= (MINIMUM_GATE));
+  assert!(score.overall_score < MINIMUM_GATE);
 }
 
 #[test]
@@ -147,7 +160,7 @@ fn test_quality_score_above_gate_enables_develop() {
     },
   ];
 
-  let ears = vec![
+  let _ears = vec![
     EarsRequirementRef {
       id: "1".to_string(),
       text: "The system shall authenticate users with password and MFA".to_string(),
@@ -160,25 +173,24 @@ fn test_quality_score_above_gate_enables_develop() {
     },
   ];
 
-  let inversion = InversionControl {
+  let _inversion = InversionControl {
     has_inversion_tests: true,
     inverted_count: 2,
   };
 
-  let result = calculate_quality(&answers, &ears, &inversion);
+  let result = LatticeQualityEvaluator.evaluate(&answers);
 
   assert!(result.is_ok());
 
   let score = result.unwrap();
   // With high completeness, testability, and security, should pass gate
-  let completeness =
-    score.get_dimension(clarity_web::lattice::quality::QualityDimension::Completeness);
+  let completeness = score.get_dimension(QualityDimension::Completeness);
   if let Some(c) = completeness {
     assert_eq!(c.score, 100);
   }
 
   // Overall should be at or above gate
-  assert!(score.overall >= 70);
+  assert!(score.overall_score >= 70);
 }
 
 #[test]
@@ -191,13 +203,13 @@ fn test_quality_score_serialization_for_cache() {
     timestamp: Utc::now().to_rfc3339(),
   }];
 
-  let ears = vec![];
-  let inversion = InversionControl {
+  let _ears: Vec<EarsRequirementRef> = vec![];
+  let _inversion = InversionControl {
     has_inversion_tests: false,
     inverted_count: 0,
   };
 
-  let result = calculate_quality(&answers, &ears, &inversion);
+  let result = LatticeQualityEvaluator.evaluate(&answers);
 
   assert!(result.is_ok());
 
@@ -207,11 +219,11 @@ fn test_quality_score_serialization_for_cache() {
   assert!(json.is_ok());
 
   // Should deserialize back correctly
-  let deserialized: Result<QualityScore, _> = serde_json::from_str(&json.unwrap());
+  let deserialized: Result<QualityReport, _> = serde_json::from_str(&json.unwrap());
   assert!(deserialized.is_ok());
 
   let deser_score = deserialized.unwrap();
-  assert_eq!(deser_score.overall, score.overall);
+  assert_eq!(deser_score.overall_score, score.overall_score);
   assert_eq!(deser_score.dimensions.len(), score.dimensions.len());
 }
 
@@ -225,13 +237,13 @@ fn test_lattice_cache_for_quality_score() {
     timestamp: Utc::now().to_rfc3339(),
   }];
 
-  let ears = vec![];
-  let inversion = InversionControl {
+  let _ears: Vec<EarsRequirementRef> = vec![];
+  let _inversion = InversionControl {
     has_inversion_tests: false,
     inverted_count: 0,
   };
 
-  let result = calculate_quality(&answers, &ears, &inversion);
+  let result = LatticeQualityEvaluator.evaluate(&answers);
 
   assert!(result.is_ok());
 
@@ -263,7 +275,7 @@ fn test_ears_requirements_integration() {
   let result = parse_requirements(requirements_text);
 
   // Convert to quality module format
-  let ears_refs: Vec<EarsRequirementRef> = result
+  let _ears_refs: Vec<EarsRequirementRef> = result
     .requirements
     .iter()
     .enumerate()
@@ -281,12 +293,12 @@ fn test_ears_requirements_integration() {
     timestamp: chrono::Utc::now().to_rfc3339(),
   }];
 
-  let inversion = InversionControl {
+  let _inversion = InversionControl {
     has_inversion_tests: false,
     inverted_count: 0,
   };
 
-  let quality_result = calculate_quality(&answers, &ears_refs, &inversion);
+  let quality_result = LatticeQualityEvaluator.evaluate(&answers);
   assert!(quality_result.is_ok());
 }
 
@@ -304,7 +316,7 @@ fn test_inversion_integration() {
   assert!(!inversion_output.challenges.is_empty());
 
   // Inversion control should reflect this
-  let inversion_control = InversionControl {
+  let _inversion_control = InversionControl {
     has_inversion_tests: !inversion_output.challenges.is_empty(),
     inverted_count: inversion_output.challenges.len(),
   };
@@ -316,8 +328,8 @@ fn test_inversion_integration() {
     timestamp: chrono::Utc::now().to_rfc3339(),
   }];
 
-  let ears = vec![];
-  let quality_result = calculate_quality(&answers, &ears, &inversion_control);
+  let _ears: Vec<EarsRequirementRef> = vec![];
+  let quality_result = LatticeQualityEvaluator.evaluate(&answers);
   assert!(quality_result.is_ok());
 }
 
@@ -332,7 +344,6 @@ fn test_debounce_delay_constant() {
 #[test]
 fn test_quality_score_dimensions_all_present() {
   use chrono::Utc;
-  use clarity_web::lattice::quality::QualityDimension;
 
   let answers = vec![Answer {
     step_id: "user_goal".to_string(),
@@ -340,13 +351,13 @@ fn test_quality_score_dimensions_all_present() {
     timestamp: Utc::now().to_rfc3339(),
   }];
 
-  let ears = vec![];
-  let inversion = InversionControl {
+  let _ears: Vec<EarsRequirementRef> = vec![];
+  let _inversion = InversionControl {
     has_inversion_tests: false,
     inverted_count: 0,
   };
 
-  let result = calculate_quality(&answers, &ears, &inversion);
+  let result = LatticeQualityEvaluator.evaluate(&answers);
 
   assert!(result.is_ok());
 
@@ -363,17 +374,16 @@ fn test_quality_score_dimensions_all_present() {
 #[test]
 fn test_quality_issues_explain_gate_failure() {
   use chrono::Utc;
-  use clarity_web::lattice::quality::QualityDimension;
 
   let answers = vec![]; // Empty answers = low score
 
-  let ears = vec![];
-  let inversion = InversionControl {
+  let _ears: Vec<EarsRequirementRef> = vec![];
+  let _inversion = InversionControl {
     has_inversion_tests: false,
     inverted_count: 0,
   };
 
-  let result = calculate_quality(&answers, &ears, &inversion);
+  let result = LatticeQualityEvaluator.evaluate(&answers);
 
   // Should fail with empty answers
   assert!(result.is_err());
@@ -385,7 +395,7 @@ fn test_quality_issues_explain_gate_failure() {
     timestamp: Utc::now().to_rfc3339(),
   }];
 
-  let result = calculate_quality(&minimal_answers, &ears, &inversion);
+  let result = LatticeQualityEvaluator.evaluate(&minimal_answers);
   assert!(result.is_ok());
 
   let score = result.unwrap();
@@ -432,18 +442,18 @@ fn test_quality_score_passed_to_develop_phase() {
     },
   ];
 
-  let ears = vec![EarsRequirementRef {
+  let _ears = vec![EarsRequirementRef {
     id: "1".to_string(),
     text: "User shall authenticate".to_string(),
     has_acceptance_criteria: true,
   }];
 
-  let inversion = InversionControl {
+  let _inversion = InversionControl {
     has_inversion_tests: true,
     inverted_count: 2,
   };
 
-  let result = calculate_quality(&discover_answers, &ears, &inversion);
+  let result = LatticeQualityEvaluator.evaluate(&discover_answers);
 
   assert!(result.is_ok());
 
@@ -459,11 +469,11 @@ fn test_quality_score_passed_to_develop_phase() {
   assert!(!cache.output_data.is_empty());
 
   // Verify it can be deserialized back
-  let restored: Result<QualityScore, _> = serde_json::from_str(&cache.output_data);
+  let restored: Result<QualityReport, _> = serde_json::from_str(&cache.output_data);
   assert!(restored.is_ok());
 
   let restored_score = restored.unwrap();
-  assert_eq!(restored_score.overall, score.overall);
+  assert_eq!(restored_score.overall_score, score.overall_score);
 }
 
 // ============================================
@@ -502,25 +512,27 @@ fn test_e2e_quality_gate_unlocks_develop() {
     })
     .collect();
 
-  let ears = vec![];
-  let inversion = InversionControl {
+  let _ears: Vec<EarsRequirementRef> = vec![];
+  let _inversion = InversionControl {
     has_inversion_tests: false,
     inverted_count: 0,
   };
 
-  let minimal_score = calculate_quality(&quality_answers_minimal, &ears, &inversion).unwrap();
+  let minimal_score = LatticeQualityEvaluator
+    .evaluate(&quality_answers_minimal)
+    .unwrap();
 
   // Step 2: Verify quality bar shows red/yellow score
   assert!(
-    minimal_score.overall < 50,
+    minimal_score.overall_score < 50,
     "Minimal quality should be in red zone (< 50), got {}",
-    minimal_score.overall
+    minimal_score.overall_score
   );
 
   // Step 3: Verify Develop tab is disabled (Discover complete but quality low)
   // Note: is_phase_done is not exported from pages module in tests context
   // The actual check would be in the UI based on answer completion
-  let quality_passes = minimal_score.passes(MINIMUM_GATE);
+  let quality_passes = minimal_score.overall_score >= (MINIMUM_GATE);
 
   assert!(
     !quality_passes,
@@ -563,30 +575,31 @@ fn test_e2e_quality_gate_unlocks_develop() {
     })
     .collect();
 
-  let improved_ears = vec![EarsRequirementRef {
+  let _improved_ears = vec![EarsRequirementRef {
     id: "1".to_string(),
     text: "User shall authenticate with username and password".to_string(),
     has_acceptance_criteria: true,
   }];
 
-  let improved_score =
-    calculate_quality(&quality_answers_improved, &improved_ears, &inversion).unwrap();
+  let improved_score = LatticeQualityEvaluator
+    .evaluate(&quality_answers_improved)
+    .unwrap();
 
   // Step 5: Verify quality score increases to >= 70
   assert!(
-    improved_score.overall >= MINIMUM_GATE,
+    improved_score.overall_score >= MINIMUM_GATE,
     "Improved quality should pass gate (>= 70), got {}",
-    improved_score.overall
+    improved_score.overall_score
   );
 
   // Step 6: Verify quality bar turns green
   assert!(
-    improved_score.overall >= 70,
+    improved_score.overall_score >= 70,
     "Score should be in green zone (>= 70)"
   );
 
   // Step 7: Verify Develop tab becomes enabled
-  let improved_quality_passes = improved_score.passes(MINIMUM_GATE);
+  let improved_quality_passes = improved_score.overall_score >= (MINIMUM_GATE);
   assert!(
     improved_quality_passes,
     "Develop phase should be enabled with quality >= 70"
@@ -604,20 +617,12 @@ fn test_e2e_quality_bar_color_progression() {
     timestamp: chrono::Utc::now().to_rfc3339(),
   }];
 
-  let red_score = calculate_quality(
-    &red_answers,
-    &[],
-    &InversionControl {
-      has_inversion_tests: false,
-      inverted_count: 0,
-    },
-  )
-  .unwrap();
+  let red_score = LatticeQualityEvaluator.evaluate(&red_answers).unwrap();
 
   assert!(
-    red_score.overall < 50,
+    red_score.overall_score < 50,
     "Red zone score should be < 50, got {}",
-    red_score.overall
+    red_score.overall_score
   );
 
   // Yellow zone: 50-69
@@ -639,20 +644,12 @@ fn test_e2e_quality_bar_color_progression() {
     },
   ];
 
-  let yellow_score = calculate_quality(
-    &yellow_answers,
-    &[],
-    &InversionControl {
-      has_inversion_tests: false,
-      inverted_count: 0,
-    },
-  )
-  .unwrap();
+  let yellow_score = LatticeQualityEvaluator.evaluate(&yellow_answers).unwrap();
 
   assert!(
-    (50..=69).contains(&yellow_score.overall),
+    (50..=69).contains(&yellow_score.overall_score),
     "Yellow zone score should be 50-69, got {}",
-    yellow_score.overall
+    yellow_score.overall_score
   );
 
   // Green zone: 70+
@@ -684,26 +681,18 @@ fn test_e2e_quality_bar_color_progression() {
     },
   ];
 
-  let green_ears = vec![EarsRequirementRef {
+  let _green_ears = vec![EarsRequirementRef {
     id: "1".to_string(),
     text: "User shall authenticate".to_string(),
     has_acceptance_criteria: true,
   }];
 
-  let green_score = calculate_quality(
-    &green_answers,
-    &green_ears,
-    &InversionControl {
-      has_inversion_tests: false,
-      inverted_count: 0,
-    },
-  )
-  .unwrap();
+  let green_score = LatticeQualityEvaluator.evaluate(&green_answers).unwrap();
 
   assert!(
-    green_score.overall >= 70,
+    green_score.overall_score >= 70,
     "Green zone score should be >= 70, got {}",
-    green_score.overall
+    green_score.overall_score
   );
 }
 
@@ -732,18 +721,10 @@ fn test_e2e_tooltip_explains_quality_gate() {
     })
     .collect();
 
-  let score = calculate_quality(
-    &quality_answers,
-    &[],
-    &InversionControl {
-      has_inversion_tests: false,
-      inverted_count: 0,
-    },
-  )
-  .unwrap();
+  let score = LatticeQualityEvaluator.evaluate(&quality_answers).unwrap();
 
   // Simulate the tooltip message generation from pages.rs
-  let passes_gate = score.passes(MINIMUM_GATE);
+  let passes_gate = score.overall_score >= (MINIMUM_GATE);
 
   let tooltip_message = if passes_gate {
     None
@@ -777,15 +758,7 @@ fn test_e2e_issues_explain_quality_gaps() {
     // Missing: actors, precondition, outcome, acceptance_criteria, security
   ];
 
-  let score = calculate_quality(
-    &answers,
-    &[],
-    &InversionControl {
-      has_inversion_tests: false,
-      inverted_count: 0,
-    },
-  )
-  .unwrap();
+  let score = LatticeQualityEvaluator.evaluate(&answers).unwrap();
 
   // Should have issues explaining gaps
   assert!(
@@ -794,7 +767,6 @@ fn test_e2e_issues_explain_quality_gaps() {
   );
 
   // Check for specific dimension issues
-  use clarity_web::lattice::quality::QualityDimension;
 
   let completeness_issues: Vec<_> = score
     .issues
@@ -839,15 +811,15 @@ fn test_e2e_complete_user_journey() {
     })
     .collect();
 
-  let inversion = InversionControl {
+  let _inversion = InversionControl {
     has_inversion_tests: false,
     inverted_count: 0,
   };
 
   // Check initial state
-  let initial_score = calculate_quality(&quality_answers, &[], &inversion).unwrap();
+  let initial_score = LatticeQualityEvaluator.evaluate(&quality_answers).unwrap();
   assert!(
-    initial_score.overall < MINIMUM_GATE,
+    initial_score.overall_score < MINIMUM_GATE,
     "Initial quality should be below gate"
   );
 
@@ -874,16 +846,16 @@ fn test_e2e_complete_user_journey() {
     })
     .collect();
 
-  let mid_score = calculate_quality(&quality_answers, &[], &inversion).unwrap();
+  let mid_score = LatticeQualityEvaluator.evaluate(&quality_answers).unwrap();
 
   // Quality should improve
   assert!(
-    mid_score.overall > initial_score.overall,
+    mid_score.overall_score > initial_score.overall_score,
     "Adding details should improve score"
   );
 
   // But still might not pass gate
-  if mid_score.overall < MINIMUM_GATE {
+  if mid_score.overall_score < MINIMUM_GATE {
     // User adds acceptance criteria
     answers.push(TypesAnswer {
       step_id: "outcome".to_string(),
@@ -907,17 +879,17 @@ fn test_e2e_complete_user_journey() {
       })
       .collect();
 
-    let ears = vec![EarsRequirementRef {
+    let _ears = vec![EarsRequirementRef {
       id: "1".to_string(),
       text: "User shall authenticate".to_string(),
       has_acceptance_criteria: true,
     }];
 
-    let final_score = calculate_quality(&quality_answers, &ears, &inversion).unwrap();
+    let final_score = LatticeQualityEvaluator.evaluate(&quality_answers).unwrap();
 
     // Should now pass gate
     assert!(
-      final_score.passes(MINIMUM_GATE),
+      final_score.overall_score >= (MINIMUM_GATE),
       "Complete answers should pass quality gate"
     );
   }
@@ -954,18 +926,18 @@ fn test_e2e_quality_score_cached_for_transition() {
     },
   ];
 
-  let ears = vec![EarsRequirementRef {
+  let _ears = vec![EarsRequirementRef {
     id: "1".to_string(),
     text: "User shall authenticate with MFA".to_string(),
     has_acceptance_criteria: true,
   }];
 
-  let inversion = InversionControl {
+  let _inversion = InversionControl {
     has_inversion_tests: true,
     inverted_count: 2,
   };
 
-  let score = calculate_quality(&answers, &ears, &inversion).unwrap();
+  let score = LatticeQualityEvaluator.evaluate(&answers).unwrap();
 
   // Serialize for cache
   let score_json = serde_json::to_string(&score);
@@ -975,13 +947,13 @@ fn test_e2e_quality_score_cached_for_transition() {
   let cache = LatticeCache::with_current_timestamp("discover".to_string(), score_json.unwrap());
 
   // Verify cache can be restored for Develop phase
-  let restored: Result<QualityScore, _> = serde_json::from_str(&cache.output_data);
+  let restored: Result<QualityReport, _> = serde_json::from_str(&cache.output_data);
   assert!(restored.is_ok());
 
   let restored_score = restored.unwrap();
-  assert_eq!(restored_score.overall, score.overall);
+  assert_eq!(restored_score.overall_score, score.overall_score);
   assert!(
-    restored_score.passes(MINIMUM_GATE),
+    restored_score.overall_score >= (MINIMUM_GATE),
     "Cached score should pass gate for Develop transition"
   );
 }

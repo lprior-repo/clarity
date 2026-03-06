@@ -12,7 +12,7 @@
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
-use crate::lattice::quality::{IssueSeverity, QualityScore};
+use crate::domain::quality::{DimensionScore, IssueSeverity, QualityIssue, QualityReport};
 use dioxus::prelude::*;
 
 /// Minimum gate threshold for quality score
@@ -22,7 +22,7 @@ pub const MINIMUM_GATE: u8 = 70;
 #[derive(Clone, Debug, PartialEq, Eq, Props)]
 pub struct QualityScoreBarProps {
   /// Current quality score
-  pub score: Signal<Option<QualityScore>>,
+  pub score: Signal<Option<QualityReport>>,
   /// Minimum gate threshold
   pub minimum_gate: u8,
   /// Whether to show detailed issues
@@ -49,8 +49,8 @@ pub fn QualityScoreBar(props: QualityScoreBarProps) -> Element {
     || (0u8, false, Vec::new(), Vec::new()),
     |s| {
       (
-        s.overall,
-        s.passes(minimum_gate),
+        s.overall_score,
+        s.overall_score >= minimum_gate,
         s.dimensions.clone(),
         s.issues.clone(),
       )
@@ -413,7 +413,7 @@ const fn get_score_bar_color_class(score: u8) -> &'static str {
 )]
 mod tests {
   use super::*;
-  use crate::lattice::quality::{DimensionScore, IssueSeverity, QualityIssue};
+  use crate::domain::quality::{DimensionScore, IssueSeverity, QualityIssue};
 
   #[test]
   fn test_get_score_color_class() {

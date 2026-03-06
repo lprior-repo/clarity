@@ -14,6 +14,8 @@
 pub mod error;
 pub mod quality;
 pub mod types;
+pub mod validator;
 
 pub use error::ClarityError;
-pub use types::{Answer, Behavior, Feature, Spec};
+pub use types::{Answer, Behavior, EarsRequirementRef, Feature, InversionControl, Spec};
+pub use validator::SchemaValidator;

@@ -49,4 +49,4 @@ pub use quality::*;
 /// - Testability: Acceptance criteria present
 /// - Clarity: Minimal jargon and complexity
 /// - Security: Auth/encryption/validation considered
-pub type LatticeInvariants = quality::QualityScore;
+pub type LatticeInvariants = crate::domain::quality::QualityReport;

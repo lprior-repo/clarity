@@ -19,7 +19,7 @@ use clarity_web::app::pages::is_phase_done;
 use clarity_web::components::quality::MINIMUM_GATE;
 use clarity_web::lattice::quality::{
   calculate_quality, Answer, DimensionScore, EarsRequirementRef, InversionControl,
-  QualityDimension, QualityIssue, QualityScore,
+  QualityDimension, QualityIssue, QualityReport,
 };
 use clarity_web::types::Answer as AppAnswer;
 
@@ -58,7 +58,7 @@ fn create_test_ears(with_acceptance_criteria: bool) -> Vec<EarsRequirementRef> {
 }
 
 /// Test helper: Check if phase button should be disabled based on quality
-fn should_disable_develop(answers: &[AppAnswer], quality_score: &Option<QualityScore>) -> bool {
+fn should_disable_develop(answers: &[AppAnswer], quality_score: &Option<QualityReport>) -> bool {
   // Check if Discover phase is complete
   let discover_complete = is_phase_done("discover", answers);
 
@@ -610,7 +610,7 @@ fn test_minimum_gate_constant() {
   assert_eq!(MINIMUM_GATE, 70, "Minimum gate should be 70");
 
   // Create score exactly at threshold
-  let threshold_score = QualityScore::new(MINIMUM_GATE, vec![], vec![]);
+  let threshold_score = clarity_web::domain::quality::QualityReport { overall_score: MINIMUM_GATE, dimensions: vec![], issues: vec![] };
   assert!(threshold_score.is_ok());
 
   let score = threshold_score.unwrap();
@@ -622,7 +622,7 @@ fn test_minimum_gate_constant() {
   );
 
   // Create score just below threshold
-  let below_threshold = QualityScore::new(MINIMUM_GATE - 1, vec![], vec![]);
+  let below_threshold = clarity_web::domain::quality::QualityReport { overall_score: MINIMUM_GATE - 1, dimensions: vec![], issues: vec![] };
   assert!(below_threshold.is_ok());
 
   let below = below_threshold.unwrap();

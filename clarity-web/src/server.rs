@@ -47,9 +47,12 @@ use crate::components::discover::types::{HolePunchingResults, ScenarioField};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::config::ai::load_ai_config;
 #[cfg(feature = "server")]
-use crate::lattice::quality::{calculate_quality, InversionControl, QualityError};
+use crate::domain::error::ClarityError;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::lattice::quality::{Answer as QualityAnswer, EarsRequirementRef, QualityScore};
+use crate::domain::quality::QualityReport;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::domain::{Answer as QualityAnswer, EarsRequirementRef};
+#[cfg(not(target_arch = "wasm32"))]
 #[cfg(not(target_arch = "wasm32"))]
 use crate::providers::OpenCodeProvider;
 #[cfg(not(target_arch = "wasm32"))]
@@ -532,7 +535,7 @@ pub async fn suggest_field_server(
 /// * `session_id` - Optional session identifier for rate limiting
 ///
 /// # Returns
-/// * `Ok(QualityScore)` - Quality assessment with dimensions and issues
+/// * `Ok(QualityReport)` - Quality assessment with dimensions and issues
 /// * `Err(ServerFnError)` - Calculation failed
 #[cfg(not(target_arch = "wasm32"))]
 #[server]
@@ -540,7 +543,7 @@ pub async fn calculate_quality_server(
   answers: Vec<QualityAnswer>,
   ears: Option<Vec<EarsRequirementRef>>,
   session_id: Option<String>,
-) -> Result<QualityScore, ServerFnError> {
+) -> Result<QualityReport, ServerFnError> {
   let session = session_id.as_deref().unwrap_or("default");
 
   // Rate limit quality calculations (they're lightweight but we track them)
@@ -571,27 +574,16 @@ pub async fn calculate_quality_server(
     )));
   }
 
-  // Default to empty EARS if none provided
-  let ears_ref = ears.as_ref().map_or_else(Vec::new, |e| e.clone());
-
-  // Inversion control defaults (will be enhanced in future)
-  let inversion = InversionControl {
-    has_inversion_tests: false,
-    inverted_count: 0,
-  };
-
   // Calculate quality
-  let result = calculate_quality(&answers, &ears_ref, &inversion).map_err(|e| match e {
-    QualityError::EmptyAnswers => ServerFnError::new(anyhow::anyhow!("No answers provided")),
-    QualityError::InvalidScore(msg) => ServerFnError::new(anyhow::anyhow!("Invalid score: {msg}")),
-    QualityError::DimensionFailed(msg) => {
-      ServerFnError::new(anyhow::anyhow!("Dimension failed: {msg}"))
-    }
+  let evaluator = LatticeQualityEvaluator;
+  let result = evaluator.evaluate(&answers).map_err(|e| match e {
+    ClarityError::Analysis(msg) => ServerFnError::new(anyhow::anyhow!("Analysis failed: {msg}")),
+    _ => ServerFnError::new(anyhow::anyhow!("Quality calculation failed: {e}")),
   })?;
 
   info!(
     session,
-    overall = result.overall,
+    overall = result.overall_score,
     dimension_count = result.dimensions.len(),
     issue_count = result.issues.len(),
     "calculate_quality_server: Quality calculated"
@@ -1873,10 +1865,10 @@ mod integration_tests {
   /// Test quality score serialization
   #[test]
   fn test_quality_score_serialization() {
-    use crate::lattice::quality::{DimensionScore, QualityDimension};
+    use crate::domain::quality::{DimensionScore, QualityDimension, QualityReport};
 
-    let score = QualityScore {
-      overall: 85,
+    let score = QualityReport {
+      overall_score: 85,
       dimensions: vec![DimensionScore {
         dimension: QualityDimension::Completeness,
         score: 90,
@@ -1885,9 +1877,9 @@ mod integration_tests {
     };
 
     let serialized = serde_json::to_string(&score).unwrap();
-    let deserialized: QualityScore = serde_json::from_str(&serialized).unwrap();
+    let deserialized: QualityReport = serde_json::from_str(&serialized).unwrap();
 
-    assert_eq!(deserialized.overall, 85);
+    assert_eq!(deserialized.overall_score, 85);
     assert_eq!(deserialized.dimensions.len(), 1);
     assert_eq!(deserialized.dimensions[0].score, 90);
   }
@@ -1950,7 +1942,7 @@ mod integration_tests {
   /// Test inversion control serialization
   #[test]
   fn test_inversion_control_serialization() {
-    use crate::lattice::quality::InversionControl;
+    use crate::domain::types::InversionControl;
 
     let inversion = InversionControl {
       has_inversion_tests: true,

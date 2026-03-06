@@ -11,6 +11,7 @@
 mod tests {
   use chrono::Utc;
   use clarity_web::components::discover::{Confidence, FieldData};
+  use clarity_web::domain::types::Answer;
   use clarity_web::providers::{
     ExtractedFields, ExtractionContext, ExtractionError, ExtractionMetadata, ExtractionProvider,
     FieldExtraction, FieldType, SchemaField,
@@ -299,7 +300,8 @@ mod tests {
 
   #[test]
   fn test_quality_score_updates() {
-    use clarity_web::lattice::quality::{calculate_quality, Answer, InversionControl};
+    use clarity_web::domain::quality::QualityEvaluator;
+    use clarity_web::lattice::quality::LatticeQualityEvaluator;
 
     let answers = vec![
       Answer {
@@ -314,16 +316,13 @@ mod tests {
       },
     ];
 
-    let ears = vec![];
-    let inversion = InversionControl {
-      has_inversion_tests: false,
-      inverted_count: 0,
-    };
+    let _ears: Vec<clarity_web::domain::types::EarsRequirementRef> = vec![];
 
-    let result = calculate_quality(&answers, &ears, &inversion);
+    let result = LatticeQualityEvaluator.evaluate(&answers);
+    assert!(result.is_ok());
     assert!(result.is_ok());
     if let Ok(score) = result {
-      assert!(score.overall <= 100);
+      assert!(score.overall_score <= 100);
       assert!(!score.dimensions.is_empty());
     }
   }
@@ -521,7 +520,8 @@ mod tests {
   //     assert!(all_locked);
   //
   //     // Step 8: Quality score updates
-  //     use clarity_web::lattice::quality::{calculate_quality, Answer, InversionControl};
+  //     use clarity_web::lattice::quality::LatticeQualityEvaluator;
+
   //
   //     let quality_answers: Vec<Answer> = field_states
   //         .iter()
@@ -532,8 +532,8 @@ mod tests {
   //         })
   //         .collect();
   //
-  //     let ears = vec![];
-  //     let inversion = InversionControl { has_inversion_tests: false, inverted_count: 0 };
+  //     let _ears: Vec<clarity_web::domain::types::EarsRequirementRef> = vec![];
+  //     let _inversion = InversionControl { has_inversion_tests: false, inverted_count: 0 };
   //
   //     let quality_result = calculate_quality(&quality_answers, &ears, &inversion);
   //     assert!(quality_result.is_ok());

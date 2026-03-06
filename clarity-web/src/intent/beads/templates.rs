@@ -929,9 +929,9 @@ const fn estimate_effort_from_priority(priority: u8) -> u8 {
   match priority {
     1 => 5, // High priority = more effort
     2 => 4,
-    3 => 3,
     4 => 2,
-    _ => 1, // Low priority = less effort
+    5 => 1,
+    _ => 3, // Priority 3 and invalid defaults to 3
   }
 }
 

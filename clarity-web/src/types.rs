@@ -63,10 +63,4 @@ pub const TABS: &[TabDef] = &[
   },
 ];
 
-/// User answer to a prompt step
-#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct Answer {
-  pub step_id: String,
-  pub value: String,
-  pub timestamp: String,
-}
+pub use crate::domain::Answer;

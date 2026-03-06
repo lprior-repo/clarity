@@ -3,7 +3,6 @@
 #![warn(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![allow(
-  clippy::result_large_err,
   clippy::manual_let_else,
   clippy::match_wild_err_arm,
   clippy::match_like_matches_macro
@@ -48,8 +47,8 @@ impl RedbTranscriptStore {
   /// # Errors
   ///
   /// Returns `redb::Error` if the database cannot be created or opened.
-  pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, redb::Error> {
-    let db = redb::Database::create(path.as_ref())?;
+  pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, crate::storage::path_util::StorageError> {
+    let db = redb::Database::create(path.as_ref()).map_err(crate::storage::path_util::StorageError::from)?;
     Ok(Self { db: Arc::new(db) })
   }
 
@@ -58,7 +57,7 @@ impl RedbTranscriptStore {
   /// # Errors
   ///
   /// Returns `redb::Error` if the in-memory database cannot be created.
-  pub fn open_in_memory() -> Result<Self, redb::Error> {
+  pub fn open_in_memory() -> Result<Self, crate::storage::path_util::StorageError> {
     let db =
       redb::Database::builder().create_with_backend(redb::backends::InMemoryBackend::new())?;
     Ok(Self { db: Arc::new(db) })

@@ -12,10 +12,10 @@ use dioxus::prelude::*;
 use crate::components::quality::{QualityScoreBar, MINIMUM_GATE};
 use crate::components::{ArtifactPanel, GraphVisualizer, PlanningCoach, StateMachine};
 // use crate::hooks::{use_quality_score, use_cached_quality_score};
-use crate::lattice::quality::{
-  calculate_quality, EarsRequirementRef, InversionControl, QualityScore,
-};
-use crate::types::{get_steps_for_phase, prompt_steps, Answer, RightTab, PHASES, TABS};
+use crate::domain::quality::{QualityEvaluator, QualityReport};
+use crate::domain::{Answer, EarsRequirementRef};
+use crate::lattice::quality::LatticeQualityEvaluator;
+use crate::types::{get_steps_for_phase, prompt_steps, RightTab, PHASES, TABS};
 
 /// Check if a phase is complete based on answers
 fn is_phase_done(phase_key: &str, answers: &[Answer]) -> bool {
@@ -247,32 +247,26 @@ pub fn HomePage() -> Element {
   let right_tab = use_signal(|| RightTab::Plan);
 
   // EARS requirements (empty for now - will be populated by lattice processing)
-  let ears_requirements = use_signal(Vec::<EarsRequirementRef>::new);
+  let _ears_requirements = use_signal(Vec::<EarsRequirementRef>::new);
 
   // Quality scoring - manual implementation to avoid type inference issues
-  let quality_score = use_signal(|| Option::<QualityScore>::None);
+  let quality_score = use_signal(|| Option::<QualityReport>::None);
 
   // Recalculate quality score when answers change
   use_effect({
     let _answers_clone = answers.read().clone();
-    let _ears_clone = ears_requirements.read().clone();
 
     let mut quality_score = quality_score;
     move || {
       let answers_clone = answers.read().clone();
-      let ears_clone = ears_requirements.read().clone();
 
       if answers_clone.is_empty() {
         *quality_score.write() = None;
         return;
       }
 
-      let inversion = InversionControl {
-        has_inversion_tests: false,
-        inverted_count: 0,
-      };
-
-      let result = calculate_quality(&answers_clone, &ears_clone, &inversion);
+      let evaluator = LatticeQualityEvaluator;
+      let result = evaluator.evaluate(&answers_clone);
       match result {
         Ok(score) => quality_score.set(Some(score)),
         Err(_) => quality_score.set(None),
@@ -294,11 +288,11 @@ pub fn HomePage() -> Element {
     .count();
 
   // Check if quality gate is passed
-  let quality_score_ref: &Signal<Option<crate::lattice::quality::QualityScore>> = &quality_score;
+  let quality_score_ref: &Signal<Option<QualityReport>> = &quality_score;
   let score_read = quality_score_ref.read();
   let passes_gate: bool = score_read
     .as_ref()
-    .is_some_and(|s: &crate::lattice::quality::QualityScore| s.passes(MINIMUM_GATE));
+    .is_some_and(|s: &QualityReport| s.overall_score >= MINIMUM_GATE);
   drop(score_read);
 
   // Pre-calculate phase states
@@ -367,7 +361,7 @@ pub fn HomePage() -> Element {
   let show_quality_details = use_signal(|| false);
 
   // Get overall score for header display
-  let overall_score: Option<u8> = quality_score.read().as_ref().map(|s| s.overall);
+  let overall_score: Option<u8> = quality_score.read().as_ref().map(|s| s.overall_score);
 
   // Calculate quality badge color class
   let quality_badge_class: &'static str = overall_score.map_or("", |score| {

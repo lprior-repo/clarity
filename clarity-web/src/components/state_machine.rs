@@ -10,12 +10,13 @@
 
 use dioxus::prelude::*;
 
-use crate::lattice::ears::parse_requirements;
-use crate::lattice::quality::{
-  calculate_quality, DimensionScore, EarsRequirementRef, InversionControl, QualityDimension,
-  QualityIssue, QualityScore,
+use crate::domain::quality::{
+  DimensionScore, IssueSeverity, QualityDimension, QualityEvaluator, QualityIssue, QualityReport,
 };
-use crate::types::{get_steps_for_phase, prompt_steps, Answer, PromptStep};
+use crate::domain::types::{Answer, EarsRequirementRef};
+use crate::lattice::ears::parse_requirements;
+use crate::lattice::quality::LatticeQualityEvaluator;
+use crate::types::{get_steps_for_phase, prompt_steps, PromptStep};
 
 const PHASES: &[&str] = &["discover", "define", "develop", "deliver"];
 
@@ -411,28 +412,13 @@ fn build_ears_requirements(answers: &[Answer]) -> Vec<EarsRequirementRef> {
 }
 
 /// Calculate quality invariants from answers
-fn build_quality_invariants(answers: &[Answer]) -> Option<QualityScore> {
+fn build_quality_invariants(answers: &[Answer]) -> Option<QualityReport> {
   if answers.is_empty() {
     return None;
   }
 
-  let ears_requirements = build_ears_requirements(answers);
-  let inversion = InversionControl {
-    has_inversion_tests: false,
-    inverted_count: 0,
-  };
-
-  // Convert Answer types to quality module's Answer type
-  let quality_answers: Vec<crate::lattice::quality::Answer> = answers
-    .iter()
-    .map(|a| crate::lattice::quality::Answer {
-      step_id: a.step_id.clone(),
-      value: a.value.clone(),
-      timestamp: a.timestamp.clone(),
-    })
-    .collect();
-
-  calculate_quality(&quality_answers, &ears_requirements, &inversion).ok()
+  let evaluator = LatticeQualityEvaluator;
+  evaluator.evaluate(&answers.to_vec()).ok()
 }
 
 /// KIRK invariant display card
@@ -479,11 +465,11 @@ fn InvariantCard(
                               fill: "none",
                                class: format!(
                                    "shrink-0 mt-0.5 {}",
-                                   match issue.severity {
-                                       crate::lattice::quality::IssueSeverity::Critical
-                                       | crate::lattice::quality::IssueSeverity::Error => "text-chart-4",
-                                       crate::lattice::quality::IssueSeverity::Warning => "text-chart-3",
-                                   }
+                                    match issue.severity {
+                                        IssueSeverity::Critical
+                                        | IssueSeverity::Error => "text-chart-4",
+                                        IssueSeverity::Warning => "text-chart-3",
+                                    }
                                ),
                               path {
                                   d: "M6 1C3.2 1 1 3.2 1 6C1 8.8 3.2 11 6 11C8.8 11 11 8.8 11 6C11 3.2 8.8 1 6 1ZM6 8.5C5.4 8.5 5 8.1 5 7.5C5 6.9 5.4 6.5 6 6.5C6.6 6.5 7 6.9 7 7.5C7 8.1 6.6 8.5 6 8.5ZM6 5.5C5.4 5.5 5 5.1 5 4.5V3C5 2.4 5.4 2 6 2C6.6 2 7 2.4 7 3V4.5C7 5.1 6.6 5.5 6 5.5Z",
@@ -519,7 +505,7 @@ pub fn StateMachine(answers: Signal<Vec<Answer>>, active_phase: Signal<String>) 
 
   // Build invariants section
   let invariants_section = quality_invariants.as_ref().map(|score| {
-      let overall_score = score.overall;
+      let overall_score = score.overall_score;
       let issues = &score.issues;
 
       let invariant_cards: Vec<Element> = QualityDimension::all()

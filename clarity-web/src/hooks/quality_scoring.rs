@@ -11,9 +11,9 @@
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
-use crate::lattice::quality::{
-  calculate_quality, Answer, EarsRequirementRef, InversionControl, QualityScore,
-};
+use crate::domain::quality::{QualityEvaluator, QualityReport};
+use crate::domain::{Answer, EarsRequirementRef};
+use crate::lattice::quality::LatticeQualityEvaluator;
 use crate::storage::types::LatticeCache;
 use dioxus::prelude::*;
 
@@ -34,15 +34,14 @@ const DEBOUNCE_MS: u64 = 500;
 #[must_use]
 pub fn use_quality_score(
   answers: Signal<Vec<Answer>>,
-  ears_requirements: Signal<Vec<EarsRequirementRef>>,
-) -> (Signal<Option<QualityScore>>, Signal<bool>) {
+  _ears_requirements: Signal<Vec<EarsRequirementRef>>,
+) -> (Signal<Option<QualityReport>>, Signal<bool>) {
   let mut quality_score = use_signal(|| None);
   let mut is_calculating = use_signal(|| false);
 
   // Use effect to recalculate when answers or EARS change
   use_effect(move || {
     let answers_clone = answers.read().clone();
-    let ears_clone = ears_requirements.read().clone();
 
     // Check if we have data to calculate
     let has_data = !answers_clone.is_empty();
@@ -57,12 +56,8 @@ pub fn use_quality_score(
     *is_calculating.write() = true;
 
     // Calculate quality score synchronously
-    let inversion = InversionControl {
-      has_inversion_tests: false,
-      inverted_count: 0,
-    };
-
-    let result = calculate_quality(&answers_clone, &ears_clone, &inversion);
+    let evaluator = LatticeQualityEvaluator;
+    let result = evaluator.evaluate(&answers_clone);
 
     // Update score
     match result {
@@ -88,7 +83,7 @@ pub fn use_quality_score(
 /// - Handles serialization/deserialization
 pub fn use_cached_quality_score(
   phase: Signal<String>,
-  quality_score: Signal<Option<QualityScore>>,
+  quality_score: Signal<Option<QualityReport>>,
 ) {
   // Load cached score on mount
   use_effect(move || {
@@ -140,13 +135,8 @@ mod tests {
   #[test]
   fn test_calculate_score_with_empty_answers() {
     let answers = vec![];
-    let ears = vec![];
-    let inversion = InversionControl {
-      has_inversion_tests: false,
-      inverted_count: 0,
-    };
-
-    let result = calculate_quality(&answers, &ears, &inversion);
+    let evaluator = LatticeQualityEvaluator;
+    let result = evaluator.evaluate(&answers);
     assert!(result.is_err());
   }
 
@@ -167,25 +157,15 @@ mod tests {
       },
     ];
 
-    let ears = vec![EarsRequirementRef {
-      id: "1".to_string(),
-      text: "User shall authenticate".to_string(),
-      has_acceptance_criteria: true,
-    }];
-
-    let inversion = InversionControl {
-      has_inversion_tests: false,
-      inverted_count: 0,
-    };
-
-    let result = calculate_quality(&answers, &ears, &inversion);
+    let evaluator = LatticeQualityEvaluator;
+    let result = evaluator.evaluate(&answers);
     assert!(result.is_ok());
 
     if let Ok(score) = result {
       // Should have dimensions
       assert!(!score.dimensions.is_empty());
       // Overall should be calculated
-      assert!(score.overall <= 100);
+      assert!(score.overall_score <= 100);
     }
   }
 }

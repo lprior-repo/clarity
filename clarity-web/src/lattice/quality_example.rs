@@ -12,9 +12,10 @@
 //! - Apply configurable gate thresholds
 //! - Extract and display quality issues
 
-use crate::lattice::quality::{
-  calculate_quality, Answer, EarsRequirementRef, InversionControl, IssueSeverity, QualityError,
-};
+use crate::domain::error::ClarityError;
+use crate::domain::quality::{IssueSeverity, QualityEvaluator};
+use crate::domain::{Answer, EarsRequirementRef, InversionControl};
+use crate::lattice::quality::LatticeQualityEvaluator;
 
 /// Default quality gate threshold (70%)
 #[allow(dead_code)]
@@ -30,15 +31,16 @@ const DEFAULT_QUALITY_GATE: u8 = 70;
 #[allow(dead_code)]
 pub fn check_quality_gate(
   answers: &[Answer],
-  ears: &[EarsRequirementRef],
-  inversion: &InversionControl,
+  _ears: &[EarsRequirementRef],
+  _inversion: &InversionControl,
   threshold: Option<u8>,
-) -> Result<(), QualityError> {
+) -> Result<(), ClarityError> {
   let gate_threshold = threshold.unwrap_or(DEFAULT_QUALITY_GATE);
 
-  let score = calculate_quality(answers, ears, inversion)?;
+  let evaluator = LatticeQualityEvaluator;
+  let score = evaluator.evaluate(&answers.to_vec())?;
 
-  if score.passes(gate_threshold) {
+  if score.overall_score >= gate_threshold {
     Ok(())
   } else {
     // Collect blocking issues
@@ -51,13 +53,13 @@ pub fn check_quality_gate(
 
     if blocking_issues.is_empty() {
       // Score below threshold but no critical issues
-      Err(QualityError::DimensionFailed(format!(
+      Err(ClarityError::analysis(format!(
         "Overall score {}% below threshold {}%",
-        score.overall, gate_threshold
+        score.overall_score, gate_threshold
       )))
     } else {
       // Critical issues present
-      Err(QualityError::DimensionFailed(format!(
+      Err(ClarityError::analysis(format!(
         "Quality gate failed - {} blocking issue(s): {}",
         blocking_issues.len(),
         blocking_issues.join("; ")
@@ -147,10 +149,10 @@ mod tests {
     let result = check_quality_gate(&answers, &ears, &inversion, Some(70));
     assert!(result.is_err());
 
-    if let Err(QualityError::DimensionFailed(msg)) = result {
+    if let Err(ClarityError::Analysis(msg)) = result {
       assert!(msg.contains("below threshold") || msg.contains("Quality gate failed"));
     } else {
-      panic!("Expected DimensionFailed error");
+      panic!("Expected Analysis error");
     }
   }
 

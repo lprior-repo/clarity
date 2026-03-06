@@ -10,8 +10,9 @@
 
 use dioxus::prelude::*;
 
+use crate::domain::types::Answer;
 use crate::lattice::ears::{parse_requirements, EarsOutput, EarsRequirement};
-use crate::types::{prompt_steps, Answer};
+use crate::types::prompt_steps;
 
 /// Section header component
 #[component]

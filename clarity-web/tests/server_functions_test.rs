@@ -42,10 +42,10 @@ fn test_extracted_fields_serialization_roundtrip() {
 
 #[test]
 fn test_quality_score_serialization_roundtrip() {
-  use clarity_web::lattice::quality::{DimensionScore, QualityDimension, QualityScore};
+  use clarity_web::domain::quality::{DimensionScore, QualityDimension, QualityReport};
 
-  let score = QualityScore {
-    overall: 80,
+  let score = QualityReport {
+    overall_score: 80,
     dimensions: vec![DimensionScore {
       dimension: QualityDimension::Completeness,
       score: 90,
@@ -54,10 +54,10 @@ fn test_quality_score_serialization_roundtrip() {
   };
 
   let serialized = serde_json::to_string(&score).expect("Failed to serialize");
-  let deserialized: QualityScore =
+  let deserialized: QualityReport =
     serde_json::from_str(&serialized).expect("Failed to deserialize");
 
-  assert_eq!(deserialized.overall, 80);
+  assert_eq!(deserialized.overall_score, 80);
   assert_eq!(deserialized.dimensions.len(), 1);
   assert_eq!(deserialized.dimensions[0].score, 90);
 }
@@ -83,7 +83,7 @@ fn test_extraction_context_serialization_roundtrip() {
 
 #[test]
 fn test_ears_requirement_ref_serialization_roundtrip() {
-  use clarity_web::lattice::quality::EarsRequirementRef;
+  use clarity_web::domain::types::EarsRequirementRef;
 
   let ears = EarsRequirementRef {
     id: "req-1".to_string(),

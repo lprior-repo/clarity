@@ -8,6 +8,7 @@
 mod app;
 mod components;
 mod config;
+mod domain;
 mod hooks;
 mod kirk;
 mod lattice;

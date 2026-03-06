@@ -85,6 +85,13 @@ impl From<redb::StorageError> for StorageError {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+impl From<redb::DatabaseError> for StorageError {
+  fn from(err: redb::DatabaseError) -> Self {
+    Self::Database(err.to_string())
+  }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 impl From<redb::CommitError> for StorageError {
   fn from(err: redb::CommitError) -> Self {
     Self::Database(err.to_string())

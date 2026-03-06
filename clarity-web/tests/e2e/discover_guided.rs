@@ -22,7 +22,9 @@ use tokio::time::sleep;
 // Import types from clarity-web
 use clarity_web::components::discover::mode_toggle::DiscoverMode;
 use clarity_web::components::discover::{QuestionState, SuggestionProvider};
-use clarity_web::lattice::quality::{calculate_quality, InversionControl};
+use clarity_web::lattice::quality::LatticeQualityEvaluator;
+use clarity_web::domain::quality::QualityEvaluator;
+use clarity_web::domain::types::InversionControl;
 use clarity_web::types::{get_steps_for_phase, Answer, PHASES};
 
 /// Mock suggestion provider for testing
@@ -112,13 +114,13 @@ impl TestState {
       })
       .collect();
 
-    let inversion = InversionControl {
+    let _inversion = InversionControl {
       has_inversion_tests: false,
       inverted_count: 0,
     };
 
-    match calculate_quality(&quality_answers, &[], &inversion) {
-      Ok(score) => self.quality_score = Some(score.overall),
+    match LatticeQualityEvaluator.evaluate(&quality_answers) {
+      Ok(score) => self.quality_score = Some(score.overall_score),
       Err(_) => self.quality_score = Some(0),
     }
   }
