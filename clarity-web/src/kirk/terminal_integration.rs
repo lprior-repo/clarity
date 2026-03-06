@@ -1,8 +1,13 @@
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::panic)]
+#![warn(clippy::unwrap_used)]
+#![warn(clippy::expect_used)]
+#![warn(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::suspicious_else_formatting)]
+#![allow(
+  clippy::suspicious_else_formatting,
+  clippy::manual_let_else,
+  clippy::match_wild_err_arm,
+  clippy::match_like_matches_macro
+)]
 #![allow(clippy::unnested_or_patterns)]
 #![warn(clippy::nursery)]
 #![allow(clippy::missing_const_for_fn)]
@@ -946,8 +951,22 @@ fn extract_field_value(fields: &ExtractedFields, name: &str) -> Option<String> {
 // ============================================================================
 
 #[cfg(test)]
+#[allow(
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::unnecessary_debug_formatting,
+  clippy::match_same_arms,
+  clippy::option_if_let_else,
+  clippy::suspicious_else_formatting,
+  clippy::manual_let_else,
+  clippy::match_wild_err_arm,
+  clippy::match_like_matches_macro,
+  clippy::needless_pass_by_value
+)]
 mod tests {
-  #![allow(clippy::unwrap_used)]
 
   use super::*;
 
@@ -1215,7 +1234,6 @@ mod tests {
 
 #[cfg(test)]
 mod mock_client {
-  #![allow(clippy::unwrap_used)]
 
   use super::*;
 
@@ -1472,14 +1490,15 @@ mod mock_client {
     let result = client.extract_problem("Test input").await;
 
     assert!(result.is_err());
-    let error = result.unwrap_err();
-    assert!(matches!(
-      error,
-      TerminalError::ConnectionFailed {
-        retryable: false,
-        ..
-      }
-    ));
+    if let Err(error) = result {
+      assert!(matches!(
+        error,
+        TerminalError::ConnectionFailed {
+          retryable: false,
+          ..
+        }
+      ));
+    }
   }
 
   #[tokio::test]

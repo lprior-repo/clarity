@@ -112,7 +112,10 @@ pub fn diff_sessions(from: &InterviewSession, to: &InterviewSession) -> SessionD
 
 /// Format a session diff as human-readable text.
 #[must_use]
+#[allow(clippy::too_many_lines)]
 pub fn format_diff(diff: &SessionDiff) -> String {
+  use std::fmt::Write;
+
   const MAX_RESPONSE_LEN: usize = 50;
 
   fn truncate(value: &str) -> String {
@@ -133,96 +136,102 @@ pub fn format_diff(diff: &SessionDiff) -> String {
   };
 
   let mut output = String::new();
-  output.push_str(&format!(
-    "Session Diff: {} -> {}\n",
+  let _ = writeln!(
+    output,
+    "Session Diff: {} -> {}",
     diff.from_session_id, diff.to_session_id
-  ));
-  output.push_str(&format!(
-    "Timestamps: {} -> {}\n\n",
+  );
+  let _ = writeln!(
+    output,
+    "Timestamps: {} -> {}\n",
     diff.from_timestamp, diff.to_timestamp
-  ));
+  );
 
   if diff.stage_changed {
-    output.push_str(&format!(
-      "Stage: {} -> {}\n\n",
-      diff.old_stage.as_deref().map_or("(none)", |value| value),
-      diff.new_stage.as_deref().map_or("(none)", |value| value)
-    ));
+    let _ = writeln!(
+      output,
+      "Stage: {} -> {}\n",
+      diff.old_stage.as_deref().unwrap_or("(none)"),
+      diff.new_stage.as_deref().unwrap_or("(none)")
+    );
   }
 
   if !diff.answers_added.is_empty() {
-    output.push_str(&format!("Answers Added ({}):\n", diff.answers_added.len()));
+    let _ = writeln!(output, "Answers Added ({}):", diff.answers_added.len());
     for answer in &diff.answers_added {
-      output.push_str(&format!(
-        "  + [{}] {}: {}\n",
+      let _ = writeln!(
+        output,
+        "  + [{}] {}: {}",
         answer.question_id,
         truncate(&answer.question_text),
         format_response(&answer.new_response)
-      ));
+      );
     }
     output.push('\n');
   }
 
   if !diff.answers_modified.is_empty() {
-    output.push_str(&format!(
-      "Answers Modified ({}):\n",
+    let _ = writeln!(
+      output,
+      "Answers Modified ({}):",
       diff.answers_modified.len()
-    ));
+    );
     for answer in &diff.answers_modified {
-      output.push_str(&format!(
-        "  ~ [{}] {}:\n    {} -> {}\n",
+      let _ = writeln!(
+        output,
+        "  ~ [{}] {}:\n    {} -> {}",
         answer.question_id,
         truncate(&answer.question_text),
         format_response(&answer.old_response),
         format_response(&answer.new_response)
-      ));
+      );
     }
     output.push('\n');
   }
 
   if !diff.answers_removed.is_empty() {
-    output.push_str(&format!(
-      "Answers Removed ({}):\n",
-      diff.answers_removed.len()
-    ));
+    let _ = writeln!(output, "Answers Removed ({}):", diff.answers_removed.len());
     for answer in &diff.answers_removed {
-      output.push_str(&format!(
-        "  - [{}] {}: {}\n",
+      let _ = writeln!(
+        output,
+        "  - [{}] {}: {}",
         answer.question_id,
         truncate(&answer.question_text),
         format_response(&answer.old_response)
-      ));
+      );
     }
     output.push('\n');
   }
 
   match diff.gaps_added.cmp(&0) {
     std::cmp::Ordering::Greater => {
-      output.push_str(&format!("Gaps: +{} new gap(s)\n", diff.gaps_added));
+      let _ = writeln!(output, "Gaps: +{} new gap(s)", diff.gaps_added);
     }
     std::cmp::Ordering::Less => {
-      output.push_str(&format!("Gaps: {} gap(s) resolved\n", -diff.gaps_added));
+      let _ = writeln!(output, "Gaps: {} gap(s) resolved", -diff.gaps_added);
     }
     std::cmp::Ordering::Equal => {
-      output.push_str("Gaps: No change\n");
+      let _ = writeln!(output, "Gaps: No change");
     }
   }
 
   match diff.conflicts_added.cmp(&0) {
     std::cmp::Ordering::Greater => {
-      output.push_str(&format!(
-        "Conflicts: +{} new conflict(s)\n",
+      let _ = writeln!(
+        output,
+        "Conflicts: +{} new conflict(s)",
         diff.conflicts_added
-      ));
+      );
     }
     std::cmp::Ordering::Less => {
-      output.push_str(&format!(
-        "Conflicts: {} conflict(s) resolved\n",
+      let _ = writeln!(
+        output,
+        "Conflicts: {} conflict(s) resolved",
         -diff.conflicts_added
-      ));
+      );
     }
     std::cmp::Ordering::Equal => {
-      output.push_str("Conflicts: No change\n");
+      let _ = writeln!(output, "Conflicts: No change");
     }
   }
 

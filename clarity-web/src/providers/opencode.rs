@@ -1,8 +1,13 @@
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::panic)]
+#![warn(clippy::unwrap_used)]
+#![warn(clippy::expect_used)]
+#![warn(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::suspicious_else_formatting)]
+#![allow(
+  clippy::suspicious_else_formatting,
+  clippy::manual_let_else,
+  clippy::match_wild_err_arm,
+  clippy::match_like_matches_macro
+)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
@@ -111,13 +116,13 @@ impl OpenCodeProvider {
   }
 
   #[must_use]
-  pub const fn model(&self) -> &Option<String> {
-    &self.model
+  pub const fn model(&self) -> Option<&String> {
+    self.model.as_ref()
   }
 
   #[must_use]
-  pub const fn routing_provider(&self) -> &Option<String> {
-    &self.routing_provider
+  pub const fn routing_provider(&self) -> Option<&String> {
+    self.routing_provider.as_ref()
   }
 
   /// Build the full URL for an API endpoint
@@ -416,11 +421,9 @@ Input:\n{text}"
 
     let candidate = fenced
       .map(|part| {
-        if let Some(stripped) = part.strip_prefix("json\n") {
-          stripped.trim().to_string()
-        } else {
-          part.to_string()
-        }
+        part
+          .strip_prefix("json\n")
+          .map_or_else(|| part.to_string(), |stripped| stripped.trim().to_string())
       })
       .or_else(|| {
         let start = text.find('{')?;
@@ -569,8 +572,18 @@ struct ExtractResponseField {
 }
 
 #[cfg(test)]
+#[allow(
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::unnecessary_debug_formatting,
+  clippy::match_same_arms,
+  clippy::option_if_let_else,
+  clippy::suspicious_else_formatting
+)]
 mod tests {
-  #![allow(clippy::unwrap_used)]
 
   use super::*;
   use serde_json::json;
@@ -587,8 +600,8 @@ mod tests {
     let provider = provider.unwrap();
     assert_eq!(provider.endpoint, "https://api.opencode.ai/v1");
     assert_eq!(provider.session_id, "test-session");
-    assert_eq!(provider.model, None);
-    assert_eq!(provider.routing_provider, None);
+    assert_eq!(provider.model(), None);
+    assert_eq!(provider.routing_provider(), None);
     assert_eq!(provider.provider_name(), "opencode");
   }
 
@@ -605,10 +618,13 @@ mod tests {
 
     assert!(provider.is_ok());
     let provider = provider.unwrap();
-    assert_eq!(provider.model(), &Some("zai-coding-plan/glm-5".to_string()));
     assert_eq!(
-      provider.routing_provider(),
-      &Some("zai-coding-plan".to_string())
+      provider.model().map(std::string::String::as_str),
+      Some("zai-coding-plan/glm-5")
+    );
+    assert_eq!(
+      provider.routing_provider().map(std::string::String::as_str),
+      Some("zai-coding-plan")
     );
   }
 

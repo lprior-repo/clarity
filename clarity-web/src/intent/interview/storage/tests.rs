@@ -40,8 +40,7 @@ fn test_jsonl_roundtrip() {
   let line = match line_result {
     Ok(value) => value,
     Err(error) => {
-      assert!(false, "serialization failed: {error}");
-      return;
+      panic!("serialization failed: {error}");
     }
   };
 
@@ -51,8 +50,7 @@ fn test_jsonl_roundtrip() {
   let parsed = match parsed_result {
     Ok(value) => value,
     Err(error) => {
-      assert!(false, "deserialization failed: {error}");
-      return;
+      panic!("deserialization failed: {error}");
     }
   };
 
@@ -67,8 +65,7 @@ fn test_append_and_list_jsonl() {
   let temp_file = match temp_file_result {
     Ok(value) => value,
     Err(error) => {
-      assert!(false, "temp file failed: {error}");
-      return;
+      panic!("temp file failed: {error}");
     }
   };
   let path = temp_file.path();
@@ -90,16 +87,14 @@ fn test_append_and_list_jsonl() {
   let sessions = match sessions_result {
     Ok(value) => value,
     Err(error) => {
-      assert!(false, "list sessions failed: {error}");
-      return;
+      panic!("list sessions failed: {error}");
     }
   };
   assert_eq!(sessions.len(), 2);
   let updated_option = sessions.iter().find(|session| session.id == "s2");
   assert!(updated_option.is_some());
-  let updated = if let Some(value) = updated_option { value } else {
-    assert!(false, "updated session should exist");
-    return;
+  let Some(updated) = updated_option else {
+    panic!("updated session should exist");
   };
   assert_eq!(updated.raw_notes, "updated");
 }
@@ -111,8 +106,7 @@ fn test_get_session_not_found() {
   let temp_file = match temp_file_result {
     Ok(value) => value,
     Err(error) => {
-      assert!(false, "temp file failed: {error}");
-      return;
+      panic!("temp file failed: {error}");
     }
   };
   let path = temp_file.path();
@@ -128,8 +122,7 @@ fn test_history_append_and_filter() {
   let temp_file = match temp_file_result {
     Ok(value) => value,
     Err(error) => {
-      assert!(false, "temp file failed: {error}");
-      return;
+      panic!("temp file failed: {error}");
     }
   };
   let path = temp_file.path();
@@ -145,8 +138,7 @@ fn test_history_append_and_filter() {
   let history = match history_result {
     Ok(value) => value,
     Err(error) => {
-      assert!(false, "history list failed: {error}");
-      return;
+      panic!("history list failed: {error}");
     }
   };
   assert_eq!(history.len(), 2);

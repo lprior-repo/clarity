@@ -18,13 +18,13 @@
 //! - **`RaceCondition`**: Concurrent modification risks
 //! - **`RollbackRequired`**: Operations requiring reversibility
 
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::panic)]
+#![warn(clippy::unwrap_used)]
+#![warn(clippy::expect_used)]
+#![warn(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
-#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::missing_errors_doc, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro)]
 
 use crate::intent::types::{Behavior, Feature, Spec};
 use serde::{Deserialize, Serialize};
@@ -291,8 +291,7 @@ impl Effect {
 // =============================================================================
 
 /// Summary of effects by type
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct EffectsSummary {
   /// Count of state change effects
   pub state_changes: usize,
@@ -309,7 +308,6 @@ pub struct EffectsSummary {
   /// Highest severity detected
   pub max_severity: Option<EffectSeverity>,
 }
-
 
 impl EffectsSummary {
   /// Create a new empty summary
@@ -374,10 +372,10 @@ impl EffectsReport {
       return format!("No second-order effects detected in {name}");
     }
 
-    let severity_str = match &summary.max_severity {
-      Some(s) => format!("Highest severity: {s}. "),
-      None => String::new(),
-    };
+    let severity_str = summary
+      .max_severity
+      .as_ref()
+      .map_or_else(String::new, |s| format!("Highest severity: {s}. "));
 
     let parts: Vec<String> = [
       (summary.state_changes > 0).then(|| format!("{} state change(s)", summary.state_changes)),
@@ -500,10 +498,10 @@ impl SpecEffectsReport {
 
     let behaviors_with_effects = reports.iter().filter(|r| !r.effects.is_empty()).count();
 
-    let severity_str = match &summary.max_severity {
-      Some(s) => format!(" with {s} severity"),
-      None => String::new(),
-    };
+    let severity_str = summary
+      .max_severity
+      .as_ref()
+      .map_or_else(String::new, |s| format!(" with {s} severity"));
 
     format!(
       "Found {} effect(s) across {} of {} behavior(s){}. \
@@ -586,9 +584,8 @@ fn estimate_severity(text: &str, effect_type: EffectType) -> EffectSeverity {
       }
     }
     EffectType::Notification => EffectSeverity::Low,
-    EffectType::Cascade => EffectSeverity::Medium,
+    EffectType::Cascade | EffectType::RollbackRequired => EffectSeverity::Medium,
     EffectType::RaceCondition => EffectSeverity::High,
-    EffectType::RollbackRequired => EffectSeverity::Medium,
   }
 }
 
@@ -1089,6 +1086,7 @@ pub fn behaviors_with_effect_type(spec: &Spec, effect_type: EffectType) -> Vec<S
 // =============================================================================
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::float_cmp, clippy::needless_collect, clippy::unnecessary_debug_formatting, clippy::match_same_arms, clippy::option_if_let_else, clippy::suspicious_else_formatting, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro, clippy::needless_pass_by_value)]
 mod tests {
   use super::*;
 

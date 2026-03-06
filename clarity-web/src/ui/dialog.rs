@@ -1,6 +1,6 @@
 //! Dialog component - shadcn-style modal dialog
 //! Based on shadcn-ui Dialog pattern with Dioxus 0.7 Signal state management
-#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::missing_errors_doc, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro)]
 #![allow(clippy::missing_panics_doc)]
 
 use dioxus::prelude::*;
@@ -364,6 +364,7 @@ pub fn DialogClose(props: DialogCloseProps) -> Element {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::float_cmp, clippy::needless_collect, clippy::unnecessary_debug_formatting, clippy::match_same_arms, clippy::option_if_let_else, clippy::suspicious_else_formatting, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro, clippy::needless_pass_by_value)]
 mod tests {
   use super::*;
 

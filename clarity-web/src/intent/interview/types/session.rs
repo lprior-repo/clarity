@@ -60,6 +60,8 @@ impl InterviewSession {
       .collect()
   }
 
+  /// # Errors
+  /// Returns `InterviewError` if gap is not found or resolution is empty
   pub fn resolve_gap(&mut self, gap_id: &str, resolution: &str) -> Result<(), InterviewError> {
     if gap_id.trim().is_empty() {
       return Err(InterviewError::EmptyGapId);
@@ -80,6 +82,8 @@ impl InterviewSession {
     Ok(())
   }
 
+  /// # Errors
+  /// Returns `InterviewSessionError` if session is not active or answer is invalid
   pub fn add_answer(
     &mut self,
     answer: Answer,
@@ -122,6 +126,8 @@ impl InterviewSession {
     Ok(())
   }
 
+  /// # Errors
+  /// Returns `InterviewSessionError` if session is not active or timestamp is empty
   pub fn complete_round(&mut self, timestamp: &str) -> Result<(), InterviewSessionError> {
     if self.stage == InterviewStage::Paused {
       return Err(InterviewSessionError::SessionPaused);
@@ -148,6 +154,8 @@ impl InterviewSession {
     Ok(())
   }
 
+  /// # Errors
+  /// Returns `InterviewSessionError` if there are unresolved blocking gaps
   pub fn can_proceed(&self) -> Result<(), InterviewSessionError> {
     let gap_ids: Vec<String> = self
       .get_blocking_gaps()
@@ -165,6 +173,8 @@ impl InterviewSession {
     }
   }
 
+  /// # Errors
+  /// Returns `InterviewSessionError` if phase number is invalid or timestamp is empty
   pub fn complete_phase(
     &mut self,
     phase_number: u32,
@@ -188,6 +198,8 @@ impl InterviewSession {
     Ok(())
   }
 
+  /// # Errors
+  /// Returns `ConflictDetectionError` if session ID is empty or question ID is empty
   pub fn detect_conflicts(&mut self) -> Result<Vec<Conflict>, ConflictDetectionError> {
     if self.id.is_empty() {
       return Err(ConflictDetectionError::EmptySessionId);
@@ -210,6 +222,8 @@ impl InterviewSession {
     Ok(new_conflicts)
   }
 
+  /// # Errors
+  /// Returns `ConflictDetectionError` if conflict is not found or option is invalid
   pub fn resolve_conflict(
     &mut self,
     conflict_id: &str,

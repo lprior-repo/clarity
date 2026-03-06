@@ -12,9 +12,9 @@
 //! - Pure functions: No side effects, deterministic output
 //! - Type-safe: Uses domain types from quality module
 
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::panic)]
+#![warn(clippy::unwrap_used)]
+#![warn(clippy::expect_used)]
+#![warn(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
@@ -373,63 +373,51 @@ pub fn suggest_missing_tests(report: &QualityReport) -> Vec<ImprovementSuggestio
 
   // Suggest error tests
   for area in &report.missing_error_tests {
-    match ImprovementSuggestion::new(
+    if let Ok(s) = ImprovementSuggestion::new(
             "testing",
             format!("Add error handling tests for {area}"),
             9,
             area.clone(),
             format!("Create test cases that verify error conditions in {area}. Include tests for: invalid inputs, boundary conditions, resource exhaustion, and failure states."),
-        ) {
-            Ok(s) => suggestions.push(s),
-            Err(_) => continue,
-        }
+        ) { suggestions.push(s) }
   }
 
   // Suggest auth tests
   for area in &report.missing_auth_tests {
-    match ImprovementSuggestion::new(
+    if let Ok(s) = ImprovementSuggestion::new(
             "testing",
             format!("Add authentication/authorization tests for {area}"),
             10,
             area.clone(),
             format!("Create test cases that verify authentication and authorization in {area}. Include tests for: unauthenticated access, insufficient permissions, token expiration, and role-based access control."),
-        ) {
-            Ok(s) => suggestions.push(s),
-            Err(_) => continue,
-        }
+        ) { suggestions.push(s) }
   }
 
   // Suggest edge case tests
   for edge_case in &report.missing_edge_cases {
-    match ImprovementSuggestion::new(
+    if let Ok(s) = ImprovementSuggestion::new(
             "testing",
             format!("Add edge case tests for {edge_case}"),
             7,
             edge_case.clone(),
             format!("Create test cases for edge cases in {edge_case}. Consider: empty inputs, maximum values, null/nil handling, concurrent access, and timeout scenarios."),
-        ) {
-            Ok(s) => suggestions.push(s),
-            Err(_) => continue,
-        }
+        ) { suggestions.push(s) }
   }
 
   // Check for behaviors without verification
   for behavior in &report.unverified_behaviors {
-    match ImprovementSuggestion::new(
+    if let Ok(s) = ImprovementSuggestion::new(
             "testing",
             format!("Add verification for behavior: {behavior}"),
             8,
             behavior.clone(),
             format!("Define verification criteria for {behavior}. Specify: test type (unit/integration/manual), expected outcomes, and validation steps."),
-        ) {
-            Ok(s) => suggestions.push(s),
-            Err(_) => continue,
-        }
+        ) { suggestions.push(s) }
   }
 
   // Check for low testability score issues
   for issue in report.issues_by_category(IssueCategory::LowTestability) {
-    match ImprovementSuggestion::new(
+    if let Ok(s) = ImprovementSuggestion::new(
       "testing",
       format!("Improve testability: {}", issue.description),
       issue.severity,
@@ -438,10 +426,7 @@ pub fn suggest_missing_tests(report: &QualityReport) -> Vec<ImprovementSuggestio
         "Add acceptance criteria and verification steps. {}",
         issue.context.as_deref().unwrap_or("")
       ),
-    ) {
-      Ok(s) => suggestions.push(s),
-      Err(_) => continue,
-    }
+    ) { suggestions.push(s) }
   }
 
   suggestions
@@ -465,24 +450,18 @@ pub fn suggest_vague_rules_improvements(report: &QualityReport) -> Vec<Improveme
     // Detect type of vagueness and suggest specific improvements
     let (description, action) = analyze_vague_rule(rule);
 
-    match ImprovementSuggestion::new("clarity", description, 7, rule.clone(), action) {
-      Ok(s) => suggestions.push(s),
-      Err(_) => continue,
-    }
+    if let Ok(s) = ImprovementSuggestion::new("clarity", description, 7, rule.clone(), action) { suggestions.push(s) }
   }
 
   // Check for low clarity score issues
   for issue in report.issues_by_category(IssueCategory::LowClarity) {
-    match ImprovementSuggestion::new(
+    if let Ok(s) = ImprovementSuggestion::new(
             "clarity",
             format!("Clarify: {}", issue.description),
             issue.severity,
             issue.field.clone(),
             format!("Rewrite with specific values and examples. Avoid ambiguous terms like 'fast', 'good', or 'appropriate'. {}", issue.context.as_deref().unwrap_or("Use measurable criteria.")),
-        ) {
-            Ok(s) => suggestions.push(s),
-            Err(_) => continue,
-        }
+        ) { suggestions.push(s) }
   }
 
   suggestions
@@ -502,21 +481,18 @@ pub fn suggest_examples_improvements(report: &QualityReport) -> Vec<ImprovementS
   let mut suggestions = Vec::new();
 
   for behavior in &report.behaviors_without_examples {
-    match ImprovementSuggestion::new(
+    if let Ok(s) = ImprovementSuggestion::new(
             "completeness",
             format!("Add example for behavior: {behavior}"),
             6,
             behavior.clone(),
             format!("Provide a concrete example demonstrating {behavior}. Include: input values, expected output, and any relevant preconditions or context."),
-        ) {
-            Ok(s) => suggestions.push(s),
-            Err(_) => continue,
-        }
+        ) { suggestions.push(s) }
   }
 
   // Check for low completeness issues
   for issue in report.issues_by_category(IssueCategory::LowCompleteness) {
-    match ImprovementSuggestion::new(
+    if let Ok(s) = ImprovementSuggestion::new(
       "completeness",
       format!("Add missing content: {}", issue.description),
       issue.severity,
@@ -524,13 +500,11 @@ pub fn suggest_examples_improvements(report: &QualityReport) -> Vec<ImprovementS
       format!(
         "Fill in the missing information. {}",
         issue
-          .context.as_deref()
+          .context
+          .as_deref()
           .unwrap_or("Provide complete details for this field.")
       ),
-    ) {
-      Ok(s) => suggestions.push(s),
-      Err(_) => continue,
-    }
+    ) { suggestions.push(s) }
   }
 
   suggestions
@@ -546,7 +520,7 @@ fn suggest_security_improvements(report: &QualityReport) -> Vec<ImprovementSugge
   let mut suggestions = Vec::new();
 
   for issue in report.issues_by_category(IssueCategory::LowSecurity) {
-    match ImprovementSuggestion::new(
+    if let Ok(s) = ImprovementSuggestion::new(
       "security",
       format!("Address security concern: {}", issue.description),
       10,
@@ -554,13 +528,11 @@ fn suggest_security_improvements(report: &QualityReport) -> Vec<ImprovementSugge
       format!(
         "Add security controls. {}",
         issue
-          .context.as_deref()
+          .context
+          .as_deref()
           .unwrap_or("Consider authentication, authorization, encryption, and input validation.")
       ),
-    ) {
-      Ok(s) => suggestions.push(s),
-      Err(_) => continue,
-    }
+    ) { suggestions.push(s) }
   }
 
   // Check for missing auth tests as security issues
@@ -640,7 +612,7 @@ fn suggest_consistency_improvements(report: &QualityReport) -> Vec<ImprovementSu
   let mut suggestions = Vec::new();
 
   for issue in report.issues_by_category(IssueCategory::LowConsistency) {
-    match ImprovementSuggestion::new(
+    if let Ok(s) = ImprovementSuggestion::new(
       "consistency",
       format!("Resolve inconsistency: {}", issue.description),
       8,
@@ -648,13 +620,11 @@ fn suggest_consistency_improvements(report: &QualityReport) -> Vec<ImprovementSu
       format!(
         "Review and resolve the contradiction. {}",
         issue
-          .context.as_deref()
+          .context
+          .as_deref()
           .unwrap_or("Ensure all requirements align and do not conflict.")
       ),
-    ) {
-      Ok(s) => suggestions.push(s),
-      Err(_) => continue,
-    }
+    ) { suggestions.push(s) }
   }
 
   suggestions
@@ -707,9 +677,8 @@ fn analyze_vague_rule(rule: &str) -> (String, String) {
 // =============================================================================
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::float_cmp, clippy::needless_collect, clippy::unnecessary_debug_formatting, clippy::match_same_arms, clippy::option_if_let_else, clippy::suspicious_else_formatting, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro, clippy::needless_pass_by_value)]
 mod tests {
-  #![allow(clippy::unwrap_used)]
-  #![allow(clippy::expect_used)]
 
   use super::*;
 

@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::float_cmp, clippy::needless_collect, clippy::unnecessary_debug_formatting, clippy::match_same_arms, clippy::option_if_let_else, clippy::suspicious_else_formatting, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro)]
 use crate::intent::interview::types::{
   Answer, Conflict, ConflictDetectionError, ConflictResolution, InterviewSession, Profile,
 };
@@ -64,7 +65,7 @@ fn detects_cap_conflict() {
       ("q-perf".to_string(), "q-data".to_string())
     );
   } else {
-    assert!(false);
+    panic!("Should not be Ok");
   }
 }
 
@@ -91,7 +92,7 @@ fn detects_anonymous_audit_conflict() {
     assert_eq!(conflicts.len(), 1);
     assert_eq!(conflicts[0].id, "conflict-anonymous-audit-0");
   } else {
-    assert!(false);
+    panic!("Should not be Ok");
   }
 }
 

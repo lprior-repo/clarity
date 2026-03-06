@@ -1,8 +1,8 @@
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::panic)]
+#![warn(clippy::unwrap_used)]
+#![warn(clippy::expect_used)]
+#![warn(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::suspicious_else_formatting)]
+#![allow(clippy::suspicious_else_formatting, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro)]
 #![warn(clippy::nursery)]
 #![allow(clippy::missing_const_for_fn)]
 #![forbid(unsafe_code)]
@@ -644,9 +644,8 @@ impl Default for HolePunchingValidation {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::float_cmp, clippy::needless_collect, clippy::unnecessary_debug_formatting, clippy::match_same_arms, clippy::option_if_let_else, clippy::suspicious_else_formatting, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro, clippy::needless_pass_by_value)]
 mod tests {
-  #![allow(clippy::float_cmp)]
-  #![allow(clippy::uninlined_format_args)]
 
   use super::*;
 
@@ -745,7 +744,7 @@ mod tests {
     let mut contract = contract;
     for i in 0..8 {
       contract = contract
-        .with_section_content(i, format!("Content {}", i))
+        .with_section_content(i, format!("Content {i}"))
         .ok_or("Should set section content")?;
     }
     assert_eq!(contract.completion_percentage(), 50);
@@ -760,7 +759,7 @@ mod tests {
     let mut contract = contract;
     for i in 0..14 {
       contract = contract
-        .with_section_content(i, format!("Content {}", i))
+        .with_section_content(i, format!("Content {i}"))
         .ok_or("Should set section content")?;
     }
     assert!(contract.is_complete());

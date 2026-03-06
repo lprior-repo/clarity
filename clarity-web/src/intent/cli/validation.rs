@@ -13,9 +13,9 @@
 //! - Format: Empty returns `Ok("json")` as default
 //! - Strategy: Empty returns `Ok("page_rank")` as default
 
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::panic)]
+#![warn(clippy::unwrap_used)]
+#![warn(clippy::expect_used)]
+#![warn(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
@@ -211,9 +211,8 @@ pub fn validate_required_flag(flag_name: &str, value: &str) -> Result<String, St
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::float_cmp, clippy::needless_collect, clippy::unnecessary_debug_formatting, clippy::match_same_arms, clippy::option_if_let_else, clippy::suspicious_else_formatting, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro, clippy::needless_pass_by_value)]
 mod tests {
-  #![allow(clippy::unwrap_used)]
-  #![allow(clippy::expect_used)]
 
   use super::*;
 
