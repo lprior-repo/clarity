@@ -41,6 +41,9 @@ pub fn create_snapshot(session: &InterviewSession, description: &str) -> Session
 }
 
 /// Append a snapshot to a history file.
+///
+/// # Errors
+/// Returns `StorageError` if file operations fail
 pub fn append_to_history(
   session: &InterviewSession,
   description: &str,
@@ -66,6 +69,9 @@ pub fn append_to_history(
 }
 
 /// List all snapshots for a specific session from a history file.
+///
+/// # Errors
+/// Returns `StorageError` if file operations fail or JSON is invalid
 pub fn list_session_history(
   history_path: &Path,
   session_id: &str,

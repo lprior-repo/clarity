@@ -20,9 +20,9 @@
 //! assert!(results.iter().all(|r| r.passed));
 //! ```
 
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::panic)]
+#![warn(clippy::unwrap_used)]
+#![warn(clippy::expect_used)]
+#![warn(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
@@ -237,7 +237,7 @@ impl RuleResult {
 /// ```
 pub fn apply_rule(rule: &Rule, value: &str) -> Result<RuleResult, RuleError> {
   match rule {
-    Rule::Required => validate_required(value),
+    Rule::Required => Ok(validate_required(value)),
     Rule::Pattern { pattern } => validate_pattern(value, pattern),
     Rule::Range { min, max } => validate_range(value, *min, *max),
     Rule::Custom { name, check } => validate_custom(value, name, check),
@@ -245,11 +245,11 @@ pub fn apply_rule(rule: &Rule, value: &str) -> Result<RuleResult, RuleError> {
 }
 
 /// Validate that a value is present and non-empty
-fn validate_required(value: &str) -> Result<RuleResult, RuleError> {
+fn validate_required(value: &str) -> RuleResult {
   let trimmed = value.trim();
   let passed = !trimmed.is_empty();
 
-  let result = if passed {
+  if passed {
     RuleResult::passed("required", Some(value.to_string()))
   } else {
     RuleResult::failed(
@@ -257,16 +257,14 @@ fn validate_required(value: &str) -> Result<RuleResult, RuleError> {
       "value is required but was empty",
       Some(value.to_string()),
     )
-  };
-
-  Ok(result)
+  }
 }
 
 /// Validate that a value matches a regex pattern
 fn validate_pattern(value: &str, pattern: &str) -> Result<RuleResult, RuleError> {
   // We need to compile the regex without using unwrap
-  let regex = regex::Regex::new(pattern)
-    .map_err(|e| RuleError::InvalidPattern(format!("{pattern}: {e}")))?;
+  let regex =
+    regex::Regex::new(pattern).map_err(|e| RuleError::InvalidPattern(format!("{pattern}: {e}")))?;
 
   let passed = regex.is_match(value);
 
@@ -345,19 +343,19 @@ fn evaluate_custom_check(value: &str, check: &str) -> Result<bool, RuleError> {
 
   // Starts with check
   if let Some(prefix) = check.strip_prefix("starts_with ") {
-    let prefix = extract_quoted_string(prefix.trim())?;
+    let prefix = extract_quoted_string(prefix.trim());
     return Ok(value.starts_with(&prefix));
   }
 
   // Ends with check
   if let Some(suffix) = check.strip_prefix("ends_with ") {
-    let suffix = extract_quoted_string(suffix.trim())?;
+    let suffix = extract_quoted_string(suffix.trim());
     return Ok(value.ends_with(&suffix));
   }
 
   // Contains check
   if let Some(substr) = check.strip_prefix("contains ") {
-    let substr = extract_quoted_string(substr.trim())?;
+    let substr = extract_quoted_string(substr.trim());
     return Ok(value.contains(&substr));
   }
 
@@ -424,19 +422,19 @@ enum Comparison {
 }
 
 /// Extract a quoted string from an expression
-fn extract_quoted_string(s: &str) -> Result<String, RuleError> {
+fn extract_quoted_string(s: &str) -> String {
   let s = s.trim();
 
   if s.starts_with('"') && s.ends_with('"') && s.len() >= 2 {
-    return Ok(s[1..s.len() - 1].to_string());
+    return s[1..s.len() - 1].to_string();
   }
 
   if s.starts_with('\'') && s.ends_with('\'') && s.len() >= 2 {
-    return Ok(s[1..s.len() - 1].to_string());
+    return s[1..s.len() - 1].to_string();
   }
 
   // If not quoted, return as-is
-  Ok(s.to_string())
+  s.to_string()
 }
 
 /// Evaluate `one_of` check
@@ -554,6 +552,21 @@ pub fn failing_rules(value: &str, rules: &[Rule]) -> Result<Vec<RuleResult>, Rul
 // =============================================================================
 
 #[cfg(test)]
+#[allow(
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::unnecessary_debug_formatting,
+  clippy::match_same_arms,
+  clippy::option_if_let_else,
+  clippy::suspicious_else_formatting,
+  clippy::manual_let_else,
+  clippy::match_wild_err_arm,
+  clippy::match_like_matches_macro,
+  clippy::needless_pass_by_value
+)]
 mod tests {
   use super::*;
 

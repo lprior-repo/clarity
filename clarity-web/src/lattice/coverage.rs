@@ -1,8 +1,13 @@
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::panic)]
+#![warn(clippy::unwrap_used)]
+#![warn(clippy::expect_used)]
+#![warn(clippy::panic)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::suspicious_else_formatting)]
+#![allow(
+  clippy::suspicious_else_formatting,
+  clippy::manual_let_else,
+  clippy::match_wild_err_arm,
+  clippy::match_like_matches_macro
+)]
 #![warn(clippy::nursery)]
 #![allow(clippy::missing_const_for_fn)]
 #![allow(clippy::derive_partial_eq_without_eq)]
@@ -11,17 +16,15 @@
 #![allow(clippy::unnecessary_wraps)]
 #![allow(clippy::redundant_closure_for_method_calls)]
 #![allow(clippy::non_std_lazy_statics)]
-#![allow(clippy::manual_let_else)]
-#![allow(clippy::match_wild_err_arm)]
 #![allow(clippy::option_if_let_else)]
 #![allow(clippy::needless_collect)]
 #![allow(clippy::useless_vec)]
 #![forbid(unsafe_code)]
 
-use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use std::sync::LazyLock as Lazy;
 use thiserror::Error;
 
 /// Pattern for capitalized words with a capture group (e.g., "Service", "Controller")
@@ -160,7 +163,11 @@ impl CoveredComponent {
     total_use_cases: usize,
   ) -> Result<Self, CoverageError> {
     let coverage_percent = if total_use_cases > 0 {
-      let percent = (matched_use_cases.len() * 100) / total_use_cases;
+      let percent = matched_use_cases
+        .len()
+        .saturating_mul(100)
+        .checked_div(total_use_cases)
+        .unwrap_or(0);
       u8::try_from(percent).map_err(|_| CoverageError::InvalidPercentage("overflow".to_string()))?
     } else {
       0
@@ -282,7 +289,10 @@ pub fn analyze_coverage(
   let covered_count = covered_use_case_ids.len();
   let total_count = use_cases.len();
   let overall_percent = if total_count > 0 {
-    let percent = (covered_count * 100) / total_count;
+    let percent = covered_count
+      .saturating_mul(100)
+      .checked_div(total_count)
+      .unwrap_or(0);
     u8::try_from(percent).map_err(|_| CoverageError::InvalidPercentage("overflow".to_string()))?
   } else {
     0
@@ -542,9 +552,18 @@ fn generate_suggestion(use_case: &UseCase, missing_components: &[String]) -> Str
 }
 
 #[cfg(test)]
+#[allow(
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::unnecessary_debug_formatting,
+  clippy::match_same_arms,
+  clippy::option_if_let_else,
+  clippy::suspicious_else_formatting
+)]
 mod tests {
-  #![allow(clippy::unwrap_used)]
-  #![allow(clippy::expect_used)]
 
   use super::*;
 

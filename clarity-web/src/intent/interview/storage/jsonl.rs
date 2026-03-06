@@ -15,11 +15,17 @@ fn ensure_parent_dir(path: &Path) -> Result<(), StorageError> {
 }
 
 /// Serialize an interview session to a JSONL line.
+///
+/// # Errors
+/// Returns `StorageError` if JSON serialization fails
 pub fn session_to_jsonl_line(session: &InterviewSession) -> Result<String, StorageError> {
   serde_json::to_string(session).map_err(|error| StorageError::JsonError(error.to_string()))
 }
 
 /// Append or update a session in a JSONL file.
+///
+/// # Errors
+/// Returns `StorageError` if file operations or serialization fails
 pub fn append_session_to_jsonl(
   session: &InterviewSession,
   jsonl_path: &Path,
@@ -57,6 +63,9 @@ pub fn append_session_to_jsonl(
 }
 
 /// List all sessions from a JSONL file.
+///
+/// # Errors
+/// Returns `StorageError` if file operations fail or JSON is invalid
 pub fn list_sessions_from_jsonl(jsonl_path: &Path) -> Result<Vec<InterviewSession>, StorageError> {
   if !jsonl_path.exists() {
     return Ok(Vec::new());
@@ -87,6 +96,9 @@ pub fn list_sessions_from_jsonl(jsonl_path: &Path) -> Result<Vec<InterviewSessio
 }
 
 /// Get a specific session from a JSONL file by ID.
+///
+/// # Errors
+/// Returns `StorageError` if session is not found or file operations fail
 pub fn get_session_from_jsonl(
   jsonl_path: &Path,
   session_id: &str,

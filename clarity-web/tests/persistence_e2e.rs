@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::float_cmp, clippy::needless_collect, clippy::unnecessary_debug_formatting, clippy::match_same_arms, clippy::option_if_let_else, clippy::suspicious_else_formatting, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro)]
 //! End-to-end test: Persistence across app restart.
 //!
 //! This is a standalone integration test that verifies the `RedbStore` persistence
@@ -10,8 +11,6 @@
 //! 4. Close and reopen database (simulate app restart)
 //! 5. Verify all data restored without corruption
 
-#![warn(clippy::pedantic)]
-#![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
 use std::collections::HashMap;

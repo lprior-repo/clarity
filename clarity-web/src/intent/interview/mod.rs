@@ -6,8 +6,8 @@
 //! - Conflict detection (CAP theorem, anonymous+audit, perspective conflicts)
 //! - JSONL storage and session diffing
 
-pub mod types;
 pub mod storage;
+pub mod types;
 
 // Engine module will be added in WP12
 // pub mod engine;
@@ -16,5 +16,5 @@ pub mod storage;
 // pub mod questions;
 
 // Re-export types
-pub use types::*;
 pub use storage::*;
+pub use types::*;

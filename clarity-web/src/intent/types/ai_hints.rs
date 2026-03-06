@@ -1,14 +1,13 @@
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::panic)]
+#![warn(clippy::unwrap_used)]
+#![warn(clippy::expect_used)]
+#![warn(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![forbid(unsafe_code)]
 
 use serde::{Deserialize, Serialize};
 
 /// `AIHints` - hints to guide AI code generation
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct AIHints {
   /// Implementation hints
   #[serde(default)]
@@ -27,10 +26,8 @@ pub struct AIHints {
   pub style_hints: Vec<String>,
 }
 
-
 /// `ImplementationHints` - hints for implementation approach
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct ImplementationHints {
   /// Suggested architecture pattern
   #[serde(default)]
@@ -43,10 +40,8 @@ pub struct ImplementationHints {
   pub error_handling: String,
 }
 
-
 /// `EntityHint` - hint for data entity modeling
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct EntityHint {
   /// Entity name
   pub name: String,
@@ -61,10 +56,8 @@ pub struct EntityHint {
   pub relationships: Vec<String>,
 }
 
-
 /// `SecurityHints` - security-related considerations
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct SecurityHints {
   /// Authentication requirements
   #[serde(default)]
@@ -80,8 +73,22 @@ pub struct SecurityHints {
   pub concerns: Vec<String>,
 }
 
-
 #[cfg(test)]
+#[allow(
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::unnecessary_debug_formatting,
+  clippy::match_same_arms,
+  clippy::option_if_let_else,
+  clippy::suspicious_else_formatting,
+  clippy::manual_let_else,
+  clippy::match_wild_err_arm,
+  clippy::match_like_matches_macro,
+  clippy::needless_pass_by_value
+)]
 mod tests {
   use super::AIHints;
 

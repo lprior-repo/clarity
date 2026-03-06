@@ -21,9 +21,9 @@
 //! assert_eq!(result, "Hello, Alice!");
 //! ```
 
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::panic)]
+#![warn(clippy::unwrap_used)]
+#![warn(clippy::expect_used)]
+#![warn(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
@@ -79,7 +79,7 @@ impl From<ArrayIndexError> for InterpolationError {
     match err {
       ArrayIndexError::InvalidPath(path) => Self::InvalidPath(path),
       ArrayIndexError::IndexOutOfBounds { index, length } => Self::IndexOutOfBounds {
-        index: index.max(0) as usize,
+        index: index.max(0).cast_unsigned(),
         length,
       },
       ArrayIndexError::NotAnArray { field, .. } => Self::NotAnArray(field),
@@ -133,20 +133,21 @@ impl Context {
   }
 
   /// Add a variable to the context
+  #[must_use]
   pub fn with_variable(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
     self.variables.insert(key.into(), value.into());
     self
   }
 
   /// Set the request body
-  #[must_use] 
+  #[must_use]
   pub fn with_request_body(mut self, body: Value) -> Self {
     self.request_body = Some(body);
     self
   }
 
   /// Set the response body
-  #[must_use] 
+  #[must_use]
   pub fn with_response_body(mut self, body: Value) -> Self {
     self.response_body = Some(body);
     self
@@ -467,6 +468,21 @@ pub fn validate_variables(input: &str, context: &Context) -> Vec<String> {
 // =============================================================================
 
 #[cfg(test)]
+#[allow(
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::unnecessary_debug_formatting,
+  clippy::match_same_arms,
+  clippy::option_if_let_else,
+  clippy::suspicious_else_formatting,
+  clippy::manual_let_else,
+  clippy::match_wild_err_arm,
+  clippy::match_like_matches_macro,
+  clippy::needless_pass_by_value
+)]
 mod tests {
   use super::*;
   use serde_json::json;

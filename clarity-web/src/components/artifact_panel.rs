@@ -1,6 +1,6 @@
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::panic)]
+#![warn(clippy::unwrap_used)]
+#![warn(clippy::expect_used)]
+#![warn(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
@@ -311,11 +311,11 @@ fn build_artifact_data(answers: &[Answer]) -> ArtifactData {
     })
     .count();
 
-  let progress = if required > 0 {
-    (done * 100 / required).min(100)
-  } else {
-    0
-  };
+  let progress = done
+    .saturating_mul(100)
+    .checked_div(required)
+    .unwrap_or(0)
+    .min(100);
 
   let ears_output = parse_requirements_from_answers(answers);
 

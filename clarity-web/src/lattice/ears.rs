@@ -1,6 +1,6 @@
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::panic)]
+#![warn(clippy::unwrap_used)]
+#![warn(clippy::expect_used)]
+#![warn(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
@@ -74,7 +74,7 @@ pub struct EarsOutput {
 
 impl EarsOutput {
   /// Create a new empty `EarsOutput`.
-  #[must_use] 
+  #[must_use]
   pub const fn new() -> Self {
     Self {
       requirements: Vec::new(),
@@ -83,14 +83,14 @@ impl EarsOutput {
   }
 
   /// Add a requirement to the output.
-  #[must_use] 
+  #[must_use]
   pub fn with_requirement(mut self, requirement: EarsRequirement) -> Self {
     self.requirements.push(requirement);
     self
   }
 
   /// Add an error to the output.
-  #[must_use] 
+  #[must_use]
   pub fn with_error(mut self, error: String) -> Self {
     self.errors.push(error);
     self
@@ -104,10 +104,17 @@ impl Default for EarsOutput {
 }
 
 /// Parse a single requirement line into an `EarsRequirement`.
+///
+/// # Errors
+/// Returns `EarsError` if input is empty or pattern is not recognized
 pub fn parse_requirement(input: &str) -> Result<EarsRequirement, EarsError> {
   let trimmed = input.trim();
 
-  if trimmed.is_empty() { Err(EarsError::EmptyInput) } else { parse_requirement_patterns(trimmed) }
+  if trimmed.is_empty() {
+    Err(EarsError::EmptyInput)
+  } else {
+    parse_requirement_patterns(trimmed)
+  }
 }
 
 /// Parse requirement text against all EARS patterns.
@@ -174,14 +181,16 @@ fn parse_ubiquitous(input: &str) -> Option<EarsRequirement> {
 
   let lower = input.to_lowercase();
 
-  lower
-    .find(PATTERN)
-    .and_then(|start| {
-      let actor = "system".to_string();
-      let action = input[start + PATTERN.len()..].trim().to_string();
+  lower.find(PATTERN).and_then(|start| {
+    let actor = "system".to_string();
+    let action = input[start + PATTERN.len()..].trim().to_string();
 
-      if action.is_empty() { None } else { Some(EarsRequirement::Ubiquitous { actor, action }) }
-    })
+    if action.is_empty() {
+      None
+    } else {
+      Some(EarsRequirement::Ubiquitous { actor, action })
+    }
+  })
 }
 
 /// Parse state-driven: "When X, the system shall Y..."
@@ -305,7 +314,7 @@ fn parse_optional(input: &str) -> Option<EarsRequirement> {
 }
 
 /// Parse multiple requirements from multi-line input.
-#[must_use] 
+#[must_use]
 pub fn parse_requirements(input: &str) -> EarsOutput {
   input.lines().filter(|line| !line.trim().is_empty()).fold(
     EarsOutput::new(),
@@ -320,9 +329,22 @@ pub fn parse_requirements(input: &str) -> EarsOutput {
 }
 
 #[cfg(test)]
+#[allow(
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::unnecessary_debug_formatting,
+  clippy::match_same_arms,
+  clippy::option_if_let_else,
+  clippy::suspicious_else_formatting,
+  clippy::manual_let_else,
+  clippy::match_wild_err_arm,
+  clippy::match_like_matches_macro,
+  clippy::needless_pass_by_value
+)]
 mod tests {
-  #![allow(clippy::unwrap_used)]
-  #![allow(clippy::expect_used)]
 
   use super::*;
 

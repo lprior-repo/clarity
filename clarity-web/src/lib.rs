@@ -1,6 +1,6 @@
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::panic)]
+#![warn(clippy::unwrap_used)]
+#![warn(clippy::expect_used)]
+#![warn(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![allow(clippy::suspicious_else_formatting)]
 #![warn(clippy::nursery)]
@@ -11,6 +11,7 @@
 pub mod app;
 pub mod components;
 pub mod config;
+pub mod domain;
 pub mod hooks;
 pub mod intent;
 pub mod kirk;

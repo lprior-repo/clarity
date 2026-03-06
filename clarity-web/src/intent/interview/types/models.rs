@@ -61,8 +61,7 @@ impl Default for Gap {
   }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct Conflict {
   pub id: String,
   pub between: (String, String),
@@ -72,16 +71,13 @@ pub struct Conflict {
   pub chosen: Option<i32>,
 }
 
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct ConflictResolution {
   pub option: String,
   pub description: String,
   pub tradeoffs: String,
   pub recommendation: bool,
 }
-
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Question {

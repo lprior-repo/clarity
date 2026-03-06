@@ -1,23 +1,6 @@
-#![allow(clippy::all)]
-#![allow(clippy::unnested_or_patterns)]
-#![allow(clippy::needless_collect)]
-#![allow(clippy::no_effect_underscore_binding)]
-#![allow(clippy::uninlined_format_args)]
-#![allow(clippy::match_same_arms)]
-#![allow(clippy::ignored_unit_patterns)]
-#![allow(clippy::single_match_else)]
-#![allow(clippy::items_after_statements)]
-#![allow(clippy::absurd_extreme_comparisons)]
-#![allow(unused_comparisons)]
-#![allow(clippy::too_many_lines)]
-#![allow(clippy::unnecessary_debug_formatting)]
-#![allow(clippy::significant_drop_tightening)]
-#![allow(clippy::assertions_on_constants)]
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::float_cmp, clippy::needless_collect, clippy::unnecessary_debug_formatting, clippy::match_same_arms, clippy::option_if_let_else, clippy::suspicious_else_formatting, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro)]
 // Integration test for ConfidenceBadge component
 // This test verifies the component is properly exported and can be used
-#![allow(clippy::unwrap_used)]
-#![allow(clippy::expect_used)]
-#![allow(clippy::panic)]
 
 use clarity_web::storage::types::Confidence;
 use clarity_web::ui::confidence_badge::ConfidenceBadgeProps;

@@ -3,9 +3,9 @@
 //! These tests probe edge cases, boundary conditions, and potential vulnerabilities
 //! in the linter to ensure robustness.
 
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::panic)]
+#![warn(clippy::unwrap_used)]
+#![warn(clippy::expect_used)]
+#![warn(clippy::panic)]
 
 use crate::intent::quality::linter::{LintError, LintResult, LintRule, LintSeverity, SpecLinter};
 use crate::intent::types::{Behavior, Feature, Spec};

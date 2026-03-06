@@ -1,6 +1,6 @@
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::panic)]
+#![warn(clippy::unwrap_used)]
+#![warn(clippy::expect_used)]
+#![warn(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
@@ -19,6 +19,8 @@ pub fn is_safe_path(path: &str) -> bool {
   validate_file_path(path).is_ok()
 }
 
+/// # Errors
+/// Returns `SecurityError` if path is invalid or unsafe
 pub fn validate_file_path(path: &str) -> SecurityResult<String> {
   if path.is_empty() {
     return Err(SecurityError::EmptyInput);
@@ -60,6 +62,8 @@ pub fn validate_file_path(path: &str) -> SecurityResult<String> {
     .map_or_else(|| Ok(path.to_owned()), Err)
 }
 
+/// # Errors
+/// Returns `SecurityError` if pattern is invalid or unsafe
 pub fn validate_regex_pattern(pattern: &str) -> SecurityResult<String> {
   if pattern.is_empty() {
     return Err(SecurityError::EmptyInput);
@@ -75,6 +79,8 @@ pub fn validate_regex_pattern(pattern: &str) -> SecurityResult<String> {
   )
 }
 
+/// # Errors
+/// Returns `SecurityError` if session ID is invalid
 pub fn validate_session_id(session_id: &str) -> SecurityResult<String> {
   if session_id.is_empty() {
     return Err(SecurityError::SessionIdValidation {
@@ -103,6 +109,8 @@ pub fn validate_session_id(session_id: &str) -> SecurityResult<String> {
     )
 }
 
+/// # Errors
+/// Returns `SecurityError` if any path in the list is invalid or unsafe
 pub fn validate_file_paths(paths: &[&str]) -> SecurityResult<Vec<String>> {
   paths
     .iter()

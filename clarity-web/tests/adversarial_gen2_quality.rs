@@ -1,11 +1,5 @@
-#![allow(unused_comparisons)]
-#![allow(clippy::unwrap_used)]
-#![allow(clippy::expect_used)]
-#![allow(clippy::panic)]
-#![warn(clippy::pedantic)]
-#![warn(clippy::nursery)]
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::float_cmp, clippy::needless_collect, clippy::unnecessary_debug_formatting, clippy::match_same_arms, clippy::option_if_let_else, clippy::suspicious_else_formatting, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro)]
 #![forbid(unsafe_code)]
-#![allow(clippy::too_many_lines)]
 
 //! Adversarial Generation 2 Testing - Quality Scoring Edge Cases
 //!
@@ -79,18 +73,14 @@ fn test_quality_boundary_maximum_score_edge_case() {
     Ok(score) => {
       // Check that overall is bounded correctly
       assert!(score.overall <= 100, "Overall score must not exceed 100");
-      assert!(score.overall >= 0, "Overall score must not be negative");
 
       // Check all dimensions are valid
       for dim in &score.dimensions {
         assert!(dim.score <= 100, "Dimension score must not exceed 100");
-        assert!(dim.score >= 0, "Dimension score must not be negative");
       }
     }
     Err(e) => {
-      panic!(
-        "Quality calculation should succeed with valid input: {e:?}"
-      );
+      panic!("Quality calculation should succeed with valid input: {e:?}");
     }
   }
 }
@@ -116,7 +106,6 @@ fn test_quality_division_by_zero_protection() {
     Ok(score) => {
       // Completeness should be 0 (no required fields)
       assert!(score.overall <= 100);
-      assert!(score.overall >= 0);
 
       // Should have completeness issues
       let completeness_issues = score.get_issues(QualityDimension::Completeness);
@@ -161,7 +150,6 @@ fn test_quality_overflow_in_calculation() {
     Ok(score) => {
       // Overall should be valid
       assert!(score.overall <= 100);
-      assert!(score.overall >= 0);
 
       // Should be exactly 100 since security might not be perfect
       // but other dimensions should be high
@@ -456,7 +444,6 @@ fn test_quality_clarity_extremely_long_sentence() {
   match result {
     Ok(score) => {
       // Should penalize heavily but not crash
-      assert!(score.overall >= 0);
       assert!(score.overall <= 100);
 
       let clarity = score.get_dimension(QualityDimension::Clarity);

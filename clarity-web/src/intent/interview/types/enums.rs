@@ -17,7 +17,6 @@ pub enum Profile {
   Ui,
 }
 
-
 impl Profile {
   #[must_use]
   pub const fn as_str(&self) -> &'static str {
@@ -28,23 +27,6 @@ impl Profile {
       Self::Data => "data",
       Self::Workflow => "workflow",
       Self::Ui => "ui",
-    }
-  }
-
-  /// # Errors
-  /// Returns `ProfileParseError` when input is not a known profile.
-  pub fn from_str(s: &str) -> Result<Self, ProfileParseError> {
-    let normalized = s.trim().to_ascii_lowercase();
-    match normalized.as_str() {
-      "api" => Ok(Self::Api),
-      "cli" => Ok(Self::Cli),
-      "event" => Ok(Self::Event),
-      "data" => Ok(Self::Data),
-      "workflow" => Ok(Self::Workflow),
-      "ui" => Ok(Self::Ui),
-      _ => Err(ProfileParseError::UnknownProfile {
-        input: s.to_string(),
-      }),
     }
   }
 
@@ -71,7 +53,18 @@ impl FromStr for Profile {
   type Err = ProfileParseError;
 
   fn from_str(s: &str) -> Result<Self, Self::Err> {
-    Self::from_str(s)
+    let normalized = s.trim().to_ascii_lowercase();
+    match normalized.as_str() {
+      "api" => Ok(Self::Api),
+      "cli" => Ok(Self::Cli),
+      "event" => Ok(Self::Event),
+      "data" => Ok(Self::Data),
+      "workflow" => Ok(Self::Workflow),
+      "ui" => Ok(Self::Ui),
+      _ => Err(ProfileParseError::UnknownProfile {
+        input: s.to_string(),
+      }),
+    }
   }
 }
 
@@ -86,7 +79,6 @@ pub enum InterviewStage {
   Complete,
   Paused,
 }
-
 
 impl InterviewStage {
   #[must_use]
@@ -113,7 +105,6 @@ pub enum Perspective {
   Business,
 }
 
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 #[derive(Default)]
@@ -123,7 +114,6 @@ pub enum QuestionPriority {
   Important,
   NiceToHave,
 }
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -137,4 +127,3 @@ pub enum QuestionCategory {
   Dependency,
   NonFunctional,
 }
-

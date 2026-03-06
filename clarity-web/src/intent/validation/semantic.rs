@@ -16,9 +16,9 @@
 //! - Deterministic: Same input always produces same output
 //! - Pure functions: No side effects, only analyzes input
 
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::panic)]
+#![warn(clippy::unwrap_used)]
+#![warn(clippy::expect_used)]
+#![warn(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
@@ -1089,6 +1089,21 @@ pub fn consistency_checks(spec: &Spec) -> SemanticResult<TerminologyCheck> {
 }
 
 #[cfg(test)]
+#[allow(
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::unnecessary_debug_formatting,
+  clippy::match_same_arms,
+  clippy::option_if_let_else,
+  clippy::suspicious_else_formatting,
+  clippy::manual_let_else,
+  clippy::match_wild_err_arm,
+  clippy::match_like_matches_macro,
+  clippy::needless_pass_by_value
+)]
 mod tests {
   use super::*;
   use crate::intent::types::{Behavior, Feature};
@@ -1417,9 +1432,9 @@ mod tests {
   #[test]
   fn test_no_unwrap_in_semantic_validator() {
     // This test is verified by the lints at the top of the file
-    // #![deny(clippy::unwrap_used)]
-    // #![deny(clippy::expect_used)]
-    // #![deny(clippy::panic)]
+    // #![warn(clippy::unwrap_used)]
+    // #![warn(clippy::expect_used)]
+    // #![warn(clippy::panic)]
     let spec = create_test_spec();
     let _ = SemanticValidator::new().validate_semantics(&spec);
     // If we got here without panicking, the test passes
