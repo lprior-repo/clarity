@@ -22,13 +22,15 @@ pub(super) fn store_feedback(feedback: &BeadFeedback) -> Result<(), FeedbackErro
     })
 }
 
-#[must_use]
-pub(super) fn read_feedback_history(bead_id: &str) -> Vec<BeadFeedback> {
-  FEEDBACK_STORE.read().ok().map_or_else(Vec::new, |store| {
-    store
-      .get(bead_id)
-      .map_or_else(Vec::new, |items| items.iter().cloned().collect::<Vec<_>>())
-  })
+pub(super) fn read_feedback_history(bead_id: &str) -> Result<Vec<BeadFeedback>, FeedbackError> {
+  FEEDBACK_STORE
+    .read()
+    .map_err(|_| FeedbackError::Blocked("Failed to acquire feedback store lock".to_string()))
+    .map(|store| {
+      store
+        .get(bead_id)
+        .map_or_else(Vec::new, |items| items.iter().cloned().collect::<Vec<_>>())
+    })
 }
 
 #[cfg(test)]

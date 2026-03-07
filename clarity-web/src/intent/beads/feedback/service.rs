@@ -57,7 +57,11 @@ pub fn update_bead_status(
   })
 }
 
-#[must_use]
-pub fn get_bead_feedback_history(bead_id: &str) -> Vec<BeadFeedback> {
+/// Returns the feedback history for a bead in insertion order.
+///
+/// # Errors
+///
+/// Returns `FeedbackError::Blocked` when the shared feedback store cannot be read.
+pub fn get_bead_feedback_history(bead_id: &str) -> Result<Vec<BeadFeedback>, FeedbackError> {
   read_feedback_history(bead_id)
 }

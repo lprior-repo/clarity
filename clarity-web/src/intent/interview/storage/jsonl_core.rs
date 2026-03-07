@@ -25,6 +25,13 @@
 
 use itertools::Itertools;
 
+/// Typed failures produced while transforming sessions into JSONL.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum JsonlCoreError {
+  /// A session could not be serialized into JSON.
+  Serialization { details: String },
+}
+
 /// Result of parsing a JSONL line.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum JsonlLineParseResult<T> {
@@ -72,9 +79,11 @@ impl<T> JsonlLineParseResult<T> {
 ///
 /// # Returns
 ///
-/// `Ok(String)` if serialization succeeds, `Err(error_message)` otherwise
-pub fn serialize_to_jsonl<T: serde::Serialize>(session: &T) -> Result<String, String> {
-  serde_json::to_string(session).map_err(|e| e.to_string())
+/// `Ok(String)` if serialization succeeds, `Err(JsonlCoreError)` otherwise
+pub fn serialize_to_jsonl<T: serde::Serialize>(session: &T) -> Result<String, JsonlCoreError> {
+  serde_json::to_string(session).map_err(|error| JsonlCoreError::Serialization {
+    details: error.to_string(),
+  })
 }
 
 /// Parse a single JSONL line.
@@ -209,8 +218,8 @@ pub trait HasId {
 ///
 /// # Returns
 ///
-/// `Ok(String)` if all sessions serialize successfully, `Err(error_message)` otherwise
-pub fn build_jsonl_content<T: serde::Serialize>(sessions: &[T]) -> Result<String, String> {
+/// `Ok(String)` if all sessions serialize successfully, `Err(JsonlCoreError)` otherwise
+pub fn build_jsonl_content<T: serde::Serialize>(sessions: &[T]) -> Result<String, JsonlCoreError> {
   sessions
     .iter()
     .map(|session| serialize_to_jsonl(session))
@@ -241,7 +250,21 @@ pub fn validate_jsonl_content(content: &str) -> Result<(), Vec<(usize, String)>>
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::float_cmp, clippy::needless_collect, clippy::unnecessary_debug_formatting, clippy::match_same_arms, clippy::option_if_let_else, clippy::suspicious_else_formatting, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro, clippy::needless_pass_by_value)]
+#[allow(
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::unnecessary_debug_formatting,
+  clippy::match_same_arms,
+  clippy::option_if_let_else,
+  clippy::suspicious_else_formatting,
+  clippy::manual_let_else,
+  clippy::match_wild_err_arm,
+  clippy::match_like_matches_macro,
+  clippy::needless_pass_by_value
+)]
 mod tests {
 
   use super::*;
@@ -267,7 +290,40 @@ mod tests {
     };
     let result = serialize_to_jsonl(&session);
     assert!(result.is_ok());
-    assert!(result.unwrap().contains("test-1"));
+    let Ok(line) = result else {
+      panic!("serialization should succeed");
+    };
+    assert!(line.contains("test-1"));
+  }
+
+  #[test]
+  fn serialize_to_jsonl_returns_typed_error_for_failed_serialization() {
+    #[derive(Serialize)]
+    struct FailingSession;
+
+    impl FailingSession {
+      fn fail<S>(_value: &Self, _serializer: S) -> Result<S::Ok, S::Error>
+      where
+        S: serde::Serializer,
+      {
+        Err(serde::ser::Error::custom("boom"))
+      }
+    }
+
+    #[derive(Serialize)]
+    struct Wrapper {
+      #[serde(serialize_with = "FailingSession::fail")]
+      item: FailingSession,
+    }
+
+    let result = serialize_to_jsonl(&Wrapper {
+      item: FailingSession,
+    });
+
+    assert!(matches!(
+      result,
+      Err(JsonlCoreError::Serialization { details }) if details.contains("boom")
+    ));
   }
 
   #[test]
@@ -371,7 +427,9 @@ mod tests {
         name: "B".to_string(),
       },
     ];
-    let content = build_jsonl_content(&sessions).unwrap();
+    let Ok(content) = build_jsonl_content(&sessions) else {
+      panic!("jsonl content should build");
+    };
     assert!(content.contains('1'));
     assert!(content.contains('2'));
   }

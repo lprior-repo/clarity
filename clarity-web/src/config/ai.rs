@@ -6,6 +6,7 @@
 #![forbid(unsafe_code)]
 
 use serde::{Deserialize, Serialize};
+use std::io::ErrorKind;
 use std::path::Path;
 use std::path::PathBuf;
 use thiserror::Error;
@@ -163,14 +164,31 @@ pub fn config_path() -> Option<PathBuf> {
 ///
 /// # Errors
 /// Returns [`ConfigError`] when path resolution, parsing, or writes fail.
+pub fn load_ai_config_if_present() -> Result<Option<AiConfig>, ConfigError> {
+  config_path().map_or(Ok(None), |path| load_ai_config_from_path_if_present(&path))
+}
+
+/// Load AI configuration from XDG config directory.
+///
+/// Creates a default config with 0600 permissions when the file is missing.
+///
+/// # Errors
+/// Returns [`ConfigError`] when path resolution, parsing, or writes fail.
 pub fn load_ai_config() -> Result<AiConfig, ConfigError> {
   let config_file = config_path().ok_or(ConfigError::ConfigDirNotFound)?;
 
-  // Try to read existing config
-  std::fs::read_to_string(&config_file).map_or_else(
-    |_| create_default_config(&config_file),
-    |content| toml::from_str(&content).map_err(|e| ConfigError::ParseError(e.to_string())),
-  )
+  load_ai_config_from_path_if_present(&config_file)?
+    .map_or_else(|| create_default_config(&config_file), Ok)
+}
+
+fn load_ai_config_from_path_if_present(path: &Path) -> Result<Option<AiConfig>, ConfigError> {
+  match std::fs::read_to_string(path) {
+    Ok(content) => toml::from_str(&content)
+      .map(Some)
+      .map_err(|e| ConfigError::ParseError(e.to_string())),
+    Err(error) if error.kind() == ErrorKind::NotFound => Ok(None),
+    Err(error) => Err(ConfigError::ReadError(error.to_string())),
+  }
 }
 
 /// Create default configuration file with secure permissions
@@ -456,6 +474,21 @@ min_score = 90
     Ok(())
   }
 
+  /// Test read-only loading does not create missing config files.
+  #[test]
+  fn test_load_if_present_does_not_create_missing_file() -> Result<(), Box<dyn Error>> {
+    let temp_dir = TempDir::new()?;
+    let config_path = temp_dir.path().join("ai.toml");
+
+    assert!(!config_path.exists());
+
+    let config = load_ai_config_from_path_if_present(&config_path)?;
+
+    assert_eq!(config, None);
+    assert!(!config_path.exists());
+    Ok(())
+  }
+
   /// Test config creation when file doesn't exist
   #[test]
   fn test_creates_default_when_missing() -> Result<(), Box<dyn Error>> {
@@ -476,10 +509,7 @@ min_score = 90
 
   // Helper function to test loading from specific path
   fn load_ai_config_from_path(path: &Path) -> Result<AiConfig, ConfigError> {
-    std::fs::read_to_string(path).map_or_else(
-      |_| create_default_config(path),
-      |content| toml::from_str(&content).map_err(|e| ConfigError::ParseError(e.to_string())),
-    )
+    load_ai_config_from_path_if_present(path)?.map_or_else(|| create_default_config(path), Ok)
   }
 
   /// Test quality score boundary

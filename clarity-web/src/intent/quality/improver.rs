@@ -427,7 +427,7 @@ pub fn suggest_missing_tests(report: &QualityReport) -> Vec<ImprovementSuggestio
         issue.context.as_deref().unwrap_or("")
       ),
     ) {
-      suggestions.push(s)
+      suggestions.push(s);
     }
   }
 
@@ -453,7 +453,7 @@ pub fn suggest_vague_rules_improvements(report: &QualityReport) -> Vec<Improveme
     let (description, action) = analyze_vague_rule(rule);
 
     if let Ok(s) = ImprovementSuggestion::new("clarity", description, 7, rule.clone(), action) {
-      suggestions.push(s)
+      suggestions.push(s);
     }
   }
 
@@ -509,7 +509,7 @@ pub fn suggest_examples_improvements(report: &QualityReport) -> Vec<ImprovementS
           .unwrap_or("Provide complete details for this field.")
       ),
     ) {
-      suggestions.push(s)
+      suggestions.push(s);
     }
   }
 
@@ -539,7 +539,7 @@ fn suggest_security_improvements(report: &QualityReport) -> Vec<ImprovementSugge
           .unwrap_or("Consider authentication, authorization, encryption, and input validation.")
       ),
     ) {
-      suggestions.push(s)
+      suggestions.push(s);
     }
   }
 
@@ -633,7 +633,7 @@ fn suggest_consistency_improvements(report: &QualityReport) -> Vec<ImprovementSu
           .unwrap_or("Ensure all requirements align and do not conflict.")
       ),
     ) {
-      suggestions.push(s)
+      suggestions.push(s);
     }
   }
 

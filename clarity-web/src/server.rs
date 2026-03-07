@@ -38,24 +38,33 @@ use tracing::info;
 use tracing::warn as tracing_warn;
 
 // Re-export types from lattice and providers
-#[cfg(feature = "server")]
+#[cfg(not(target_arch = "wasm32"))]
 use crate::components::discover::straw_man::StrawManTrap;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::components::discover::straw_man::StrawManValidation;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::components::discover::types::{HolePunchingResults, ScenarioField};
 #[cfg(not(target_arch = "wasm32"))]
-use crate::config::ai::load_ai_config;
+use crate::config::ai::{default_config, load_ai_config_if_present, AiConfig, ConfigError};
 #[cfg(feature = "server")]
 use crate::lattice::quality::{calculate_quality, InversionControl, QualityError};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::lattice::quality::{Answer as QualityAnswer, EarsRequirementRef, QualityScore};
 #[cfg(not(target_arch = "wasm32"))]
+use crate::providers::resolution::resolve_provider_config;
+#[cfg(feature = "server")]
+use crate::providers::ExtractionProvider;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::providers::OpenCodeProvider;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::providers::{ExtractedFields, ExtractionContext, FieldType, OpenCodeProviderOptions};
-#[cfg(feature = "server")]
-use crate::providers::{ExtractionError, ExtractionProvider, SchemaField};
+use crate::providers::SchemaField;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::providers::{
+  ExtractedFields, ExtractionContext, ExtractionError, FieldExtraction, FieldType,
+  OpenCodeProviderOptions,
+};
+#[cfg(not(target_arch = "wasm32"))]
+use thiserror::Error;
 
 /// A planning bead (atomic work unit)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -268,55 +277,105 @@ impl RateLimiter {
 #[allow(dead_code)]
 static RATE_LIMITER: LazyLock<RateLimiter> = LazyLock::new(|| RateLimiter::new(10));
 
-/// Global AI provider singleton
-///
-/// Initialized once with config from `~/.config/clarity/ai.toml`.
 #[cfg(not(target_arch = "wasm32"))]
-#[allow(dead_code)]
-static AI_PROVIDER: LazyLock<Arc<OpenCodeProvider>> = LazyLock::new(|| {
-  let config = load_ai_config()
-    .map_err(|e| {
-      tracing_warn!(error = %e, "Failed to load AI config, using defaults");
-      e
-    })
-    .unwrap_or_else(|_| crate::config::ai::default_config());
+#[derive(Debug, Clone)]
+struct AiProviderState {
+  provider: Arc<OpenCodeProvider>,
+  diagnostics: AiProviderDiagnostics,
+}
 
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ProviderBootstrapInput {
+  diagnostics: AiProviderDiagnostics,
+  session_id: String,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Debug, Error)]
+enum AiProviderBootstrapError {
+  #[error("failed to load AI configuration: {0}")]
+  Config(#[from] ConfigError),
+
+  #[error("unsupported AI provider: {0}")]
+  UnsupportedProvider(String),
+
+  #[error("failed to initialize AI provider: {0}")]
+  Provider(#[from] ExtractionError),
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn build_provider_bootstrap_input(
+  config: AiConfig,
+  session_factory: impl FnOnce() -> String,
+) -> ProviderBootstrapInput {
+  let resolved = resolve_provider_config(&config);
   let session_id = if config.provider.session_id.is_empty() {
-    uuid::Uuid::new_v4().to_string()
+    session_factory()
   } else {
-    config.provider.session_id.clone()
+    config.provider.session_id
   };
 
-  OpenCodeProvider::new_with_options(
-    config.provider.endpoint,
-    session_id,
-    OpenCodeProviderOptions {
-      model: config.provider.model,
-      routing_provider: config.provider.routing_provider,
+  ProviderBootstrapInput {
+    diagnostics: AiProviderDiagnostics {
+      provider: resolved.provider_type,
+      endpoint: resolved.endpoint,
+      model: resolved.model,
+      routing_provider: resolved.routing_provider,
     },
-  )
-  .map(Arc::new)
-  .map_err(|e| {
-    tracing_warn!(error = %e, "Failed to create OpenCode provider");
-    e
+    session_id,
+  }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn create_ai_provider_state(
+  input: ProviderBootstrapInput,
+) -> Result<AiProviderState, AiProviderBootstrapError> {
+  if input.diagnostics.provider != "opencode" {
+    return Err(AiProviderBootstrapError::UnsupportedProvider(
+      input.diagnostics.provider,
+    ));
+  }
+
+  let diagnostics = input.diagnostics;
+  let provider = OpenCodeProvider::new_with_options(
+    diagnostics.endpoint.clone(),
+    input.session_id,
+    OpenCodeProviderOptions {
+      model: diagnostics.model.clone(),
+      routing_provider: diagnostics.routing_provider.clone(),
+    },
+  )?;
+
+  Ok(AiProviderState {
+    provider: Arc::new(provider),
+    diagnostics,
   })
-  .unwrap_or_else(|_| {
-    match OpenCodeProvider::new_with_options(
-      "https://api.opencode.ai/v1".to_string(),
-      uuid::Uuid::new_v4().to_string(),
-      OpenCodeProviderOptions {
-        model: Some("zai-coding-plan/glm-5".to_string()),
-        routing_provider: Some("zai-coding-plan".to_string()),
-      },
-    ) {
-      Ok(provider) => Arc::new(provider),
-      Err(error) => {
-        tracing_warn!(error = %error, "Fallback OpenCode provider initialization failed");
-        std::process::abort();
-      }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn initialize_ai_provider_state() -> Result<AiProviderState, AiProviderBootstrapError> {
+  let config = load_ai_config_if_present()?.unwrap_or_else(default_config);
+  let input = build_provider_bootstrap_input(config, || uuid::Uuid::new_v4().to_string());
+
+  create_ai_provider_state(input)
+}
+
+/// Global AI provider state.
+///
+/// Initialized lazily from configuration without aborting the process on failure.
+#[cfg(not(target_arch = "wasm32"))]
+#[allow(dead_code)]
+static AI_PROVIDER_STATE: LazyLock<Result<AiProviderState, AiProviderBootstrapError>> =
+  LazyLock::new(|| {
+    let state = initialize_ai_provider_state();
+
+    if let Err(error) = &state {
+      tracing_warn!(error = %error, "AI provider bootstrap failed");
     }
-  })
-});
+
+    state
+  });
 
 /// Lightweight diagnostics for currently configured AI extraction provider.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -328,14 +387,301 @@ pub struct AiProviderDiagnostics {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+fn ai_provider_state() -> Result<&'static AiProviderState, ServerFnError> {
+  AI_PROVIDER_STATE.as_ref().map_err(|error| {
+    ServerFnError::new(anyhow::anyhow!(
+      "AI provider initialization failed: {error}"
+    ))
+  })
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn ai_provider() -> Result<Arc<OpenCodeProvider>, ServerFnError> {
+  ai_provider_state().map(|state| Arc::clone(&state.provider))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn map_extraction_error(action: &'static str, error: ExtractionError) -> ServerFnError {
+  match error {
+    ExtractionError::RateLimited {
+      retry_after_seconds,
+    } => ServerFnError::new(anyhow::anyhow!(
+      "Provider rate limited. Retry after {retry_after_seconds}s"
+    )),
+    ExtractionError::AuthenticationError(message) => {
+      ServerFnError::new(anyhow::anyhow!("Authentication failed: {message}"))
+    }
+    ExtractionError::InvalidInput(message) => {
+      ServerFnError::new(anyhow::anyhow!("Invalid input: {message}"))
+    }
+    other => ServerFnError::new(anyhow::anyhow!("{action}: {other}")),
+  }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn build_straw_man_schema() -> Vec<SchemaField> {
+  vec![
+    SchemaField {
+      name: "irrational_actor_detected".to_string(),
+      field_type: FieldType::Boolean,
+      required: true,
+      description: Some(
+        "True if the persona acts against their own motivations or self-interest".to_string(),
+      ),
+      options: None,
+    },
+    SchemaField {
+      name: "manic_pixie_dream_user_detected".to_string(),
+      field_type: FieldType::Boolean,
+      required: true,
+      description: Some(
+        "True if the persona magically loves everything without discernment or constraints"
+          .to_string(),
+      ),
+      options: None,
+    },
+    SchemaField {
+      name: "stoic_monk_detected".to_string(),
+      field_type: FieldType::Boolean,
+      required: true,
+      description: Some(
+        "True if the persona tolerates immense friction or difficulty without complaint"
+          .to_string(),
+      ),
+      options: None,
+    },
+    SchemaField {
+      name: "your_clone_detected".to_string(),
+      field_type: FieldType::Boolean,
+      required: true,
+      description: Some(
+        "True if the persona has developer-level system knowledge or mental models".to_string(),
+      ),
+      options: None,
+    },
+    SchemaField {
+      name: "suggestions".to_string(),
+      field_type: FieldType::TextArea,
+      required: false,
+      description: Some(
+        "Specific suggestions for fixing detected traps. Be concrete and actionable.".to_string(),
+      ),
+      options: None,
+    },
+  ]
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn build_straw_man_context(schema: Vec<SchemaField>) -> ExtractionContext {
+  ExtractionContext {
+    document_type: Some("persona_validation".to_string()),
+    locale: Some("en_US".to_string()),
+    schema: Some(schema),
+    extra: serde_json::json!({
+        "validation_type": "straw_man_traps",
+        "traps": [
+            {
+                "name": "IrrationalActor",
+                "description": "User acts against their own motivations or self-interest"
+            },
+            {
+                "name": "ManicPixieDreamUser",
+                "description": "User magically loves everything without discernment"
+            },
+            {
+                "name": "StoicMonk",
+                "description": "User tolerates immense friction without complaint"
+            },
+            {
+                "name": "YourClone",
+                "description": "User has developer's system knowledge and mental models"
+            }
+        ]
+    }),
+  }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn build_straw_man_prompt(persona_text: &str) -> String {
+  format!(
+    "Analyze this user persona description for straw man trap patterns:\n\n{persona_text}\n\n\
+        Detect which of the following traps are present:\n\
+        1. Irrational Actor: User acts against their own motivations\n\
+        2. Manic Pixie Dream User: User magically loves everything\n\
+        3. Stoic Monk: User tolerates excessive friction\n\
+        4. Your Clone: User has developer's system knowledge\n\n\
+        Provide specific suggestions for any detected traps."
+  )
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn parse_straw_man_validation(fields: &[FieldExtraction]) -> StrawManValidation {
+  let traps_detected = fields
+    .iter()
+    .filter_map(|field| match (field.name.as_str(), field.value.as_bool()) {
+      ("irrational_actor_detected", Some(true)) => Some(StrawManTrap::IrrationalActor),
+      ("manic_pixie_dream_user_detected", Some(true)) => Some(StrawManTrap::ManicPixieDreamUser),
+      ("stoic_monk_detected", Some(true)) => Some(StrawManTrap::StoicMonk),
+      ("your_clone_detected", Some(true)) => Some(StrawManTrap::YourClone),
+      _ => None,
+    })
+    .collect();
+
+  StrawManValidation::new(traps_detected)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn build_hole_punching_schema() -> Vec<SchemaField> {
+  vec![
+    SchemaField {
+      name: "discovery_hole_addressed".to_string(),
+      field_type: FieldType::Boolean,
+      required: true,
+      description: Some(
+        "True if the scenario explains how the user discovers the feature/solution".to_string(),
+      ),
+      options: None,
+    },
+    SchemaField {
+      name: "edge_case_hole_addressed".to_string(),
+      field_type: FieldType::Boolean,
+      required: true,
+      description: Some(
+        "True if the scenario addresses what happens in edge cases (errors, network issues, typos)"
+          .to_string(),
+      ),
+      options: None,
+    },
+    SchemaField {
+      name: "motivation_dropoff_addressed".to_string(),
+      field_type: FieldType::Boolean,
+      required: true,
+      description: Some(
+        "True if the scenario explains why users continue through high-friction steps".to_string(),
+      ),
+      options: None,
+    },
+    SchemaField {
+      name: "identified_holes".to_string(),
+      field_type: FieldType::TextArea,
+      required: false,
+      description: Some(
+        "List any holes that were detected but not addressed in the scenario".to_string(),
+      ),
+      options: None,
+    },
+    SchemaField {
+      name: "suggestions".to_string(),
+      field_type: FieldType::TextArea,
+      required: false,
+      description: Some(
+        "Specific suggestions for addressing any detected holes. Be concrete and actionable."
+          .to_string(),
+      ),
+      options: None,
+    },
+  ]
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn build_hole_punching_context(schema: Vec<SchemaField>) -> ExtractionContext {
+  ExtractionContext {
+    document_type: Some("scenario_validation".to_string()),
+    locale: Some("en_US".to_string()),
+    schema: Some(schema),
+    extra: serde_json::json!({
+        "validation_type": "hole_punching",
+        "holes": [
+            {
+                "name": "DiscoveryHole",
+                "description": "How did they find the feature?",
+                "question": "Addresses the gap between user need and awareness of the solution"
+            },
+            {
+                "name": "EdgeCaseHole",
+                "description": "What if internet drops, mistype, etc?",
+                "question": "Addresses technical and usability edge cases"
+            },
+            {
+                "name": "MotivationDropOff",
+                "description": "Why continue at high-friction steps?",
+                "question": "Addresses motivation and engagement at critical points"
+            }
+        ]
+    }),
+  }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn build_hole_punching_prompt(scenario: &ScenarioField) -> String {
+  format!(
+    "Analyze this user scenario for hole punching gaps:\n\n\
+        Trigger: {}\n\
+        Value Moment: {}\n\
+        Feeling: {}\n\n\
+        Current hole punching status:\n\
+        - Discovery Hole: {}\n\
+        - Edge Case Hole: {}\n\
+        - Motivation Drop-off: {}\n\n\
+        Check which of the following holes have been adequately addressed:\n\
+        1. Discovery Hole: How did they find the feature/solution?\n\
+        2. Edge Case Hole: What if internet drops, typos, errors occur?\n\
+        3. Motivation Drop-off: Why continue through high-friction steps?\n\n\
+        Evaluate if each hole has been addressed. If a hole is present but not addressed,\n\
+        provide specific suggestions for how to address it.",
+    scenario.trigger,
+    scenario.value_moment,
+    scenario.feeling,
+    scenario
+      .hole_punching
+      .discovery_hole
+      .as_deref()
+      .unwrap_or("Not addressed"),
+    scenario
+      .hole_punching
+      .edge_case_hole
+      .as_deref()
+      .unwrap_or("Not addressed"),
+    scenario
+      .hole_punching
+      .motivation_dropoff
+      .as_deref()
+      .unwrap_or("Not addressed")
+  )
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn merge_hole_punching_results(
+  existing: &HolePunchingResults,
+  fields: &[FieldExtraction],
+) -> HolePunchingResults {
+  fields.iter().fold(existing.clone(), |results, field| {
+    match (field.name.as_str(), field.value.as_bool()) {
+      ("discovery_hole_addressed", Some(true)) if results.discovery_hole.is_none() => results
+        .address(
+          crate::components::discover::types::HoleType::DiscoveryHole,
+          "Addressed in scenario".to_string(),
+        ),
+      ("edge_case_hole_addressed", Some(true)) if results.edge_case_hole.is_none() => results
+        .address(
+          crate::components::discover::types::HoleType::EdgeCaseHole,
+          "Addressed in scenario".to_string(),
+        ),
+      ("motivation_dropoff_addressed", Some(true)) if results.motivation_dropoff.is_none() => {
+        results.address(
+          crate::components::discover::types::HoleType::MotivationDropOff,
+          "Addressed in scenario".to_string(),
+        )
+      }
+      _ => results,
+    }
+  })
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 #[server]
 pub async fn get_ai_provider_status_server() -> Result<AiProviderDiagnostics, ServerFnError> {
-  Ok(AiProviderDiagnostics {
-    provider: "opencode".to_string(),
-    endpoint: AI_PROVIDER.endpoint().clone(),
-    model: AI_PROVIDER.model().clone(),
-    routing_provider: AI_PROVIDER.routing_provider().clone(),
-  })
+  ai_provider_state().map(|state| state.diagnostics.clone())
 }
 
 /// Extract structured fields from freeform text input
@@ -392,23 +738,11 @@ pub async fn extract_fields_server(
   };
 
   // Call provider
-  let result = AI_PROVIDER
+  let provider = ai_provider()?;
+  let result = provider
     .extract_fields(&input, &context)
     .await
-    .map_err(|e| match e {
-      ExtractionError::RateLimited {
-        retry_after_seconds,
-      } => ServerFnError::new(anyhow::anyhow!(
-        "Provider rate limited. Retry after {retry_after_seconds}s"
-      )),
-      ExtractionError::AuthenticationError(msg) => {
-        ServerFnError::new(anyhow::anyhow!("Authentication failed: {msg}"))
-      }
-      ExtractionError::InvalidInput(msg) => {
-        ServerFnError::new(anyhow::anyhow!("Invalid input: {msg}"))
-      }
-      _ => ServerFnError::new(anyhow::anyhow!("Extraction failed: {e}")),
-    })?;
+    .map_err(|error| map_extraction_error("Extraction failed", error))?;
 
   info!(
     session,
@@ -479,23 +813,11 @@ pub async fn suggest_field_server(
   );
 
   // Call provider
-  let result = AI_PROVIDER
+  let provider = ai_provider()?;
+  let result = provider
     .extract_fields_with_schema(&prompt_text, &schema, &context)
     .await
-    .map_err(|e| match e {
-      ExtractionError::RateLimited {
-        retry_after_seconds,
-      } => ServerFnError::new(anyhow::anyhow!(
-        "Provider rate limited. Retry after {retry_after_seconds}s"
-      )),
-      ExtractionError::AuthenticationError(msg) => {
-        ServerFnError::new(anyhow::anyhow!("Authentication failed: {msg}"))
-      }
-      ExtractionError::InvalidInput(msg) => {
-        ServerFnError::new(anyhow::anyhow!("Invalid input: {msg}"))
-      }
-      _ => ServerFnError::new(anyhow::anyhow!("Suggestion failed: {e}")),
-    })?;
+    .map_err(|error| map_extraction_error("Suggestion failed", error))?;
 
   // Extract the first field's value as string
   let suggestion = result
@@ -666,148 +988,19 @@ pub async fn validate_straw_man_traps_server(
     )));
   }
 
-  // Define schema for trap detection
-  // We'll extract which traps are present and get suggestions for each
-  let schema = vec![
-    SchemaField {
-      name: "irrational_actor_detected".to_string(),
-      field_type: FieldType::Boolean,
-      required: true,
-      description: Some(
-        "True if the persona acts against their own motivations or self-interest".to_string(),
-      ),
-      options: None,
-    },
-    SchemaField {
-      name: "manic_pixie_dream_user_detected".to_string(),
-      field_type: FieldType::Boolean,
-      required: true,
-      description: Some(
-        "True if the persona magically loves everything without discernment or constraints"
-          .to_string(),
-      ),
-      options: None,
-    },
-    SchemaField {
-      name: "stoic_monk_detected".to_string(),
-      field_type: FieldType::Boolean,
-      required: true,
-      description: Some(
-        "True if the persona tolerates immense friction or difficulty without complaint"
-          .to_string(),
-      ),
-      options: None,
-    },
-    SchemaField {
-      name: "your_clone_detected".to_string(),
-      field_type: FieldType::Boolean,
-      required: true,
-      description: Some(
-        "True if the persona has developer-level system knowledge or mental models".to_string(),
-      ),
-      options: None,
-    },
-    SchemaField {
-      name: "suggestions".to_string(),
-      field_type: FieldType::TextArea,
-      required: false,
-      description: Some(
-        "Specific suggestions for fixing detected traps. Be concrete and actionable.".to_string(),
-      ),
-      options: None,
-    },
-  ];
-
-  // Build context
-  let context = ExtractionContext {
-    document_type: Some("persona_validation".to_string()),
-    locale: Some("en_US".to_string()),
-    schema: Some(schema.clone()),
-    extra: serde_json::json!({
-        "validation_type": "straw_man_traps",
-        "traps": [
-            {
-                "name": "IrrationalActor",
-                "description": "User acts against their own motivations or self-interest"
-            },
-            {
-                "name": "ManicPixieDreamUser",
-                "description": "User magically loves everything without discernment"
-            },
-            {
-                "name": "StoicMonk",
-                "description": "User tolerates immense friction without complaint"
-            },
-            {
-                "name": "YourClone",
-                "description": "User has developer's system knowledge and mental models"
-            }
-        ]
-    }),
-  };
-
-  // Build analysis prompt
-  let analysis_prompt = format!(
-    "Analyze this user persona description for straw man trap patterns:\n\n{}\n\n\
-        Detect which of the following traps are present:\n\
-        1. Irrational Actor: User acts against their own motivations\n\
-        2. Manic Pixie Dream User: User magically loves everything\n\
-        3. Stoic Monk: User tolerates excessive friction\n\
-        4. Your Clone: User has developer's system knowledge\n\n\
-        Provide specific suggestions for any detected traps.",
-    persona_text
-  );
+  let schema = build_straw_man_schema();
+  let context = build_straw_man_context(schema.clone());
+  let analysis_prompt = build_straw_man_prompt(&persona_text);
 
   // Call AI provider
-  let result = AI_PROVIDER
+  let provider = ai_provider()?;
+  let result = provider
     .extract_fields_with_schema(&analysis_prompt, &schema, &context)
     .await
-    .map_err(|e| match e {
-      ExtractionError::RateLimited {
-        retry_after_seconds,
-      } => ServerFnError::new(anyhow::anyhow!(
-        "Provider rate limited. Retry after {retry_after_seconds}s"
-      )),
-      ExtractionError::AuthenticationError(msg) => {
-        ServerFnError::new(anyhow::anyhow!("Authentication failed: {msg}"))
-      }
-      ExtractionError::InvalidInput(msg) => {
-        ServerFnError::new(anyhow::anyhow!("Invalid input: {msg}"))
-      }
-      _ => ServerFnError::new(anyhow::anyhow!("Trap detection failed: {e}")),
-    })?;
+    .map_err(|error| map_extraction_error("Trap detection failed", error))?;
 
-  // Parse detected traps from response
-  let mut traps_detected = Vec::new();
-
-  for field in &result.fields {
-    match field.name.as_str() {
-      "irrational_actor_detected" => {
-        if let Some(true) = field.value.as_bool() {
-          traps_detected.push(StrawManTrap::IrrationalActor);
-        }
-      }
-      "manic_pixie_dream_user_detected" => {
-        if let Some(true) = field.value.as_bool() {
-          traps_detected.push(StrawManTrap::ManicPixieDreamUser);
-        }
-      }
-      "stoic_monk_detected" => {
-        if let Some(true) = field.value.as_bool() {
-          traps_detected.push(StrawManTrap::StoicMonk);
-        }
-      }
-      "your_clone_detected" => {
-        if let Some(true) = field.value.as_bool() {
-          traps_detected.push(StrawManTrap::YourClone);
-        }
-      }
-      _ => {}
-    }
-  }
-
-  // Create validation result
-  let validation = StrawManValidation::new(traps_detected.clone());
+  let validation = parse_straw_man_validation(&result.fields);
+  let traps_detected = validation.traps_detected.clone();
 
   info!(
       session,
@@ -898,179 +1091,18 @@ pub async fn validate_hole_punching_server(
     )));
   }
 
-  // Define schema for hole detection
-  // We'll extract which holes are present and detect if they've been addressed
-  let schema = vec![
-    SchemaField {
-      name: "discovery_hole_addressed".to_string(),
-      field_type: FieldType::Boolean,
-      required: true,
-      description: Some(
-        "True if the scenario explains how the user discovers the feature/solution".to_string(),
-      ),
-      options: None,
-    },
-    SchemaField {
-      name: "edge_case_hole_addressed".to_string(),
-      field_type: FieldType::Boolean,
-      required: true,
-      description: Some(
-        "True if the scenario addresses what happens in edge cases (errors, network issues, typos)"
-          .to_string(),
-      ),
-      options: None,
-    },
-    SchemaField {
-      name: "motivation_dropoff_addressed".to_string(),
-      field_type: FieldType::Boolean,
-      required: true,
-      description: Some(
-        "True if the scenario explains why users continue through high-friction steps".to_string(),
-      ),
-      options: None,
-    },
-    SchemaField {
-      name: "identified_holes".to_string(),
-      field_type: FieldType::TextArea,
-      required: false,
-      description: Some(
-        "List any holes that were detected but not addressed in the scenario".to_string(),
-      ),
-      options: None,
-    },
-    SchemaField {
-      name: "suggestions".to_string(),
-      field_type: FieldType::TextArea,
-      required: false,
-      description: Some(
-        "Specific suggestions for addressing any detected holes. Be concrete and actionable."
-          .to_string(),
-      ),
-      options: None,
-    },
-  ];
-
-  // Build context
-  let context = ExtractionContext {
-    document_type: Some("scenario_validation".to_string()),
-    locale: Some("en_US".to_string()),
-    schema: Some(schema.clone()),
-    extra: serde_json::json!({
-        "validation_type": "hole_punching",
-        "holes": [
-            {
-                "name": "DiscoveryHole",
-                "description": "How did they find the feature?",
-                "question": "Addresses the gap between user need and awareness of the solution"
-            },
-            {
-                "name": "EdgeCaseHole",
-                "description": "What if internet drops, mistype, etc?",
-                "question": "Addresses technical and usability edge cases"
-            },
-            {
-                "name": "MotivationDropOff",
-                "description": "Why continue at high-friction steps?",
-                "question": "Addresses motivation and engagement at critical points"
-            }
-        ]
-    }),
-  };
-
-  // Build analysis prompt
-  let analysis_prompt = format!(
-    "Analyze this user scenario for hole punching gaps:\n\n\
-        Trigger: {}\n\
-        Value Moment: {}\n\
-        Feeling: {}\n\n\
-        Current hole punching status:\n\
-        - Discovery Hole: {}\n\
-        - Edge Case Hole: {}\n\
-        - Motivation Drop-off: {}\n\n\
-        Check which of the following holes have been adequately addressed:\n\
-        1. Discovery Hole: How did they find the feature/solution?\n\
-        2. Edge Case Hole: What if internet drops, typos, errors occur?\n\
-        3. Motivation Drop-off: Why continue through high-friction steps?\n\n\
-        Evaluate if each hole has been addressed. If a hole is present but not addressed,\n\
-        provide specific suggestions for how to address it.",
-    scenario.trigger,
-    scenario.value_moment,
-    scenario.feeling,
-    scenario
-      .hole_punching
-      .discovery_hole
-      .as_deref()
-      .unwrap_or("Not addressed"),
-    scenario
-      .hole_punching
-      .edge_case_hole
-      .as_deref()
-      .unwrap_or("Not addressed"),
-    scenario
-      .hole_punching
-      .motivation_dropoff
-      .as_deref()
-      .unwrap_or("Not addressed")
-  );
+  let schema = build_hole_punching_schema();
+  let context = build_hole_punching_context(schema.clone());
+  let analysis_prompt = build_hole_punching_prompt(&scenario);
 
   // Call AI provider
-  let result = AI_PROVIDER
+  let provider = ai_provider()?;
+  let result = provider
     .extract_fields_with_schema(&analysis_prompt, &schema, &context)
     .await
-    .map_err(|e| match e {
-      ExtractionError::RateLimited {
-        retry_after_seconds,
-      } => ServerFnError::new(anyhow::anyhow!(
-        "Provider rate limited. Retry after {retry_after_seconds}s"
-      )),
-      ExtractionError::AuthenticationError(msg) => {
-        ServerFnError::new(anyhow::anyhow!("Authentication failed: {msg}"))
-      }
-      ExtractionError::InvalidInput(msg) => {
-        ServerFnError::new(anyhow::anyhow!("Invalid input: {msg}"))
-      }
-      _ => ServerFnError::new(anyhow::anyhow!("Hole punching validation failed: {e}")),
-    })?;
+    .map_err(|error| map_extraction_error("Hole punching validation failed", error))?;
 
-  // Parse hole addressing status from response
-  let mut discovery_hole = scenario.hole_punching.discovery_hole.clone();
-  let mut edge_case_hole = scenario.hole_punching.edge_case_hole.clone();
-  let mut motivation_dropoff = scenario.hole_punching.motivation_dropoff.clone();
-
-  for field in &result.fields {
-    match field.name.as_str() {
-      "discovery_hole_addressed" => {
-        if let Some(true) = field.value.as_bool() {
-          // Mark as addressed if not already set
-          if discovery_hole.is_none() {
-            discovery_hole = Some("Addressed in scenario".to_string());
-          }
-        }
-      }
-      "edge_case_hole_addressed" => {
-        if let Some(true) = field.value.as_bool() {
-          if edge_case_hole.is_none() {
-            edge_case_hole = Some("Addressed in scenario".to_string());
-          }
-        }
-      }
-      "motivation_dropoff_addressed" => {
-        if let Some(true) = field.value.as_bool() {
-          if motivation_dropoff.is_none() {
-            motivation_dropoff = Some("Addressed in scenario".to_string());
-          }
-        }
-      }
-      _ => {}
-    }
-  }
-
-  // Create hole punching results
-  let hole_results = HolePunchingResults {
-    discovery_hole,
-    edge_case_hole,
-    motivation_dropoff,
-  };
+  let hole_results = merge_hole_punching_results(&scenario.hole_punching, &result.fields);
 
   info!(
       session,
@@ -1721,6 +1753,7 @@ pub async fn compile_to_kirk(
 mod integration_tests {
   use super::*;
   use crate::components::discover::straw_man::StrawManTrap;
+  use crate::config::ai::{AiConfig, ProviderConfig, ProviderType, QualityConfig};
   use crate::providers::FieldExtraction;
   use serde_json::json;
 
@@ -1945,6 +1978,298 @@ mod integration_tests {
       deserialized.routing_provider.as_deref(),
       Some("zai-coding-plan")
     );
+  }
+
+  #[test]
+  fn test_map_extraction_error_maps_rate_limit_message() {
+    let error = ExtractionError::RateLimited {
+      retry_after_seconds: 12,
+    };
+
+    let mapped = map_extraction_error("Trap detection failed", error);
+
+    assert!(mapped.to_string().contains("Retry after 12s"));
+  }
+
+  #[test]
+  fn test_map_extraction_error_maps_authentication_message() {
+    let mapped = map_extraction_error(
+      "Trap detection failed",
+      ExtractionError::AuthenticationError("bad key".to_string()),
+    );
+
+    assert!(mapped
+      .to_string()
+      .contains("Authentication failed: bad key"));
+  }
+
+  #[test]
+  fn test_map_extraction_error_uses_action_for_fallback_errors() {
+    let mapped = map_extraction_error(
+      "Trap detection failed",
+      ExtractionError::Unknown("boom".to_string()),
+    );
+
+    assert!(mapped
+      .to_string()
+      .contains("Trap detection failed: Unknown error: boom"));
+  }
+
+  #[test]
+  fn test_build_straw_man_prompt_includes_persona_and_all_four_traps() {
+    let prompt = build_straw_man_prompt("Persona text");
+
+    assert!(prompt.contains("Persona text"));
+    assert!(prompt.contains("Irrational Actor"));
+    assert!(prompt.contains("Manic Pixie Dream User"));
+    assert!(prompt.contains("Stoic Monk"));
+    assert!(prompt.contains("Your Clone"));
+  }
+
+  #[test]
+  fn test_parse_straw_man_validation_collects_only_true_known_flags() {
+    let fields = vec![
+      FieldExtraction {
+        name: "irrational_actor_detected".to_string(),
+        field_type: FieldType::Boolean,
+        value: json!(true),
+        confidence: 1.0,
+        justification: None,
+      },
+      FieldExtraction {
+        name: "stoic_monk_detected".to_string(),
+        field_type: FieldType::Boolean,
+        value: json!(false),
+        confidence: 1.0,
+        justification: None,
+      },
+      FieldExtraction {
+        name: "unknown_flag".to_string(),
+        field_type: FieldType::Boolean,
+        value: json!(true),
+        confidence: 1.0,
+        justification: None,
+      },
+    ];
+
+    let validation = parse_straw_man_validation(&fields);
+
+    assert_eq!(
+      validation.traps_detected,
+      vec![StrawManTrap::IrrationalActor]
+    );
+    assert!(!validation.passed);
+  }
+
+  #[test]
+  fn test_parse_straw_man_validation_returns_passing_when_no_true_flags() {
+    let fields = vec![FieldExtraction {
+      name: "stoic_monk_detected".to_string(),
+      field_type: FieldType::Boolean,
+      value: json!(false),
+      confidence: 1.0,
+      justification: None,
+    }];
+
+    let validation = parse_straw_man_validation(&fields);
+
+    assert!(validation.passed);
+    assert!(validation.traps_detected.is_empty());
+  }
+
+  #[test]
+  fn test_build_hole_punching_prompt_uses_not_addressed_fallbacks() {
+    let scenario = ScenarioField {
+      trigger: "Trigger".to_string(),
+      value_moment: "Value".to_string(),
+      feeling: "Feeling".to_string(),
+      hole_punching: HolePunchingResults::default(),
+    };
+
+    let prompt = build_hole_punching_prompt(&scenario);
+
+    assert!(prompt.contains("Trigger: Trigger"));
+    assert!(prompt.contains("Value Moment: Value"));
+    assert!(prompt.contains("Feeling: Feeling"));
+    assert_eq!(prompt.matches("Not addressed").count(), 3);
+  }
+
+  #[test]
+  fn test_merge_hole_punching_results_marks_missing_holes_as_addressed() {
+    let fields = vec![
+      FieldExtraction {
+        name: "discovery_hole_addressed".to_string(),
+        field_type: FieldType::Boolean,
+        value: json!(true),
+        confidence: 1.0,
+        justification: None,
+      },
+      FieldExtraction {
+        name: "motivation_dropoff_addressed".to_string(),
+        field_type: FieldType::Boolean,
+        value: json!(true),
+        confidence: 1.0,
+        justification: None,
+      },
+    ];
+
+    let merged = merge_hole_punching_results(&HolePunchingResults::default(), &fields);
+
+    assert_eq!(
+      merged.discovery_hole.as_deref(),
+      Some("Addressed in scenario")
+    );
+    assert_eq!(
+      merged.motivation_dropoff.as_deref(),
+      Some("Addressed in scenario")
+    );
+    assert_eq!(merged.edge_case_hole, None);
+  }
+
+  #[test]
+  fn test_merge_hole_punching_results_preserves_existing_explanations() {
+    let existing = HolePunchingResults {
+      discovery_hole: Some("Already explained".to_string()),
+      edge_case_hole: None,
+      motivation_dropoff: None,
+    };
+    let fields = vec![FieldExtraction {
+      name: "discovery_hole_addressed".to_string(),
+      field_type: FieldType::Boolean,
+      value: json!(true),
+      confidence: 1.0,
+      justification: None,
+    }];
+
+    let merged = merge_hole_punching_results(&existing, &fields);
+
+    assert_eq!(merged.discovery_hole.as_deref(), Some("Already explained"));
+  }
+
+  #[test]
+  fn test_merge_hole_punching_results_ignores_false_non_boolean_unknown_fields() {
+    let fields = vec![
+      FieldExtraction {
+        name: "edge_case_hole_addressed".to_string(),
+        field_type: FieldType::Boolean,
+        value: json!(false),
+        confidence: 1.0,
+        justification: None,
+      },
+      FieldExtraction {
+        name: "edge_case_hole_addressed".to_string(),
+        field_type: FieldType::Boolean,
+        value: json!("yes"),
+        confidence: 1.0,
+        justification: None,
+      },
+      FieldExtraction {
+        name: "unknown_field".to_string(),
+        field_type: FieldType::Boolean,
+        value: json!(true),
+        confidence: 1.0,
+        justification: None,
+      },
+    ];
+
+    let merged = merge_hole_punching_results(&HolePunchingResults::default(), &fields);
+
+    assert_eq!(merged, HolePunchingResults::default());
+  }
+
+  #[test]
+  fn test_build_provider_bootstrap_input_preserves_configured_session() {
+    let config = AiConfig {
+      provider: ProviderConfig {
+        provider: ProviderType::Opencode,
+        endpoint: "https://api.example.com/v1".to_string(),
+        session_id: "configured-session".to_string(),
+        model: Some("provider-a/model-a".to_string()),
+        routing_provider: Some("provider-a".to_string()),
+      },
+      quality: QualityConfig::default(),
+    };
+
+    let input = build_provider_bootstrap_input(config, || "generated-session".to_string());
+
+    assert_eq!(input.session_id, "configured-session");
+    assert_eq!(input.diagnostics.provider, "opencode");
+    assert_eq!(input.diagnostics.endpoint, "https://api.example.com/v1");
+    assert_eq!(input.diagnostics.model.as_deref(), Some("model-a"));
+    assert_eq!(
+      input.diagnostics.routing_provider.as_deref(),
+      Some("provider-a")
+    );
+  }
+
+  #[test]
+  fn test_build_provider_bootstrap_input_generates_session_when_missing() {
+    let config = AiConfig {
+      provider: ProviderConfig {
+        provider: ProviderType::Opencode,
+        endpoint: "https://api.opencode.ai/v1".to_string(),
+        session_id: String::new(),
+        model: Some("provider-b/model-b".to_string()),
+        routing_provider: None,
+      },
+      quality: QualityConfig::default(),
+    };
+
+    let input = build_provider_bootstrap_input(config, || "generated-session".to_string());
+
+    assert_eq!(input.session_id, "generated-session");
+    assert_eq!(input.diagnostics.model.as_deref(), Some("model-b"));
+    assert_eq!(
+      input.diagnostics.routing_provider.as_deref(),
+      Some("provider-b")
+    );
+  }
+
+  #[test]
+  fn test_create_ai_provider_state_rejects_unsupported_provider() {
+    let input = ProviderBootstrapInput {
+      diagnostics: AiProviderDiagnostics {
+        provider: "anthropic".to_string(),
+        endpoint: "https://api.example.com".to_string(),
+        model: Some("claude".to_string()),
+        routing_provider: None,
+      },
+      session_id: "session-123".to_string(),
+    };
+
+    let result = create_ai_provider_state(input);
+
+    assert!(matches!(
+      result,
+      Err(AiProviderBootstrapError::UnsupportedProvider(provider)) if provider == "anthropic"
+    ));
+  }
+
+  #[test]
+  fn test_create_ai_provider_state_returns_structured_diagnostics() {
+    let input = ProviderBootstrapInput {
+      diagnostics: AiProviderDiagnostics {
+        provider: "opencode".to_string(),
+        endpoint: "https://api.opencode.ai/v1".to_string(),
+        model: Some("glm-5".to_string()),
+        routing_provider: Some("zai-coding-plan".to_string()),
+      },
+      session_id: "session-123".to_string(),
+    };
+
+    let state = match create_ai_provider_state(input) {
+      Ok(state) => state,
+      Err(error) => panic!("provider should initialize: {error}"),
+    };
+
+    assert_eq!(state.diagnostics.provider, "opencode");
+    assert_eq!(state.diagnostics.endpoint, "https://api.opencode.ai/v1");
+    assert_eq!(state.diagnostics.model.as_deref(), Some("glm-5"));
+    assert_eq!(
+      state.diagnostics.routing_provider.as_deref(),
+      Some("zai-coding-plan")
+    );
+    assert_eq!(state.provider.session_id(), "session-123");
   }
 
   /// Test inversion control serialization

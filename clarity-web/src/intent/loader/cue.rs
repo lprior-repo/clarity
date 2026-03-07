@@ -148,8 +148,20 @@ pub fn export_cue_to_json(path: &Path) -> Result<String, LoaderError> {
 
   // Core: Parse UTF-8 output (pure)
   cue_core::parse_utf8_output(&output.stdout).map_err(|error| LoaderError::InvalidCueOutput {
-    reason: CueOutputError::InvalidUtf8 { error },
+    reason: map_cue_core_error(error),
   })
+}
+
+fn map_cue_core_error(error: cue_core::CueCoreError) -> CueOutputError {
+  match error {
+    cue_core::CueCoreError::InvalidUtf8 { details } => {
+      CueOutputError::InvalidUtf8 { error: details }
+    }
+    cue_core::CueCoreError::EmptyOutput => CueOutputError::EmptyOutput,
+    cue_core::CueCoreError::InvalidJson { details } => {
+      CueOutputError::InvalidJson { error: details }
+    }
+  }
 }
 
 /// Check if the CUE binary is available and working.
@@ -177,7 +189,21 @@ fn check_cue_binary() -> Result<(), LoaderError> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::float_cmp, clippy::needless_collect, clippy::unnecessary_debug_formatting, clippy::match_same_arms, clippy::option_if_let_else, clippy::suspicious_else_formatting, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro, clippy::needless_pass_by_value)]
+#[allow(
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::unnecessary_debug_formatting,
+  clippy::match_same_arms,
+  clippy::option_if_let_else,
+  clippy::suspicious_else_formatting,
+  clippy::manual_let_else,
+  clippy::match_wild_err_arm,
+  clippy::match_like_matches_macro,
+  clippy::needless_pass_by_value
+)]
 mod tests {
   use super::*;
   use crate::intent::loader::cue::cue_core::validate_path_string;
