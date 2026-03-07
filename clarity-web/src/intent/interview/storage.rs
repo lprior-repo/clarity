@@ -11,6 +11,7 @@ mod diff;
 mod error;
 mod history;
 mod jsonl;
+mod jsonl_core;
 mod models;
 
 pub use diff::{diff_sessions, diff_snapshots, format_diff};

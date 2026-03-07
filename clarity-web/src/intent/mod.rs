@@ -26,6 +26,7 @@
 //! - **Type safety**: Leverage Rust's type system for compile-time guarantees
 //! - **JSONL compatibility**: Maintain compatibility with existing intent-cli files
 
+pub mod batch;
 pub mod beads;
 pub mod cli;
 pub mod documents;

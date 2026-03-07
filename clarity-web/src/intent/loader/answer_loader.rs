@@ -17,8 +17,112 @@ use std::collections::HashMap;
 use serde_json::Value;
 use thiserror::Error;
 
+/// I/O failure categories for answer loading.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AnswerIoErrorKind {
+  InvalidData,
+  UnexpectedEof,
+  Other,
+}
+
+impl std::fmt::Display for AnswerIoErrorKind {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::InvalidData => write!(f, "invalid data"),
+      Self::UnexpectedEof => write!(f, "unexpected end of file"),
+      Self::Other => write!(f, "other I/O error"),
+    }
+  }
+}
+
+/// JSON decoder failure categories.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum JsonDecodeCategory {
+  Io,
+  Syntax,
+  Data,
+  Eof,
+}
+
+impl std::fmt::Display for JsonDecodeCategory {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::Io => write!(f, "I/O"),
+      Self::Syntax => write!(f, "syntax"),
+      Self::Data => write!(f, "data"),
+      Self::Eof => write!(f, "EOF"),
+    }
+  }
+}
+
+/// Structured parse failures for answer documents.
+#[derive(Debug, Clone, Error, PartialEq, Eq)]
+pub enum AnswerParseError {
+  #[error("invalid JSON ({category}) at line {line}, column {column}")]
+  InvalidJson {
+    category: JsonDecodeCategory,
+    line: usize,
+    column: usize,
+  },
+
+  #[error("top-level answers must be an object/map, got {actual}")]
+  RootMustBeObject { actual: JsonInputKind },
+}
+
+/// Structured schema failures for answer documents.
+#[derive(Debug, Clone, Error, PartialEq, Eq)]
+pub enum AnswerSchemaError {
+  #[error("missing required field: {field}")]
+  MissingField { field: String },
+
+  #[error("unsupported schema shape: {shape}")]
+  UnsupportedShape { shape: String },
+}
+
+/// Type expectations used by detailed parse helpers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum JsonExpectation {
+  JsonDocument,
+  RootObject,
+}
+
+impl std::fmt::Display for JsonExpectation {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::JsonDocument => write!(f, "JSON"),
+      Self::RootObject => write!(f, "Object"),
+    }
+  }
+}
+
+/// JSON input kinds used for typed error reporting.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum JsonInputKind {
+  Null,
+  Bool,
+  Number,
+  String,
+  Array,
+  Object,
+  InvalidJson,
+}
+
+impl std::fmt::Display for JsonInputKind {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::Null => write!(f, "Null"),
+      Self::Bool => write!(f, "Bool"),
+      Self::Number => write!(f, "Number"),
+      Self::String => write!(f, "String"),
+      Self::Array => write!(f, "Array"),
+      Self::Object => write!(f, "Object"),
+      Self::InvalidJson => write!(f, "invalid"),
+    }
+  }
+}
+
 /// Errors that can occur during answer loading
-#[derive(Debug, Clone, Error)]
+#[derive(Debug, Clone, Error, PartialEq, Eq)]
 pub enum AnswerLoaderError {
   #[error("file not found: {0}")]
   FileNotFound(String),
@@ -26,25 +130,31 @@ pub enum AnswerLoaderError {
   #[error("permission denied: {0}")]
   PermissionDenied(String),
 
-  #[error("parse error in {path}: {message}")]
-  ParseError { path: String, message: String },
+  #[error("parse error in {path}: {reason}")]
+  ParseError {
+    path: String,
+    reason: AnswerParseError,
+  },
 
   #[error("schema error: {0}")]
-  SchemaError(String),
+  SchemaError(AnswerSchemaError),
 
-  #[error("I/O error: {0}")]
-  IoError(String),
+  #[error("I/O error in {path}: {kind}")]
+  IoError {
+    path: String,
+    kind: AnswerIoErrorKind,
+  },
 }
 
 /// Parse error with detailed information for testing
-#[derive(Debug, Clone, Error)]
+#[derive(Debug, Clone, Error, PartialEq, Eq)]
 pub enum ParseErrorWithDetails {
-  #[error("parse error in {path}: expected {expected}, got {actual} - {message}")]
+  #[error("parse error in {path}: expected {expected}, got {actual} - {reason}")]
   DecodeError {
     path: String,
-    expected: String,
-    actual: String,
-    message: String,
+    expected: JsonExpectation,
+    actual: JsonInputKind,
+    reason: AnswerParseError,
   },
 }
 
@@ -53,12 +163,13 @@ pub enum ParseErrorWithDetails {
 /// # Errors
 /// Returns `AnswerLoaderError` if the file cannot be read or parsed.
 pub fn load_from_file(path: &str) -> Result<HashMap<String, String>, AnswerLoaderError> {
-  let contents = std::fs::read_to_string(path).map_err(|e| {
-    if e.kind() == std::io::ErrorKind::NotFound {
-      AnswerLoaderError::FileNotFound(path.to_string())
-    } else {
-      AnswerLoaderError::IoError(e.to_string())
-    }
+  let contents = std::fs::read_to_string(path).map_err(|e| match e.kind() {
+    std::io::ErrorKind::NotFound => AnswerLoaderError::FileNotFound(path.to_string()),
+    std::io::ErrorKind::PermissionDenied => AnswerLoaderError::PermissionDenied(path.to_string()),
+    kind => AnswerLoaderError::IoError {
+      path: path.to_string(),
+      kind: map_io_error_kind(kind),
+    },
   })?;
 
   parse_answers(path, &contents)
@@ -76,16 +187,19 @@ fn parse_answers_json(
   path: &str,
   json_str: &str,
 ) -> Result<HashMap<String, String>, AnswerLoaderError> {
-  let value: Value = serde_json::from_str(json_str).map_err(|e| AnswerLoaderError::ParseError {
-    path: path.to_string(),
-    message: format!("Failed to decode answers JSON: {e}"),
-  })?;
+  let value: Value =
+    serde_json::from_str(json_str).map_err(|error| AnswerLoaderError::ParseError {
+      path: path.to_string(),
+      reason: map_json_parse_error(&error),
+    })?;
 
   match value {
     Value::Object(map) => Ok(flatten_answers(map)),
     _ => Err(AnswerLoaderError::ParseError {
       path: path.to_string(),
-      message: "Top-level answers must be an object/map".to_string(),
+      reason: AnswerParseError::RootMustBeObject {
+        actual: value_type_name(&value),
+      },
     }),
   }
 }
@@ -141,8 +255,29 @@ fn value_to_string(value: &Value) -> String {
     }
     Value::Object(_) => {
       // Serialize object back to JSON string
-      serde_json::to_string(value).unwrap_or_default()
+      serde_json::to_string(value).unwrap_or_else(|_| "{}".to_string())
     }
+  }
+}
+
+const fn map_io_error_kind(kind: std::io::ErrorKind) -> AnswerIoErrorKind {
+  match kind {
+    std::io::ErrorKind::InvalidData => AnswerIoErrorKind::InvalidData,
+    std::io::ErrorKind::UnexpectedEof => AnswerIoErrorKind::UnexpectedEof,
+    _ => AnswerIoErrorKind::Other,
+  }
+}
+
+fn map_json_parse_error(error: &serde_json::Error) -> AnswerParseError {
+  AnswerParseError::InvalidJson {
+    category: match error.classify() {
+      serde_json::error::Category::Io => JsonDecodeCategory::Io,
+      serde_json::error::Category::Syntax => JsonDecodeCategory::Syntax,
+      serde_json::error::Category::Data => JsonDecodeCategory::Data,
+      serde_json::error::Category::Eof => JsonDecodeCategory::Eof,
+    },
+    line: error.line(),
+    column: error.column(),
   }
 }
 
@@ -160,39 +295,54 @@ pub fn parse_answers_json_for_test(
   json_str: &str,
 ) -> Result<HashMap<String, String>, ParseErrorWithDetails> {
   let value: Value =
-    serde_json::from_str(json_str).map_err(|_| ParseErrorWithDetails::DecodeError {
+    serde_json::from_str(json_str).map_err(|error| ParseErrorWithDetails::DecodeError {
       path: path.to_string(),
-      expected: "JSON".to_string(),
-      actual: "invalid".to_string(),
-      message: "Failed to decode JSON".to_string(),
+      expected: JsonExpectation::JsonDocument,
+      actual: JsonInputKind::InvalidJson,
+      reason: map_json_parse_error(&error),
     })?;
 
   match value {
     Value::Object(map) => Ok(flatten_answers(map)),
     _ => Err(ParseErrorWithDetails::DecodeError {
       path: path.to_string(),
-      expected: "Object".to_string(),
+      expected: JsonExpectation::RootObject,
       actual: value_type_name(&value),
-      message: "Root value must be an object".to_string(),
+      reason: AnswerParseError::RootMustBeObject {
+        actual: value_type_name(&value),
+      },
     }),
   }
 }
 
 /// Get type name from JSON value
-fn value_type_name(value: &Value) -> String {
+const fn value_type_name(value: &Value) -> JsonInputKind {
   match value {
-    Value::Null => "Null",
-    Value::Bool(_) => "Bool",
-    Value::Number(_) => "Number",
-    Value::String(_) => "String",
-    Value::Array(_) => "Array",
-    Value::Object(_) => "Object",
+    Value::Null => JsonInputKind::Null,
+    Value::Bool(_) => JsonInputKind::Bool,
+    Value::Number(_) => JsonInputKind::Number,
+    Value::String(_) => JsonInputKind::String,
+    Value::Array(_) => JsonInputKind::Array,
+    Value::Object(_) => JsonInputKind::Object,
   }
-  .to_string()
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::float_cmp, clippy::needless_collect, clippy::unnecessary_debug_formatting, clippy::match_same_arms, clippy::option_if_let_else, clippy::suspicious_else_formatting, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro, clippy::needless_pass_by_value)]
+#[allow(
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::unnecessary_debug_formatting,
+  clippy::match_same_arms,
+  clippy::option_if_let_else,
+  clippy::suspicious_else_formatting,
+  clippy::manual_let_else,
+  clippy::match_wild_err_arm,
+  clippy::match_like_matches_macro,
+  clippy::needless_pass_by_value
+)]
 mod tests {
 
   use super::*;
@@ -233,14 +383,31 @@ mod tests {
   fn test_parse_answers_json_not_object() {
     let json = r#"["not", "an", "object"]"#;
     let result = parse_answers_json("test.json", json);
-    assert!(result.is_err());
+    assert!(matches!(
+      result,
+      Err(AnswerLoaderError::ParseError {
+        path,
+        reason: AnswerParseError::RootMustBeObject {
+          actual: JsonInputKind::Array,
+        },
+      }) if path == "test.json"
+    ));
   }
 
   #[test]
   fn test_parse_answers_json_invalid() {
     let json = r"not valid json";
     let result = parse_answers_json("test.json", json);
-    assert!(result.is_err());
+    assert!(matches!(
+      result,
+      Err(AnswerLoaderError::ParseError {
+        path,
+        reason: AnswerParseError::InvalidJson {
+          category: JsonDecodeCategory::Syntax,
+          ..
+        },
+      }) if path == "test.json"
+    ));
   }
 
   #[test]
@@ -310,32 +477,47 @@ mod tests {
   fn test_parse_answers_json_for_test_invalid_json() {
     let json = r"invalid";
     let result = parse_answers_json_for_test("test.json", json);
-    assert!(result.is_err());
+    assert!(matches!(
+      result,
+      Err(ParseErrorWithDetails::DecodeError {
+        path,
+        expected: JsonExpectation::JsonDocument,
+        actual: JsonInputKind::InvalidJson,
+        ..
+      }) if path == "test.json"
+    ));
   }
 
   #[test]
   fn test_parse_answers_json_for_test_not_object() {
     let json = r"[1, 2, 3]";
     let result = parse_answers_json_for_test("test.json", json);
-    assert!(result.is_err());
-    if let Err(ParseErrorWithDetails::DecodeError { actual, .. }) = result {
-      assert_eq!(actual, "Array");
-    }
+    assert!(matches!(
+      result,
+      Err(ParseErrorWithDetails::DecodeError {
+        expected: JsonExpectation::RootObject,
+        actual: JsonInputKind::Array,
+        ..
+      })
+    ));
   }
 
   #[test]
   fn test_value_type_name() {
-    assert_eq!(value_type_name(&Value::Null), "Null");
-    assert_eq!(value_type_name(&Value::Bool(true)), "Bool");
+    assert_eq!(value_type_name(&Value::Null), JsonInputKind::Null);
+    assert_eq!(value_type_name(&Value::Bool(true)), JsonInputKind::Bool);
     assert_eq!(
       value_type_name(&Value::Number(serde_json::Number::from(1))),
-      "Number"
+      JsonInputKind::Number
     );
-    assert_eq!(value_type_name(&Value::String("s".to_string())), "String");
-    assert_eq!(value_type_name(&Value::Array(vec![])), "Array");
+    assert_eq!(
+      value_type_name(&Value::String("s".to_string())),
+      JsonInputKind::String
+    );
+    assert_eq!(value_type_name(&Value::Array(vec![])), JsonInputKind::Array);
     assert_eq!(
       value_type_name(&Value::Object(serde_json::Map::new())),
-      "Object"
+      JsonInputKind::Object
     );
   }
 }

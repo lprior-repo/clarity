@@ -25,20 +25,20 @@ const CUSTOM_QUESTIONS_PATH: &str = ".intent/custom-questions.cue";
 /// Errors for question loading
 #[derive(Debug, Clone, Error)]
 pub enum QuestionLoadError {
-  #[error("file not found: {0}")]
-  FileNotFound(String),
+  #[error("file not found: {path}")]
+  FileNotFound { path: String },
 
-  #[error("CUE export failed: {0}")]
-  CueExportError(String),
+  #[error("CUE export failed: {message}")]
+  CueExportError { message: String },
 
-  #[error("JSON parse error: {0}")]
-  JsonParseError(String),
+  #[error("JSON parse error: {message}")]
+  JsonParseError { message: String },
 
-  #[error("question parse error: {0}")]
-  QuestionParseError(String),
+  #[error("question parse error: {message}")]
+  QuestionParseError { message: String },
 
-  #[error("security error: {0}")]
-  SecurityError(String),
+  #[error("security error: {message}")]
+  SecurityError { message: String },
 }
 
 /// Loaded questions database
@@ -101,11 +101,14 @@ pub struct CustomCommonQuestions {
 /// Returns `QuestionLoadError` if the file cannot be read or parsed.
 pub fn load_questions(path: &str) -> Result<QuestionsDatabase, QuestionLoadError> {
   if path.is_empty() {
-    return Err(QuestionLoadError::FileNotFound(path.to_string()));
+    return Err(QuestionLoadError::FileNotFound {
+      path: path.to_string(),
+    });
   }
 
-  let contents =
-    std::fs::read_to_string(path).map_err(|_| QuestionLoadError::FileNotFound(path.to_string()))?;
+  let contents = std::fs::read_to_string(path).map_err(|_| QuestionLoadError::FileNotFound {
+    path: path.to_string(),
+  })?;
 
   parse_questions_json(&contents)
 }
@@ -131,11 +134,14 @@ pub fn load_default_questions() -> Result<QuestionsDatabase, QuestionLoadError> 
 /// Returns `QuestionLoadError` if the file cannot be read or parsed.
 pub fn load_custom_questions(path: &str) -> Result<CustomQuestions, QuestionLoadError> {
   if path.is_empty() {
-    return Err(QuestionLoadError::FileNotFound(path.to_string()));
+    return Err(QuestionLoadError::FileNotFound {
+      path: path.to_string(),
+    });
   }
 
-  let contents =
-    std::fs::read_to_string(path).map_err(|_| QuestionLoadError::FileNotFound(path.to_string()))?;
+  let contents = std::fs::read_to_string(path).map_err(|_| QuestionLoadError::FileNotFound {
+    path: path.to_string(),
+  })?;
 
   parse_custom_questions_json(&contents)
 }
@@ -143,7 +149,9 @@ pub fn load_custom_questions(path: &str) -> Result<CustomQuestions, QuestionLoad
 /// Parse JSON content into questions database
 fn parse_questions_json(json_str: &str) -> Result<QuestionsDatabase, QuestionLoadError> {
   let value: serde_json::Value =
-    serde_json::from_str(json_str).map_err(|e| QuestionLoadError::JsonParseError(e.to_string()))?;
+    serde_json::from_str(json_str).map_err(|error| QuestionLoadError::JsonParseError {
+      message: error.to_string(),
+    })?;
 
   parse_database(&value)
 }
@@ -152,7 +160,9 @@ fn parse_questions_json(json_str: &str) -> Result<QuestionsDatabase, QuestionLoa
 fn parse_database(value: &serde_json::Value) -> Result<QuestionsDatabase, QuestionLoadError> {
   let obj = value
     .as_object()
-    .ok_or_else(|| QuestionLoadError::QuestionParseError("Root must be an object".to_string()))?;
+    .ok_or_else(|| QuestionLoadError::QuestionParseError {
+      message: "Root must be an object".to_string(),
+    })?;
 
   Ok(QuestionsDatabase {
     api: parse_profile_questions(obj.get("api"))?,
@@ -171,9 +181,11 @@ fn parse_profile_questions(
 ) -> Result<ProfileQuestions, QuestionLoadError> {
   match value {
     Some(v) => {
-      let obj = v.as_object().ok_or_else(|| {
-        QuestionLoadError::QuestionParseError("Profile questions must be an object".to_string())
-      })?;
+      let obj = v
+        .as_object()
+        .ok_or_else(|| QuestionLoadError::QuestionParseError {
+          message: "Profile questions must be an object".to_string(),
+        })?;
 
       Ok(ProfileQuestions {
         round_1: parse_question_list(obj.get("round_1"))?,
@@ -190,9 +202,11 @@ fn parse_common_questions(
 ) -> Result<CommonQuestions, QuestionLoadError> {
   match value {
     Some(v) => {
-      let obj = v.as_object().ok_or_else(|| {
-        QuestionLoadError::QuestionParseError("Common questions must be an object".to_string())
-      })?;
+      let obj = v
+        .as_object()
+        .ok_or_else(|| QuestionLoadError::QuestionParseError {
+          message: "Common questions must be an object".to_string(),
+        })?;
 
       Ok(CommonQuestions {
         round_3: parse_question_list(obj.get("round_3"))?,
@@ -216,9 +230,11 @@ fn parse_question_list(
 
 /// Parse a single question from JSON value
 fn parse_question(value: &serde_json::Value) -> Result<Question, QuestionLoadError> {
-  let obj = value.as_object().ok_or_else(|| {
-    QuestionLoadError::QuestionParseError("Question must be an object".to_string())
-  })?;
+  let obj = value
+    .as_object()
+    .ok_or_else(|| QuestionLoadError::QuestionParseError {
+      message: "Question must be an object".to_string(),
+    })?;
 
   let id = get_string_field(obj, "id")?;
   let round = get_u32_field(obj, "round")?;
@@ -292,8 +308,8 @@ fn get_string_field(
     .get(key)
     .and_then(|v| v.as_str())
     .map(String::from)
-    .ok_or_else(|| {
-      QuestionLoadError::QuestionParseError(format!("Missing or invalid field: {key}"))
+    .ok_or_else(|| QuestionLoadError::QuestionParseError {
+      message: format!("Missing or invalid field: {key}"),
     })
 }
 
@@ -306,8 +322,8 @@ fn get_u32_field(
     .get(key)
     .and_then(serde_json::Value::as_u64)
     .map(|n| u32::try_from(n).unwrap_or(1))
-    .ok_or_else(|| {
-      QuestionLoadError::QuestionParseError(format!("Missing or invalid field: {key}"))
+    .ok_or_else(|| QuestionLoadError::QuestionParseError {
+      message: format!("Missing or invalid field: {key}"),
     })
 }
 
@@ -337,7 +353,9 @@ fn get_optional_string_list(
 /// Parse custom questions JSON
 fn parse_custom_questions_json(json_str: &str) -> Result<CustomQuestions, QuestionLoadError> {
   let value: serde_json::Value =
-    serde_json::from_str(json_str).map_err(|e| QuestionLoadError::JsonParseError(e.to_string()))?;
+    serde_json::from_str(json_str).map_err(|error| QuestionLoadError::JsonParseError {
+      message: error.to_string(),
+    })?;
 
   parse_custom_database(&value)
 }
@@ -366,11 +384,11 @@ fn parse_custom_profile_questions(
 ) -> Result<Option<CustomProfileQuestions>, QuestionLoadError> {
   match value {
     Some(v) if v.is_object() => {
-      let obj = v.as_object().ok_or_else(|| {
-        QuestionLoadError::QuestionParseError(
-          "Custom profile questions must be an object".to_string(),
-        )
-      })?;
+      let obj = v
+        .as_object()
+        .ok_or_else(|| QuestionLoadError::QuestionParseError {
+          message: "Custom profile questions must be an object".to_string(),
+        })?;
 
       Ok(Some(CustomProfileQuestions {
         round_1: parse_question_list(obj.get("round_1")).ok(),
@@ -387,11 +405,11 @@ fn parse_custom_common_questions(
 ) -> Result<Option<CustomCommonQuestions>, QuestionLoadError> {
   match value {
     Some(v) if v.is_object() => {
-      let obj = v.as_object().ok_or_else(|| {
-        QuestionLoadError::QuestionParseError(
-          "Custom common questions must be an object".to_string(),
-        )
-      })?;
+      let obj = v
+        .as_object()
+        .ok_or_else(|| QuestionLoadError::QuestionParseError {
+          message: "Custom common questions must be an object".to_string(),
+        })?;
 
       Ok(Some(CustomCommonQuestions {
         round_3: parse_question_list(obj.get("round_3")).ok(),
@@ -489,16 +507,32 @@ pub fn get_questions(db: &QuestionsDatabase, profile: &str, round: u32) -> Vec<Q
 #[must_use]
 pub fn format_error(error: &QuestionLoadError) -> String {
   match error {
-    QuestionLoadError::FileNotFound(path) => format!("Questions file not found: {path}"),
-    QuestionLoadError::CueExportError(msg) => format!("CUE export failed:\n{msg}"),
-    QuestionLoadError::JsonParseError(msg) => format!("JSON parse error: {msg}"),
-    QuestionLoadError::QuestionParseError(msg) => format!("Question parse error: {msg}"),
-    QuestionLoadError::SecurityError(msg) => msg.clone(),
+    QuestionLoadError::FileNotFound { path } => format!("Questions file not found: {path}"),
+    QuestionLoadError::CueExportError { message } => format!("CUE export failed:\n{message}"),
+    QuestionLoadError::JsonParseError { message } => format!("JSON parse error: {message}"),
+    QuestionLoadError::QuestionParseError { message } => {
+      format!("Question parse error: {message}")
+    }
+    QuestionLoadError::SecurityError { message } => message.clone(),
   }
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::float_cmp, clippy::needless_collect, clippy::unnecessary_debug_formatting, clippy::match_same_arms, clippy::option_if_let_else, clippy::suspicious_else_formatting, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro, clippy::needless_pass_by_value)]
+#[allow(
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::unnecessary_debug_formatting,
+  clippy::match_same_arms,
+  clippy::option_if_let_else,
+  clippy::suspicious_else_formatting,
+  clippy::manual_let_else,
+  clippy::match_wild_err_arm,
+  clippy::match_like_matches_macro,
+  clippy::needless_pass_by_value
+)]
 mod tests {
 
   use super::*;
@@ -616,14 +650,40 @@ mod tests {
 
   #[test]
   fn test_format_error_file_not_found() {
-    let error = QuestionLoadError::FileNotFound("test.cue".to_string());
+    let error = QuestionLoadError::FileNotFound {
+      path: "test.cue".to_string(),
+    };
     assert!(format_error(&error).contains("test.cue"));
   }
 
   #[test]
   fn test_load_questions_empty_path() {
     let result = load_questions("");
-    assert!(matches!(result, Err(QuestionLoadError::FileNotFound(_))));
+    assert!(matches!(
+      result,
+      Err(QuestionLoadError::FileNotFound { path }) if path.is_empty()
+    ));
+  }
+
+  #[test]
+  fn test_parse_questions_json_invalid_json_has_typed_payload() {
+    let result = parse_questions_json("not json");
+
+    assert!(matches!(
+      result,
+      Err(QuestionLoadError::JsonParseError { message }) if !message.is_empty()
+    ));
+  }
+
+  #[test]
+  fn test_parse_questions_json_non_object_root_has_typed_payload() {
+    let result = parse_questions_json("[]");
+
+    assert!(matches!(
+      result,
+      Err(QuestionLoadError::QuestionParseError { message })
+        if message == "Root must be an object"
+    ));
   }
 
   #[test]

@@ -25,6 +25,17 @@
 
 use std::path::Path;
 
+/// Typed failures produced by the pure CUE core.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CueCoreError {
+  /// Raw bytes were not valid UTF-8.
+  InvalidUtf8 { details: String },
+  /// Expected command output was empty.
+  EmptyOutput,
+  /// Expected JSON content could not be parsed.
+  InvalidJson { details: String },
+}
+
 /// Result of validating a command output.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandOutput {
@@ -181,9 +192,11 @@ pub fn validate_command_output(output: &CommandOutput) -> Result<(), (i32, Strin
 ///
 /// # Returns
 ///
-/// `Ok(String)` if valid UTF-8, `Err(error_message)` otherwise
-pub fn parse_utf8_output(bytes: &[u8]) -> Result<String, String> {
-  String::from_utf8(bytes.to_vec()).map_err(|e| e.to_string())
+/// `Ok(String)` if valid UTF-8, `Err(CueCoreError)` otherwise
+pub fn parse_utf8_output(bytes: &[u8]) -> Result<String, CueCoreError> {
+  String::from_utf8(bytes.to_vec()).map_err(|error| CueCoreError::InvalidUtf8 {
+    details: error.to_string(),
+  })
 }
 
 /// Check if a version command output indicates success.
@@ -219,14 +232,16 @@ pub fn check_version_output(output: &CommandOutput) -> BinaryCheck {
 ///
 /// # Returns
 ///
-/// `Ok(())` if valid JSON, `Err(error_message)` otherwise
-pub fn validate_json_content(content: &str) -> Result<(), String> {
+/// `Ok(())` if valid JSON, `Err(CueCoreError)` otherwise
+pub fn validate_json_content(content: &str) -> Result<(), CueCoreError> {
   if content.trim().is_empty() {
-    return Err("output is empty".to_string());
+    return Err(CueCoreError::EmptyOutput);
   }
   serde_json::from_str::<serde_json::Value>(content)
     .map(|_| ())
-    .map_err(|e| e.to_string())
+    .map_err(|error| CueCoreError::InvalidJson {
+      details: error.to_string(),
+    })
 }
 
 /// Extract file metadata information from a path string.
@@ -249,7 +264,21 @@ pub fn extract_path_components(path_str: &str) -> Option<(String, String)> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::float_cmp, clippy::needless_collect, clippy::unnecessary_debug_formatting, clippy::match_same_arms, clippy::option_if_let_else, clippy::suspicious_else_formatting, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro, clippy::needless_pass_by_value)]
+#[allow(
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::unnecessary_debug_formatting,
+  clippy::match_same_arms,
+  clippy::option_if_let_else,
+  clippy::suspicious_else_formatting,
+  clippy::manual_let_else,
+  clippy::match_wild_err_arm,
+  clippy::match_like_matches_macro,
+  clippy::needless_pass_by_value
+)]
 mod tests {
 
   use super::*;
@@ -334,7 +363,10 @@ mod tests {
   #[test]
   fn parse_utf8_output_fails_for_invalid_utf8() {
     let bytes = &[0xff, 0xfe];
-    assert!(parse_utf8_output(bytes).is_err());
+    assert!(matches!(
+      parse_utf8_output(bytes),
+      Err(CueCoreError::InvalidUtf8 { .. })
+    ));
   }
 
   #[test]
@@ -358,14 +390,20 @@ mod tests {
 
   #[test]
   fn validate_json_content_fails_for_invalid_json() {
-    assert!(validate_json_content("not json").is_err());
-    assert!(validate_json_content("{invalid}").is_err());
+    assert!(matches!(
+      validate_json_content("not json"),
+      Err(CueCoreError::InvalidJson { .. })
+    ));
+    assert!(matches!(
+      validate_json_content("{invalid}"),
+      Err(CueCoreError::InvalidJson { .. })
+    ));
   }
 
   #[test]
   fn validate_json_content_fails_for_empty() {
-    assert!(validate_json_content("").is_err());
-    assert!(validate_json_content("   ").is_err());
+    assert_eq!(validate_json_content(""), Err(CueCoreError::EmptyOutput));
+    assert_eq!(validate_json_content("   "), Err(CueCoreError::EmptyOutput));
   }
 
   #[test]

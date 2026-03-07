@@ -17,9 +17,20 @@
 #![warn(clippy::nursery)]
 #![forbid(unsafe_code)]
 
+use thiserror::Error;
+
 /// Default maximum edit distance for suggestions
 /// Flags within this distance will be suggested as corrections
 const DEFAULT_MAX_DISTANCE: usize = 2;
+
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum FlagValidationError {
+  #[error("Unknown flag: {flag}")]
+  UnknownFlag { flag: String },
+
+  #[error("Unknown flag '{flag}'. Did you mean '{suggestion}'?")]
+  UnknownFlagWithSuggestion { flag: String, suggestion: String },
+}
 
 /// All known boolean flags
 const BOOL_FLAGS: &[&str] = &[
@@ -157,11 +168,16 @@ pub fn suggest_flag(unknown_flag: &str, max_distance: usize) -> String {
 
 /// Format error message with suggestion
 #[must_use]
-pub fn format_suggestion(unknown_flag: &str, suggestion: &str) -> String {
+pub fn format_suggestion(unknown_flag: &str, suggestion: &str) -> FlagValidationError {
   if suggestion.is_empty() {
-    format!("Unknown flag: {unknown_flag}")
+    FlagValidationError::UnknownFlag {
+      flag: unknown_flag.to_string(),
+    }
   } else {
-    format!("Unknown flag '{unknown_flag}'. Did you mean '{suggestion}'?")
+    FlagValidationError::UnknownFlagWithSuggestion {
+      flag: unknown_flag.to_string(),
+      suggestion: suggestion.to_string(),
+    }
   }
 }
 
@@ -180,7 +196,7 @@ fn extract_flag_name(arg: &str) -> &str {
 ///
 /// # Errors
 /// Returns an error message string if an unknown flag is found.
-pub fn validate_flags(args: &[String]) -> Result<(), String> {
+pub fn validate_flags(args: &[String]) -> Result<(), FlagValidationError> {
   // Find all flags in the args
   let flags: Vec<&str> = args
     .iter()
@@ -201,7 +217,21 @@ pub fn validate_flags(args: &[String]) -> Result<(), String> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::float_cmp, clippy::needless_collect, clippy::unnecessary_debug_formatting, clippy::match_same_arms, clippy::option_if_let_else, clippy::suspicious_else_formatting, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro, clippy::needless_pass_by_value)]
+#[allow(
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::unnecessary_debug_formatting,
+  clippy::match_same_arms,
+  clippy::option_if_let_else,
+  clippy::suspicious_else_formatting,
+  clippy::manual_let_else,
+  clippy::match_wild_err_arm,
+  clippy::match_like_matches_macro,
+  clippy::needless_pass_by_value
+)]
 mod tests {
 
   use super::*;
@@ -300,7 +330,12 @@ mod tests {
 
   #[test]
   fn test_format_suggestion_with_suggestion() {
-    let msg = format_suggestion("--verbsoe", "--verbose");
+    let error = format_suggestion("--verbsoe", "--verbose");
+    let msg = error.to_string();
+    assert!(matches!(
+      error,
+      FlagValidationError::UnknownFlagWithSuggestion { .. }
+    ));
     assert!(msg.contains("--verbsoe"));
     assert!(msg.contains("--verbose"));
     assert!(msg.contains("Did you mean"));
@@ -308,7 +343,9 @@ mod tests {
 
   #[test]
   fn test_format_suggestion_without_suggestion() {
-    let msg = format_suggestion("--unknown", "");
+    let error = format_suggestion("--unknown", "");
+    let msg = error.to_string();
+    assert!(matches!(error, FlagValidationError::UnknownFlag { .. }));
     assert!(msg.contains("Unknown flag"));
     assert!(msg.contains("--unknown"));
     assert!(!msg.contains("Did you mean"));
@@ -343,7 +380,7 @@ mod tests {
     let args = vec!["--verbsoe".to_string()];
     let result = validate_flags(&args);
     assert!(result.is_err());
-    let err = result.unwrap_err();
+    let err = result.unwrap_err().to_string();
     assert!(err.contains("--verbsoe"));
   }
 

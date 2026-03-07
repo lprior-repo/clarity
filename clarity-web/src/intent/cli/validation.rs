@@ -56,6 +56,49 @@ const VALID_FORMATS: [&str; 3] = ["json", "jsonl", "markdown"];
 /// Valid strategy options for CLI validation
 const VALID_STRATEGIES: [&str; 4] = ["page_rank", "critical_path", "shortest", "risk_first"];
 
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum CliValidationError {
+  #[error("Profile is required. Valid options: {valid_options}")]
+  ProfileRequired { valid_options: String },
+
+  #[error("Invalid profile '{input}'. Valid options: {valid_options}")]
+  InvalidProfile {
+    input: String,
+    valid_options: String,
+  },
+
+  #[error("Invalid format '{input}'. Valid options: {valid_options}")]
+  InvalidFormat {
+    input: String,
+    valid_options: String,
+  },
+
+  #[error("Invalid strategy '{input}'. Valid options: {valid_options}")]
+  InvalidStrategy {
+    input: String,
+    valid_options: String,
+  },
+
+  #[error("Command '{command_name}' does not accept arguments, but received {count} argument(s)")]
+  UnexpectedArguments { command_name: String, count: usize },
+
+  #[error(
+    "Command '{command_name}' requires exactly {expected} argument, but received {received}"
+  )]
+  WrongArgumentCount {
+    command_name: String,
+    expected: usize,
+    received: usize,
+  },
+
+  #[error("Required flag '--{flag_name}' is missing or empty")]
+  MissingRequiredFlag { flag_name: String },
+}
+
+fn format_options(options: &[&str]) -> String {
+  options.join(", ")
+}
+
 /// Validate a profile string
 ///
 /// # Errors
@@ -227,7 +270,21 @@ pub fn validate_required_flag(flag_name: &str, value: &str) -> Result<String, Va
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::float_cmp, clippy::needless_collect, clippy::unnecessary_debug_formatting, clippy::match_same_arms, clippy::option_if_let_else, clippy::suspicious_else_formatting, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro, clippy::needless_pass_by_value)]
+#[allow(
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::unnecessary_debug_formatting,
+  clippy::match_same_arms,
+  clippy::option_if_let_else,
+  clippy::suspicious_else_formatting,
+  clippy::manual_let_else,
+  clippy::match_wild_err_arm,
+  clippy::match_like_matches_macro,
+  clippy::needless_pass_by_value
+)]
 mod tests {
 
   use super::*;
