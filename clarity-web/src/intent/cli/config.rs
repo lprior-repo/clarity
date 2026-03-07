@@ -41,20 +41,35 @@ impl Default for Config {
 /// Errors that can occur during configuration loading
 #[derive(Debug, Clone, Error)]
 pub enum ConfigError {
-  #[error("failed to read config file: {0}")]
-  ReadError(String),
+  #[error("failed to read config file '{path}': {reason}")]
+  ReadError { path: String, reason: String },
 
-  #[error("failed to parse YAML configuration file")]
-  ParseError,
+  #[error("invalid numeric value for '{field}': '{value}'")]
+  InvalidNumber { field: String, value: String },
 
-  #[error("empty YAML configuration file")]
-  EmptyConfig,
+  #[error("invalid default_profile '{input}'. Valid options: {valid_options}")]
+  InvalidProfile {
+    input: String,
+    valid_options: String,
+  },
 
-  #[error("YAML configuration must be a map/object")]
-  NotAMap,
+  #[error("invalid default_output_format '{input}'. Valid options: {valid_options}")]
+  InvalidOutputFormat {
+    input: String,
+    valid_options: String,
+  },
 
-  #[error("invalid configuration: {0}")]
-  ValidationError(String),
+  #[error("invalid default_strategy '{input}'. Valid options: {valid_options}")]
+  InvalidStrategy {
+    input: String,
+    valid_options: String,
+  },
+
+  #[error("invalid watch_debounce_ms: {value}. Must be between 0 and {max}")]
+  InvalidWatchDebounce { value: u32, max: u32 },
+
+  #[error("invalid max_cache_entries: {value}. Must be between 0 and {max}")]
+  InvalidMaxCacheEntries { value: u32, max: u32 },
 }
 
 /// Load configuration from .intentrc.yaml in current directory
@@ -71,16 +86,16 @@ pub fn load_config() -> Result<Config, ConfigError> {
     return Ok(Config::default());
   }
 
-  let contents =
-    std::fs::read_to_string(path).map_err(|e| ConfigError::ReadError(e.to_string()))?;
+  let contents = std::fs::read_to_string(path).map_err(|error| ConfigError::ReadError {
+    path: path.display().to_string(),
+    reason: error.to_string(),
+  })?;
 
   parse_yaml_config(&contents)
 }
 
 /// Parse YAML configuration content
 fn parse_yaml_config(yaml_content: &str) -> Result<Config, ConfigError> {
-  // Simple YAML parser for our limited config format
-  // In a production system, you'd use a proper YAML library
   let mut config = Config::default();
 
   for line in yaml_content.lines() {
@@ -96,10 +111,10 @@ fn parse_yaml_config(yaml_content: &str) -> Result<Config, ConfigError> {
         "default_output_format" => config.default_output_format = value,
         "default_strategy" => config.default_strategy = value,
         "watch_debounce_ms" => {
-          config.watch_debounce_ms = value.parse().unwrap_or(500);
+          config.watch_debounce_ms = parse_u32_config_value("watch_debounce_ms", &value)?;
         }
         "max_cache_entries" => {
-          config.max_cache_entries = value.parse().unwrap_or(50);
+          config.max_cache_entries = parse_u32_config_value("max_cache_entries", &value)?;
         }
         _ => {}
       }
@@ -124,53 +139,54 @@ fn parse_yaml_key_value(line: &str) -> Option<(String, String)> {
 
 /// Validate configuration values
 fn validate_config(config: &Config) -> Result<(), ConfigError> {
-  // Validate default_profile
   let valid_profiles = ["api", "cli", "event", "data", "workflow", "ui"];
   if !valid_profiles.contains(&config.default_profile.as_str()) {
-    return Err(ConfigError::ValidationError(format!(
-      "Invalid default_profile: {}. Valid options: {}",
-      config.default_profile,
-      valid_profiles.join(", ")
-    )));
+    return Err(ConfigError::InvalidProfile {
+      input: config.default_profile.clone(),
+      valid_options: valid_profiles.join(", "),
+    });
   }
 
-  // Validate default_output_format
   let valid_formats = ["json", "text", "markdown"];
   if !valid_formats.contains(&config.default_output_format.as_str()) {
-    return Err(ConfigError::ValidationError(format!(
-      "Invalid default_output_format: {}. Valid options: {}",
-      config.default_output_format,
-      valid_formats.join(", ")
-    )));
+    return Err(ConfigError::InvalidOutputFormat {
+      input: config.default_output_format.clone(),
+      valid_options: valid_formats.join(", "),
+    });
   }
 
-  // Validate default_strategy
   let valid_strategies = ["page_rank", "effort_ease", "dependency_order"];
   if !valid_strategies.contains(&config.default_strategy.as_str()) {
-    return Err(ConfigError::ValidationError(format!(
-      "Invalid default_strategy: {}. Valid options: {}",
-      config.default_strategy,
-      valid_strategies.join(", ")
-    )));
+    return Err(ConfigError::InvalidStrategy {
+      input: config.default_strategy.clone(),
+      valid_options: valid_strategies.join(", "),
+    });
   }
 
-  // Validate watch_debounce_ms
   if config.watch_debounce_ms > 60000 {
-    return Err(ConfigError::ValidationError(format!(
-      "Invalid watch_debounce_ms: {}. Must be between 0 and 60000",
-      config.watch_debounce_ms
-    )));
+    return Err(ConfigError::InvalidWatchDebounce {
+      value: config.watch_debounce_ms,
+      max: 60000,
+    });
   }
 
-  // Validate max_cache_entries
   if config.max_cache_entries > 10000 {
-    return Err(ConfigError::ValidationError(format!(
-      "Invalid max_cache_entries: {}. Must be between 0 and 10000",
-      config.max_cache_entries
-    )));
+    return Err(ConfigError::InvalidMaxCacheEntries {
+      value: config.max_cache_entries,
+      max: 10000,
+    });
   }
 
   Ok(())
+}
+
+fn parse_u32_config_value(field: &str, value: &str) -> Result<u32, ConfigError> {
+  value
+    .parse::<u32>()
+    .map_err(|_| ConfigError::InvalidNumber {
+      field: field.to_string(),
+      value: value.to_string(),
+    })
 }
 
 /// Get default profile from config, falling back to CLI argument
@@ -210,7 +226,21 @@ pub fn config_file_exists() -> bool {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::float_cmp, clippy::needless_collect, clippy::unnecessary_debug_formatting, clippy::match_same_arms, clippy::option_if_let_else, clippy::suspicious_else_formatting, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro, clippy::needless_pass_by_value)]
+#[allow(
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::unnecessary_debug_formatting,
+  clippy::match_same_arms,
+  clippy::option_if_let_else,
+  clippy::suspicious_else_formatting,
+  clippy::manual_let_else,
+  clippy::match_wild_err_arm,
+  clippy::match_like_matches_macro,
+  clippy::needless_pass_by_value
+)]
 mod tests {
 
   use super::*;
@@ -277,7 +307,10 @@ default_profile: cli
       default_profile: "invalid".to_string(),
       ..Config::default()
     };
-    assert!(validate_config(&config).is_err());
+    assert!(matches!(
+      validate_config(&config),
+      Err(ConfigError::InvalidProfile { .. })
+    ));
   }
 
   #[test]
@@ -286,7 +319,10 @@ default_profile: cli
       default_output_format: "xml".to_string(),
       ..Config::default()
     };
-    assert!(validate_config(&config).is_err());
+    assert!(matches!(
+      validate_config(&config),
+      Err(ConfigError::InvalidOutputFormat { .. })
+    ));
   }
 
   #[test]
@@ -295,7 +331,10 @@ default_profile: cli
       default_strategy: "random".to_string(),
       ..Config::default()
     };
-    assert!(validate_config(&config).is_err());
+    assert!(matches!(
+      validate_config(&config),
+      Err(ConfigError::InvalidStrategy { .. })
+    ));
   }
 
   #[test]
@@ -304,7 +343,10 @@ default_profile: cli
       watch_debounce_ms: 70000,
       ..Config::default()
     };
-    assert!(validate_config(&config).is_err());
+    assert!(matches!(
+      validate_config(&config),
+      Err(ConfigError::InvalidWatchDebounce { .. })
+    ));
   }
 
   #[test]
@@ -313,7 +355,23 @@ default_profile: cli
       max_cache_entries: 20000,
       ..Config::default()
     };
-    assert!(validate_config(&config).is_err());
+    assert!(matches!(
+      validate_config(&config),
+      Err(ConfigError::InvalidMaxCacheEntries { .. })
+    ));
+  }
+
+  #[test]
+  fn test_parse_yaml_config_invalid_number_is_typed_error() {
+    let yaml = r"
+watch_debounce_ms: nope
+";
+
+    assert!(matches!(
+      parse_yaml_config(yaml),
+      Err(ConfigError::InvalidNumber { field, value })
+        if field == "watch_debounce_ms" && value == "nope"
+    ));
   }
 
   #[test]

@@ -12,6 +12,8 @@
 //! modules. That removes the older stringly duplicate boundary and makes the
 //! public module a thin shell over the functional-core design.
 
+#[path = "loader/answer_loader.rs"]
+pub mod answer_loader;
 #[path = "loader/cue.rs"]
 mod cue;
 #[path = "loader/error.rs"]

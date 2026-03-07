@@ -14,6 +14,109 @@
 use itertools::Itertools;
 use thiserror::Error;
 
+/// Structured reasons for invalid spec paths.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InvalidPathReason {
+  Empty,
+  NullByte,
+  PathTraversal,
+  ShellMetacharacter(ShellMetacharacter),
+}
+
+impl std::fmt::Display for InvalidPathReason {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::Empty => write!(f, "path is empty"),
+      Self::NullByte => write!(f, "path contains a null byte"),
+      Self::PathTraversal => write!(f, "path traversal is not allowed"),
+      Self::ShellMetacharacter(character) => {
+        write!(
+          f,
+          "path contains shell metacharacter '{}'",
+          character.as_char()
+        )
+      }
+    }
+  }
+}
+
+/// Typed shell metacharacters rejected from file paths.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ShellMetacharacter {
+  Pipe,
+  Semicolon,
+  Ampersand,
+  Backtick,
+  Dollar,
+  OpenParen,
+  CloseParen,
+}
+
+impl ShellMetacharacter {
+  const fn as_char(self) -> char {
+    match self {
+      Self::Pipe => '|',
+      Self::Semicolon => ';',
+      Self::Ampersand => '&',
+      Self::Backtick => '`',
+      Self::Dollar => '$',
+      Self::OpenParen => '(',
+      Self::CloseParen => ')',
+    }
+  }
+}
+
+/// Typed reasons for per-file processing failures.
+#[derive(Debug, Clone, Error, PartialEq, Eq)]
+pub enum SpecProcessingError {
+  #[error("invalid file path '{path}': {reason}")]
+  InvalidPath {
+    path: String,
+    reason: InvalidPathReason,
+  },
+
+  #[error("file not found: {path}")]
+  FileNotFound { path: String },
+
+  #[error("cannot access file '{path}': {reason}")]
+  CannotAccessFile {
+    path: String,
+    reason: FileAccessReason,
+  },
+}
+
+/// Typed reasons a file could not be accessed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FileAccessReason {
+  NotAFile,
+  PermissionDenied,
+}
+
+impl std::fmt::Display for FileAccessReason {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::NotAFile => write!(f, "path does not point to a regular file"),
+      Self::PermissionDenied => write!(f, "permission denied"),
+    }
+  }
+}
+
+/// Typed reasons a directory read failed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DirectoryReadErrorKind {
+  PermissionDenied,
+  Other,
+}
+
+impl std::fmt::Display for DirectoryReadErrorKind {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::PermissionDenied => write!(f, "permission denied"),
+      Self::Other => write!(f, "other I/O error"),
+    }
+  }
+}
+
 /// Batch processing configuration
 #[derive(Debug, Clone)]
 pub struct BatchConfig {
@@ -42,6 +145,7 @@ pub struct SpecResult {
   pub behaviors_count: usize,
   pub quality_score: u32,
   pub error: String,
+  pub error_detail: Option<SpecProcessingError>,
 }
 
 impl Default for SpecResult {
@@ -52,6 +156,7 @@ impl Default for SpecResult {
       behaviors_count: 0,
       quality_score: 0,
       error: String::new(),
+      error_detail: None,
     }
   }
 }
@@ -77,7 +182,7 @@ impl BatchStatus {
 }
 
 /// Summary report for batch processing
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct BatchSummary {
   pub total_files: usize,
   pub successful: usize,
@@ -88,49 +193,43 @@ pub struct BatchSummary {
   pub results: Vec<SpecResult>,
 }
 
-impl Default for BatchSummary {
-  fn default() -> Self {
-    Self {
-      total_files: 0,
-      successful: 0,
-      failed: 0,
-      skipped: 0,
-      total_behaviors: 0,
-      average_quality: 0,
-      results: Vec::new(),
-    }
-  }
-}
-
 /// Errors during batch processing
 #[derive(Debug, Clone, Error)]
 pub enum BatchError {
   #[error("no spec files provided")]
   NoSpecFiles,
 
-  #[error("invalid file path: {0}")]
-  InvalidPath(String),
+  #[error("invalid file path '{path}': {reason}")]
+  InvalidPath {
+    path: String,
+    reason: InvalidPathReason,
+  },
 
-  #[error("file not found: {0}")]
-  FileNotFound(String),
+  #[error("file not found: {path}")]
+  FileNotFound { path: String },
 
-  #[error("cannot access file: {0}")]
-  CannotAccessFile(String),
+  #[error("cannot access file '{path}': {reason}")]
+  CannotAccessFile {
+    path: String,
+    reason: FileAccessReason,
+  },
 
-  #[error("not a directory: {0}")]
-  NotADirectory(String),
+  #[error("not a directory: {path}")]
+  NotADirectory { path: String },
 
-  #[error("failed to read directory: {0}")]
-  ReadDirectoryError(String),
+  #[error("failed to read directory '{path}': {kind}")]
+  ReadDirectoryError {
+    path: String,
+    kind: DirectoryReadErrorKind,
+  },
 
-  #[error("no .cue files found in: {0}")]
-  NoCueFilesFound(String),
+  #[error("no .cue files found in: {path}")]
+  NoCueFilesFound { path: String },
 }
 
 /// Process multiple spec files sequentially
 ///
-/// # Errors
-/// Returns `BatchError` if the files list is empty or other critical errors occur.
+#[must_use]
 pub fn process_specs(files: &[String], config: &BatchConfig) -> BatchSummary {
   if files.is_empty() {
     return BatchSummary::default();
@@ -142,8 +241,7 @@ pub fn process_specs(files: &[String], config: &BatchConfig) -> BatchSummary {
     .map(|(index, file)| process_single_spec(file, index + 1, files.len(), config))
     .collect();
 
-  let summary = generate_summary(&results);
-  summary
+  generate_summary(&results)
 }
 
 /// Process a single spec file
@@ -154,33 +252,38 @@ fn process_single_spec(
   _config: &BatchConfig,
 ) -> SpecResult {
   // Validate file path for security
-  if !is_valid_file_path(file) {
-    return SpecResult {
-      file: file.to_string(),
-      status: BatchStatus::Failed,
-      error: "Invalid file path".to_string(),
-      ..SpecResult::default()
-    };
+  if let Err(reason) = validate_file_path(file) {
+    return spec_result_with_error(
+      file,
+      BatchStatus::Failed,
+      SpecProcessingError::InvalidPath {
+        path: file.to_string(),
+        reason,
+      },
+    );
   }
 
   // Check if file exists
   let path = std::path::Path::new(file);
   if !path.exists() {
-    return SpecResult {
-      file: file.to_string(),
-      status: BatchStatus::Skipped,
-      error: "File not found".to_string(),
-      ..SpecResult::default()
-    };
+    return spec_result_with_error(
+      file,
+      BatchStatus::Skipped,
+      SpecProcessingError::FileNotFound {
+        path: file.to_string(),
+      },
+    );
   }
 
   if !path.is_file() {
-    return SpecResult {
-      file: file.to_string(),
-      status: BatchStatus::Failed,
-      error: "Cannot access file".to_string(),
-      ..SpecResult::default()
-    };
+    return spec_result_with_error(
+      file,
+      BatchStatus::Failed,
+      SpecProcessingError::CannotAccessFile {
+        path: file.to_string(),
+        reason: FileAccessReason::NotAFile,
+      },
+    );
   }
 
   // For now, return a placeholder result
@@ -191,21 +294,56 @@ fn process_single_spec(
     behaviors_count: 0,
     quality_score: 0,
     error: String::new(),
+    error_detail: None,
+  }
+}
+
+fn spec_result_with_error(
+  file: &str,
+  status: BatchStatus,
+  error: SpecProcessingError,
+) -> SpecResult {
+  SpecResult {
+    file: file.to_string(),
+    status,
+    error: error.to_string(),
+    error_detail: Some(error),
+    ..SpecResult::default()
   }
 }
 
 /// Validate file path for security
+fn validate_file_path(path: &str) -> Result<(), InvalidPathReason> {
+  if path.is_empty() {
+    return Err(InvalidPathReason::Empty);
+  }
+
+  if path.contains('\0') {
+    return Err(InvalidPathReason::NullByte);
+  }
+
+  if path.split('/').any(|segment| segment == "..") {
+    return Err(InvalidPathReason::PathTraversal);
+  }
+
+  let shell_metacharacter = path.chars().find_map(|character| match character {
+    '|' => Some(ShellMetacharacter::Pipe),
+    ';' => Some(ShellMetacharacter::Semicolon),
+    '&' => Some(ShellMetacharacter::Ampersand),
+    '`' => Some(ShellMetacharacter::Backtick),
+    '$' => Some(ShellMetacharacter::Dollar),
+    '(' => Some(ShellMetacharacter::OpenParen),
+    ')' => Some(ShellMetacharacter::CloseParen),
+    _ => None,
+  });
+
+  shell_metacharacter.map_or(Ok(()), |character| {
+    Err(InvalidPathReason::ShellMetacharacter(character))
+  })
+}
+
 fn is_valid_file_path(path: &str) -> bool {
-  // Basic validation: not empty, no null bytes, no shell metacharacters
-  !path.is_empty()
-    && !path.contains('\0')
-    && !path.contains('|')
-    && !path.contains(';')
-    && !path.contains('&')
-    && !path.contains('`')
-    && !path.contains('$')
-    && !path.contains('(')
-    && !path.contains(')')
+  validate_file_path(path).is_ok()
 }
 
 /// Generate summary from results
@@ -240,7 +378,10 @@ fn generate_summary(results: &[SpecResult]) -> BatchSummary {
     0
   } else {
     let sum: u32 = successful_results.iter().map(|r| r.quality_score).sum();
-    sum / u32::try_from(successful_results.len()).unwrap_or(1)
+    match u32::try_from(successful_results.len()) {
+      Ok(length) if length > 0 => sum / length,
+      _ => 0,
+    }
   };
 
   BatchSummary {
@@ -262,20 +403,34 @@ pub fn get_specs_from_dir(dir: &str) -> Result<Vec<String>, BatchError> {
   let path = std::path::Path::new(dir);
 
   if !path.exists() {
-    return Err(BatchError::NotADirectory(dir.to_string()));
+    return Err(BatchError::FileNotFound {
+      path: dir.to_string(),
+    });
   }
 
   if !path.is_dir() {
-    return Err(BatchError::NotADirectory(dir.to_string()));
+    return Err(BatchError::NotADirectory {
+      path: dir.to_string(),
+    });
   }
 
-  let entries =
-    std::fs::read_dir(path).map_err(|_| BatchError::ReadDirectoryError(dir.to_string()))?;
+  let entries = std::fs::read_dir(path).map_err(|error| BatchError::ReadDirectoryError {
+    path: dir.to_string(),
+    kind: match error.kind() {
+      std::io::ErrorKind::PermissionDenied => DirectoryReadErrorKind::PermissionDenied,
+      _ => DirectoryReadErrorKind::Other,
+    },
+  })?;
 
   let cue_files: Vec<String> = entries
-    .filter_map(|entry| entry.ok())
+    .filter_map(std::result::Result::ok)
     .filter_map(|entry| entry.file_name().to_str().map(String::from))
-    .filter(|name| name.ends_with(".cue") && !name.starts_with('.'))
+    .filter(|name| {
+      std::path::Path::new(name)
+        .extension()
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("cue"))
+        && !name.starts_with('.')
+    })
     .map(|name| {
       if name.starts_with('/') {
         name
@@ -287,7 +442,9 @@ pub fn get_specs_from_dir(dir: &str) -> Result<Vec<String>, BatchError> {
     .collect();
 
   if cue_files.is_empty() {
-    Err(BatchError::NoCueFilesFound(dir.to_string()))
+    Err(BatchError::NoCueFilesFound {
+      path: dir.to_string(),
+    })
   } else {
     Ok(cue_files)
   }
@@ -300,7 +457,21 @@ pub fn status_to_string(status: BatchStatus) -> String {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::float_cmp, clippy::needless_collect, clippy::unnecessary_debug_formatting, clippy::match_same_arms, clippy::option_if_let_else, clippy::suspicious_else_formatting, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro, clippy::needless_pass_by_value)]
+#[allow(
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::unnecessary_debug_formatting,
+  clippy::match_same_arms,
+  clippy::option_if_let_else,
+  clippy::suspicious_else_formatting,
+  clippy::manual_let_else,
+  clippy::match_wild_err_arm,
+  clippy::match_like_matches_macro,
+  clippy::needless_pass_by_value
+)]
 mod tests {
   use super::*;
 
@@ -332,6 +503,13 @@ mod tests {
     let summary = process_specs(&files, &config);
     assert_eq!(summary.total_files, 1);
     assert_eq!(summary.failed, 1);
+    assert!(matches!(
+      summary.results.first().and_then(|result| result.error_detail.as_ref()),
+      Some(SpecProcessingError::InvalidPath {
+        path,
+        reason: InvalidPathReason::PathTraversal,
+      }) if path == "../etc/passwd"
+    ));
   }
 
   #[test]
@@ -340,6 +518,10 @@ mod tests {
     let files = vec!["/nonexistent/file.cue".to_string()];
     let summary = process_specs(&files, &config);
     assert_eq!(summary.skipped, 1);
+    assert!(matches!(
+      summary.results.first().and_then(|result| result.error_detail.as_ref()),
+      Some(SpecProcessingError::FileNotFound { path }) if path == "/nonexistent/file.cue"
+    ));
   }
 
   #[test]
@@ -351,6 +533,7 @@ mod tests {
         behaviors_count: 5,
         quality_score: 80,
         error: String::new(),
+        error_detail: None,
       },
       SpecResult {
         file: "b.cue".to_string(),
@@ -358,6 +541,7 @@ mod tests {
         behaviors_count: 10,
         quality_score: 90,
         error: String::new(),
+        error_detail: None,
       },
     ];
     let summary = generate_summary(&results);
@@ -378,6 +562,7 @@ mod tests {
         behaviors_count: 5,
         quality_score: 80,
         error: String::new(),
+        error_detail: None,
       },
       SpecResult {
         file: "b.cue".to_string(),
@@ -385,6 +570,7 @@ mod tests {
         behaviors_count: 0,
         quality_score: 0,
         error: "Parse error".to_string(),
+        error_detail: None,
       },
       SpecResult {
         file: "c.cue".to_string(),
@@ -392,6 +578,7 @@ mod tests {
         behaviors_count: 0,
         quality_score: 0,
         error: "File not found".to_string(),
+        error_detail: None,
       },
     ];
     let summary = generate_summary(&results);
@@ -425,8 +612,10 @@ mod tests {
   #[test]
   fn test_get_specs_from_dir_not_found() {
     let result = get_specs_from_dir("/nonexistent/directory");
-    assert!(result.is_err());
-    assert!(matches!(result, Err(BatchError::NotADirectory(_))));
+    assert!(matches!(
+      result,
+      Err(BatchError::FileNotFound { path }) if path == "/nonexistent/directory"
+    ));
   }
 
   #[test]
