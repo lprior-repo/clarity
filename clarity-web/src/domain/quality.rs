@@ -11,9 +11,9 @@ pub struct QualityReport {
 }
 
 pub trait QualityEvaluator<T> {
-  /// Evaluate input quality and return a structured report.
   ///
   /// # Errors
-  /// Returns [`ClarityError`] when evaluation cannot complete successfully.
+  ///
+  /// Returns a `ClarityError` if the evaluation process fails.
   fn evaluate(&self, input: &T) -> Result<QualityReport, ClarityError>;
 }

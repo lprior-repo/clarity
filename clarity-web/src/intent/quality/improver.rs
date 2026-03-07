@@ -213,9 +213,11 @@ impl QualityIssueReport {
 
   /// Add context to the issue report
   #[must_use]
-  pub fn with_context(mut self, context: impl Into<String>) -> Self {
-    self.context = Some(context.into());
-    self
+  pub fn with_context(self, context: impl Into<String>) -> Self {
+    Self {
+      context: Some(context.into()),
+      ..self
+    }
   }
 }
 
@@ -333,20 +335,14 @@ impl Default for QualityReport {
 /// A vector of improvement suggestions sorted by priority (highest first)
 #[must_use]
 pub fn suggest_improvements(report: &QualityReport) -> Vec<ImprovementSuggestion> {
-  let mut suggestions = Vec::new();
-
-  // Collect suggestions from all categories
-  suggestions.extend(suggest_missing_tests(report));
-  suggestions.extend(suggest_vague_rules_improvements(report));
-  suggestions.extend(suggest_examples_improvements(report));
-  suggestions.extend(suggest_security_improvements(report));
-  suggestions.extend(suggest_completeness_improvements(report));
-  suggestions.extend(suggest_clarity_improvements(report));
-  suggestions.extend(suggest_consistency_improvements(report));
-
-  // Sort by priority (highest first), then by category
-  suggestions
+  suggest_missing_tests(report)
     .into_iter()
+    .chain(suggest_vague_rules_improvements(report))
+    .chain(suggest_examples_improvements(report))
+    .chain(suggest_security_improvements(report))
+    .chain(suggest_completeness_improvements(report))
+    .chain(suggest_clarity_improvements(report))
+    .chain(suggest_consistency_improvements(report))
     .sorted_by(|a, b| {
       b.priority
         .cmp(&a.priority)
@@ -369,69 +365,69 @@ pub fn suggest_improvements(report: &QualityReport) -> Vec<ImprovementSuggestion
 /// A vector of improvement suggestions for test coverage
 #[must_use]
 pub fn suggest_missing_tests(report: &QualityReport) -> Vec<ImprovementSuggestion> {
-  let mut suggestions = Vec::new();
-
-  // Suggest error tests
-  for area in &report.missing_error_tests {
-    if let Ok(s) = ImprovementSuggestion::new(
-            "testing",
-            format!("Add error handling tests for {area}"),
-            9,
-            area.clone(),
-            format!("Create test cases that verify error conditions in {area}. Include tests for: invalid inputs, boundary conditions, resource exhaustion, and failure states."),
-        ) { suggestions.push(s) }
-  }
-
-  // Suggest auth tests
-  for area in &report.missing_auth_tests {
-    if let Ok(s) = ImprovementSuggestion::new(
-            "testing",
-            format!("Add authentication/authorization tests for {area}"),
-            10,
-            area.clone(),
-            format!("Create test cases that verify authentication and authorization in {area}. Include tests for: unauthenticated access, insufficient permissions, token expiration, and role-based access control."),
-        ) { suggestions.push(s) }
-  }
-
-  // Suggest edge case tests
-  for edge_case in &report.missing_edge_cases {
-    if let Ok(s) = ImprovementSuggestion::new(
-            "testing",
-            format!("Add edge case tests for {edge_case}"),
-            7,
-            edge_case.clone(),
-            format!("Create test cases for edge cases in {edge_case}. Consider: empty inputs, maximum values, null/nil handling, concurrent access, and timeout scenarios."),
-        ) { suggestions.push(s) }
-  }
-
-  // Check for behaviors without verification
-  for behavior in &report.unverified_behaviors {
-    if let Ok(s) = ImprovementSuggestion::new(
-            "testing",
-            format!("Add verification for behavior: {behavior}"),
-            8,
-            behavior.clone(),
-            format!("Define verification criteria for {behavior}. Specify: test type (unit/integration/manual), expected outcomes, and validation steps."),
-        ) { suggestions.push(s) }
-  }
-
-  // Check for low testability score issues
-  for issue in report.issues_by_category(IssueCategory::LowTestability) {
-    if let Ok(s) = ImprovementSuggestion::new(
+  let error_tests = report.missing_error_tests.iter().filter_map(|area| {
+    ImprovementSuggestion::new(
       "testing",
-      format!("Improve testability: {}", issue.description),
-      issue.severity,
-      issue.field.clone(),
-      format!(
-        "Add acceptance criteria and verification steps. {}",
-        issue.context.as_deref().unwrap_or("")
-      ),
-    ) {
-      suggestions.push(s);
-    }
-  }
+      format!("Add error handling tests for {area}"),
+      9,
+      area.clone(),
+      format!("Create test cases that verify error conditions in {area}. Include tests for: invalid inputs, boundary conditions, resource exhaustion, and failure states."),
+    ).ok()
+  });
 
-  suggestions
+  let auth_tests = report.missing_auth_tests.iter().filter_map(|area| {
+    ImprovementSuggestion::new(
+      "testing",
+      format!("Add authentication/authorization tests for {area}"),
+      10,
+      area.clone(),
+      format!("Create test cases that verify authentication and authorization in {area}. Include tests for: unauthenticated access, insufficient permissions, token expiration, and role-based access control."),
+    ).ok()
+  });
+
+  let edge_cases = report.missing_edge_cases.iter().filter_map(|edge_case| {
+    ImprovementSuggestion::new(
+      "testing",
+      format!("Add edge case tests for {edge_case}"),
+      7,
+      edge_case.clone(),
+      format!("Create test cases for edge cases in {edge_case}. Consider: empty inputs, maximum values, null/nil handling, concurrent access, and timeout scenarios."),
+    ).ok()
+  });
+
+  let unverified = report.unverified_behaviors.iter().filter_map(|behavior| {
+    ImprovementSuggestion::new(
+      "testing",
+      format!("Add verification for behavior: {behavior}"),
+      8,
+      behavior.clone(),
+      format!("Define verification criteria for {behavior}. Specify: test type (unit/integration/manual), expected outcomes, and validation steps."),
+    ).ok()
+  });
+
+  let testability = report
+    .issues_by_category(IssueCategory::LowTestability)
+    .into_iter()
+    .filter_map(|issue| {
+      ImprovementSuggestion::new(
+        "testing",
+        format!("Improve testability: {}", issue.description),
+        issue.severity,
+        issue.field.clone(),
+        format!(
+          "Add acceptance criteria and verification steps. {}",
+          issue.context.as_deref().unwrap_or("")
+        ),
+      )
+      .ok()
+    });
+
+  error_tests
+    .chain(auth_tests)
+    .chain(edge_cases)
+    .chain(unverified)
+    .chain(testability)
+    .collect()
 }
 
 /// Suggest improvements for vague rules
@@ -446,29 +442,22 @@ pub fn suggest_missing_tests(report: &QualityReport) -> Vec<ImprovementSuggestio
 /// A vector of improvement suggestions for rule clarity
 #[must_use]
 pub fn suggest_vague_rules_improvements(report: &QualityReport) -> Vec<ImprovementSuggestion> {
-  let mut suggestions = Vec::new();
-
-  for rule in &report.vague_rules {
-    // Detect type of vagueness and suggest specific improvements
+  let vague_rules = report.vague_rules.iter().filter_map(|rule| {
     let (description, action) = analyze_vague_rule(rule);
+    ImprovementSuggestion::new("clarity", description, 7, rule.clone(), action).ok()
+  });
 
-    if let Ok(s) = ImprovementSuggestion::new("clarity", description, 7, rule.clone(), action) {
-      suggestions.push(s);
-    }
-  }
+  let clarity_issues = report.issues_by_category(IssueCategory::LowClarity).into_iter().filter_map(|issue| {
+    ImprovementSuggestion::new(
+      "clarity",
+      format!("Clarify: {}", issue.description),
+      issue.severity,
+      issue.field.clone(),
+      format!("Rewrite with specific values and examples. Avoid ambiguous terms like 'fast', 'good', or 'appropriate'. {}", issue.context.as_deref().unwrap_or("Use measurable criteria.")),
+    ).ok()
+  });
 
-  // Check for low clarity score issues
-  for issue in report.issues_by_category(IssueCategory::LowClarity) {
-    if let Ok(s) = ImprovementSuggestion::new(
-            "clarity",
-            format!("Clarify: {}", issue.description),
-            issue.severity,
-            issue.field.clone(),
-            format!("Rewrite with specific values and examples. Avoid ambiguous terms like 'fast', 'good', or 'appropriate'. {}", issue.context.as_deref().unwrap_or("Use measurable criteria.")),
-        ) { suggestions.push(s) }
-  }
-
-  suggestions
+  vague_rules.chain(clarity_issues).collect()
 }
 
 /// Suggest improvements for missing examples
@@ -482,38 +471,37 @@ pub fn suggest_vague_rules_improvements(report: &QualityReport) -> Vec<Improveme
 /// A vector of improvement suggestions for adding examples
 #[must_use]
 pub fn suggest_examples_improvements(report: &QualityReport) -> Vec<ImprovementSuggestion> {
-  let mut suggestions = Vec::new();
-
-  for behavior in &report.behaviors_without_examples {
-    if let Ok(s) = ImprovementSuggestion::new(
-            "completeness",
-            format!("Add example for behavior: {behavior}"),
-            6,
-            behavior.clone(),
-            format!("Provide a concrete example demonstrating {behavior}. Include: input values, expected output, and any relevant preconditions or context."),
-        ) { suggestions.push(s) }
-  }
-
-  // Check for low completeness issues
-  for issue in report.issues_by_category(IssueCategory::LowCompleteness) {
-    if let Ok(s) = ImprovementSuggestion::new(
+  let behaviors = report.behaviors_without_examples.iter().filter_map(|behavior| {
+    ImprovementSuggestion::new(
       "completeness",
-      format!("Add missing content: {}", issue.description),
-      issue.severity,
-      issue.field.clone(),
-      format!(
-        "Fill in the missing information. {}",
-        issue
-          .context
-          .as_deref()
-          .unwrap_or("Provide complete details for this field.")
-      ),
-    ) {
-      suggestions.push(s);
-    }
-  }
+      format!("Add example for behavior: {behavior}"),
+      6,
+      behavior.clone(),
+      format!("Provide a concrete example demonstrating {behavior}. Include: input values, expected output, and any relevant preconditions or context."),
+    ).ok()
+  });
 
-  suggestions
+  let completeness_issues = report
+    .issues_by_category(IssueCategory::LowCompleteness)
+    .into_iter()
+    .filter_map(|issue| {
+      ImprovementSuggestion::new(
+        "completeness",
+        format!("Add missing content: {}", issue.description),
+        issue.severity,
+        issue.field.clone(),
+        format!(
+          "Fill in the missing information. {}",
+          issue
+            .context
+            .as_deref()
+            .unwrap_or("Provide complete details for this field.")
+        ),
+      )
+      .ok()
+    });
+
+  behaviors.chain(completeness_issues).collect()
 }
 
 // =============================================================================
@@ -523,121 +511,123 @@ pub fn suggest_examples_improvements(report: &QualityReport) -> Vec<ImprovementS
 /// Suggest security-related improvements
 #[must_use]
 fn suggest_security_improvements(report: &QualityReport) -> Vec<ImprovementSuggestion> {
-  let mut suggestions = Vec::new();
+  let security_issues = report
+    .issues_by_category(IssueCategory::LowSecurity)
+    .into_iter()
+    .filter_map(|issue| {
+      ImprovementSuggestion::new(
+        "security",
+        format!("Address security concern: {}", issue.description),
+        10,
+        issue.field.clone(),
+        format!(
+          "Add security controls. {}",
+          issue
+            .context
+            .as_deref()
+            .unwrap_or("Consider authentication, authorization, encryption, and input validation.")
+        ),
+      )
+      .ok()
+    });
 
-  for issue in report.issues_by_category(IssueCategory::LowSecurity) {
-    if let Ok(s) = ImprovementSuggestion::new(
+  let auth_tests = if report.missing_auth_tests.is_empty() {
+    None
+  } else {
+    ImprovementSuggestion::new(
       "security",
-      format!("Address security concern: {}", issue.description),
+      "Add comprehensive security test coverage".to_string(),
       10,
-      issue.field.clone(),
-      format!(
-        "Add security controls. {}",
-        issue
-          .context
-          .as_deref()
-          .unwrap_or("Consider authentication, authorization, encryption, and input validation.")
-      ),
-    ) {
-      suggestions.push(s);
-    }
-  }
+      "security".to_string(),
+      format!("The following areas need security tests: {}. Include tests for authentication, authorization, input validation, and injection prevention.", report.missing_auth_tests.join(", ")),
+    ).ok()
+  };
 
-  // Check for missing auth tests as security issues
-  if !report.missing_auth_tests.is_empty() {
-    if let Ok(s) = ImprovementSuggestion::new(
-            "security",
-            "Add comprehensive security test coverage".to_string(),
-            10,
-            "security".to_string(),
-            format!("The following areas need security tests: {}. Include tests for authentication, authorization, input validation, and injection prevention.", report.missing_auth_tests.join(", ")),
-        ) { suggestions.push(s) }
-  }
-
-  suggestions
+  security_issues.chain(auth_tests).collect()
 }
 
 /// Suggest completeness improvements
 #[must_use]
 fn suggest_completeness_improvements(report: &QualityReport) -> Vec<ImprovementSuggestion> {
-  let mut suggestions = Vec::new();
-
-  // Check overall score
-  if report.overall_score < 50 {
-    if let Ok(s) = ImprovementSuggestion::new(
-            "completeness",
-            "Overall quality score is critically low".to_string(),
-            10,
-            "overall".to_string(),
-            "Focus on filling in missing required fields and adding verification criteria before addressing other issues.".to_string(),
-        ) { suggestions.push(s) }
+  let score_suggestion = if report.overall_score < 50 {
+    ImprovementSuggestion::new(
+      "completeness",
+      "Overall quality score is critically low".to_string(),
+      10,
+      "overall".to_string(),
+      "Focus on filling in missing required fields and adding verification criteria before addressing other issues.".to_string(),
+    ).ok()
   } else if report.overall_score < 70 {
-    if let Ok(s) = ImprovementSuggestion::new(
-            "completeness",
-            "Overall quality score needs improvement".to_string(),
-            8,
-            "overall".to_string(),
-            "Address the identified gaps to improve the overall quality score. Prioritize high-severity issues first.".to_string(),
-        ) { suggestions.push(s) }
-  }
+    ImprovementSuggestion::new(
+      "completeness",
+      "Overall quality score needs improvement".to_string(),
+      8,
+      "overall".to_string(),
+      "Address the identified gaps to improve the overall quality score. Prioritize high-severity issues first.".to_string(),
+    ).ok()
+  } else {
+    None
+  };
 
-  // Check for behaviors without verification
-  if report.behavior_count > 0 && report.unverified_behaviors.len() > report.behavior_count / 2 {
-    if let Ok(s) = ImprovementSuggestion::new(
-            "completeness",
-            "More than half of behaviors lack verification".to_string(),
-            9,
-            "verification".to_string(),
-            format!("{} of {} behaviors need verification criteria. Define how each behavior will be tested and validated.", report.unverified_behaviors.len(), report.behavior_count),
-        ) { suggestions.push(s) }
-  }
+  let behavior_suggestion = if report.behavior_count > 0
+    && report.unverified_behaviors.len() > report.behavior_count / 2
+  {
+    ImprovementSuggestion::new(
+      "completeness",
+      "More than half of behaviors lack verification".to_string(),
+      9,
+      "verification".to_string(),
+      format!("{} of {} behaviors need verification criteria. Define how each behavior will be tested and validated.", report.unverified_behaviors.len(), report.behavior_count),
+    ).ok()
+  } else {
+    None
+  };
 
-  suggestions
+  std::iter::empty()
+    .chain(score_suggestion)
+    .chain(behavior_suggestion)
+    .collect()
 }
 
 /// Suggest clarity improvements
 #[must_use]
 fn suggest_clarity_improvements(report: &QualityReport) -> Vec<ImprovementSuggestion> {
-  let mut suggestions = Vec::new();
-
-  // Check for common vague patterns across all vague rules
   if report.vague_rules.len() > 3 {
-    if let Ok(s) = ImprovementSuggestion::new(
-            "clarity",
-            "Multiple vague rules detected - consider glossary".to_string(),
-            6,
-            "documentation".to_string(),
-            "Create a glossary defining common terms and acceptable value ranges to ensure consistent interpretation across all rules.".to_string(),
-        ) { suggestions.push(s) }
+    ImprovementSuggestion::new(
+      "clarity",
+      "Multiple vague rules detected - consider glossary".to_string(),
+      6,
+      "documentation".to_string(),
+      "Create a glossary defining common terms and acceptable value ranges to ensure consistent interpretation across all rules.".to_string(),
+    ).into_iter().collect()
+  } else {
+    Vec::new()
   }
-
-  suggestions
 }
 
 /// Suggest consistency improvements
 #[must_use]
 fn suggest_consistency_improvements(report: &QualityReport) -> Vec<ImprovementSuggestion> {
-  let mut suggestions = Vec::new();
-
-  for issue in report.issues_by_category(IssueCategory::LowConsistency) {
-    if let Ok(s) = ImprovementSuggestion::new(
-      "consistency",
-      format!("Resolve inconsistency: {}", issue.description),
-      8,
-      issue.field.clone(),
-      format!(
-        "Review and resolve the contradiction. {}",
-        issue
-          .context
-          .as_deref()
-          .unwrap_or("Ensure all requirements align and do not conflict.")
-      ),
-    ) {
-      suggestions.push(s);
-    }
-  }
-
-  suggestions
+  report
+    .issues_by_category(IssueCategory::LowConsistency)
+    .into_iter()
+    .filter_map(|issue| {
+      ImprovementSuggestion::new(
+        "consistency",
+        format!("Resolve inconsistency: {}", issue.description),
+        8,
+        issue.field.clone(),
+        format!(
+          "Review and resolve the contradiction. {}",
+          issue
+            .context
+            .as_deref()
+            .unwrap_or("Ensure all requirements align and do not conflict.")
+        ),
+      )
+      .ok()
+    })
+    .collect()
 }
 
 // =============================================================================

@@ -7,7 +7,7 @@
 //! - Argument count validation
 //! - Required flag validation
 //!
-//! All functions return typed validation errors for pure, panic-free handling.
+//! All functions return `Result<T, ValidationError>` for pure, panic-free error handling.
 //! Empty strings are handled according to each function's contract:
 //! - Profile: Empty is an error (no default)
 //! - Format: Empty returns `Ok("json")` as default
@@ -21,6 +21,31 @@
 #![forbid(unsafe_code)]
 
 use thiserror::Error;
+
+/// Errors from CLI validation
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum ValidationError {
+  #[error("Profile is required. Valid options: {0}")]
+  ProfileRequired(String),
+
+  #[error("Invalid profile '{0}'. Valid options: {1}")]
+  InvalidProfile(String, String),
+
+  #[error("Invalid format '{0}'. Valid options: {1}")]
+  InvalidFormat(String, String),
+
+  #[error("Invalid strategy '{0}'. Valid options: {1}")]
+  InvalidStrategy(String, String),
+
+  #[error("Command '{0}' does not accept arguments, but received {1} argument(s)")]
+  UnexpectedArgs(String, usize),
+
+  #[error("Command '{0}' requires exactly 1 argument, but received {1}")]
+  WrongArgCount(String, usize),
+
+  #[error("Required flag '--{0}' is missing or empty")]
+  MissingRequiredFlag(String),
+}
 
 /// Valid profile options for CLI validation
 const VALID_PROFILES: [&str; 6] = ["api", "cli", "event", "data", "workflow", "ui"];
@@ -85,31 +110,24 @@ fn format_options(options: &[&str]) -> String {
 ///
 /// # Examples
 /// ```
-/// use clarity_web::intent::cli::validation::{validate_profile, CliValidationError};
+/// use clarity_web::intent::cli::validation::{validate_profile, ValidationError};
 /// assert_eq!(validate_profile("API"), Ok("api".to_string()));
-/// assert_eq!(
-///   validate_profile(""),
-///   Err(CliValidationError::ProfileRequired {
-///     valid_options: "api, cli, event, data, workflow, ui".to_string()
-///   })
-/// );
+/// assert!(matches!(validate_profile(""), Err(ValidationError::ProfileRequired(_))));
 /// ```
-pub fn validate_profile(profile: &str) -> Result<String, CliValidationError> {
+pub fn validate_profile(profile: &str) -> Result<String, ValidationError> {
   let normalized = profile.trim().to_lowercase();
 
   if normalized.is_empty() {
-    return Err(CliValidationError::ProfileRequired {
-      valid_options: format_options(&VALID_PROFILES),
-    });
+    return Err(ValidationError::ProfileRequired(VALID_PROFILES.join(", ")));
   }
 
   if VALID_PROFILES.contains(&normalized.as_str()) {
     Ok(normalized)
   } else {
-    Err(CliValidationError::InvalidProfile {
-      input: profile.to_string(),
-      valid_options: format_options(&VALID_PROFILES),
-    })
+    Err(ValidationError::InvalidProfile(
+      profile.to_string(),
+      VALID_PROFILES.join(", "),
+    ))
   }
 }
 
@@ -126,18 +144,12 @@ pub fn validate_profile(profile: &str) -> Result<String, CliValidationError> {
 ///
 /// # Examples
 /// ```
-/// use clarity_web::intent::cli::validation::{validate_format, CliValidationError};
+/// use clarity_web::intent::cli::validation::{validate_format, ValidationError};
 /// assert_eq!(validate_format(""), Ok("json".to_string()));
 /// assert_eq!(validate_format("MARKDOWN"), Ok("markdown".to_string()));
-/// assert_eq!(
-///   validate_format("xml"),
-///   Err(CliValidationError::InvalidFormat {
-///     input: "xml".to_string(),
-///     valid_options: "json, jsonl, markdown".to_string()
-///   })
-/// );
+/// assert!(matches!(validate_format("xml"), Err(ValidationError::InvalidFormat(_, _))));
 /// ```
-pub fn validate_format(format: &str) -> Result<String, CliValidationError> {
+pub fn validate_format(format: &str) -> Result<String, ValidationError> {
   let normalized = format.trim().to_lowercase();
 
   if normalized.is_empty() {
@@ -147,10 +159,10 @@ pub fn validate_format(format: &str) -> Result<String, CliValidationError> {
   if VALID_FORMATS.contains(&normalized.as_str()) {
     Ok(normalized)
   } else {
-    Err(CliValidationError::InvalidFormat {
-      input: format.to_string(),
-      valid_options: format_options(&VALID_FORMATS),
-    })
+    Err(ValidationError::InvalidFormat(
+      format.to_string(),
+      VALID_FORMATS.join(", "),
+    ))
   }
 }
 
@@ -167,18 +179,12 @@ pub fn validate_format(format: &str) -> Result<String, CliValidationError> {
 ///
 /// # Examples
 /// ```
-/// use clarity_web::intent::cli::validation::{validate_strategy, CliValidationError};
+/// use clarity_web::intent::cli::validation::{validate_strategy, ValidationError};
 /// assert_eq!(validate_strategy(""), Ok("page_rank".to_string()));
 /// assert_eq!(validate_strategy("CRITICAL_PATH"), Ok("critical_path".to_string()));
-/// assert_eq!(
-///   validate_strategy("random"),
-///   Err(CliValidationError::InvalidStrategy {
-///     input: "random".to_string(),
-///     valid_options: "page_rank, critical_path, shortest, risk_first".to_string()
-///   })
-/// );
+/// assert!(matches!(validate_strategy("random"), Err(ValidationError::InvalidStrategy(_, _))));
 /// ```
-pub fn validate_strategy(strategy: &str) -> Result<String, CliValidationError> {
+pub fn validate_strategy(strategy: &str) -> Result<String, ValidationError> {
   let normalized = strategy.trim().to_lowercase();
 
   if normalized.is_empty() {
@@ -188,10 +194,10 @@ pub fn validate_strategy(strategy: &str) -> Result<String, CliValidationError> {
   if VALID_STRATEGIES.contains(&normalized.as_str()) {
     Ok(normalized)
   } else {
-    Err(CliValidationError::InvalidStrategy {
-      input: strategy.to_string(),
-      valid_options: format_options(&VALID_STRATEGIES),
-    })
+    Err(ValidationError::InvalidStrategy(
+      strategy.to_string(),
+      VALID_STRATEGIES.join(", "),
+    ))
   }
 }
 
@@ -202,18 +208,18 @@ pub fn validate_strategy(strategy: &str) -> Result<String, CliValidationError> {
 ///
 /// # Examples
 /// ```
-/// use clarity_web::intent::cli::validation::validate_no_args;
+/// use clarity_web::intent::cli::validation::{validate_no_args, ValidationError};
 /// assert_eq!(validate_no_args(&[], "help"), Ok(()));
-/// assert!(validate_no_args(&["extra".to_string()], "help").is_err());
+/// assert!(matches!(validate_no_args(&["extra".to_string()], "help"), Err(ValidationError::UnexpectedArgs(_, _))));
 /// ```
-pub fn validate_no_args(args: &[String], command_name: &str) -> Result<(), CliValidationError> {
+pub fn validate_no_args(args: &[String], command_name: &str) -> Result<(), ValidationError> {
   if args.is_empty() {
     Ok(())
   } else {
-    Err(CliValidationError::UnexpectedArguments {
-      command_name: command_name.to_string(),
-      count: args.len(),
-    })
+    Err(ValidationError::UnexpectedArgs(
+      command_name.to_string(),
+      args.len(),
+    ))
   }
 }
 
@@ -225,27 +231,16 @@ pub fn validate_no_args(args: &[String], command_name: &str) -> Result<(), CliVa
 ///
 /// # Examples
 /// ```
-/// use clarity_web::intent::cli::validation::validate_single_arg;
+/// use clarity_web::intent::cli::validation::{validate_single_arg, ValidationError};
 /// assert_eq!(validate_single_arg(&["bead-id".to_string()], "get"), Ok("bead-id".to_string()));
-/// assert!(validate_single_arg(&[], "get").is_err());
-/// assert!(validate_single_arg(&["a".to_string(), "b".to_string()], "get").is_err());
+/// assert!(matches!(validate_single_arg(&[], "get"), Err(ValidationError::WrongArgCount(_, 0))));
+/// assert!(matches!(validate_single_arg(&["a".to_string(), "b".to_string()], "get"), Err(ValidationError::WrongArgCount(_, 2))));
 /// ```
-pub fn validate_single_arg(
-  args: &[String],
-  command_name: &str,
-) -> Result<String, CliValidationError> {
+pub fn validate_single_arg(args: &[String], command_name: &str) -> Result<String, ValidationError> {
   match args.len() {
-    0 => Err(CliValidationError::WrongArgumentCount {
-      command_name: command_name.to_string(),
-      expected: 1,
-      received: 0,
-    }),
+    0 => Err(ValidationError::WrongArgCount(command_name.to_string(), 0)),
     1 => Ok(args[0].clone()),
-    received => Err(CliValidationError::WrongArgumentCount {
-      command_name: command_name.to_string(),
-      expected: 1,
-      received,
-    }),
+    n => Err(ValidationError::WrongArgCount(command_name.to_string(), n)),
   }
 }
 
@@ -259,18 +254,16 @@ pub fn validate_single_arg(
 ///
 /// # Examples
 /// ```
-/// use clarity_web::intent::cli::validation::validate_required_flag;
+/// use clarity_web::intent::cli::validation::{validate_required_flag, ValidationError};
 /// assert_eq!(validate_required_flag("name", "  value  "), Ok("value".to_string()));
-/// assert!(validate_required_flag("name", "").is_err());
-/// assert!(validate_required_flag("name", "   ").is_err());
+/// assert!(matches!(validate_required_flag("name", ""), Err(ValidationError::MissingRequiredFlag(_))));
+/// assert!(matches!(validate_required_flag("name", "   "), Err(ValidationError::MissingRequiredFlag(_))));
 /// ```
-pub fn validate_required_flag(flag_name: &str, value: &str) -> Result<String, CliValidationError> {
+pub fn validate_required_flag(flag_name: &str, value: &str) -> Result<String, ValidationError> {
   let trimmed = value.trim();
 
   if trimmed.is_empty() {
-    Err(CliValidationError::MissingRequiredFlag {
-      flag_name: flag_name.to_string(),
-    })
+    Err(ValidationError::MissingRequiredFlag(flag_name.to_string()))
   } else {
     Ok(trimmed.to_string())
   }
@@ -335,27 +328,30 @@ mod tests {
   fn test_validate_profile_empty_string() {
     let result = validate_profile("");
     assert!(result.is_err());
-    let error = result.unwrap_err().to_string();
-    assert!(error.contains("Profile is required"));
-    assert!(error.contains("api, cli, event, data, workflow, ui"));
+    let error = result.unwrap_err();
+    let error_str = error.to_string();
+    assert!(error_str.contains("Profile is required"));
+    assert!(error_str.contains("api, cli, event, data, workflow, ui"));
   }
 
   #[test]
   fn test_validate_profile_whitespace_only() {
     let result = validate_profile("   ");
     assert!(result.is_err());
-    let error = result.unwrap_err().to_string();
-    assert!(error.contains("Profile is required"));
+    let error = result.unwrap_err();
+    let error_str = error.to_string();
+    assert!(error_str.contains("Profile is required"));
   }
 
   #[test]
   fn test_validate_profile_invalid_value() {
     let result = validate_profile("invalid");
     assert!(result.is_err());
-    let error = result.unwrap_err().to_string();
-    assert!(error.contains("Invalid profile"));
-    assert!(error.contains("invalid"));
-    assert!(error.contains("api, cli, event, data, workflow, ui"));
+    let error = result.unwrap_err();
+    let error_str = error.to_string();
+    assert!(error_str.contains("Invalid profile"));
+    assert!(error_str.contains("invalid"));
+    assert!(error_str.contains("api, cli, event, data, workflow, ui"));
   }
 
   // ============================================================
@@ -411,10 +407,11 @@ mod tests {
   fn test_validate_format_invalid_value() {
     let result = validate_format("xml");
     assert!(result.is_err());
-    let error = result.unwrap_err().to_string();
-    assert!(error.contains("Invalid format"));
-    assert!(error.contains("xml"));
-    assert!(error.contains("json, jsonl, markdown"));
+    let error = result.unwrap_err();
+    let error_str = error.to_string();
+    assert!(error_str.contains("Invalid format"));
+    assert!(error_str.contains("xml"));
+    assert!(error_str.contains("json, jsonl, markdown"));
   }
 
   // ============================================================
@@ -470,10 +467,11 @@ mod tests {
   fn test_validate_strategy_invalid_value() {
     let result = validate_strategy("random");
     assert!(result.is_err());
-    let error = result.unwrap_err().to_string();
-    assert!(error.contains("Invalid strategy"));
-    assert!(error.contains("random"));
-    assert!(error.contains("page_rank, critical_path, shortest, risk_first"));
+    let error = result.unwrap_err();
+    let error_str = error.to_string();
+    assert!(error_str.contains("Invalid strategy"));
+    assert!(error_str.contains("random"));
+    assert!(error_str.contains("page_rank, critical_path, shortest, risk_first"));
   }
 
   // ============================================================
@@ -491,10 +489,11 @@ mod tests {
     let args = vec!["extra".to_string()];
     let result = validate_no_args(&args, "help");
     assert!(result.is_err());
-    let error = result.unwrap_err().to_string();
-    assert!(error.contains("help"));
-    assert!(error.contains("does not accept arguments"));
-    assert!(error.contains("1 argument"));
+    let error = result.unwrap_err();
+    let error_str = error.to_string();
+    assert!(error_str.contains("help"));
+    assert!(error_str.contains("does not accept arguments"));
+    assert!(error_str.contains("1 argument"));
   }
 
   #[test]
@@ -502,9 +501,10 @@ mod tests {
     let args = vec!["a".to_string(), "b".to_string(), "c".to_string()];
     let result = validate_no_args(&args, "version");
     assert!(result.is_err());
-    let error = result.unwrap_err().to_string();
-    assert!(error.contains("version"));
-    assert!(error.contains("3 argument"));
+    let error = result.unwrap_err();
+    let error_str = error.to_string();
+    assert!(error_str.contains("version"));
+    assert!(error_str.contains("3 argument"));
   }
 
   // ============================================================
@@ -523,10 +523,11 @@ mod tests {
   fn test_validate_single_arg_empty() {
     let result = validate_single_arg(&[], "get");
     assert!(result.is_err());
-    let error = result.unwrap_err().to_string();
-    assert!(error.contains("get"));
-    assert!(error.contains("requires exactly 1 argument"));
-    assert!(error.contains("received 0"));
+    let error = result.unwrap_err();
+    let error_str = error.to_string();
+    assert!(error_str.contains("get"));
+    assert!(error_str.contains("requires exactly 1 argument"));
+    assert!(error_str.contains("received 0"));
   }
 
   #[test]
@@ -534,9 +535,10 @@ mod tests {
     let args = vec!["a".to_string(), "b".to_string()];
     let result = validate_single_arg(&args, "get");
     assert!(result.is_err());
-    let error = result.unwrap_err().to_string();
-    assert!(error.contains("get"));
-    assert!(error.contains("requires exactly 1 argument"));
+    let error = result.unwrap_err();
+    let error_str = error.to_string();
+    assert!(error_str.contains("get"));
+    assert!(error_str.contains("requires exactly 1 argument"));
     assert!(error.contains("received 2"));
   }
 
@@ -550,8 +552,9 @@ mod tests {
     ];
     let result = validate_single_arg(&args, "edit");
     assert!(result.is_err());
-    let error = result.unwrap_err().to_string();
-    assert!(error.contains("received 4"));
+    let error = result.unwrap_err();
+    let error_str = error.to_string();
+    assert!(error_str.contains("received 4"));
   }
 
   // ============================================================
@@ -576,18 +579,20 @@ mod tests {
   fn test_validate_required_flag_empty_string() {
     let result = validate_required_flag("name", "");
     assert!(result.is_err());
-    let error = result.unwrap_err().to_string();
-    assert!(error.contains("--name"));
-    assert!(error.contains("missing or empty"));
+    let error = result.unwrap_err();
+    let error_str = error.to_string();
+    assert!(error_str.contains("--name"));
+    assert!(error_str.contains("missing or empty"));
   }
 
   #[test]
   fn test_validate_required_flag_whitespace_only() {
     let result = validate_required_flag("config", "   ");
     assert!(result.is_err());
-    let error = result.unwrap_err().to_string();
-    assert!(error.contains("--config"));
-    assert!(error.contains("missing or empty"));
+    let error = result.unwrap_err();
+    let error_str = error.to_string();
+    assert!(error_str.contains("--config"));
+    assert!(error_str.contains("missing or empty"));
   }
 
   #[test]
@@ -629,27 +634,30 @@ mod tests {
   #[test]
   fn test_error_messages_are_descriptive() {
     // Profile error should list valid options
-    let profile_error = validate_profile("invalid").unwrap_err().to_string();
-    assert!(profile_error.contains("Invalid profile"));
-    assert!(profile_error.contains("api"));
+    let profile_error = validate_profile("invalid").unwrap_err();
+    let profile_error_str = profile_error.to_string();
+    assert!(profile_error_str.contains("Invalid profile"));
+    assert!(profile_error_str.contains("api"));
 
     // Format error should list valid options
-    let format_error = validate_format("xml").unwrap_err().to_string();
-    assert!(format_error.contains("Invalid format"));
-    assert!(format_error.contains("json"));
+    let format_error = validate_format("xml").unwrap_err();
+    let format_error_str = format_error.to_string();
+    assert!(format_error_str.contains("Invalid format"));
+    assert!(format_error_str.contains("json"));
 
     // Strategy error should list valid options
-    let strategy_error = validate_strategy("random").unwrap_err().to_string();
-    assert!(strategy_error.contains("Invalid strategy"));
-    assert!(strategy_error.contains("page_rank"));
+    let strategy_error = validate_strategy("random").unwrap_err();
+    let strategy_error_str = strategy_error.to_string();
+    assert!(strategy_error_str.contains("Invalid strategy"));
+    assert!(strategy_error_str.contains("page_rank"));
 
     // Argument count errors should include counts
-    let no_args_error = validate_no_args(&["extra".to_string()], "help")
-      .unwrap_err()
-      .to_string();
-    assert!(no_args_error.contains("1 argument"));
+    let no_args_error = validate_no_args(&["extra".to_string()], "help").unwrap_err();
+    let no_args_error_str = no_args_error.to_string();
+    assert!(no_args_error_str.contains("1 argument"));
 
-    let single_arg_error = validate_single_arg(&[], "get").unwrap_err().to_string();
-    assert!(single_arg_error.contains("0"));
+    let single_arg_error = validate_single_arg(&[], "get").unwrap_err();
+    let single_arg_error_str = single_arg_error.to_string();
+    assert!(single_arg_error_str.contains("0"));
   }
 }

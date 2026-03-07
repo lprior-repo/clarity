@@ -45,7 +45,7 @@ tasks:
   # ============================================================================
 
   quick:
-    command: "cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings"
+    script: "cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings"
     description: "Fast format + lint check (cached, excludes integration-tests)"
     inputs:
       - "clarity-*/src/**/*.rs"

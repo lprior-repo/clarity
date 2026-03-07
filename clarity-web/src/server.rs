@@ -57,14 +57,11 @@ use crate::providers::ExtractionProvider;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::providers::OpenCodeProvider;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::providers::SchemaField;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::providers::{
-  ExtractedFields, ExtractionContext, ExtractionError, FieldExtraction, FieldType,
-  OpenCodeProviderOptions,
+  ExtractedFields, ExtractionContext, ExtractionError, FieldType, OpenCodeProviderOptions,
 };
-#[cfg(not(target_arch = "wasm32"))]
-use thiserror::Error;
+#[cfg(feature = "server")]
+use crate::providers::{ExtractionProvider, SchemaField};
 
 /// A planning bead (atomic work unit)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -111,6 +108,7 @@ pub async fn save_bead(bead: Bead) -> Result<Bead, ServerFnError> {
 /// Get all beads for a project
 #[server]
 pub async fn get_beads(project_id: String) -> Result<Vec<Bead>, ServerFnError> {
+  let _ = project_id;
   // In a real app, this would fetch from a database
   // For now, return sample data
   let beads = vec![
@@ -149,7 +147,7 @@ pub async fn get_beads(project_id: String) -> Result<Vec<Bead>, ServerFnError> {
 #[server]
 pub async fn delete_bead(bead_id: String) -> Result<(), ServerFnError> {
   // In a real app, this would delete from a database
-  println!("Deleting bead: {}", bead_id);
+  println!("Deleting bead: {bead_id}");
   Ok(())
 }
 
@@ -169,22 +167,18 @@ pub async fn get_coach_guidance(
 ) -> Result<CoachResponse, ServerFnError> {
   // In a real app, this would call an AI API
   let guidance = match phase {
-    Phase::Discover => format!(
-      "In the Discover phase, focus on understanding users deeply. Context: {}",
-      context
-    ),
+    Phase::Discover => {
+      format!("In the Discover phase, focus on understanding users deeply. Context: {context}")
+    }
     Phase::Define => format!(
-      "In the Define phase, synthesize your findings into a clear problem. Context: {}",
-      context
+      "In the Define phase, synthesize your findings into a clear problem. Context: {context}"
     ),
-    Phase::Develop => format!(
-      "In the Develop phase, ideate and prototype solutions. Context: {}",
-      context
-    ),
-    Phase::Deliver => format!(
-      "In the Deliver phase, test and refine your solution. Context: {}",
-      context
-    ),
+    Phase::Develop => {
+      format!("In the Develop phase, ideate and prototype solutions. Context: {context}")
+    }
+    Phase::Deliver => {
+      format!("In the Deliver phase, test and refine your solution. Context: {context}")
+    }
   };
 
   let questions = match phase {
@@ -277,6 +271,58 @@ impl RateLimiter {
 #[allow(dead_code)]
 static RATE_LIMITER: LazyLock<RateLimiter> = LazyLock::new(|| RateLimiter::new(10));
 
+/// Check rate limit for a session, returning a formatted error if limited.
+///
+/// # Arguments
+/// * `session` - Session identifier for rate limiting
+/// * `operation` - Name of the operation for logging
+///
+/// # Returns
+/// `Ok(())` if allowed, `Err(ServerFnError)` if rate limited
+#[cfg(not(target_arch = "wasm32"))]
+async fn check_rate_limit_for_session(session: &str, operation: &str) -> Result<(), ServerFnError> {
+  match RATE_LIMITER.check_rate_limit(session).await {
+    Ok(()) => {
+      info!(session, operation, "Rate limit check passed");
+      Ok(())
+    }
+    Err(retry_after) => {
+      tracing_warn!(session, retry_after, operation, "Rate limit exceeded");
+      Err(ServerFnError::new(anyhow::anyhow!(
+        "Rate limit exceeded. Please retry after {retry_after}s"
+      )))
+    }
+  }
+}
+
+/// Map extraction errors to server function errors with consistent formatting.
+///
+/// # Arguments
+/// * `error` - The extraction error to map
+///
+/// # Returns
+/// `ServerFnError` with user-friendly message
+#[cfg(not(target_arch = "wasm32"))]
+fn map_extraction_error(error: ExtractionError) -> ServerFnError {
+  match error {
+    ExtractionError::RateLimited {
+      retry_after_seconds,
+    } => ServerFnError::new(anyhow::anyhow!(
+      "Provider rate limited. Retry after {retry_after_seconds}s"
+    )),
+    ExtractionError::AuthenticationError(msg) => {
+      ServerFnError::new(anyhow::anyhow!("Authentication failed: {msg}"))
+    }
+    ExtractionError::InvalidInput(msg) => {
+      ServerFnError::new(anyhow::anyhow!("Invalid input: {msg}"))
+    }
+    _ => ServerFnError::new(anyhow::anyhow!("Extraction failed: {error}")),
+  }
+}
+
+/// Global AI provider singleton
+///
+/// Initialized once with config from `~/.config/clarity/ai.toml`.
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug, Clone)]
 struct AiProviderState {
@@ -681,7 +727,12 @@ fn merge_hole_punching_results(
 #[cfg(not(target_arch = "wasm32"))]
 #[server]
 pub async fn get_ai_provider_status_server() -> Result<AiProviderDiagnostics, ServerFnError> {
-  ai_provider_state().map(|state| state.diagnostics.clone())
+  Ok(AiProviderDiagnostics {
+    provider: "opencode".to_string(),
+    endpoint: AI_PROVIDER.endpoint().clone(),
+    model: AI_PROVIDER.model().cloned(),
+    routing_provider: AI_PROVIDER.routing_provider().cloned(),
+  })
 }
 
 /// Extract structured fields from freeform text input
@@ -702,25 +753,7 @@ pub async fn extract_fields_server(
   let session = session_id.as_deref().unwrap_or("default");
 
   // Check rate limit
-  match RATE_LIMITER.check_rate_limit(session).await {
-    Ok(()) => {
-      info!(
-        session,
-        input_len = input.len(),
-        "extract_fields_server: API call"
-      );
-    }
-    Err(retry_after) => {
-      tracing_warn!(
-        session,
-        retry_after,
-        "extract_fields_server: Rate limit exceeded"
-      );
-      return Err(ServerFnError::new(anyhow::anyhow!(
-        "Rate limit exceeded. Please retry after {retry_after}s"
-      )));
-    }
-  }
+  check_rate_limit_for_session(session, "extract_fields_server").await?;
 
   // Validate input
   if input.trim().is_empty() {
@@ -742,7 +775,7 @@ pub async fn extract_fields_server(
   let result = provider
     .extract_fields(&input, &context)
     .await
-    .map_err(|error| map_extraction_error("Extraction failed", error))?;
+    .map_err(map_extraction_error)?;
 
   info!(
     session,
@@ -775,28 +808,14 @@ pub async fn suggest_field_server(
   let session = session_id.as_deref().unwrap_or("default");
 
   // Check rate limit
-  match RATE_LIMITER.check_rate_limit(session).await {
-    Ok(()) => {
-      info!(session, ?field, "suggest_field_server: API call");
-    }
-    Err(retry_after) => {
-      tracing_warn!(
-        session,
-        retry_after,
-        "suggest_field_server: Rate limit exceeded"
-      );
-      return Err(ServerFnError::new(anyhow::anyhow!(
-        "Rate limit exceeded. Please retry after {retry_after}s"
-      )));
-    }
-  }
+  check_rate_limit_for_session(session, "suggest_field_server").await?;
 
   // Build schema for single field suggestion
   let schema = vec![SchemaField {
     name: "suggestion".to_string(),
     field_type: field.clone(),
     required: true,
-    description: Some(format!("AI-suggested content for {:?} field", field)),
+    description: Some(format!("AI-suggested content for {field:?} field")),
     options: None,
   }];
 
@@ -817,23 +836,19 @@ pub async fn suggest_field_server(
   let result = provider
     .extract_fields_with_schema(&prompt_text, &schema, &context)
     .await
-    .map_err(|error| map_extraction_error("Suggestion failed", error))?;
+    .map_err(map_extraction_error)?;
 
   // Extract the first field's value as string
   let suggestion = result
     .fields
     .first()
-    .map(|f| {
+    .and_then(|f| {
       serde_json::to_string(&f.value)
         .map(|s| s.trim_matches('"').to_string())
         .ok()
     })
-    .flatten()
     .unwrap_or_else(|| {
-      format!(
-        "Suggestion for {:?} field based on your context. Please review and edit.",
-        field
-      )
+      format!("Suggestion for {field:?} field based on your context. Please review and edit.")
     });
 
   info!(
@@ -894,7 +909,9 @@ pub async fn calculate_quality_server(
   }
 
   // Default to empty EARS if none provided
-  let ears_ref = ears.as_ref().map_or_else(Vec::new, |e| e.clone());
+  let ears_ref = ears
+    .as_ref()
+    .map_or_else(Vec::new, std::clone::Clone::clone);
 
   // Inversion control defaults (will be enhanced in future)
   let inversion = InversionControl {
@@ -961,25 +978,7 @@ pub async fn validate_straw_man_traps_server(
   let session = session_id.as_deref().unwrap_or("default");
 
   // Check rate limit
-  match RATE_LIMITER.check_rate_limit(session).await {
-    Ok(()) => {
-      info!(
-        session,
-        text_len = persona_text.len(),
-        "validate_straw_man_traps_server: API call"
-      );
-    }
-    Err(retry_after) => {
-      tracing_warn!(
-        session,
-        retry_after,
-        "validate_straw_man_traps_server: Rate limit exceeded"
-      );
-      return Err(ServerFnError::new(anyhow::anyhow!(
-        "Rate limit exceeded. Please retry after {retry_after}s"
-      )));
-    }
-  }
+  check_rate_limit_for_session(session, "validate_straw_man_traps_server").await?;
 
   // Validate input
   if persona_text.trim().is_empty() {
@@ -988,19 +987,135 @@ pub async fn validate_straw_man_traps_server(
     )));
   }
 
-  let schema = build_straw_man_schema();
-  let context = build_straw_man_context(schema.clone());
-  let analysis_prompt = build_straw_man_prompt(&persona_text);
+  // Define schema for trap detection
+  // We'll extract which traps are present and get suggestions for each
+  let schema = vec![
+    SchemaField {
+      name: "irrational_actor_detected".to_string(),
+      field_type: FieldType::Boolean,
+      required: true,
+      description: Some(
+        "True if the persona acts against their own motivations or self-interest".to_string(),
+      ),
+      options: None,
+    },
+    SchemaField {
+      name: "manic_pixie_dream_user_detected".to_string(),
+      field_type: FieldType::Boolean,
+      required: true,
+      description: Some(
+        "True if the persona magically loves everything without discernment or constraints"
+          .to_string(),
+      ),
+      options: None,
+    },
+    SchemaField {
+      name: "stoic_monk_detected".to_string(),
+      field_type: FieldType::Boolean,
+      required: true,
+      description: Some(
+        "True if the persona tolerates immense friction or difficulty without complaint"
+          .to_string(),
+      ),
+      options: None,
+    },
+    SchemaField {
+      name: "your_clone_detected".to_string(),
+      field_type: FieldType::Boolean,
+      required: true,
+      description: Some(
+        "True if the persona has developer-level system knowledge or mental models".to_string(),
+      ),
+      options: None,
+    },
+    SchemaField {
+      name: "suggestions".to_string(),
+      field_type: FieldType::TextArea,
+      required: false,
+      description: Some(
+        "Specific suggestions for fixing detected traps. Be concrete and actionable.".to_string(),
+      ),
+      options: None,
+    },
+  ];
+
+  // Build context
+  let context = ExtractionContext {
+    document_type: Some("persona_validation".to_string()),
+    locale: Some("en_US".to_string()),
+    schema: Some(schema.clone()),
+    extra: serde_json::json!({
+        "validation_type": "straw_man_traps",
+        "traps": [
+            {
+                "name": "IrrationalActor",
+                "description": "User acts against their own motivations or self-interest"
+            },
+            {
+                "name": "ManicPixieDreamUser",
+                "description": "User magically loves everything without discernment"
+            },
+            {
+                "name": "StoicMonk",
+                "description": "User tolerates immense friction without complaint"
+            },
+            {
+                "name": "YourClone",
+                "description": "User has developer's system knowledge and mental models"
+            }
+        ]
+    }),
+  };
+
+  // Build analysis prompt
+  let analysis_prompt = format!(
+    "Analyze this user persona description for straw man trap patterns:\n\n{persona_text}\n\n\
+        Detect which of the following traps are present:\n\
+        1. Irrational Actor: User acts against their own motivations\n\
+        2. Manic Pixie Dream User: User magically loves everything\n\
+        3. Stoic Monk: User tolerates excessive friction\n\
+        4. Your Clone: User has developer's system knowledge\n\n\
+        Provide specific suggestions for any detected traps."
+  );
 
   // Call AI provider
   let provider = ai_provider()?;
   let result = provider
     .extract_fields_with_schema(&analysis_prompt, &schema, &context)
     .await
-    .map_err(|error| map_extraction_error("Trap detection failed", error))?;
+    .map_err(map_extraction_error)?;
 
-  let validation = parse_straw_man_validation(&result.fields);
-  let traps_detected = validation.traps_detected.clone();
+  // Parse detected traps from response
+  let mut traps_detected = Vec::new();
+
+  for field in &result.fields {
+    match field.name.as_str() {
+      "irrational_actor_detected" => {
+        if field.value.as_bool() == Some(true) {
+          traps_detected.push(StrawManTrap::IrrationalActor);
+        }
+      }
+      "manic_pixie_dream_user_detected" => {
+        if field.value.as_bool() == Some(true) {
+          traps_detected.push(StrawManTrap::ManicPixieDreamUser);
+        }
+      }
+      "stoic_monk_detected" => {
+        if field.value.as_bool() == Some(true) {
+          traps_detected.push(StrawManTrap::StoicMonk);
+        }
+      }
+      "your_clone_detected" => {
+        if field.value.as_bool() == Some(true) {
+          traps_detected.push(StrawManTrap::YourClone);
+        }
+      }
+      _ => {}
+    }
+  }
+
+  // Create validation result
+  let validation = StrawManValidation::new(traps_detected.clone());
 
   info!(
       session,
@@ -1062,27 +1177,7 @@ pub async fn validate_hole_punching_server(
   let session = session_id.as_deref().unwrap_or("default");
 
   // Check rate limit
-  match RATE_LIMITER.check_rate_limit(session).await {
-    Ok(()) => {
-      info!(
-        session,
-        trigger_len = scenario.trigger.len(),
-        value_moment_len = scenario.value_moment.len(),
-        feeling_len = scenario.feeling.len(),
-        "validate_hole_punching_server: API call"
-      );
-    }
-    Err(retry_after) => {
-      tracing_warn!(
-        session,
-        retry_after,
-        "validate_hole_punching_server: Rate limit exceeded"
-      );
-      return Err(ServerFnError::new(anyhow::anyhow!(
-        "Rate limit exceeded. Please retry after {retry_after}s"
-      )));
-    }
-  }
+  check_rate_limit_for_session(session, "validate_hole_punching_server").await?;
 
   // Validate input - scenario bullets should be complete
   if !scenario.is_bullets_complete() {
@@ -1100,9 +1195,43 @@ pub async fn validate_hole_punching_server(
   let result = provider
     .extract_fields_with_schema(&analysis_prompt, &schema, &context)
     .await
-    .map_err(|error| map_extraction_error("Hole punching validation failed", error))?;
+    .map_err(map_extraction_error)?;
 
-  let hole_results = merge_hole_punching_results(&scenario.hole_punching, &result.fields);
+  // Parse hole addressing status from response
+  let mut discovery_hole = scenario.hole_punching.discovery_hole.clone();
+  let mut edge_case_hole = scenario.hole_punching.edge_case_hole.clone();
+  let mut motivation_dropoff = scenario.hole_punching.motivation_dropoff.clone();
+
+  for field in &result.fields {
+    match field.name.as_str() {
+      "discovery_hole_addressed" => {
+        if field.value.as_bool() == Some(true) {
+          // Mark as addressed if not already set
+          if discovery_hole.is_none() {
+            discovery_hole = Some("Addressed in scenario".to_string());
+          }
+        }
+      }
+      "edge_case_hole_addressed" => {
+        if field.value.as_bool() == Some(true) && edge_case_hole.is_none() {
+          edge_case_hole = Some("Addressed in scenario".to_string());
+        }
+      }
+      "motivation_dropoff_addressed" => {
+        if field.value.as_bool() == Some(true) && motivation_dropoff.is_none() {
+          motivation_dropoff = Some("Addressed in scenario".to_string());
+        }
+      }
+      _ => {}
+    }
+  }
+
+  // Create hole punching results
+  let hole_results = HolePunchingResults {
+    discovery_hole,
+    edge_case_hole,
+    motivation_dropoff,
+  };
 
   info!(
       session,
