@@ -24,6 +24,17 @@
 #![forbid(unsafe_code)]
 
 use itertools::Itertools;
+use thiserror::Error;
+
+/// Error type for JSONL operations.
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
+pub enum JsonlError {
+  #[error("serialization failed: {0}")]
+  SerializationError(String),
+
+  #[error("failed to build JSONL content: {0}")]
+  BuildContentError(String),
+}
 
 /// Result of parsing a JSONL line.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -72,9 +83,9 @@ impl<T> JsonlLineParseResult<T> {
 ///
 /// # Returns
 ///
-/// `Ok(String)` if serialization succeeds, `Err(error_message)` otherwise
-pub fn serialize_to_jsonl<T: serde::Serialize>(session: &T) -> Result<String, String> {
-  serde_json::to_string(session).map_err(|e| e.to_string())
+/// `Ok(String)` if serialization succeeds, `Err(JsonlError)` otherwise
+pub fn serialize_to_jsonl<T: serde::Serialize>(session: &T) -> Result<String, JsonlError> {
+  serde_json::to_string(session).map_err(|e| JsonlError::SerializationError(e.to_string()))
 }
 
 /// Parse a single JSONL line.
@@ -209,8 +220,8 @@ pub trait HasId {
 ///
 /// # Returns
 ///
-/// `Ok(String)` if all sessions serialize successfully, `Err(error_message)` otherwise
-pub fn build_jsonl_content<T: serde::Serialize>(sessions: &[T]) -> Result<String, String> {
+/// `Ok(String)` if all sessions serialize successfully, `Err(JsonlError)` otherwise
+pub fn build_jsonl_content<T: serde::Serialize>(sessions: &[T]) -> Result<String, JsonlError> {
   sessions
     .iter()
     .map(|session| serialize_to_jsonl(session))

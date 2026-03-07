@@ -53,9 +53,11 @@ use crate::lattice::quality::{Answer as QualityAnswer, EarsRequirementRef, Quali
 #[cfg(not(target_arch = "wasm32"))]
 use crate::providers::OpenCodeProvider;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::providers::{ExtractedFields, ExtractionContext, FieldType, OpenCodeProviderOptions};
+use crate::providers::{
+  ExtractedFields, ExtractionContext, ExtractionError, FieldType, OpenCodeProviderOptions,
+};
 #[cfg(feature = "server")]
-use crate::providers::{ExtractionError, ExtractionProvider, SchemaField};
+use crate::providers::{ExtractionProvider, SchemaField};
 
 /// A planning bead (atomic work unit)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -265,6 +267,55 @@ impl RateLimiter {
 #[allow(dead_code)]
 static RATE_LIMITER: LazyLock<RateLimiter> = LazyLock::new(|| RateLimiter::new(10));
 
+/// Check rate limit for a session, returning a formatted error if limited.
+///
+/// # Arguments
+/// * `session` - Session identifier for rate limiting
+/// * `operation` - Name of the operation for logging
+///
+/// # Returns
+/// `Ok(())` if allowed, `Err(ServerFnError)` if rate limited
+#[cfg(not(target_arch = "wasm32"))]
+async fn check_rate_limit_for_session(session: &str, operation: &str) -> Result<(), ServerFnError> {
+  match RATE_LIMITER.check_rate_limit(session).await {
+    Ok(()) => {
+      info!(session, operation, "Rate limit check passed");
+      Ok(())
+    }
+    Err(retry_after) => {
+      tracing_warn!(session, retry_after, operation, "Rate limit exceeded");
+      Err(ServerFnError::new(anyhow::anyhow!(
+        "Rate limit exceeded. Please retry after {retry_after}s"
+      )))
+    }
+  }
+}
+
+/// Map extraction errors to server function errors with consistent formatting.
+///
+/// # Arguments
+/// * `error` - The extraction error to map
+///
+/// # Returns
+/// `ServerFnError` with user-friendly message
+#[cfg(not(target_arch = "wasm32"))]
+fn map_extraction_error(error: ExtractionError) -> ServerFnError {
+  match error {
+    ExtractionError::RateLimited {
+      retry_after_seconds,
+    } => ServerFnError::new(anyhow::anyhow!(
+      "Provider rate limited. Retry after {retry_after_seconds}s"
+    )),
+    ExtractionError::AuthenticationError(msg) => {
+      ServerFnError::new(anyhow::anyhow!("Authentication failed: {msg}"))
+    }
+    ExtractionError::InvalidInput(msg) => {
+      ServerFnError::new(anyhow::anyhow!("Invalid input: {msg}"))
+    }
+    _ => ServerFnError::new(anyhow::anyhow!("Extraction failed: {error}")),
+  }
+}
+
 /// Global AI provider singleton
 ///
 /// Initialized once with config from `~/.config/clarity/ai.toml`.
@@ -353,25 +404,7 @@ pub async fn extract_fields_server(
   let session = session_id.as_deref().unwrap_or("default");
 
   // Check rate limit
-  match RATE_LIMITER.check_rate_limit(session).await {
-    Ok(()) => {
-      info!(
-        session,
-        input_len = input.len(),
-        "extract_fields_server: API call"
-      );
-    }
-    Err(retry_after) => {
-      tracing_warn!(
-        session,
-        retry_after,
-        "extract_fields_server: Rate limit exceeded"
-      );
-      return Err(ServerFnError::new(anyhow::anyhow!(
-        "Rate limit exceeded. Please retry after {retry_after}s"
-      )));
-    }
-  }
+  check_rate_limit_for_session(session, "extract_fields_server").await?;
 
   // Validate input
   if input.trim().is_empty() {
@@ -392,20 +425,7 @@ pub async fn extract_fields_server(
   let result = AI_PROVIDER
     .extract_fields(&input, &context)
     .await
-    .map_err(|e| match e {
-      ExtractionError::RateLimited {
-        retry_after_seconds,
-      } => ServerFnError::new(anyhow::anyhow!(
-        "Provider rate limited. Retry after {retry_after_seconds}s"
-      )),
-      ExtractionError::AuthenticationError(msg) => {
-        ServerFnError::new(anyhow::anyhow!("Authentication failed: {msg}"))
-      }
-      ExtractionError::InvalidInput(msg) => {
-        ServerFnError::new(anyhow::anyhow!("Invalid input: {msg}"))
-      }
-      _ => ServerFnError::new(anyhow::anyhow!("Extraction failed: {e}")),
-    })?;
+    .map_err(map_extraction_error)?;
 
   info!(
     session,
@@ -438,21 +458,7 @@ pub async fn suggest_field_server(
   let session = session_id.as_deref().unwrap_or("default");
 
   // Check rate limit
-  match RATE_LIMITER.check_rate_limit(session).await {
-    Ok(()) => {
-      info!(session, ?field, "suggest_field_server: API call");
-    }
-    Err(retry_after) => {
-      tracing_warn!(
-        session,
-        retry_after,
-        "suggest_field_server: Rate limit exceeded"
-      );
-      return Err(ServerFnError::new(anyhow::anyhow!(
-        "Rate limit exceeded. Please retry after {retry_after}s"
-      )));
-    }
-  }
+  check_rate_limit_for_session(session, "suggest_field_server").await?;
 
   // Build schema for single field suggestion
   let schema = vec![SchemaField {
@@ -479,20 +485,7 @@ pub async fn suggest_field_server(
   let result = AI_PROVIDER
     .extract_fields_with_schema(&prompt_text, &schema, &context)
     .await
-    .map_err(|e| match e {
-      ExtractionError::RateLimited {
-        retry_after_seconds,
-      } => ServerFnError::new(anyhow::anyhow!(
-        "Provider rate limited. Retry after {retry_after_seconds}s"
-      )),
-      ExtractionError::AuthenticationError(msg) => {
-        ServerFnError::new(anyhow::anyhow!("Authentication failed: {msg}"))
-      }
-      ExtractionError::InvalidInput(msg) => {
-        ServerFnError::new(anyhow::anyhow!("Invalid input: {msg}"))
-      }
-      _ => ServerFnError::new(anyhow::anyhow!("Suggestion failed: {e}")),
-    })?;
+    .map_err(map_extraction_error)?;
 
   // Extract the first field's value as string
   let suggestion = result
@@ -634,25 +627,7 @@ pub async fn validate_straw_man_traps_server(
   let session = session_id.as_deref().unwrap_or("default");
 
   // Check rate limit
-  match RATE_LIMITER.check_rate_limit(session).await {
-    Ok(()) => {
-      info!(
-        session,
-        text_len = persona_text.len(),
-        "validate_straw_man_traps_server: API call"
-      );
-    }
-    Err(retry_after) => {
-      tracing_warn!(
-        session,
-        retry_after,
-        "validate_straw_man_traps_server: Rate limit exceeded"
-      );
-      return Err(ServerFnError::new(anyhow::anyhow!(
-        "Rate limit exceeded. Please retry after {retry_after}s"
-      )));
-    }
-  }
+  check_rate_limit_for_session(session, "validate_straw_man_traps_server").await?;
 
   // Validate input
   if persona_text.trim().is_empty() {
@@ -756,20 +731,7 @@ pub async fn validate_straw_man_traps_server(
   let result = AI_PROVIDER
     .extract_fields_with_schema(&analysis_prompt, &schema, &context)
     .await
-    .map_err(|e| match e {
-      ExtractionError::RateLimited {
-        retry_after_seconds,
-      } => ServerFnError::new(anyhow::anyhow!(
-        "Provider rate limited. Retry after {retry_after_seconds}s"
-      )),
-      ExtractionError::AuthenticationError(msg) => {
-        ServerFnError::new(anyhow::anyhow!("Authentication failed: {msg}"))
-      }
-      ExtractionError::InvalidInput(msg) => {
-        ServerFnError::new(anyhow::anyhow!("Invalid input: {msg}"))
-      }
-      _ => ServerFnError::new(anyhow::anyhow!("Trap detection failed: {e}")),
-    })?;
+    .map_err(map_extraction_error)?;
 
   // Parse detected traps from response
   let mut traps_detected = Vec::new();
@@ -863,27 +825,7 @@ pub async fn validate_hole_punching_server(
   let session = session_id.as_deref().unwrap_or("default");
 
   // Check rate limit
-  match RATE_LIMITER.check_rate_limit(session).await {
-    Ok(()) => {
-      info!(
-        session,
-        trigger_len = scenario.trigger.len(),
-        value_moment_len = scenario.value_moment.len(),
-        feeling_len = scenario.feeling.len(),
-        "validate_hole_punching_server: API call"
-      );
-    }
-    Err(retry_after) => {
-      tracing_warn!(
-        session,
-        retry_after,
-        "validate_hole_punching_server: Rate limit exceeded"
-      );
-      return Err(ServerFnError::new(anyhow::anyhow!(
-        "Rate limit exceeded. Please retry after {retry_after}s"
-      )));
-    }
-  }
+  check_rate_limit_for_session(session, "validate_hole_punching_server").await?;
 
   // Validate input - scenario bullets should be complete
   if !scenario.is_bullets_complete() {
@@ -1011,20 +953,7 @@ pub async fn validate_hole_punching_server(
   let result = AI_PROVIDER
     .extract_fields_with_schema(&analysis_prompt, &schema, &context)
     .await
-    .map_err(|e| match e {
-      ExtractionError::RateLimited {
-        retry_after_seconds,
-      } => ServerFnError::new(anyhow::anyhow!(
-        "Provider rate limited. Retry after {retry_after_seconds}s"
-      )),
-      ExtractionError::AuthenticationError(msg) => {
-        ServerFnError::new(anyhow::anyhow!("Authentication failed: {msg}"))
-      }
-      ExtractionError::InvalidInput(msg) => {
-        ServerFnError::new(anyhow::anyhow!("Invalid input: {msg}"))
-      }
-      _ => ServerFnError::new(anyhow::anyhow!("Hole punching validation failed: {e}")),
-    })?;
+    .map_err(map_extraction_error)?;
 
   // Parse hole addressing status from response
   let mut discovery_hole = scenario.hole_punching.discovery_hole.clone();
