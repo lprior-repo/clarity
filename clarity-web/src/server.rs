@@ -160,10 +160,7 @@ pub struct CoachResponse {
 
 /// Get AI coaching guidance for a phase
 #[server]
-pub async fn get_coach_guidance(
-  phase: Phase,
-  context: String,
-) -> Result<CoachResponse, ServerFnError> {
+pub async fn get_coach_guidance(phase: Phase, context: String) -> Result<CoachResponse, ServerFnError> {
   // In a real app, this would call an AI API
   let guidance = match phase {
     Phase::Discover => {

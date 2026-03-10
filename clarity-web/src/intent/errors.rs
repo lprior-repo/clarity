@@ -108,7 +108,7 @@ pub struct ContextualError {
   pub line: Option<usize>,
   /// Column number in source (if applicable)
   pub column: Option<usize>,
-  /// JSON path to the error location (e.g., "spec.beads[0].name")
+  /// JSON path to the error location (e.g., "spec.beads\[0\].name")
   pub json_path: Option<String>,
   /// Suggestions for fixing the error
   pub suggestions: Vec<Suggestion>,

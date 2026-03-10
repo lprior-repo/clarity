@@ -217,8 +217,8 @@ async fn queue_respects_concurrency_limits() {
 
   // All 5 extractions should succeed (mock accepts all)
   assert_eq!(successful, 5);
-  // 3 of them were empty/whitespace-only but still processed
-  assert_eq!(empty_inputs, 3);
+  // None of the inputs are empty - they are "Input 0" through "Input 4"
+  assert_eq!(empty_inputs, 0);
 }
 
 #[tokio::test]
