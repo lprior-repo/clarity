@@ -93,6 +93,7 @@ pub enum BeadStatus {
 }
 
 /// Save a bead to the database
+#[allow(clippy::unused_async)]
 #[server]
 pub async fn save_bead(bead: Bead) -> Result<Bead, ServerFnError> {
   // In a real app, this would save to a database
@@ -105,6 +106,7 @@ pub async fn save_bead(bead: Bead) -> Result<Bead, ServerFnError> {
 }
 
 /// Get all beads for a project
+#[allow(clippy::unused_async)]
 #[server]
 pub async fn get_beads(project_id: String) -> Result<Vec<Bead>, ServerFnError> {
   let _ = project_id;
@@ -143,6 +145,7 @@ pub async fn get_beads(project_id: String) -> Result<Vec<Bead>, ServerFnError> {
 }
 
 /// Delete a bead
+#[allow(clippy::unused_async)]
 #[server]
 pub async fn delete_bead(bead_id: String) -> Result<(), ServerFnError> {
   // In a real app, this would delete from a database
@@ -159,6 +162,7 @@ pub struct CoachResponse {
 }
 
 /// Get AI coaching guidance for a phase
+#[allow(clippy::unused_async)]
 #[server]
 pub async fn get_coach_guidance(
   phase: Phase,
@@ -708,6 +712,7 @@ fn merge_hole_punching_results(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+#[allow(clippy::unused_async)]
 #[server]
 pub async fn get_ai_provider_status_server() -> Result<AiProviderDiagnostics, ServerFnError> {
   let provider = ai_provider()?;
@@ -954,6 +959,7 @@ pub async fn calculate_quality_server(
 /// }
 /// ```
 #[cfg(not(target_arch = "wasm32"))]
+#[allow(clippy::too_many_lines)]
 #[server]
 pub async fn validate_straw_man_traps_server(
   persona_text: String,
@@ -1711,6 +1717,7 @@ fn extract_ears_from_text(text: &str, source_section: &str) -> Vec<ExtractedEars
 /// * `Ok(KirkContract16)` - Compiled 16-section contract
 /// * `Err(ServerFnError)` - Compilation failed or rate limited
 #[cfg(not(target_arch = "wasm32"))]
+#[allow(clippy::too_many_lines)]
 #[server]
 pub async fn compile_to_kirk(
   transcript: InterrogationTranscript,
