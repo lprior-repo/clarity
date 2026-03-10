@@ -245,7 +245,8 @@ impl RateLimiter {
   #[allow(dead_code)]
   async fn check_rate_limit(&self, session_id: &str) -> Result<(), u64> {
     let now = Instant::now();
-    let one_minute_ago = now.checked_sub(Duration::from_mins(1)).unwrap_or(now);
+    #[allow(clippy::duration_suboptimal_units)] // from_mins is nightly-only
+        let one_minute_ago = now.checked_sub(Duration::from_secs(60)).unwrap_or(now);
     let mut requests = self.requests.write().await;
     let session_requests = requests
       .entry(session_id.to_string())
@@ -2375,10 +2376,8 @@ mod integration_tests {
       session_id: "session-123".to_string(),
     };
 
-    let state = match create_ai_provider_state(input) {
-      Ok(state) => state,
-      Err(error) => panic!("provider should initialize: {error}"),
-    };
+    let state = create_ai_provider_state(input)
+      .expect("provider should initialize");
 
     assert_eq!(state.diagnostics.provider, "opencode");
     assert_eq!(state.diagnostics.endpoint, "https://api.opencode.ai/v1");
