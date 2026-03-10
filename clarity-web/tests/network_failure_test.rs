@@ -50,11 +50,18 @@ fn test_connection_refused_to_nonexistent_server() {
   match result {
     Err(ExtractionError::NetworkError(msg)) => {
       println!("Connection refused error: {}", msg);
-      assert!(msg.contains("Failed to connect") || msg.contains("connection refused") ||
-              msg.contains("connect error"), "Error message should indicate connection failure");
+      assert!(
+        msg.contains("Failed to connect")
+          || msg.contains("connection refused")
+          || msg.contains("connect error"),
+        "Error message should indicate connection failure"
+      );
     }
     Err(other) => {
-      panic!("Expected NetworkError for connection refused, got: {:?}", other);
+      panic!(
+        "Expected NetworkError for connection refused, got: {:?}",
+        other
+      );
     }
     Ok(_) => {
       panic!("Should not succeed with non-existent server");
@@ -82,12 +89,19 @@ fn test_connection_timeout_to_unroutable_ip() {
 
   // Should timeout and return an error, not hang indefinitely
   // The timeout is 30 seconds, but connection might fail faster
-  assert!(elapsed < Duration::from_secs(35), "Should timeout within 35 seconds, took {:?}", elapsed);
+  assert!(
+    elapsed < Duration::from_secs(35),
+    "Should timeout within 35 seconds, took {:?}",
+    elapsed
+  );
 
   match result {
     Err(ExtractionError::Timeout { timeout_ms }) => {
       println!("Got timeout error with timeout_ms: {}", timeout_ms);
-      assert_eq!(timeout_ms, 30000, "Timeout should match DEFAULT_TIMEOUT_SECS (30s)");
+      assert_eq!(
+        timeout_ms, 30000,
+        "Timeout should match DEFAULT_TIMEOUT_SECS (30s)"
+      );
     }
     Err(ExtractionError::NetworkError(msg)) => {
       // Network errors are also acceptable (might fail before timeout)
@@ -120,19 +134,26 @@ fn test_invalid_hostname() {
   println!("Invalid hostname test completed in: {:?}", elapsed);
 
   // Should fail quickly with DNS error
-  assert!(elapsed < Duration::from_secs(10), "DNS failure should be fast, took {:?}", elapsed);
+  assert!(
+    elapsed < Duration::from_secs(10),
+    "DNS failure should be fast, took {:?}",
+    elapsed
+  );
 
   match result {
     Err(ExtractionError::NetworkError(msg)) => {
       println!("DNS resolution error: {}", msg);
       // DNS errors often mention "dns", "resolve", or "name"
       let msg_lower = msg.to_lowercase();
-      assert!(msg_lower.contains("dns") ||
-              msg_lower.contains("resolve") ||
-              msg_lower.contains("name") ||
-              msg_lower.contains("connection") ||
-              msg_lower.contains("connect"),
-              "Error should indicate DNS/resolution issue, got: {}", msg);
+      assert!(
+        msg_lower.contains("dns")
+          || msg_lower.contains("resolve")
+          || msg_lower.contains("name")
+          || msg_lower.contains("connection")
+          || msg_lower.contains("connect"),
+        "Error should indicate DNS/resolution issue, got: {}",
+        msg
+      );
     }
     Err(other) => {
       panic!("Expected NetworkError for DNS failure, got: {:?}", other);
@@ -197,12 +218,21 @@ fn test_timeout_value_is_reasonable() {
 
       // Actual time waited should be close to configured timeout
       // Allow some margin for overhead
-      assert!(elapsed >= Duration::from_secs(25), "Should wait near timeout duration");
-      assert!(elapsed <= Duration::from_secs(35), "Should not exceed timeout significantly");
+      assert!(
+        elapsed >= Duration::from_secs(25),
+        "Should wait near timeout duration"
+      );
+      assert!(
+        elapsed <= Duration::from_secs(35),
+        "Should not exceed timeout significantly"
+      );
     }
     Err(ExtractionError::NetworkError(_)) => {
       // Connection refused might happen before timeout - this is okay
-      assert!(elapsed < Duration::from_secs(5), "Connection error should be fast");
+      assert!(
+        elapsed < Duration::from_secs(5),
+        "Connection error should be fast"
+      );
     }
     Err(other) => {
       panic!("Unexpected error: {:?}", other);
@@ -230,8 +260,7 @@ fn test_malformed_url() {
     let result = rt.block_on(provider.extract_fields("test input", &create_test_context()));
 
     match result {
-      Err(ExtractionError::NetworkError(_)) |
-      Err(ExtractionError::ConfigurationError(_)) => {
+      Err(ExtractionError::NetworkError(_)) | Err(ExtractionError::ConfigurationError(_)) => {
         println!("Got expected error for malformed URL");
       }
       Err(other) => {
@@ -283,12 +312,14 @@ fn test_concurrent_failure_handling() {
   let provider1 = OpenCodeProvider::new(
     "http://localhost:59999".to_string(),
     "test-session-concurrent-1".to_string(),
-  ).expect("provider should be created");
+  )
+  .expect("provider should be created");
 
   let provider2 = OpenCodeProvider::new(
     "http://localhost:59998".to_string(),
     "test-session-concurrent-2".to_string(),
-  ).expect("provider should be created");
+  )
+  .expect("provider should be created");
 
   let rt = tokio::runtime::Runtime::new().expect("runtime should be created");
 
@@ -323,7 +354,11 @@ fn test_retry_does_not_hang() {
   let elapsed = start.elapsed();
 
   // Should complete quickly (connection refused or timeout)
-  assert!(elapsed < Duration::from_secs(35), "Request should not hang indefinitely, took {:?}", elapsed);
+  assert!(
+    elapsed < Duration::from_secs(35),
+    "Request should not hang indefinitely, took {:?}",
+    elapsed
+  );
 
   assert!(result.is_err(), "Should fail with non-existent server");
   println!("No-hang test passed in {:?}", elapsed);
@@ -355,8 +390,14 @@ fn test_error_messages_are_actionable() {
         // Error messages should be descriptive
         assert!(!error_msg.is_empty(), "Error message should not be empty");
         assert!(error_msg.len() > 10, "Error message should be descriptive");
-        assert!(!error_msg.contains("panic"), "Error should not mention panic");
-        assert!(!error_msg.contains("unwrap"), "Error should not mention unwrap");
+        assert!(
+          !error_msg.contains("panic"),
+          "Error should not mention panic"
+        );
+        assert!(
+          !error_msg.contains("unwrap"),
+          "Error should not mention unwrap"
+        );
       }
     }
   }

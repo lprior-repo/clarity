@@ -52,23 +52,32 @@ fn test_error_messages_are_user_friendly() {
   match result {
     Err(error) => {
       let error_msg = format!("{}", error);
-      
+
       println!("User-facing error message: {}", error_msg);
-      
+
       // Error messages should be user-friendly
       assert!(!error_msg.is_empty(), "Error message must not be empty");
-      assert!(!error_msg.contains("panic"), "Error should not mention 'panic'");
-      assert!(!error_msg.contains("unwrap"), "Error should not mention 'unwrap'");
+      assert!(
+        !error_msg.contains("panic"),
+        "Error should not mention 'panic'"
+      );
+      assert!(
+        !error_msg.contains("unwrap"),
+        "Error should not mention 'unwrap'"
+      );
       assert!(!error_msg.contains("BUG"), "Error should not mention 'BUG'");
-      assert!(!error_msg.contains("assertion"), "Error should not mention 'assertion'");
-      
+      assert!(
+        !error_msg.contains("assertion"),
+        "Error should not mention 'assertion'"
+      );
+
       // Error should indicate the problem
       let error_msg_lower = error_msg.to_lowercase();
       assert!(
-        error_msg_lower.contains("failed") || 
-        error_msg_lower.contains("error") ||
-        error_msg_lower.contains("timeout") ||
-        error_msg_lower.contains("connect"),
+        error_msg_lower.contains("failed")
+          || error_msg_lower.contains("error")
+          || error_msg_lower.contains("timeout")
+          || error_msg_lower.contains("connect"),
         "Error should describe the problem"
       );
     }
@@ -93,13 +102,16 @@ fn test_timeout_error_message_includes_duration() {
 
   match result {
     Err(ExtractionError::Timeout { timeout_ms }) => {
-      let error_msg = format!("{}", error);
-      
+      let error_msg = format!("Timeout after {}ms", timeout_ms);
+
       println!("Timeout error message: {}", error_msg);
-      
+
       // The error message should mention the timeout duration
-      assert!(error_msg.contains("30000") || error_msg.contains("30"), 
-              "Timeout error should mention the duration: {}", error_msg);
+      assert!(
+        error_msg.contains("30000") || error_msg.contains("30"),
+        "Timeout error should mention the duration: {}",
+        error_msg
+      );
     }
     Err(ExtractionError::NetworkError(_)) => {
       // Connection might fail before timeout - acceptable
@@ -121,14 +133,17 @@ fn test_rate_limit_error_includes_retry_after() {
   let error = ExtractionError::RateLimited {
     retry_after_seconds: 60,
   };
-  
+
   let error_msg = format!("{}", error);
-  
+
   println!("Rate limit error message: {}", error_msg);
-  
+
   // Error should mention retry time
-  assert!(error_msg.contains("60") || error_msg.contains("retry"), 
-          "Rate limit error should mention retry time: {}", error_msg);
+  assert!(
+    error_msg.contains("60") || error_msg.contains("retry"),
+    "Rate limit error should mention retry time: {}",
+    error_msg
+  );
 }
 
 #[test]
@@ -175,11 +190,11 @@ fn test_state_preserved_after_error() {
   // State should be preserved
   assert_eq!(provider.session_id(), "test-session-state");
   assert_eq!(provider.endpoint(), "http://localhost:59999");
-  
+
   // Provider should still be usable
   let result2 = rt.block_on(provider.extract_fields("test 2", &create_test_context()));
   assert!(result2.is_err());
-  
+
   println!("State preservation test passed");
 }
 
@@ -199,8 +214,11 @@ fn test_no_ui_hang_on_connection_refused() {
   let elapsed = start.elapsed();
 
   // Connection refused should fail fast (< 5 seconds)
-  assert!(elapsed < Duration::from_secs(5), 
-          "Connection refused should fail fast, took {:?}", elapsed);
+  assert!(
+    elapsed < Duration::from_secs(5),
+    "Connection refused should fail fast, took {:?}",
+    elapsed
+  );
 
   assert!(result.is_err());
   println!("No hang on connection refused: {:?}", elapsed);
@@ -222,8 +240,11 @@ fn test_no_ui_hang_on_dns_failure() {
   let elapsed = start.elapsed();
 
   // DNS failure should fail fast (< 10 seconds)
-  assert!(elapsed < Duration::from_secs(10), 
-          "DNS failure should fail fast, took {:?}", elapsed);
+  assert!(
+    elapsed < Duration::from_secs(10),
+    "DNS failure should fail fast, took {:?}",
+    elapsed
+  );
 
   assert!(result.is_err());
   println!("No hang on DNS failure: {:?}", elapsed);
@@ -246,13 +267,19 @@ fn test_no_ui_hang_on_timeout() {
 
   // Should timeout close to configured 30 seconds
   // Allow 5 second margin for overhead
-  assert!(elapsed < Duration::from_secs(35), 
-          "Timeout should not exceed 35 seconds, took {:?}", elapsed);
-  
+  assert!(
+    elapsed < Duration::from_secs(35),
+    "Timeout should not exceed 35 seconds, took {:?}",
+    elapsed
+  );
+
   // And should wait at least 25 seconds (close to configured timeout)
   if matches!(result, Err(ExtractionError::Timeout { .. })) {
-    assert!(elapsed >= Duration::from_secs(25), 
-            "Should wait close to timeout duration, took {:?}", elapsed);
+    assert!(
+      elapsed >= Duration::from_secs(25),
+      "Should wait close to timeout duration, took {:?}",
+      elapsed
+    );
   }
 
   assert!(result.is_err());
@@ -265,17 +292,18 @@ fn test_multiple_providers_dont_interfere() {
   let provider1 = OpenCodeProvider::new(
     "http://localhost:59999".to_string(),
     "session-1".to_string(),
-  ).expect("provider 1 should be created");
+  )
+  .expect("provider 1 should be created");
 
   let provider2 = OpenCodeProvider::new(
     "http://invalid-1.invalid".to_string(),
     "session-2".to_string(),
-  ).expect("provider 2 should be created");
+  )
+  .expect("provider 2 should be created");
 
-  let provider3 = OpenCodeProvider::new(
-    "http://192.0.2.1:9999".to_string(),
-    "session-3".to_string(),
-  ).expect("provider 3 should be created");
+  let provider3 =
+    OpenCodeProvider::new("http://192.0.2.1:9999".to_string(), "session-3".to_string())
+      .expect("provider 3 should be created");
 
   let rt = tokio::runtime::Runtime::new().expect("runtime should be created");
 
@@ -300,7 +328,7 @@ fn test_multiple_providers_dont_interfere() {
 fn test_timeout_value_is_configurable_and_reasonable() {
   // Verify timeout value is reasonable for user experience
   // 30 seconds is a good balance - not too short, not too long
-  
+
   let provider = OpenCodeProvider::new(
     "http://localhost:59999".to_string(),
     "test-session-config-check".to_string(),
@@ -314,14 +342,18 @@ fn test_timeout_value_is_configurable_and_reasonable() {
   if let Err(ExtractionError::Timeout { timeout_ms }) = result {
     // 30 seconds = 30000 ms
     assert_eq!(timeout_ms, 30000);
-    
+
     // Verify it's reasonable for UX:
     // - Not too short (< 5s would be too aggressive)
     // - Not too long (> 2 min would frustrate users)
     assert!(timeout_ms >= 5000, "Timeout should be at least 5 seconds");
     assert!(timeout_ms <= 120000, "Timeout should not exceed 2 minutes");
-    
-    println!("Timeout value is reasonable: {}ms ({} seconds)", timeout_ms, timeout_ms / 1000);
+
+    println!(
+      "Timeout value is reasonable: {}ms ({} seconds)",
+      timeout_ms,
+      timeout_ms / 1000
+    );
   }
 }
 
