@@ -27,7 +27,8 @@ fn ensure_parent_dir(path: &Path) -> Result<(), StorageError> {
 /// Returns `StorageError` if JSON serialization fails
 pub fn session_to_jsonl_line(session: &InterviewSession) -> Result<String, StorageError> {
   jsonl_core::serialize_to_jsonl(session).map_err(|error| match error {
-    jsonl_core::JsonlCoreError::Serialization { details } => StorageError::JsonError(details),
+    jsonl_core::JsonlError::SerializationError(details)
+    | jsonl_core::JsonlError::BuildContentError(details) => StorageError::JsonError(details),
   })
 }
 
@@ -61,7 +62,8 @@ pub fn append_session_to_jsonl(
   sessions_to_write.push(session.clone());
   let content =
     jsonl_core::build_jsonl_content(&sessions_to_write).map_err(|error| match error {
-      jsonl_core::JsonlCoreError::Serialization { details } => StorageError::JsonError(details),
+      jsonl_core::JsonlError::SerializationError(details)
+      | jsonl_core::JsonlError::BuildContentError(details) => StorageError::JsonError(details),
     })?;
 
   if content.is_empty() {

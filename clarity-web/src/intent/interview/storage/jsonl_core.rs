@@ -331,7 +331,7 @@ mod tests {
 
     assert!(matches!(
       result,
-      Err(JsonlCoreError::Serialization { details }) if details.contains("boom")
+      Err(JsonlError::SerializationError(details)) if details.contains("boom")
     ));
   }
 

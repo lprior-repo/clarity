@@ -1,0 +1,119 @@
+{
+  "config": {
+    "configFile": "/home/lewis/src/clarity/playwright.config.ts",
+    "rootDir": "/home/lewis/src/clarity/playwright-tests",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {},
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/lewis/src/clarity/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/home/lewis/src/clarity/playwright-tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/home/lewis/src/clarity/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "/home/lewis/src/clarity/playwright-tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/home/lewis/src/clarity/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "/home/lewis/src/clarity/playwright-tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "html",
+        null
+      ],
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "runAgents": "none",
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.58.2",
+    "workers": 16,
+    "webServer": {
+      "command": "cd clarity-web && cargo run --features server",
+      "url": "http://localhost:8080",
+      "reuseExistingServer": true,
+      "timeout": 120000
+    }
+  },
+  "suites": [],
+  "errors": [
+    {
+      "message": "SyntaxError: /home/lewis/src/clarity/playwright-tests/quality-gating.spec.ts: Unexpected token, expected \",\" (215:158)\n\n  213 |     // Step 2: Fill in Express mode input\n  214 |     const expressInput = page.locator('textarea[placeholder*=\"Describe\"]');\n> 215 |     await expressInput.fill('Building a task management app for remote teams. The main problem is that team members often miss deadlines because tasks aren\\\\'t clearly assigned or tracked across different time zones. We need a way to see who\\\\'s working on what, when it\\\\'s due. Target users: remote team members and project managers. Context: teams working across different time zones need visibility. Constraints: must work across time zones, support mobile access. Goals: clear task assignment, deadline visibility, progress tracking.');\n      |                                                                                                                                                               ^\n  216 |\n  217 |     // Step 3: Submit for extraction\n  218 |     const extractButton = page.locator('button:has-text(\"Extract\")');",
+      "stack": "SyntaxError: /home/lewis/src/clarity/playwright-tests/quality-gating.spec.ts: Unexpected token, expected \",\" (215:158)\n\n  213 |     // Step 2: Fill in Express mode input\n  214 |     const expressInput = page.locator('textarea[placeholder*=\"Describe\"]');\n> 215 |     await expressInput.fill('Building a task management app for remote teams. The main problem is that team members often miss deadlines because tasks aren\\\\'t clearly assigned or tracked across different time zones. We need a way to see who\\\\'s working on what, when it\\\\'s due. Target users: remote team members and project managers. Context: teams working across different time zones need visibility. Constraints: must work across time zones, support mobile access. Goals: clear task assignment, deadline visibility, progress tracking.');\n      |                                                                                                                                                               ^\n  216 |\n  217 |     // Step 3: Submit for extraction\n  218 |     const extractButton = page.locator('button:has-text(\"Extract\")');",
+      "location": {
+        "file": "/home/lewis/src/clarity/playwright-tests/quality-gating.spec.ts",
+        "line": 215,
+        "column": 158
+      },
+      "snippet": "\u001b[90m   at \u001b[39mquality-gating.spec.ts:215\n\n  213 |     // Step 2: Fill in Express mode input\n  214 |     const expressInput = page.locator('textarea[placeholder*=\"Describe\"]');\n> 215 |     await expressInput.fill('Building a task management app for remote teams. The main problem is that team members often miss deadlines because tasks aren\\\\'t clearly assigned or tracked across different time zones. We need a way to see who\\\\'s working on what, when it\\\\'s due. Target users: remote team members and project managers. Context: teams working across different time zones need visibility. Constraints: must work across time zones, support mobile access. Goals: clear task assignment, deadline visibility, progress tracking.');\n      |                                                                                                                                                              ^\n  216 |\n  217 |     // Step 3: Submit for extraction\n  218 |     const extractButton = page.locator('button:has-text(\"Extract\")');"
+    },
+    {
+      "message": "Error: No tests found",
+      "stack": "Error: No tests found"
+    }
+  ],
+  "stats": {
+    "startTime": "2026-03-10T03:55:52.564Z",
+    "duration": 44.499000000000024,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

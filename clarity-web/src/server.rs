@@ -45,7 +45,7 @@ use crate::components::discover::straw_man::StrawManValidation;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::components::discover::types::{HolePunchingResults, ScenarioField};
 #[cfg(not(target_arch = "wasm32"))]
-use crate::config::ai::{default_config, load_ai_config_if_present, AiConfig, ConfigError};
+use crate::config::ai::{default_config, load_ai_config_if_present, AiConfig};
 #[cfg(feature = "server")]
 use crate::lattice::quality::{calculate_quality, InversionControl, QualityError};
 #[cfg(not(target_arch = "wasm32"))]
@@ -58,10 +58,9 @@ use crate::providers::ExtractionProvider;
 use crate::providers::OpenCodeProvider;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::providers::{
-  ExtractedFields, ExtractionContext, ExtractionError, FieldType, OpenCodeProviderOptions,
+  ExtractedFields, ExtractionContext, ExtractionError, FieldExtraction, FieldType,
+  OpenCodeProviderOptions, SchemaField,
 };
-#[cfg(feature = "server")]
-use crate::providers::{ExtractionProvider, SchemaField};
 
 /// A planning bead (atomic work unit)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -337,17 +336,19 @@ struct ProviderBootstrapInput {
   session_id: String,
 }
 
+use thiserror::Error;
+
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug, Error)]
 enum AiProviderBootstrapError {
   #[error("failed to load AI configuration: {0}")]
-  Config(#[from] ConfigError),
+  Config(#[from] crate::config::ConfigError),
 
   #[error("unsupported AI provider: {0}")]
   UnsupportedProvider(String),
 
   #[error("failed to initialize AI provider: {0}")]
-  Provider(#[from] ExtractionError),
+  Provider(#[from] crate::providers::ExtractionError),
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -417,7 +418,7 @@ static AI_PROVIDER_STATE: LazyLock<Result<AiProviderState, AiProviderBootstrapEr
     let state = initialize_ai_provider_state();
 
     if let Err(error) = &state {
-      tracing_warn!(error = %error, "AI provider bootstrap failed");
+      tracing_warn!(error = ?error, "AI provider bootstrap failed");
     }
 
     state
@@ -436,7 +437,7 @@ pub struct AiProviderDiagnostics {
 fn ai_provider_state() -> Result<&'static AiProviderState, ServerFnError> {
   AI_PROVIDER_STATE.as_ref().map_err(|error| {
     ServerFnError::new(anyhow::anyhow!(
-      "AI provider initialization failed: {error}"
+      "AI provider initialization failed: {error:?}"
     ))
   })
 }
@@ -444,24 +445,6 @@ fn ai_provider_state() -> Result<&'static AiProviderState, ServerFnError> {
 #[cfg(not(target_arch = "wasm32"))]
 fn ai_provider() -> Result<Arc<OpenCodeProvider>, ServerFnError> {
   ai_provider_state().map(|state| Arc::clone(&state.provider))
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn map_extraction_error(action: &'static str, error: ExtractionError) -> ServerFnError {
-  match error {
-    ExtractionError::RateLimited {
-      retry_after_seconds,
-    } => ServerFnError::new(anyhow::anyhow!(
-      "Provider rate limited. Retry after {retry_after_seconds}s"
-    )),
-    ExtractionError::AuthenticationError(message) => {
-      ServerFnError::new(anyhow::anyhow!("Authentication failed: {message}"))
-    }
-    ExtractionError::InvalidInput(message) => {
-      ServerFnError::new(anyhow::anyhow!("Invalid input: {message}"))
-    }
-    other => ServerFnError::new(anyhow::anyhow!("{action}: {other}")),
-  }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -727,11 +710,12 @@ fn merge_hole_punching_results(
 #[cfg(not(target_arch = "wasm32"))]
 #[server]
 pub async fn get_ai_provider_status_server() -> Result<AiProviderDiagnostics, ServerFnError> {
+  let provider = ai_provider()?;
   Ok(AiProviderDiagnostics {
     provider: "opencode".to_string(),
-    endpoint: AI_PROVIDER.endpoint().clone(),
-    model: AI_PROVIDER.model().cloned(),
-    routing_provider: AI_PROVIDER.routing_provider().cloned(),
+    endpoint: provider.endpoint().clone(),
+    model: provider.model().cloned(),
+    routing_provider: provider.routing_provider().cloned(),
   })
 }
 
@@ -2115,33 +2099,31 @@ mod integration_tests {
       retry_after_seconds: 12,
     };
 
-    let mapped = map_extraction_error("Trap detection failed", error);
+    let mapped = map_extraction_error(error);
 
     assert!(mapped.to_string().contains("Retry after 12s"));
   }
 
   #[test]
   fn test_map_extraction_error_maps_authentication_message() {
-    let mapped = map_extraction_error(
-      "Trap detection failed",
-      ExtractionError::AuthenticationError("bad key".to_string()),
-    );
+    let mapped = map_extraction_error(ExtractionError::AuthenticationError(
+      "Invalid API key".to_string(),
+    ));
 
     assert!(mapped
       .to_string()
-      .contains("Authentication failed: bad key"));
+      .contains("Authentication failed: Invalid API key"));
   }
 
   #[test]
   fn test_map_extraction_error_uses_action_for_fallback_errors() {
-    let mapped = map_extraction_error(
-      "Trap detection failed",
-      ExtractionError::Unknown("boom".to_string()),
-    );
+    let mapped = map_extraction_error(ExtractionError::ProviderError(
+      "JSON schema violation".to_string(),
+    ));
 
     assert!(mapped
       .to_string()
-      .contains("Trap detection failed: Unknown error: boom"));
+      .contains("Extraction failed: Provider error: JSON schema violation"));
   }
 
   #[test]

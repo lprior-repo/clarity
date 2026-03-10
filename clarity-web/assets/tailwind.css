@@ -875,6 +875,10 @@ body {
   display: inline-block;
 }
 
+.inline {
+  display: inline;
+}
+
 .flex {
   display: flex;
 }
@@ -1778,6 +1782,10 @@ body {
 
 .bg-destructive\/10 {
   background-color: hsl(var(--destructive) / 0.1);
+}
+
+.bg-destructive\/20 {
+  background-color: hsl(var(--destructive) / 0.2);
 }
 
 .bg-emerald-400 {

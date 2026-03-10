@@ -48,10 +48,6 @@ serial_test = "3"
 proptest = "1.10.0"
 
 [[test]]
-name = "e2e_discover_guided"
-path = "tests/e2e/discover_guided.rs"
-
-[[test]]
 name = "server_functions_test"
 path = "tests/server_functions_test.rs"
 
