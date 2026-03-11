@@ -1,0 +1,14 @@
+clarity-web/build.rs
+clarity-web/examples/opencode_usage.rs
+clarity-web/examples/test_straw_man_validation.rs
+clarity-web/examples/test_validate_straw_man.rs
+clarity-web/examples/ui_components_demo.rs
+clarity-web/src/app/pages.rs
+clarity-web/src/app.rs
+clarity-web/src/bin/test_intention_parsing.rs
+clarity-web/src/components/artifact_panel.rs
+clarity-web/src/components/discover/ai_status_indicator.rs
+clarity-web/src/components/discover/antithesis.rs
+clarity-web/src/components/discover/brutal_truths.rs
+clarity-web/src/components/discover/extract_fields_button.rs
+clarity-web/src/components/discover/extracting_progress.rs

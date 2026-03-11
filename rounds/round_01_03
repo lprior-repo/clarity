@@ -1,0 +1,14 @@
+clarity-web/src/domain/error.rs
+clarity-web/src/domain/mod.rs
+clarity-web/src/domain/newtypes.rs
+clarity-web/src/domain/quality.rs
+clarity-web/src/domain/types.rs
+clarity-web/src/domain/validator.rs
+clarity-web/src/hooks/mod.rs
+clarity-web/src/hooks/progressive_discover.rs
+clarity-web/src/hooks/quality_scoring.rs
+clarity-web/src/intent/batch/mod.rs
+clarity-web/src/intent/batch/processor.rs
+clarity-web/src/intent/beads/feedback/boundary.rs
+clarity-web/src/intent/beads/feedback/domain.rs
+clarity-web/src/intent/beads/feedback.rs

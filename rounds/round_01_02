@@ -1,0 +1,14 @@
+clarity-web/src/components/discover/quality_score.rs
+clarity-web/src/components/discover/scenario_confirm.rs
+clarity-web/src/components/discover/solution_confirm.rs
+clarity-web/src/components/discover/state.rs
+clarity-web/src/components/discover/straw_man.rs
+clarity-web/src/components/discover/types.rs
+clarity-web/src/components/graph_visualizer.rs
+clarity-web/src/components/mod.rs
+clarity-web/src/components/planning_coach.rs
+clarity-web/src/components/quality/mod.rs
+clarity-web/src/components/quality/quality_score_bar.rs
+clarity-web/src/components/state_machine.rs
+clarity-web/src/config/ai.rs
+clarity-web/src/config/mod.rs

@@ -1,0 +1,14 @@
+clarity-web/tests/e2e_persistence.rs
+clarity-web/tests/empty_json_payload.rs
+clarity-web/tests/lattice_integration_test.rs
+clarity-web/tests/network_failure_test.rs
+clarity-web/tests/network_user_experience_test.rs
+clarity-web/tests/newtypes_test.rs
+clarity-web/tests/opencode_provider_test.rs
+clarity-web/tests/persistence_e2e.rs
+clarity-web/tests/quality_gate_integration_test.rs
+clarity-web/tests/queue_adversarial.rs
+clarity-web/tests/server_functions_test.rs
+clarity-web/tests/storage_path_util_test.rs
+clarity-web/tests/tests/e2e/quality_gate.rs
+clarity-web/tests/ui_confidence_badge_test.rs

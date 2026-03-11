@@ -1,0 +1,14 @@
+clarity-web/src/components/discover/field_card.rs
+clarity-web/src/components/discover/locked_phase.rs
+clarity-web/src/components/discover/locked_summary.rs
+clarity-web/src/components/discover/mod.rs
+clarity-web/src/components/discover/nonpersona_confirm.rs
+clarity-web/src/components/discover/persona_confirm.rs
+clarity-web/src/components/discover/phases/extracting_phase.rs
+clarity-web/src/components/discover/phases/mod.rs
+clarity-web/src/components/discover/phases/preview_phase.rs
+clarity-web/src/components/discover/preview_summary.rs
+clarity-web/src/components/discover/problem_confirm.rs
+clarity-web/src/components/discover/progressive_discover.rs
+clarity-web/src/components/discover/prompt_textarea.rs
+clarity-web/src/components/discover/quality_score_example.rs

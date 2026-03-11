@@ -1,0 +1,14 @@
+clarity-web/src/intent/quality/effects/analysis.rs
+clarity-web/src/intent/quality/effects/patterns.rs
+clarity-web/src/intent/quality/effects.rs
+clarity-web/src/intent/quality/effects/rules.rs
+clarity-web/src/intent/quality/effects/tests.rs
+clarity-web/src/intent/quality/effects/types.rs
+clarity-web/src/intent/quality/improver.rs
+clarity-web/src/intent/quality/improver/suggestions.rs
+clarity-web/src/intent/quality/improver/tests.rs
+clarity-web/src/intent/quality/improver/types.rs
+clarity-web/src/intent/quality/improver/vague_rules.rs
+clarity-web/src/intent/quality/linter_adversarial.rs
+clarity-web/src/intent/quality/linter_bdd_tests.rs
+clarity-web/src/intent/quality/linter.rs

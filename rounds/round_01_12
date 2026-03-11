@@ -1,0 +1,14 @@
+clarity-web/src/intent/quality/mod.rs
+clarity-web/src/intent/security/constants.rs
+clarity-web/src/intent/security/helpers.rs
+clarity-web/src/intent/security.rs
+clarity-web/src/intent/security/tests/mod.rs
+clarity-web/src/intent/security/tests/path.rs
+clarity-web/src/intent/security/tests/regex.rs
+clarity-web/src/intent/security/tests/session.rs
+clarity-web/src/intent/security/types.rs
+clarity-web/src/intent/security/validators.rs
+clarity-web/src/intent/templates/mod.rs
+clarity-web/src/intent/templates/spec_templates/engine.rs
+clarity-web/src/intent/templates/spec_templates/errors.rs
+clarity-web/src/intent/templates/spec_templates/profile_templates/api.rs

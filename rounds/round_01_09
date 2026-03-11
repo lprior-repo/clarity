@@ -1,0 +1,14 @@
+clarity-web/src/intent/plan/mod.rs
+clarity-web/src/intent/plan/plan_emit_beads/core.rs
+clarity-web/src/intent/plan/plan_emit_beads/profile.rs
+clarity-web/src/intent/plan/plan_emit_beads.rs
+clarity-web/src/intent/plan/plan_mode/compute.rs
+clarity-web/src/intent/plan/plan_mode/flow.rs
+clarity-web/src/intent/plan/plan_mode/format.rs
+clarity-web/src/intent/plan/plan_mode.rs
+clarity-web/src/intent/plan/plan_mode/types.rs
+clarity-web/src/intent/plan/plan_mode/validate.rs
+clarity-web/src/intent/plan/plan_next/logic.rs
+clarity-web/src/intent/plan/plan_next.rs
+clarity-web/src/intent/plan/resolver/graph.rs
+clarity-web/src/intent/plan/resolver/metrics.rs

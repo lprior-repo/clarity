@@ -1,0 +1,14 @@
+clarity-web/src/intent/validation/spec_validator/categorize.rs
+clarity-web/src/intent/validation/spec_validator/errors.rs
+clarity-web/src/intent/validation/spec_validator/graph.rs
+clarity-web/src/intent/validation/spec_validator/priority.rs
+clarity-web/src/intent/validation/spec_validator/result.rs
+clarity-web/src/intent/validation/spec_validator.rs
+clarity-web/src/intent/validation/spec_validator/validator.rs
+clarity-web/src/kirk/mod.rs
+clarity-web/src/kirk/progressive_discover.rs
+clarity-web/src/kirk/terminal_integration.rs
+clarity-web/src/kirk/types.rs
+clarity-web/src/lattice/compact_example.rs
+clarity-web/src/lattice/compact.rs
+clarity-web/src/lattice/conflict_detection.rs

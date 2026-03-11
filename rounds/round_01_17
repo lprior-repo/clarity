@@ -1,0 +1,14 @@
+clarity-web/src/lattice/coverage.rs
+clarity-web/src/lattice/design_by_contract.rs
+clarity-web/src/lattice/ears.rs
+clarity-web/src/lattice/effects.rs
+clarity-web/src/lattice/gap_detection.rs
+clarity-web/src/lattice/interview_5x5.rs
+clarity-web/src/lattice/inversion.rs
+clarity-web/src/lattice/mod.rs
+clarity-web/src/lattice/premortem_demo.rs
+clarity-web/src/lattice/premortem.rs
+clarity-web/src/lattice/quality_dimensions.rs
+clarity-web/src/lattice/quality_example.rs
+clarity-web/src/lattice/quality_mod_test.rs
+clarity-web/src/lattice/quality.rs

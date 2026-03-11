@@ -1,0 +1,14 @@
+clarity-web/src/intent/templates/spec_templates/profile_templates/cli.rs
+clarity-web/src/intent/templates/spec_templates/profile_templates/data.rs
+clarity-web/src/intent/templates/spec_templates/profile_templates/event.rs
+clarity-web/src/intent/templates/spec_templates/profile_templates/mod.rs
+clarity-web/src/intent/templates/spec_templates/profile_templates/ui.rs
+clarity-web/src/intent/templates/spec_templates/profile_templates/workflow.rs
+clarity-web/src/intent/templates/spec_templates.rs
+clarity-web/src/intent/types/ai_hints.rs
+clarity-web/src/intent/types/anti_pattern.rs
+clarity-web/src/intent/types/behavior.rs
+clarity-web/src/intent/types/feature.rs
+clarity-web/src/intent/types/invariant.rs
+clarity-web/src/intent/types/names.rs
+clarity-web/src/intent/types.rs

@@ -1,0 +1,14 @@
+clarity-web/src/intent/types/spec.rs
+clarity-web/src/intent/types/type_error.rs
+clarity-web/src/intent/types/verification.rs
+clarity-web/src/intent/util/array_indexing/errors.rs
+clarity-web/src/intent/util/array_indexing/navigation.rs
+clarity-web/src/intent/util/array_indexing/parsing.rs
+clarity-web/src/intent/util/array_indexing.rs
+clarity-web/src/intent/util/array_indexing/spec.rs
+clarity-web/src/intent/util/case_insensitive.rs
+clarity-web/src/intent/util/mod.rs
+clarity-web/src/intent/util/stdin.rs
+clarity-web/src/intent/validation/interpolation/context.rs
+clarity-web/src/intent/validation/interpolation/errors.rs
+clarity-web/src/intent/validation/interpolation/interpolate.rs

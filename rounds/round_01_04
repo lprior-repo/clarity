@@ -1,0 +1,14 @@
+clarity-web/src/intent/beads/feedback/service.rs
+clarity-web/src/intent/beads/feedback/store.rs
+clarity-web/src/intent/beads/mod.rs
+clarity-web/src/intent/beads/templates/domain.rs
+clarity-web/src/intent/beads/templates/generator/profiles.rs
+clarity-web/src/intent/beads/templates/generator.rs
+clarity-web/src/intent/beads/templates/render.rs
+clarity-web/src/intent/beads/templates.rs
+clarity-web/src/intent/cli/config.rs
+clarity-web/src/intent/cli/env.rs
+clarity-web/src/intent/cli/flag_suggestions.rs
+clarity-web/src/intent/cli/init_prompt.rs
+clarity-web/src/intent/cli/mod.rs
+clarity-web/src/intent/cli/validation.rs

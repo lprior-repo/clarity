@@ -1,0 +1,14 @@
+clarity-web/src/intent/documents/acceptance_synthesizer.rs
+clarity-web/src/intent/documents/mod.rs
+clarity-web/src/intent/documents/ready.rs
+clarity-web/src/intent/documents/spec_builder.rs
+clarity-web/src/intent/documents/vision.rs
+clarity-web/src/intent/errors/contextual.rs
+clarity-web/src/intent/errors/formatting.rs
+clarity-web/src/intent/errors/helpers.rs
+clarity-web/src/intent/errors/intent.rs
+clarity-web/src/intent/errors.rs
+clarity-web/src/intent/errors/validation.rs
+clarity-web/src/intent/formats/email.rs
+clarity-web/src/intent/formats/errors.rs
+clarity-web/src/intent/formats/helpers.rs
