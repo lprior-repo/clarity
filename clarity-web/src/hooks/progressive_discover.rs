@@ -26,6 +26,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
+use crate::components::discover::brutal_truths::BrutalTruthsState;
 use crate::components::discover::state::{ConfirmSubPhase, ProgressiveDiscoverPhase};
 use crate::components::discover::straw_man::StrawManTrap;
 use crate::components::discover::types::HolePunchingResults;
@@ -78,58 +79,124 @@ pub struct PersistableState {
   /// Hole punching results
   pub hole_punching: HolePunchingResults,
   /// Four Brutal Truths acknowledgment state
-  pub brutal_truths: [bool; 4],
+  pub brutal_truths: BrutalTruthsState,
+}
+
+/// Builder for `PersistableState`.
+#[derive(Clone, Debug, Default)]
+pub struct PersistableStateBuilder {
+  phase: Option<ProgressiveDiscoverPhase>,
+  sub_phase: Option<ConfirmSubPhase>,
+  transcript: Option<InterrogationTranscript>,
+  session_id: Option<String>,
+  antithesis_points: Option<[String; 3]>,
+  antithesis_score: Option<f64>,
+  detected_traps: Option<Vec<StrawManTrap>>,
+  acknowledged_traps: Option<Vec<StrawManTrap>>,
+  vorp_validation: Option<VorpValidation>,
+  hole_punching: Option<HolePunchingResults>,
+  brutal_truths: Option<BrutalTruthsState>,
+}
+
+impl PersistableStateBuilder {
+  #[must_use]
+  pub fn new() -> Self {
+    Self::default()
+  }
+
+  #[must_use]
+  pub fn phase(mut self, phase: ProgressiveDiscoverPhase) -> Self {
+    self.phase = Some(phase);
+    self
+  }
+
+  #[must_use]
+  pub fn sub_phase(mut self, sub_phase: ConfirmSubPhase) -> Self {
+    self.sub_phase = Some(sub_phase);
+    self
+  }
+
+  #[must_use]
+  pub fn transcript(mut self, transcript: InterrogationTranscript) -> Self {
+    self.transcript = Some(transcript);
+    self
+  }
+
+  #[must_use]
+  pub fn session_id(mut self, session_id: String) -> Self {
+    self.session_id = Some(session_id);
+    self
+  }
+
+  #[must_use]
+  pub fn antithesis_points(mut self, antithesis_points: [String; 3]) -> Self {
+    self.antithesis_points = Some(antithesis_points);
+    self
+  }
+
+  #[must_use]
+  pub fn detected_traps(mut self, detected_traps: Vec<StrawManTrap>) -> Self {
+    self.detected_traps = Some(detected_traps);
+    self
+  }
+
+  #[must_use]
+  pub fn acknowledged_traps(mut self, acknowledged_traps: Vec<StrawManTrap>) -> Self {
+    self.acknowledged_traps = Some(acknowledged_traps);
+    self
+  }
+
+  #[must_use]
+  pub fn hole_punching(mut self, hole_punching: HolePunchingResults) -> Self {
+    self.hole_punching = Some(hole_punching);
+    self
+  }
+
+  #[must_use]
+  pub fn brutal_truths(mut self, brutal_truths: BrutalTruthsState) -> Self {
+    self.brutal_truths = Some(brutal_truths);
+    self
+  }
+
+  #[must_use]
+  pub fn build(self) -> PersistableState {
+    PersistableState {
+      phase: self.phase.unwrap_or_default(),
+      sub_phase: self.sub_phase.unwrap_or_default(),
+      transcript: self.transcript.unwrap_or_default(),
+      session_id: self.session_id.unwrap_or_default(),
+      saved_at: chrono::Utc::now().to_rfc3339(),
+      antithesis_points: self.antithesis_points.unwrap_or_default(),
+      antithesis_score: self.antithesis_score,
+      detected_traps: self.detected_traps.unwrap_or_default(),
+      acknowledged_traps: self.acknowledged_traps.unwrap_or_default(),
+      vorp_validation: self.vorp_validation,
+      hole_punching: self.hole_punching.unwrap_or_default(),
+      brutal_truths: self.brutal_truths.unwrap_or_default(),
+    }
+  }
 }
 
 impl PersistableState {
-  /// Create a new persistable state from the current state.
   #[must_use]
-  #[allow(clippy::too_many_arguments)]
-  pub fn new(
-    phase: ProgressiveDiscoverPhase,
-    sub_phase: ConfirmSubPhase,
-    transcript: InterrogationTranscript,
-    session_id: String,
-    antithesis_points: [String; 3],
-    antithesis_score: Option<f64>,
-    detected_traps: Vec<StrawManTrap>,
-    acknowledged_traps: Vec<StrawManTrap>,
-    vorp_validation: Option<VorpValidation>,
-    hole_punching: HolePunchingResults,
-    brutal_truths: [bool; 4],
-  ) -> Self {
-    Self {
-      phase,
-      sub_phase,
-      transcript,
-      session_id,
-      saved_at: chrono::Utc::now().to_rfc3339(),
-      antithesis_points,
-      antithesis_score,
-      detected_traps,
-      acknowledged_traps,
-      vorp_validation,
-      hole_punching,
-      brutal_truths,
-    }
+  pub fn builder() -> PersistableStateBuilder {
+    PersistableStateBuilder::new()
   }
 
   /// Convert from `ProgressiveDiscoverState`.
   #[must_use]
   pub fn from_state(state: &ProgressiveDiscoverState, session_id: &str) -> Self {
-    Self::new(
-      state.phase,
-      state.sub_phase,
-      state.transcript.clone(),
-      session_id.to_string(),
-      state.antithesis_points.clone(),
-      state.antithesis_score,
-      state.detected_traps.clone(),
-      state.acknowledged_traps.clone(),
-      state.vorp_validation.clone(),
-      state.hole_punching.clone(),
-      state.brutal_truths,
-    )
+    Self::builder()
+      .phase(state.phase)
+      .sub_phase(state.sub_phase)
+      .transcript(state.transcript.clone())
+      .session_id(session_id.to_string())
+      .antithesis_points(state.antithesis_points.clone())
+      .detected_traps(state.detected_traps.clone())
+      .acknowledged_traps(state.acknowledged_traps.clone())
+      .hole_punching(state.hole_punching.clone())
+      .brutal_truths(state.brutal_truths.clone())
+      .build()
   }
 }
 
@@ -371,7 +438,7 @@ pub struct ProgressiveDiscoverState {
   /// Hole punching validation results for scenario
   pub hole_punching: HolePunchingResults,
   /// Four Brutal Truths acknowledgment state
-  pub brutal_truths: [bool; 4],
+  pub brutal_truths: BrutalTruthsState,
 }
 
 impl Default for ProgressiveDiscoverState {
@@ -389,7 +456,7 @@ impl Default for ProgressiveDiscoverState {
       acknowledged_traps: Vec::new(),
       vorp_validation: None,
       hole_punching: HolePunchingResults::default(),
-      brutal_truths: [false; 4],
+      brutal_truths: BrutalTruthsState::default(),
     }
   }
 }
@@ -411,7 +478,7 @@ impl ProgressiveDiscoverState {
       acknowledged_traps: Vec::new(),
       vorp_validation: None,
       hole_punching: HolePunchingResults::default(),
-      brutal_truths: [false; 4],
+      brutal_truths: BrutalTruthsState::default(),
     }
   }
 
@@ -718,7 +785,7 @@ impl ProgressiveDiscoverState {
   pub fn with_brutal_truth(self, index: usize, value: bool) -> Self {
     let mut truths = self.brutal_truths;
     if index < 4 {
-      truths[index] = value;
+      truths.checked[index] = value;
     }
     Self {
       phase: self.phase,
@@ -740,7 +807,7 @@ impl ProgressiveDiscoverState {
   /// Check if all brutal truths are acknowledged.
   #[must_use]
   pub fn are_all_brutal_truths_acknowledged(&self) -> bool {
-    self.brutal_truths.iter().all(|&t| t)
+    self.brutal_truths.is_complete()
   }
 
   /// Check if can advance from the current sub-phase.
@@ -1422,5 +1489,23 @@ mod tests {
     assert!(updated.is_loading);
     assert_eq!(updated.error, Some("Error".to_string()));
     assert_eq!(updated.transcript.original_prompt, "New prompt");
+  }
+
+  #[test]
+  fn test_persistable_state_builder_creates_state() {
+    let state = PersistableState::builder()
+      .phase(ProgressiveDiscoverPhase::Prompt)
+      .sub_phase(ConfirmSubPhase::ConfirmProblem)
+      .transcript(InterrogationTranscript::default())
+      .session_id("test-session".to_string())
+      .antithesis_points(["a".to_string(), "b".to_string(), "c".to_string()])
+      .detected_traps(vec![])
+      .acknowledged_traps(vec![])
+      .hole_punching(HolePunchingResults::default())
+      .brutal_truths(BrutalTruthsState::default())
+      .build();
+
+    assert_eq!(state.phase, ProgressiveDiscoverPhase::Prompt);
+    assert_eq!(state.session_id, "test-session");
   }
 }

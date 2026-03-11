@@ -110,3 +110,6 @@ REMAINING_*.md
 .amazonq/
 .github/copilot/
 .kittify/.dashboard
+
+# Dolt database files (added by bd init)
+.dolt/

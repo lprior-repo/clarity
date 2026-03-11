@@ -12,8 +12,10 @@
 #![forbid(unsafe_code)]
 
 pub mod error;
+pub mod newtypes;
 pub mod quality;
 pub mod types;
 
 pub use error::ClarityError;
+pub use newtypes::{AnswerId, AnswerValue, BeadId, StepId, Timestamp};
 pub use types::{Answer, Behavior, Feature, Spec};
