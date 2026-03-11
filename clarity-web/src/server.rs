@@ -34,7 +34,6 @@ use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 #[cfg(feature = "server")]
 use tracing::info;
-#[allow(unused_imports)]
 use tracing::warn as tracing_warn;
 
 // Re-export types from lattice and providers
