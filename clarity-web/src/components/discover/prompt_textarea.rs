@@ -223,12 +223,18 @@ pub struct CharacterCountProps {
 /// ```
 #[component]
 pub fn CharacterCount(props: CharacterCountProps) -> Element {
-  let progress_percent = props
-    .current
-    .saturating_mul(100)
-    .checked_div(props.minimum)
-    .unwrap_or(100)
-    .min(100);
+  // Calculate progress percentage toward minimum threshold.
+  // When minimum is 0 (edge case), we show 100% progress since there's no minimum requirement.
+  let progress_percent = if props.minimum == 0 {
+    100_usize
+  } else {
+    props
+      .current
+      .saturating_mul(100)
+      .checked_div(props.minimum)
+      .unwrap_or(0)
+      .min(100)
+  };
 
   let is_at_minimum = props.current >= props.minimum;
   let is_near_limit = props.current > props.maximum.saturating_sub(200);

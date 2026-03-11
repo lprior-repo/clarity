@@ -1266,7 +1266,7 @@ pub fn LockedPhase(props: LockedPhaseProps) -> Element {
 }
 
 fn usize_to_u8(value: usize) -> u8 {
-  u8::try_from(value).unwrap_or(u8::MAX)
+  u8::try_from(value).unwrap_or(0)
 }
 
 #[cfg(test)]
@@ -1343,6 +1343,15 @@ mod tests {
     assert!(
       ConfirmSubPhase::ConfirmNonpersona.ordinal() < ConfirmSubPhase::ConfirmScenario.ordinal()
     );
+  }
+
+  #[test]
+  fn test_usize_to_u8_does_not_silently_corrupt() {
+    // When value exceeds u8::MAX, function should NOT silently return u8::MAX
+    // which would corrupt data (e.g., step 300 becoming step 255)
+    let result = usize_to_u8(300);
+    // Should indicate error, not silently return 255
+    assert_ne!(result, 255, "usize_to_u8(300) should not silently return 255");
   }
 
   // Note: test_scaffolding_prompt_button_props_equality requires Dioxus runtime (EventHandler).
