@@ -17,11 +17,7 @@ use crate::lattice::quality::{
 use crate::storage::types::LatticeCache;
 use dioxus::prelude::*;
 
-/// Debounce delay for quality score calculation (ms)
-#[allow(dead_code)]
-const DEBOUNCE_MS: u64 = 500;
-
-/// Hook for calculating quality score with debouncing
+/// Hook for calculating quality score
 ///
 /// This hook:
 /// - Debounces answer updates by 500ms
@@ -131,11 +127,6 @@ pub fn use_cached_quality_score(
 )]
 mod tests {
   use super::*;
-
-  #[test]
-  fn test_debounce_constant() {
-    assert_eq!(DEBOUNCE_MS, 500);
-  }
 
   #[test]
   fn test_calculate_score_with_empty_answers() {

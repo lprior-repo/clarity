@@ -17,7 +17,6 @@ pub mod effects;
 pub mod inversion;
 mod premortem;
 pub mod quality;
-mod quality_example;
 
 pub use compact::{
   clean_text, compact_artifacts, CompactAnswer, CompactError, CompactOutput, CompactSummary, Phase,
