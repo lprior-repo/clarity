@@ -403,23 +403,23 @@ fn analyze_category(
 ) -> (u8, Vec<DetectedGap>) {
   let indicators = category.coverage_indicators();
 
-  // Count how many indicators are found
-  let mut found_indicators = 0;
+  // Count unique requirements that have at least one indicator
+  // Bug fix: Previously counted ALL indicator matches, not unique requirements
+  let mut requirements_with_indicators = 0;
 
   for req in requirements {
     let lower = req.to_lowercase();
-    for indicator in indicators {
-      if lower.contains(indicator) {
-        found_indicators += 1;
-      }
+    let has_indicator = indicators.iter().any(|indicator| lower.contains(indicator));
+    if has_indicator {
+      requirements_with_indicators += 1;
     }
   }
 
-  // Calculate coverage score
-  let coverage = if indicators.is_empty() {
-    100
+  // Calculate coverage score based on unique requirements, not indicator count
+  let coverage = if indicators.is_empty() || requirements.is_empty() {
+    0
   } else {
-    let ratio = found_indicators as f32 / indicators.len() as f32;
+    let ratio = requirements_with_indicators as f32 / requirements.len() as f32;
     (ratio * 100.0).min(100.0) as u8
   };
 
@@ -444,7 +444,7 @@ fn analyze_category(
     )
     .with_evidence(format!(
       "Found {} of {} expected indicators",
-      found_indicators,
+      requirements_with_indicators,
       indicators.len()
     ));
 
@@ -616,7 +616,7 @@ mod tests {
     let analysis = detect_gaps(requirements);
 
     // Should have reasonable coverage
-    assert!(analysis.overall_coverage > 30);
+    assert!(analysis.overall_coverage >= 10, "Coverage should be at least 10% with new logic");
   }
 
   #[test]
@@ -870,15 +870,17 @@ mod tests {
     // Bug: If one requirement contains all 5 security indicators,
     // current code returns 100% even though only 1/3 requirements are covered
     let requirements = &[
-      "The system shall authenticate users and authorize access and encrypt data and log events and audit changes.",
+      // This requirement has ALL 5 security indicators
+      "The system must provide auth and encrypt data with secure access control and permission management.",
+      // These two have no security indicators
       "Users can create reports.",
       "Reports can be exported.",
     ];
 
     let coverage = check_category_coverage(requirements, GapCategory::Security);
 
-    // With 3 requirements and only 1 having security indicators, coverage should be ~33%
-    // NOT 100% which is what the buggy code returns
-    assert!(coverage <= 50, "Coverage should reflect unique requirements, not indicator count. Got {}%", coverage);
+    // With 3 requirements and only 1 having security indicators, correct coverage should be ~33%
+    // But buggy code returns 100% (5/5 indicators found)
+    assert!(coverage <= 50, "Coverage should reflect unique requirements (33%), not indicator count (100%). Got {}%", coverage);
   }
 }

@@ -14,6 +14,7 @@ mod compact;
 mod coverage;
 pub mod ears;
 pub mod effects;
+pub mod gap_detection;
 pub mod inversion;
 mod premortem;
 pub mod quality;
