@@ -299,14 +299,19 @@ impl VorpValidation {
   /// Create a new VORP validation result.
   #[must_use]
   pub fn new(value_score: f64, obvious_score: f64, real_score: f64, possible_score: f64) -> Self {
+    let value_clamped = value_score.clamp(0.0, 1.0);
+    let obvious_clamped = obvious_score.clamp(0.0, 1.0);
+    let real_clamped = real_score.clamp(0.0, 1.0);
+    let possible_clamped = possible_score.clamp(0.0, 1.0);
+
     let dimensions = vec![
-      ("Value".to_string(), value_score.clamp(0.0, 1.0)),
-      ("Obvious".to_string(), obvious_score.clamp(0.0, 1.0)),
-      ("Real".to_string(), real_score.clamp(0.0, 1.0)),
-      ("Possible".to_string(), possible_score.clamp(0.0, 1.0)),
+      ("Value".to_string(), value_clamped),
+      ("Obvious".to_string(), obvious_clamped),
+      ("Real".to_string(), real_clamped),
+      ("Possible".to_string(), possible_clamped),
     ];
 
-    let overall_score = (value_score + obvious_score + real_score + possible_score) / 4.0;
+    let overall_score = (value_clamped + obvious_clamped + real_clamped + possible_clamped) / 4.0;
 
     let suggestions = Self::generate_suggestions(&dimensions);
 
@@ -791,6 +796,19 @@ mod tests {
 
     assert!((vorp.overall_score - 0.75).abs() < f64::EPSILON);
     assert_eq!(vorp.dimensions.len(), 4);
+  }
+
+  #[test]
+  fn test_vorp_validation_with_values_above_one() {
+    // Bug test: when values exceed 1.0, overall_score should be consistent with clamped dimensions
+    let vorp = VorpValidation::new(1.5, 0.5, 0.5, 0.5);
+
+    // Dimensions should be clamped to 1.0
+    assert_eq!(vorp.dimensions[0].1, 1.0);
+
+    // Overall score should also reflect clamped values: (1.0 + 0.5 + 0.5 + 0.5) / 4 = 0.625
+    assert!((vorp.overall_score - 0.625).abs() < f64::EPSILON,
+        "overall_score should be consistent with clamped dimensions, got {}", vorp.overall_score);
   }
 
   #[test]
