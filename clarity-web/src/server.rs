@@ -91,12 +91,12 @@ pub enum BeadStatus {
   Done,
 }
 
-/// Save a bead to the database
+/// Save a bead (MOCK - does NOT actually save to database)
 #[allow(clippy::unused_async)]
 #[server]
 pub async fn save_bead(bead: Bead) -> Result<Bead, ServerFnError> {
+  // WARNING: Does NOT persist to database - only updates timestamp
   // In a real app, this would save to a database
-  // For now, we just return the bead with an updated timestamp
   let updated_bead = Bead {
     updated_at: chrono::Utc::now().to_rfc3339(),
     ..bead
@@ -104,13 +104,13 @@ pub async fn save_bead(bead: Bead) -> Result<Bead, ServerFnError> {
   Ok(updated_bead)
 }
 
-/// Get all beads for a project
+/// Get all beads for a project (MOCK - ignores project_id, returns hardcoded data)
 #[allow(clippy::unused_async)]
 #[server]
 pub async fn get_beads(project_id: String) -> Result<Vec<Bead>, ServerFnError> {
   let _ = project_id;
+  // WARNING: Does NOT fetch from database - returns HARDCODED sample data
   // In a real app, this would fetch from a database
-  // For now, return sample data
   let beads = vec![
     Bead {
       id: "1".to_string(),
@@ -143,12 +143,13 @@ pub async fn get_beads(project_id: String) -> Result<Vec<Bead>, ServerFnError> {
   Ok(beads)
 }
 
-/// Delete a bead
+/// Delete a bead (MOCK - does NOT actually delete)
 #[allow(clippy::unused_async)]
 #[server]
 pub async fn delete_bead(bead_id: String) -> Result<(), ServerFnError> {
+  // WARNING: Does NOT delete from database - just logs
   // In a real app, this would delete from a database
-  println!("Deleting bead: {bead_id}");
+  println!("[MOCK] Would delete bead: {bead_id}");
   Ok(())
 }
 
@@ -160,7 +161,7 @@ pub struct CoachResponse {
   pub questions: Vec<String>,
 }
 
-/// Get AI coaching guidance for a phase
+/// Get AI coaching guidance for a phase (MOCK - not actually AI)
 #[allow(clippy::unused_async)]
 #[server]
 pub async fn get_coach_guidance(

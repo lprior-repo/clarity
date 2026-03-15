@@ -95,7 +95,8 @@ pub struct ProgressiveDiscoverProps {
 impl PartialEq for ProgressiveDiscoverProps {
   fn eq(&self, _other: &Self) -> bool {
     // Props with Arc<dyn Trait> cannot be compared
-    // We assume equality based on initial_prompt only
+    // NOTE: This always returns false - equality checking is broken for this type
+    // TODO: Implement proper comparison if needed, or remove PartialEq impl
     false
   }
 }
@@ -1354,7 +1355,7 @@ mod tests {
     assert_ne!(result, 255, "usize_to_u8(300) should not silently return 255");
   }
 
-  // TODO: Blocked - requires compile_to_kirk server function
+  // NOTE: compile_to_kirk EXISTS at server.rs:1723 - TODO is outdated
   #[test]
   fn test_kirk_compilation_phase_uses_compile_to_kirk_server_function() {
     use crate::server::compile_to_kirk;
