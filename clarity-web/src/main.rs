@@ -31,4 +31,4 @@ fn main() {
   // Launch the fullstack app
   dioxus::launch(App);
 }
-mod intent;
+pub mod intent;
