@@ -41,7 +41,7 @@ fn App() -> Element {
     let mut state = use_signal(AppState::default);
 
     rsx! {
-        style { {include_str!("../assets/style.css")} }
+        style { {include_str!("../assets/tailwind.css")} }
         div {
             class: "min-h-screen bg-background p-8 space-y-8",
 
