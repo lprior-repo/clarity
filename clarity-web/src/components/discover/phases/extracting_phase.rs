@@ -99,7 +99,8 @@ pub fn ExtractingPhase(props: ExtractingPhaseProps) -> Element {
         return;
       }
 
-      // For now, auto-advance through the extraction
+      // SIMULATION: Auto-advance through fake extraction progress
+      // This is a mock that just increments progress 0->100
       // In a real implementation, this would be driven by the AI provider
       let current_progress = *progress.read();
       if current_progress < 100 {

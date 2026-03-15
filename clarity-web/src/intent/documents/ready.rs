@@ -359,10 +359,9 @@ fn generate_security_guidelines(spec: &Spec) -> String {
   }
 }
 
-/// Get current timestamp in ISO 8601 format
+/// WARNING: Returns HARDCODED placeholder, NOT current timestamp
+/// In production, use a proper datetime library like chrono
 fn get_current_timestamp() -> String {
-  // In production, use a proper datetime library like chrono
-  // For now, return a placeholder
   "2024-01-15T10:30:00Z".to_string()
 }
 

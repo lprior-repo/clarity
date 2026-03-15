@@ -20,9 +20,9 @@ use dioxus::prelude::*;
 /// Hook for calculating quality score
 ///
 /// This hook:
-/// - Debounces answer updates by 500ms
+/// - Calculates quality score on every render (no debouncing)
 /// - Calculates quality score from answers and EARS requirements
-/// - Caches results in `lattice_cache` for persistence
+/// - Does NOT cache (persistence requires separate hook)
 /// - Returns current score and loading state
 ///
 /// Note: In browser context, true debouncing requires JS interop.
@@ -78,10 +78,13 @@ pub fn use_quality_score(
 
 /// Hook for caching quality score to `lattice_cache`
 ///
-/// This hook:
-/// - Saves quality score to `lattice_cache` table when it changes
-/// - Loads cached score on mount
-/// - Handles serialization/deserialization
+/// WARNING: This hook does NOT actually persist to database.
+/// It only serializes to JSON and creates LatticeCache objects but does NOT save them.
+///
+/// Actual behavior:
+/// - Creates LatticeCache objects when score changes (but doesn't save)
+/// - Calls load on mount (but drops the result immediately)
+/// - Handles serialization/deserialization (but doesn't use it)
 pub fn use_cached_quality_score(
   phase: Signal<String>,
   quality_score: Signal<Option<QualityScore>>,

@@ -286,7 +286,7 @@ fn process_single_spec(
     );
   }
 
-  // For now, return a placeholder result
+  // WARNING: Returns FAKE SUCCESS - does not actually process the spec
   // In a real implementation, this would load and analyze the spec
   SpecResult {
     file: file.to_string(),
