@@ -617,4 +617,23 @@ mod tests {
       assert_eq!(effect.confidence, 0.8);
     }
   }
+
+  #[test]
+  fn test_valid_deep_chain_not_flagged_as_error() {
+    // Create a valid chain longer than MAX_DEPTH (5)
+    // A -> B -> C -> D -> E -> F -> G (7 nodes = 6 edges)
+    // This is a valid dependency chain with no cycles
+    let mut graph = HashMap::new();
+    let nodes = ["A", "B", "C", "D", "E", "F", "G"];
+
+    for window in nodes.windows(2) {
+      graph.insert(window[0].to_string(), vec![window[1].to_string()]);
+    }
+    graph.insert("G".to_string(), vec![]);
+
+    // This chain has no cycles and should pass
+    // BUG: Currently fails with MaxDepthExceeded even though there are no cycles
+    let result = detect_cycles(&graph);
+    assert!(result.is_ok(), "Valid deep chain should not fail: {:?}", result);
+  }
 }
