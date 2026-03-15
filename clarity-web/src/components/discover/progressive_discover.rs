@@ -1354,6 +1354,13 @@ mod tests {
     assert_ne!(result, 255, "usize_to_u8(300) should not silently return 255");
   }
 
+  // TODO: Blocked - requires compile_to_kirk server function
+  #[test]
+  fn test_kirk_compilation_phase_uses_compile_to_kirk_server_function() {
+    use crate::server::compile_to_kirk;
+    let _: fn(InterrogationTranscript, Option<String>) -> _ = compile_to_kirk;
+  }
+
   // Note: test_scaffolding_prompt_button_props_equality requires Dioxus runtime (EventHandler).
   // It needs dioxus::prelude::launch_test() wrapper to run.
 }

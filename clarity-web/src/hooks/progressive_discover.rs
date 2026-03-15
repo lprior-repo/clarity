@@ -439,9 +439,7 @@ pub struct ProgressiveDiscoverState {
   pub hole_punching: HolePunchingResults,
   /// Four Brutal Truths acknowledgment state
   pub brutal_truths: BrutalTruthsState,
-}
-
-impl Default for ProgressiveDiscoverState {
+}impl Default for ProgressiveDiscoverState {
   fn default() -> Self {
     Self {
       phase: ProgressiveDiscoverPhase::default(),
@@ -850,7 +848,7 @@ impl ProgressiveDiscoverState {
 /// - Phase state management with transitions
 /// - Transcript data management
 /// - Loading and error states
-/// - Persistence integration (future)
+/// - Persistence integration via localStorage
 ///
 /// # Example
 ///
@@ -1502,7 +1500,6 @@ mod tests {
       .detected_traps(vec![])
       .acknowledged_traps(vec![])
       .hole_punching(HolePunchingResults::default())
-      .brutal_truths(BrutalTruthsState::default())
       .build();
 
     assert_eq!(state.phase, ProgressiveDiscoverPhase::Prompt);
