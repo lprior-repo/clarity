@@ -8,6 +8,11 @@ use serde::{Deserialize, Serialize};
 
 use super::{Behavior, TypeError};
 
+/// Maximum number of behaviors allowed in a feature
+const MAX_BEHAVIORS: usize = 50;
+/// Maximum number of dependencies allowed in a feature
+const MAX_DEPENDENCIES: usize = 20;
+
 /// Feature - a named collection of behaviors
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Feature {
@@ -71,6 +76,28 @@ impl Feature {
       self.depends_on.push(feature_name);
     }
     self
+  }
+
+  /// Validate the feature
+  ///
+  /// # Errors
+  /// Returns appropriate `TypeError` variant if validation fails
+  pub fn validate(&self) -> Result<(), TypeError> {
+    if self.behaviors.len() > MAX_BEHAVIORS {
+      return Err(TypeError::TooManyBehaviors(
+        self.name.clone(),
+        self.behaviors.len(),
+        MAX_BEHAVIORS,
+      ));
+    }
+    if self.depends_on.len() > MAX_DEPENDENCIES {
+      return Err(TypeError::TooManyDependencies(
+        self.name.clone(),
+        self.depends_on.len(),
+        MAX_DEPENDENCIES,
+      ));
+    }
+    Ok(())
   }
 }
 
@@ -161,5 +188,27 @@ mod tests {
     };
 
     assert_eq!(feature, parsed);
+  }
+
+  #[test]
+  fn test_feature_validate_too_many_behaviors() {
+    let mut feature = Feature::new("test".to_string()).unwrap();
+    for i in 0..51 {
+      feature.behaviors.push(Behavior::new(format!("behavior_{}", i)).unwrap());
+    }
+
+    let result = feature.validate();
+    assert!(matches!(result, Err(TypeError::TooManyBehaviors(_, _, _))));
+  }
+
+  #[test]
+  fn test_feature_validate_too_many_dependencies() {
+    let mut feature = Feature::new("test".to_string()).unwrap();
+    for i in 0..21 {
+      feature.depends_on.push(format!("dep_{}", i));
+    }
+
+    let result = feature.validate();
+    assert!(matches!(result, Err(TypeError::TooManyDependencies(_, _, _))));
   }
 }

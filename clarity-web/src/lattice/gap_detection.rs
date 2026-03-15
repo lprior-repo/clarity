@@ -864,4 +864,21 @@ mod tests {
     // All 10 categories should have coverage scores
     assert_eq!(analysis.category_coverage.len(), 10);
   }
+
+  #[test]
+  fn test_coverage_counts_unique_requirements_not_indicators() {
+    // Bug: If one requirement contains all 5 security indicators,
+    // current code returns 100% even though only 1/3 requirements are covered
+    let requirements = &[
+      "The system shall authenticate users and authorize access and encrypt data and log events and audit changes.",
+      "Users can create reports.",
+      "Reports can be exported.",
+    ];
+
+    let coverage = check_category_coverage(requirements, GapCategory::Security);
+
+    // With 3 requirements and only 1 having security indicators, coverage should be ~33%
+    // NOT 100% which is what the buggy code returns
+    assert!(coverage <= 50, "Coverage should reflect unique requirements, not indicator count. Got {}%", coverage);
+  }
 }

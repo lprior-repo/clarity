@@ -8,6 +8,11 @@ use serde::{Deserialize, Serialize};
 
 use super::{TypeError, Verification};
 
+/// Maximum number of preconditions allowed in a behavior
+const MAX_PRECONDITIONS: usize = 20;
+/// Maximum number of postconditions allowed in a behavior
+const MAX_POSTCONDITIONS: usize = 20;
+
 /// Validate behavior names as `snake_case` with leading lowercase letter.
 fn is_valid_behavior_name(name: &str) -> bool {
   let mut chars = name.chars();
@@ -87,6 +92,28 @@ impl Behavior {
   pub fn add_postcondition(&mut self, condition: String) -> &mut Self {
     self.postconditions.push(condition);
     self
+  }
+
+  /// Validate the behavior
+  ///
+  /// # Errors
+  /// Returns appropriate `TypeError` variant if validation fails
+  pub fn validate(&self) -> Result<(), TypeError> {
+    if self.preconditions.len() > MAX_PRECONDITIONS {
+      return Err(TypeError::TooManyPreconditions(
+        self.name.clone(),
+        self.preconditions.len(),
+        MAX_PRECONDITIONS,
+      ));
+    }
+    if self.postconditions.len() > MAX_POSTCONDITIONS {
+      return Err(TypeError::TooManyPostconditions(
+        self.name.clone(),
+        self.postconditions.len(),
+        MAX_POSTCONDITIONS,
+      ));
+    }
+    Ok(())
   }
 }
 
@@ -177,5 +204,27 @@ mod tests {
     };
 
     assert_eq!(behavior, parsed);
+  }
+
+  #[test]
+  fn test_behavior_validate_too_many_preconditions() {
+    let mut behavior = Behavior::new("test".to_string()).unwrap();
+    for i in 0..21 {
+      behavior.preconditions.push(format!("precondition_{}", i));
+    }
+
+    let result = behavior.validate();
+    assert!(matches!(result, Err(TypeError::TooManyPreconditions(_, _, _))));
+  }
+
+  #[test]
+  fn test_behavior_validate_too_many_postconditions() {
+    let mut behavior = Behavior::new("test".to_string()).unwrap();
+    for i in 0..21 {
+      behavior.postconditions.push(format!("postcondition_{}", i));
+    }
+
+    let result = behavior.validate();
+    assert!(matches!(result, Err(TypeError::TooManyPostconditions(_, _, _))));
   }
 }

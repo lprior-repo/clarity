@@ -33,6 +33,34 @@ pub enum TypeError {
   /// Feature referenced but not found
   #[error("unknown feature dependency: '{0}'")]
   UnknownFeatureDependency(String),
+
+  /// Too many features in specification
+  #[error("too many features: {0} (maximum {1})")]
+  TooManyFeatures(usize, usize),
+
+  /// Too many invariants in specification
+  #[error("too many invariants: {0} (maximum {1})")]
+  TooManyInvariants(usize, usize),
+
+  /// Too many anti-patterns in specification
+  #[error("too many anti-patterns: {0} (maximum {1})")]
+  TooManyAntiPatterns(usize, usize),
+
+  /// Too many behaviors in feature
+  #[error("too many behaviors in feature '{0}': {1} (maximum {2})")]
+  TooManyBehaviors(String, usize, usize),
+
+  /// Too many dependencies in feature
+  #[error("too many dependencies in feature '{0}': {1} (maximum {2})")]
+  TooManyDependencies(String, usize, usize),
+
+  /// Too many preconditions in behavior
+  #[error("too many preconditions in behavior '{0}': {1} (maximum {2})")]
+  TooManyPreconditions(String, usize, usize),
+
+  /// Too many postconditions in behavior
+  #[error("too many postconditions in behavior '{0}': {1} (maximum {2})")]
+  TooManyPostconditions(String, usize, usize),
 }
 
 #[cfg(test)]

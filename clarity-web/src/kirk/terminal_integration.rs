@@ -488,9 +488,9 @@ impl OpenCodeTerminalClient {
   ) -> Result<ExtractedFields, TerminalError> {
     // Update status to connecting
     {
-      let status = self.status.read().await.clone();
+      let mut status = self.status.write().await;
       if !status.state.is_active() && !status.state.is_pending() {
-        self.status.write().await.state = ConnectionState::Connecting;
+        status.state = ConnectionState::Connecting;
       }
     }
 
@@ -507,8 +507,8 @@ impl OpenCodeTerminalClient {
           let latency = start.elapsed().as_millis().try_into().unwrap_or(u64::MAX);
 
           // Update status on success
-          let status_guard = self.status.read().await.clone();
-          *self.status.write().await = status_guard
+          let mut status = self.status.write().await;
+          *status = status.clone()
             .with_state(ConnectionState::Connected)
             .with_success(latency);
 
@@ -532,10 +532,10 @@ impl OpenCodeTerminalClient {
           );
 
           // Update status on failure
-          let current_state = self.status.read().await.state;
-          let new_state = current_state.on_failure(retryable);
+          let mut status = self.status.write().await;
+          let new_state = status.state.on_failure(retryable);
           let error_msg = terminal_error.to_string();
-          *self.status.write().await = ConnectionStatus::new(new_state).with_failure(error_msg);
+          *status = ConnectionStatus::new(new_state).with_failure(error_msg);
 
           last_error = Some(terminal_error);
 
@@ -582,9 +582,9 @@ impl OpenCodeTerminalClient {
   ) -> Result<ExtractedFields, TerminalError> {
     // Update status to connecting
     {
-      let status = self.status.read().await.clone();
+      let mut status = self.status.write().await;
       if !status.state.is_active() && !status.state.is_pending() {
-        self.status.write().await.state = ConnectionState::Connecting;
+        status.state = ConnectionState::Connecting;
       }
     }
 
@@ -605,8 +605,8 @@ impl OpenCodeTerminalClient {
           let latency = start.elapsed().as_millis().try_into().unwrap_or(u64::MAX);
 
           // Update status on success
-          let status_guard = self.status.read().await.clone();
-          *self.status.write().await = status_guard
+          let mut status = self.status.write().await;
+          *status = status.clone()
             .with_state(ConnectionState::Connected)
             .with_success(latency);
 
@@ -810,9 +810,9 @@ impl TerminalClient for OpenCodeTerminalClient {
   async fn health_check(&self) -> Result<(), TerminalError> {
     // Update status to connecting
     {
-      let status = self.status.read().await.clone();
+      let mut status = self.status.write().await;
       if !status.state.is_active() && !status.state.is_pending() {
-        self.status.write().await.state = ConnectionState::Connecting;
+        status.state = ConnectionState::Connecting;
       }
     }
 
@@ -820,16 +820,16 @@ impl TerminalClient for OpenCodeTerminalClient {
 
     match result {
       Ok(()) => {
-        let status_guard = self.status.read().await.clone();
-        *self.status.write().await = status_guard.with_state(ConnectionState::Connected);
+        let mut status = self.status.write().await;
+        *status = status.clone().with_state(ConnectionState::Connected);
 
         debug!("Health check passed");
         Ok(())
       }
       Err(e) => {
         let terminal_error = TerminalError::from(e);
-        let status_guard = self.status.read().await.clone();
-        *self.status.write().await = status_guard
+        let mut status = self.status.write().await;
+        *status = status.clone()
           .with_state(ConnectionState::Failed)
           .with_failure(terminal_error.to_string());
 
@@ -1273,8 +1273,8 @@ mod mock_client {
         });
       }
 
-      let status_guard = self.status.read().await.clone();
-      *self.status.write().await = status_guard
+      let mut status = self.status.write().await;
+      *status = status.clone()
         .with_state(ConnectionState::Connected)
         .with_success(100);
 

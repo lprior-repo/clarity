@@ -9,6 +9,13 @@ use std::collections::HashSet;
 
 use super::{AIHints, AntiPattern, Feature, Invariant, TypeError};
 
+/// Maximum number of features allowed in a specification
+const MAX_FEATURES: usize = 100;
+/// Maximum number of invariants allowed in a specification
+const MAX_INVARIANTS: usize = 100;
+/// Maximum number of anti-patterns allowed in a specification
+const MAX_ANTI_PATTERNS: usize = 100;
+
 /// Top-level specification container
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Spec {
@@ -103,6 +110,15 @@ impl Spec {
   /// # Errors
   /// Returns appropriate `TypeError` variant if validation fails
   pub fn validate(&self) -> Result<(), TypeError> {
+    if self.features.len() > MAX_FEATURES {
+      return Err(TypeError::TooManyFeatures(self.features.len(), MAX_FEATURES));
+    }
+    if self.invariants.len() > MAX_INVARIANTS {
+      return Err(TypeError::TooManyInvariants(self.invariants.len(), MAX_INVARIANTS));
+    }
+    if self.anti_patterns.len() > MAX_ANTI_PATTERNS {
+      return Err(TypeError::TooManyAntiPatterns(self.anti_patterns.len(), MAX_ANTI_PATTERNS));
+    }
     let mut seen_features: HashSet<&str> = HashSet::new();
     for feature in &self.features {
       if !seen_features.insert(&feature.name) {
@@ -204,7 +220,7 @@ impl Spec {
 )]
 mod tests {
   use super::Spec;
-  use crate::intent::types::{Behavior, Feature, TypeError};
+  use crate::intent::types::{AIHints, Behavior, Feature, TypeError};
 
   #[test]
   fn test_spec_new_valid() {
@@ -310,5 +326,22 @@ mod tests {
 
     let result = spec.validate();
     assert!(result.is_ok());
+  }
+
+  #[test]
+  fn test_spec_validate_too_many_features() {
+    let spec = Spec {
+      name: "test".to_string(),
+      description: String::new(),
+      features: (0..101)
+        .map(|i| Feature::new(format!("feature_{}", i)).unwrap())
+        .collect(),
+      invariants: Vec::new(),
+      anti_patterns: Vec::new(),
+      ai_hints: AIHints::default(),
+    };
+
+    let result = spec.validate();
+    assert!(matches!(result, Err(TypeError::TooManyFeatures(_, _))));
   }
 }
