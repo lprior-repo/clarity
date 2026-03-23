@@ -84,7 +84,7 @@ fn format_bead_human(bead: &PlanBead) -> String {
 
 #[must_use]
 pub fn format_plan_json(plan: &ExecutionPlan) -> String {
-  serde_json::to_string_pretty(plan).unwrap_or_else(|_| "{}".to_string())
+  serde_json::to_string_pretty(plan).map_or_else(|_| "{}".to_string(), |v| v)
 }
 
 #[must_use]

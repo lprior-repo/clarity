@@ -13,7 +13,6 @@
 
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use std::fmt::Write as _;
 use thiserror::Error;
 
 /// Domain errors for compact module
@@ -215,55 +214,32 @@ impl CompactOutput {
   /// Generate agent-ready formatted output
   #[must_use]
   pub fn to_agent_format(&self) -> String {
-    let mut output = String::from("# Project Summary\n\n");
+    let sections: [(&str, &[String]); 5] = [
+      ("Problem", &self.summary.problem),
+      ("Solution", &self.summary.solution),
+      ("Requirements", &self.summary.requirements),
+      ("Constraints", &self.summary.constraints),
+      ("Tasks", &self.summary.tasks),
+    ];
 
-    if !self.summary.problem.is_empty() {
-      output.push_str("## Problem\n");
-      for point in &self.summary.problem {
-        let _ = writeln!(output, "* {point}");
-      }
-      output.push('\n');
-    }
+    let formatted_sections: String = sections
+      .iter()
+      .filter(|(_, items)| !items.is_empty())
+      .map(|(title, items)| {
+        let items_text = items
+          .iter()
+          .map(|item| format!("* {item}"))
+          .collect::<Vec<_>>()
+          .join("\n");
+        format!("## {title}\n{items_text}\n")
+      })
+      .collect::<Vec<_>>()
+      .join("\n");
 
-    if !self.summary.solution.is_empty() {
-      output.push_str("## Solution\n");
-      for point in &self.summary.solution {
-        let _ = writeln!(output, "* {point}");
-      }
-      output.push('\n');
-    }
-
-    if !self.summary.requirements.is_empty() {
-      output.push_str("## Requirements\n");
-      for point in &self.summary.requirements {
-        let _ = writeln!(output, "* {point}");
-      }
-      output.push('\n');
-    }
-
-    if !self.summary.constraints.is_empty() {
-      output.push_str("## Constraints\n");
-      for point in &self.summary.constraints {
-        let _ = writeln!(output, "* {point}");
-      }
-      output.push('\n');
-    }
-
-    if !self.summary.tasks.is_empty() {
-      output.push_str("## Tasks\n");
-      for point in &self.summary.tasks {
-        let _ = writeln!(output, "* {point}");
-      }
-      output.push('\n');
-    }
-
-    let _ = write!(
-      output,
-      "---\n**Artifacts processed**: {}",
+    format!(
+      "# Project Summary\n\n{formatted_sections}\n---\n**Artifacts processed**: {}",
       self.artifact_count
-    );
-
-    output
+    )
   }
 }
 

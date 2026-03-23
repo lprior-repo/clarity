@@ -268,22 +268,21 @@ fn validate_email_local(local: &str) -> Result<(), EmailError> {
 
   // Validate characters
   // Allowed: alphanumeric + !#$%&'*+-/=?^_`{|}~
-  for c in local.chars() {
-    let is_valid = c.is_ascii_alphanumeric()
-      || ALLOWED_LOCAL_SPECIAL.contains(&c)
-      || (c == '.' && !local.contains(".."));
-    if !is_valid {
-      return Err(EmailError::InvalidLocalChar(c));
-    }
-  }
+  local
+    .chars()
+    .find(|c| {
+      !c.is_ascii_alphanumeric()
+        && !ALLOWED_LOCAL_SPECIAL.contains(c)
+        && !(*c == '.' && !local.contains(".."))
+    })
+    .map_or(Ok(()), |c| Err(EmailError::InvalidLocalChar(c)))?;
 
   // Re-check consecutive dots after char validation
   let chars: Vec<char> = local.chars().collect();
-  for window in chars.windows(2) {
-    if window[0] == '.' && window[1] == '.' {
-      return Err(EmailError::ConsecutiveDots);
-    }
-  }
+  chars
+    .windows(2)
+    .find(|w| w[0] == '.' && w[1] == '.')
+    .map_or(Ok(()), |_| Err(EmailError::ConsecutiveDots))?;
 
   Ok(())
 }
@@ -317,9 +316,7 @@ fn validate_email_domain(domain: &str) -> Result<(), EmailError> {
   }
 
   // Validate labels
-  for label in domain.split('.') {
-    validate_domain_label(label)?;
-  }
+  domain.split('.').try_for_each(validate_domain_label)?;
 
   Ok(())
 }
@@ -343,11 +340,10 @@ fn validate_domain_label(label: &str) -> Result<(), EmailError> {
   }
 
   // Validate characters: alphanumeric and hyphen only
-  for c in label.chars() {
-    if !c.is_ascii_alphanumeric() && c != '-' {
-      return Err(EmailError::InvalidDomainChar(c));
-    }
-  }
+  label
+    .chars()
+    .find(|c| !c.is_ascii_alphanumeric() && *c != '-')
+    .map_or(Ok(()), |c| Err(EmailError::InvalidDomainChar(c)))?;
 
   Ok(())
 }
@@ -385,25 +381,23 @@ pub fn validate_uuid(input: &str) -> Result<(), FormatError> {
 
   // Check hyphen positions: 8, 13, 18, 23
   let hyphen_positions = [8, 13, 18, 23];
-  for pos in hyphen_positions {
-    let chars: Vec<char> = input.chars().collect();
-    if chars.get(pos) != Some(&'-') {
-      return Err(UuidError::MissingHyphens.into());
-    }
-  }
+  let chars: Vec<char> = input.chars().collect();
+
+  hyphen_positions
+    .iter()
+    .find(|&&pos| chars.get(pos) != Some(&'-'))
+    .map_or(Ok(()), |_| {
+      Err(FormatError::Uuid(UuidError::MissingHyphens))
+    })?;
 
   // Validate hex characters and positions
-  let chars: Vec<char> = input.chars().collect();
-  for (idx, &c) in chars.iter().enumerate() {
-    // Skip hyphen positions
-    if hyphen_positions.contains(&idx) {
-      continue;
-    }
-
-    if !is_valid_hex_char(c) {
-      return Err(UuidError::InvalidChar(idx, c).into());
-    }
-  }
+  chars
+    .iter()
+    .enumerate()
+    .find(|(idx, c)| !hyphen_positions.contains(idx) && !is_valid_hex_char(**c))
+    .map_or(Ok(()), |(idx, c)| {
+      Err(FormatError::Uuid(UuidError::InvalidChar(idx, *c)))
+    })?;
 
   // Validate version (position 14, index 14)
   let version_char = chars.get(14).ok_or(UuidError::WrongLength(input.len()))?;
@@ -497,12 +491,11 @@ fn validate_uri_scheme(scheme: &str) -> Result<(), UriError> {
   }
 
   // Validate remaining characters
-  for c in chars.iter().skip(1) {
-    let is_valid = c.is_ascii_alphanumeric() || matches!(c, '+' | '-' | '.');
-    if !is_valid {
-      return Err(UriError::InvalidSchemeChar(*c));
-    }
-  }
+  chars
+    .iter()
+    .skip(1)
+    .find(|c| !c.is_ascii_alphanumeric() && !matches!(c, '+' | '-' | '.'))
+    .map_or(Ok(()), |c| Err(UriError::InvalidSchemeChar(*c)))?;
 
   Ok(())
 }

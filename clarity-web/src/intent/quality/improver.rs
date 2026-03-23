@@ -416,7 +416,7 @@ pub fn suggest_missing_tests(report: &QualityReport) -> Vec<ImprovementSuggestio
         issue.field.clone(),
         format!(
           "Add acceptance criteria and verification steps. {}",
-          issue.context.as_deref().unwrap_or("")
+          issue.context.as_deref().map_or("", |v| v)
         ),
       )
       .ok()
@@ -453,7 +453,7 @@ pub fn suggest_vague_rules_improvements(report: &QualityReport) -> Vec<Improveme
       format!("Clarify: {}", issue.description),
       issue.severity,
       issue.field.clone(),
-      format!("Rewrite with specific values and examples. Avoid ambiguous terms like 'fast', 'good', or 'appropriate'. {}", issue.context.as_deref().unwrap_or("Use measurable criteria.")),
+      format!("Rewrite with specific values and examples. Avoid ambiguous terms like 'fast', 'good', or 'appropriate'. {}", issue.context.as_deref().map_or("Use measurable criteria.", |v| v)),
     ).ok()
   });
 
@@ -495,7 +495,7 @@ pub fn suggest_examples_improvements(report: &QualityReport) -> Vec<ImprovementS
           issue
             .context
             .as_deref()
-            .unwrap_or("Provide complete details for this field.")
+            .map_or("Provide complete details for this field.", |v| v)
         ),
       )
       .ok()
@@ -525,7 +525,7 @@ fn suggest_security_improvements(report: &QualityReport) -> Vec<ImprovementSugge
           issue
             .context
             .as_deref()
-            .unwrap_or("Consider authentication, authorization, encryption, and input validation.")
+            .map_or("Consider authentication, authorization, encryption, and input validation.", |v| v)
         ),
       )
       .ok()
@@ -622,7 +622,7 @@ fn suggest_consistency_improvements(report: &QualityReport) -> Vec<ImprovementSu
           issue
             .context
             .as_deref()
-            .unwrap_or("Ensure all requirements align and do not conflict.")
+            .map_or("Ensure all requirements align and do not conflict.", |v| v)
         ),
       )
       .ok()

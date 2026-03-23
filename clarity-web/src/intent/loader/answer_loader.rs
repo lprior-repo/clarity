@@ -255,7 +255,7 @@ fn value_to_string(value: &Value) -> String {
     }
     Value::Object(_) => {
       // Serialize object back to JSON string
-      serde_json::to_string(value).unwrap_or_else(|_| "{}".to_string())
+      serde_json::to_string(value).map_or_else(|_| "{}".to_string(), |v| v)
     }
   }
 }

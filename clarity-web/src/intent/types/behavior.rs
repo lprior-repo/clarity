@@ -214,7 +214,10 @@ mod tests {
     }
 
     let result = behavior.validate();
-    assert!(matches!(result, Err(TypeError::TooManyPreconditions(_, _, _))));
+    assert!(matches!(
+      result,
+      Err(TypeError::TooManyPreconditions(_, _, _))
+    ));
   }
 
   #[test]
@@ -225,6 +228,9 @@ mod tests {
     }
 
     let result = behavior.validate();
-    assert!(matches!(result, Err(TypeError::TooManyPostconditions(_, _, _))));
+    assert!(matches!(
+      result,
+      Err(TypeError::TooManyPostconditions(_, _, _))
+    ));
   }
 }

@@ -247,11 +247,10 @@ pub fn trace_effects_with_patterns(solution: &str, patterns: &[CausalPattern]) -
     .filter(|s| !s.is_empty())
     .collect();
 
-  for sentence in sentences {
-    if let Some(effect) = parse_sentence(sentence, patterns) {
-      output.add_effect(effect);
-    }
-  }
+  sentences
+    .iter()
+    .filter_map(|sentence| parse_sentence(sentence, patterns))
+    .for_each(|effect| output.add_effect(effect));
 
   // Check for circular dependencies
   if let Err(e) = detect_cycles(&output.dependency_graph) {
@@ -268,8 +267,10 @@ pub fn trace_effects_with_patterns(solution: &str, patterns: &[CausalPattern]) -
 fn parse_sentence(sentence: &str, patterns: &[CausalPattern]) -> Option<Effect> {
   let lower = sentence.to_lowercase();
 
-  for pattern in patterns {
-    if let Some(pos) = lower.find(&pattern.keyword) {
+  patterns
+    .iter()
+    .filter_map(|pattern| {
+      let pos = lower.find(&pattern.keyword)?;
       // Extract trigger (before the keyword)
       let trigger = sentence[..pos].trim().to_string();
 
@@ -278,18 +279,17 @@ fn parse_sentence(sentence: &str, patterns: &[CausalPattern]) -> Option<Effect> 
       let outcome = sentence[outcome_start..].trim().to_string();
 
       // Only create effect if both trigger and outcome are non-empty
-      if !trigger.is_empty() && !outcome.is_empty() {
-        return Some(Effect {
-          trigger: clean_text(&trigger),
-          outcome: clean_text(&outcome),
-          confidence: pattern.default_confidence,
-          indirect_effects: Vec::new(),
-        });
+      if trigger.is_empty() || outcome.is_empty() {
+        return None;
       }
-    }
-  }
-
-  None
+      Some(Effect {
+        trigger: clean_text(&trigger),
+        outcome: clean_text(&outcome),
+        confidence: pattern.default_confidence,
+        indirect_effects: Vec::new(),
+      })
+    })
+    .next()
 }
 
 /// Clean and normalize text
@@ -316,9 +316,7 @@ pub fn detect_cycles(graph: &HashMap<String, Vec<String>>) -> Result<(), Effects
 
   for node in graph.keys() {
     if !visited.contains(node) {
-      if let Err(err) = dfs_visit(node, graph, &mut visited, &mut rec_stack, 0) {
-        return Err(err);
-      }
+      dfs_visit(node, graph, &mut visited, &mut rec_stack, 0)?;
     }
   }
 
@@ -343,16 +341,19 @@ fn dfs_visit(
   rec_stack.insert(node.to_string());
 
   if let Some(neighbors) = graph.get(node) {
-    for neighbor in neighbors {
+    let node_owned = node.to_string();
+    neighbors.iter().try_for_each(|neighbor| {
       if !visited.contains(neighbor) {
-        dfs_visit(neighbor, graph, visited, rec_stack, depth + 1)?;
+        dfs_visit(neighbor, graph, visited, rec_stack, depth + 1)
       } else if rec_stack.contains(neighbor) {
-        return Err(EffectsError::CircularDependency(
-          node.to_string(),
+        Err(EffectsError::CircularDependency(
+          node_owned.clone(),
           neighbor.to_string(),
-        ));
+        ))
+      } else {
+        Ok(())
       }
-    }
+    })?;
   }
 
   rec_stack.remove(node);
@@ -634,6 +635,10 @@ mod tests {
     // This chain has no cycles and should pass
     // BUG: Currently fails with MaxDepthExceeded even though there are no cycles
     let result = detect_cycles(&graph);
-    assert!(result.is_ok(), "Valid deep chain should not fail: {:?}", result);
+    assert!(
+      result.is_ok(),
+      "Valid deep chain should not fail: {:?}",
+      result
+    );
   }
 }

@@ -339,8 +339,8 @@ impl ConnectionStatus {
     if total == 0 {
       return 1.0;
     }
-    f64::from(u32::try_from(self.successful_requests).unwrap_or(u32::MAX))
-      / f64::from(u32::try_from(total).unwrap_or(u32::MAX))
+    f64::from(u32::try_from(self.successful_requests).map_or(u32::MAX, |v| v))
+      / f64::from(u32::try_from(total).map_or(u32::MAX, |v| v))
   }
 }
 
@@ -504,11 +504,12 @@ impl OpenCodeTerminalClient {
 
       match self.provider.extract_fields(text, context).await {
         Ok(fields) => {
-          let latency = start.elapsed().as_millis().try_into().unwrap_or(u64::MAX);
+          let latency = start.elapsed().as_millis().try_into().map_or(u64::MAX, |v| v);
 
           // Update status on success
           let mut status = self.status.write().await;
-          *status = status.clone()
+          *status = status
+            .clone()
             .with_state(ConnectionState::Connected)
             .with_success(latency);
 
@@ -602,11 +603,12 @@ impl OpenCodeTerminalClient {
         .await
       {
         Ok(fields) => {
-          let latency = start.elapsed().as_millis().try_into().unwrap_or(u64::MAX);
+          let latency = start.elapsed().as_millis().try_into().map_or(u64::MAX, |v| v);
 
           // Update status on success
           let mut status = self.status.write().await;
-          *status = status.clone()
+          *status = status
+            .clone()
             .with_state(ConnectionState::Connected)
             .with_success(latency);
 
@@ -829,7 +831,8 @@ impl TerminalClient for OpenCodeTerminalClient {
       Err(e) => {
         let terminal_error = TerminalError::from(e);
         let mut status = self.status.write().await;
-        *status = status.clone()
+        *status = status
+          .clone()
           .with_state(ConnectionState::Failed)
           .with_failure(terminal_error.to_string());
 
@@ -886,7 +889,7 @@ impl TranscriptProcessor {
     // Extract problem
     let problem_result = self.client.extract_problem(&original_prompt).await?;
     let problem =
-      extract_field_value(&problem_result, "problem").unwrap_or_else(|| original_prompt.clone());
+      extract_field_value(&problem_result, "problem").map_or_else(|| original_prompt.clone(), |v| v);
 
     // Extract persona
     let persona_result = self.client.extract_persona(&original_prompt).await?;
@@ -1274,7 +1277,8 @@ mod mock_client {
       }
 
       let mut status = self.status.write().await;
-      *status = status.clone()
+      *status = status
+        .clone()
         .with_state(ConnectionState::Connected)
         .with_success(100);
 

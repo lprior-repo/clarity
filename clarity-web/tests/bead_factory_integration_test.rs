@@ -11,12 +11,12 @@ use clarity_web::kirk::progressive_discover::KirkContract16;
 /// the Bead Factory route.
 #[test]
 fn test_kirk_contract_has_16_sections_for_bead_factory() {
-    let contract = KirkContract16::new();
+  let contract = KirkContract16::new();
 
-    // The contract must have exactly 16 sections for KIRK methodology
-    assert_eq!(
-        contract.sections.len(),
-        16,
-        "KirkContract16 must have 16 sections for Bead Factory integration"
-    );
+  // The contract must have exactly 16 sections for KIRK methodology
+  assert_eq!(
+    contract.sections.len(),
+    16,
+    "KirkContract16 must have 16 sections for Bead Factory integration"
+  );
 }

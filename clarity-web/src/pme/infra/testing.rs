@@ -179,7 +179,7 @@ impl TestSummary {
         if self.total == 0 {
             return 0.0;
         }
-        (f64::from(u32::try_from(self.passed).unwrap_or(0)) / f64::from(u32::try_from(self.total).unwrap_or(u32::MAX))) * 100.0
+        (f64::from(u32::try_from(self.passed).map_or(0, |v| v)) / f64::from(u32::try_from(self.total).map_or(u32::MAX, |v| v))) * 100.0
     }
 
     /// Check if all tests passed
@@ -389,7 +389,7 @@ impl ModuleCoverage {
         let covered = self.items.values().filter(|i| i.covered).count();
         let total = self.items.len();
 
-        (f64::from(u32::try_from(covered).unwrap_or(0)) / f64::from(u32::try_from(total).unwrap_or(u32::MAX))) * 100.0
+        (f64::from(u32::try_from(covered).map_or(0, |v| v)) / f64::from(u32::try_from(total).map_or(u32::MAX, |v| v))) * 100.0
     }
 
     /// Get uncovered items
@@ -482,7 +482,7 @@ impl CoverageTracker {
             return 100.0;
         }
 
-        (f64::from(u32::try_from(covered_items).unwrap_or(0)) / f64::from(u32::try_from(total_items).unwrap_or(u32::MAX))) * 100.0
+        (f64::from(u32::try_from(covered_items).map_or(0, |v| v)) / f64::from(u32::try_from(total_items).map_or(u32::MAX, |v| v))) * 100.0
     }
 
     /// Check if target is met
@@ -767,7 +767,7 @@ impl TestDataGenerator {
         if range == 0 {
             return min;
         }
-        min + i64::try_from(self.next_u64() % range).unwrap_or(0)
+        min + i64::try_from(self.next_u64() % range).map_or(0, |v| v)
     }
 
     /// Generate a random f64 in range [0, 1)
@@ -795,7 +795,7 @@ impl TestDataGenerator {
         const CHARS: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         (0..length)
             .map(|_| {
-                let idx = usize::try_from(self.next_u64() % u64::try_from(CHARS.len()).unwrap_or(1)).unwrap_or(0);
+                let idx = usize::try_from(self.next_u64() % u64::try_from(CHARS.len()).map_or(1, |v| v)).map_or(0, |v| v);
                 char::from(CHARS[idx])
             })
             .collect()
@@ -807,7 +807,7 @@ impl TestDataGenerator {
         if slice.is_empty() {
             return None;
         }
-        let idx = usize::try_from(self.next_u64() % u64::try_from(slice.len()).unwrap_or(1)).unwrap_or(0);
+        let idx = usize::try_from(self.next_u64() % u64::try_from(slice.len()).map_or(1, |v| v)).map_or(0, |v| v);
         slice.get(idx)
     }
 
@@ -817,7 +817,7 @@ impl TestDataGenerator {
             return;
         }
         for i in (1..vec.len()).rev() {
-            let j = usize::try_from(self.next_u64() % u64::try_from(i + 1).unwrap_or(1)).unwrap_or(0);
+            let j = usize::try_from(self.next_u64() % u64::try_from(i + 1).map_or(1, |v| v)).map_or(0, |v| v);
             vec.swap(i, j);
         }
     }
@@ -875,7 +875,7 @@ impl TestContext {
     #[must_use]
     pub fn elapsed_ms(&self) -> u64 {
         let elapsed = Utc::now().signed_duration_since(self.start_time);
-        elapsed.num_milliseconds().try_into().unwrap_or(0)
+        elapsed.num_milliseconds().try_into().map_or(0, |v| v)
     }
 
     /// Create a passing result

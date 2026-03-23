@@ -791,7 +791,7 @@ fn looks_like_flat_answer_entry(value: &serde_json::Value) -> bool {
 }
 
 fn byte_offset_to_location(content: &str, byte_offset: usize) -> ErrorLocation {
-  content.get(..byte_offset).unwrap_or(content).chars().fold(
+  content.get(..byte_offset).map_or(content, |s| s).chars().fold(
     ErrorLocation { line: 1, column: 1 },
     |location, character| {
       if character == '\n' {

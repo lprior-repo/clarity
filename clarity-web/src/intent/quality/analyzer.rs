@@ -270,7 +270,7 @@ pub fn calculate_coverage_score(spec: &Spec) -> u8 {
     score = score.saturating_add(5);
   }
 
-  u8::try_from(score.min(100)).unwrap_or(100)
+  u8::try_from(score.min(100)).map_or(100, |v| v)
 }
 
 /// Calculate clarity score (0-100)
@@ -305,7 +305,7 @@ pub fn calculate_clarity_score(spec: &Spec) -> u8 {
     score = score.saturating_sub(10);
   }
 
-  u8::try_from(score.min(100)).unwrap_or(100)
+  u8::try_from(score.min(100)).map_or(100, |v| v)
 }
 
 /// Calculate testability score (0-100)
@@ -346,7 +346,7 @@ pub fn calculate_testability_score(spec: &Spec) -> u8 {
     score = score.saturating_add(5);
   }
 
-  u8::try_from(score.min(100)).unwrap_or(100)
+  u8::try_from(score.min(100)).map_or(100, |v| v)
 }
 
 /// Calculate AI readiness score (0-100)
@@ -403,7 +403,7 @@ pub fn calculate_ai_readiness_score(spec: &Spec) -> u8 {
     score = score.saturating_add(10);
   }
 
-  u8::try_from(score.min(100)).unwrap_or(100)
+  u8::try_from(score.min(100)).map_or(100, |v| v)
 }
 
 /// Calculate overall score as weighted average
@@ -437,7 +437,7 @@ fn calculate_overall_score_from_values(
     .saturating_add(u16::from(testability).saturating_mul(25))
     .saturating_add(u16::from(ai_readiness).saturating_mul(20));
 
-  u8::try_from(weighted_sum / 100).unwrap_or(100)
+  u8::try_from(weighted_sum / 100).map_or(100, |v| v)
 }
 
 // =============================================================================

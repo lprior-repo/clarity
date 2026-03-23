@@ -314,7 +314,7 @@ fn build_artifact_data(answers: &[Answer]) -> ArtifactData {
   let progress = done
     .saturating_mul(100)
     .checked_div(required)
-    .unwrap_or(0)
+    .map_or(0, |v| v)
     .min(100);
 
   let ears_output = parse_requirements_from_answers(answers);

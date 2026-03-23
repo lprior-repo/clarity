@@ -165,7 +165,7 @@ pub fn SelectValue(props: SelectValueProps) -> Element {
   let display_text = labels
     .get(&selected)
     .cloned()
-    .unwrap_or_else(|| props.placeholder.clone());
+    .map_or_else(|| props.placeholder.clone(), |v| v);
 
   let class_str = if props.class.is_empty() {
     String::new()

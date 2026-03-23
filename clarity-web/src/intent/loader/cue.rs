@@ -99,7 +99,7 @@ pub fn validate_cue_file(path: &Path) -> Result<(), LoaderError> {
 
   // Shell: Convert to our type
   let command_output = CommandOutput::from_raw(
-    output.status.code().unwrap_or(-1),
+    output.status.code().map_or(-1, |v| v),
     String::from_utf8_lossy(&output.stdout).to_string(),
     String::from_utf8_lossy(&output.stderr).to_string(),
   );
@@ -137,7 +137,7 @@ pub fn export_cue_to_json(path: &Path) -> Result<String, LoaderError> {
 
   // Shell: Convert to our type
   let command_output = CommandOutput::from_raw(
-    output.status.code().unwrap_or(-1),
+    output.status.code().map_or(-1, |v| v),
     String::from_utf8_lossy(&output.stdout).to_string(),
     String::from_utf8_lossy(&output.stderr).to_string(),
   );

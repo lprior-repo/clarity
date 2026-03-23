@@ -803,7 +803,7 @@ impl GreatReindexingEngine {
           job_statement,
           source_story_ids: source_ids,
           motivations,
-          priority: 100u8.saturating_sub(u8::try_from(idx * 10).unwrap_or(0)),
+          priority: 100u8.saturating_sub(u8::try_from(idx * 10).map_or(0, |v| v)),
         }
       })
       .collect()
@@ -819,7 +819,7 @@ impl GreatReindexingEngine {
       .strip_prefix("i can ")
       .or_else(|| lower.strip_prefix("to "))
       .or_else(|| lower.strip_prefix("i am able to "))
-      .unwrap_or(&lower);
+      .map_or(&lower, |s| s);
 
     // Capitalize first letter
     let mut result = String::new();

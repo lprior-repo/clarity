@@ -392,15 +392,17 @@ impl ThesisAntithesisGenerator {
         statement
             .split(',')
             .next()
-            .map(|s| {
-                let trimmed = s.trim();
-                if trimmed.len() > 50 {
-                    format!("{}...", &trimmed[..47])
-                } else {
-                    trimmed.to_string()
-                }
-            })
-            .unwrap_or_else(|| statement.to_string())
+            .map_or_else(
+                || statement.to_string(),
+                |s| {
+                    let trimmed = s.trim();
+                    if trimmed.len() > 50 {
+                        format!("{}...", &trimmed[..47])
+                    } else {
+                        trimmed.to_string()
+                    }
+                },
+            )
     }
 
     /// Suggest a validation approach for a failure category.
@@ -442,7 +444,7 @@ impl ThesisAntithesisGenerator {
             .fold(0.0_f64, |acc, p| acc.max(p));
 
         let avg_probability = antitheses.iter().map(|a| a.probability).sum::<f64>()
-            / f64::from(u8::try_from(antitheses.len()).unwrap_or(1));
+            / f64::from(u8::try_from(antitheses.len()).map_or(1, |v| v));
 
         // Combine max and average for risk score
         (max_probability * 0.6 + avg_probability * 0.4).clamp(0.0, 1.0)
@@ -456,7 +458,7 @@ impl ThesisAntithesisGenerator {
         let high_risk: Vec<_> = antitheses
             .iter()
             .filter(|a| a.probability > 0.5)
-            .sorted_by(|a, b| b.probability.partial_cmp(&a.probability).unwrap_or(std::cmp::Ordering::Equal))
+            .sorted_by(|a, b| b.probability.partial_cmp(&a.probability).map_or(std::cmp::Ordering::Equal, |v| v))
             .take(3)
             .collect();
 
@@ -530,8 +532,8 @@ impl ThesisAntithesisGenerator {
             return ValidationStatus::Unvalidated;
         }
 
-        let high_ratio = f64::from(u8::try_from(high_prob_count).unwrap_or(0)) / f64::from(u8::try_from(total).unwrap_or(1));
-        let low_ratio = f64::from(u8::try_from(low_prob_count).unwrap_or(0)) / f64::from(u8::try_from(total).unwrap_or(1));
+        let high_ratio = f64::from(u8::try_from(high_prob_count).map_or(0, |v| v)) / f64::from(u8::try_from(total).map_or(1, |v| v));
+        let low_ratio = f64::from(u8::try_from(low_prob_count).map_or(0, |v| v)) / f64::from(u8::try_from(total).map_or(1, |v| v));
 
         if high_ratio > 0.5 {
             ValidationStatus::Falsified

@@ -269,62 +269,62 @@ fn calculate_completeness(answers: &[Answer], issues: &mut Vec<QualityIssue>) ->
     .count();
 
   // Check for empty required fields
-  for pattern in &required_patterns {
-    let has_answer = answers
+  issues.extend(
+    required_patterns
       .iter()
-      .any(|a| a.step_id.contains(pattern) && !a.value.trim().is_empty());
-
-    if !has_answer {
-      issues.push(QualityIssue::new(
-        QualityDimension::Completeness,
-        IssueSeverity::Error,
-        format!("Missing required field: {pattern}"),
-      ));
-    }
-  }
+      .filter(|pattern| {
+        !answers
+          .iter()
+          .any(|a| a.step_id.contains(*pattern) && !a.value.trim().is_empty())
+      })
+      .map(|pattern| {
+        QualityIssue::new(
+          QualityDimension::Completeness,
+          IssueSeverity::Error,
+          format!("Missing required field: {pattern}"),
+        )
+      }),
+  );
 
   let score = if total_required > 0 {
     u8::try_from(
       filled_count
         .saturating_mul(100)
         .checked_div(total_required)
-        .unwrap_or(0),
+        .map_or(0, |v| v),
     )
-    .unwrap_or(100)
+    .map_or(100, |v| v)
   } else {
     100
   };
 
-  DimensionScore::new(QualityDimension::Completeness, score).unwrap_or_else(|_| DimensionScore {
+  DimensionScore::new(QualityDimension::Completeness, score).map_or_else(|_| DimensionScore {
     dimension: QualityDimension::Completeness,
     score: 0,
-  })
+  }, |v| v)
 }
 
 /// Calculate consistency: detect contradictions
 fn calculate_consistency(answers: &[Answer], issues: &mut Vec<QualityIssue>) -> DimensionScore {
-  let mut contradictions = 0_usize;
   let total_pairs = answers.len().saturating_sub(1);
 
   // Simple contradiction detection: look for negations of similar concepts
   let values: Vec<_> = answers.iter().map(|a| a.value.to_lowercase()).collect();
 
-  for (i, val1) in values.iter().enumerate() {
-    for val2 in values.iter().skip(i + 1) {
-      // Check for contradictory phrases
-      if has_contradiction(val1, val2) {
-        contradictions += 1;
-      }
-    }
-  }
+  let contradictions = values
+    .iter()
+    .enumerate()
+    .flat_map(|(i, val1)| values.iter().skip(i + 1).map(move |val2| (val1, val2)))
+    .filter(|(val1, val2)| has_contradiction(val1, val2))
+    .count();
 
   // Score based on contradiction ratio
   let score = if total_pairs > 0 {
     let contradiction_ratio = contradictions
       .saturating_mul(100)
       .checked_div(total_pairs)
-      .unwrap_or(0);
-    u8::try_from(100_u32.saturating_sub(contradiction_ratio as u32)).unwrap_or(0)
+      .map_or(0, |v| v);
+    u8::try_from(100_u32.saturating_sub(contradiction_ratio as u32)).map_or(0, |v| v)
   } else {
     100
   };
@@ -337,10 +337,10 @@ fn calculate_consistency(answers: &[Answer], issues: &mut Vec<QualityIssue>) -> 
     ));
   }
 
-  DimensionScore::new(QualityDimension::Consistency, score).unwrap_or_else(|_| DimensionScore {
+  DimensionScore::new(QualityDimension::Consistency, score).map_or_else(|_| DimensionScore {
     dimension: QualityDimension::Consistency,
     score: 0,
-  })
+  }, |v| v)
 }
 
 /// Check if two statements contradict each other
@@ -370,17 +370,17 @@ fn calculate_testability(
       IssueSeverity::Error,
       "No EARS requirements defined".to_string(),
     ));
-    return DimensionScore::new(QualityDimension::Testability, 0).unwrap_or_else(|_| {
+    return DimensionScore::new(QualityDimension::Testability, 0).map_or_else(|_| {
       DimensionScore {
         dimension: QualityDimension::Testability,
         score: 0,
       }
-    });
+    }, |v| v);
   }
 
   let with_criteria = ears.iter().filter(|e| e.has_acceptance_criteria).count();
 
-  let score = u8::try_from((with_criteria * 100) / ears.len()).unwrap_or(100);
+  let score = u8::try_from((with_criteria * 100) / ears.len()).map_or(100, |v| v);
 
   let without = ears.len() - with_criteria;
   if without > 0 {
@@ -391,18 +391,14 @@ fn calculate_testability(
     ));
   }
 
-  DimensionScore::new(QualityDimension::Testability, score).unwrap_or_else(|_| DimensionScore {
+  DimensionScore::new(QualityDimension::Testability, score).map_or_else(|_| DimensionScore {
     dimension: QualityDimension::Testability,
     score: 0,
-  })
+  }, |v| v)
 }
 
 /// Calculate clarity: sentence complexity and jargon density
 fn calculate_clarity(answers: &[Answer], issues: &mut Vec<QualityIssue>) -> DimensionScore {
-  let mut total_sentences = 0;
-  let mut complex_sentences = 0_usize;
-  let mut jargon_count = 0;
-
   let jargon_terms = [
     "microservice",
     "kubernetes",
@@ -414,35 +410,44 @@ fn calculate_clarity(answers: &[Answer], issues: &mut Vec<QualityIssue>) -> Dime
     "event-driven",
   ];
 
-  for answer in answers {
-    let text = &answer.value;
+  let (total_sentences, complex_sentences, jargon_count) = answers.iter().fold(
+    (0usize, 0usize, 0usize),
+    |(total_sentences, complex_sentences, jargon_count), answer| {
+      let text = &answer.value;
 
-    // Count sentences (rough heuristic by period/exclamation count)
-    let sentence_count = text.matches(&['.', '!', '?'][..]).count().max(1);
-    total_sentences += sentence_count;
+      // Count sentences (rough heuristic by period/exclamation count)
+      let sentence_count = text.matches(&['.', '!', '?'][..]).count().max(1);
 
-    // Complex sentence: more than 3 commas or 30 words
-    let comma_count = text.matches(',').count();
-    let word_count = text.split_whitespace().count();
+      // Complex sentence: more than 3 commas or 30 words
+      let comma_count = text.matches(',').count();
+      let word_count = text.split_whitespace().count();
 
-    if comma_count > 3 || word_count > 30 {
-      complex_sentences += 1;
-    }
+      // Count jargon terms
+      let lower = text.to_lowercase();
+      let jargon_hits = jargon_terms
+        .iter()
+        .filter(|term| lower.contains(*term))
+        .count();
 
-    // Count jargon terms
-    let lower = text.to_lowercase();
-    jargon_count += jargon_terms
-      .iter()
-      .filter(|term| lower.contains(*term))
-      .count();
-  }
+      (
+        total_sentences + sentence_count,
+        complex_sentences
+          + if comma_count > 3 || word_count > 30 {
+            1
+          } else {
+            0
+          },
+        jargon_count + jargon_hits,
+      )
+    },
+  );
 
   // Score = 100 - (complex_sentence_ratio + jargon_penalty)
   let complex_ratio = if total_sentences > 0 {
     complex_sentences
       .saturating_mul(100)
       .checked_div(total_sentences)
-      .unwrap_or(0)
+      .map_or(0, |v| v)
   } else {
     0
   };
@@ -454,7 +459,7 @@ fn calculate_clarity(answers: &[Answer], issues: &mut Vec<QualityIssue>) -> Dime
       .saturating_sub(complex_ratio as u32)
       .saturating_sub(jargon_penalty as u32),
   )
-  .unwrap_or(0);
+  .map_or(0, |v| v);
 
   if complex_sentences > 0 {
     issues.push(QualityIssue::new(
@@ -472,10 +477,10 @@ fn calculate_clarity(answers: &[Answer], issues: &mut Vec<QualityIssue>) -> Dime
     ));
   }
 
-  DimensionScore::new(QualityDimension::Clarity, score).unwrap_or_else(|_| DimensionScore {
+  DimensionScore::new(QualityDimension::Clarity, score).map_or_else(|_| DimensionScore {
     dimension: QualityDimension::Clarity,
     score: 0,
-  })
+  }, |v| v)
 }
 
 /// Calculate security: auth/encryption/validation mentions
@@ -501,37 +506,40 @@ fn calculate_security(answers: &[Answer], issues: &mut Vec<QualityIssue>) -> Dim
     "injection",
   ];
 
-  let mut mentions = 0;
-  let mut covered_areas = HashSet::new();
+  let matching_keywords: Vec<&str> = answers
+    .iter()
+    .flat_map(|answer| {
+      let lower = answer.value.to_lowercase();
+      security_keywords
+        .iter()
+        .filter_map(move |keyword| lower.contains(*keyword).then_some(*keyword))
+    })
+    .collect();
 
-  for answer in answers {
-    let lower = answer.value.to_lowercase();
-
-    for keyword in &security_keywords {
-      if lower.contains(keyword) {
-        mentions += 1;
-
-        // Categorize into areas
-        if keyword.contains("auth") || keyword.contains("login") || keyword.contains("password") {
-          covered_areas.insert("authentication");
-        }
-        if keyword.contains("encrypt") || keyword.contains("tls") || keyword.contains("ssl") {
-          covered_areas.insert("encryption");
-        }
-        if keyword.contains("validat") || keyword.contains("sanitiz") || keyword.contains("escape")
-        {
-          covered_areas.insert("validation");
-        }
+  let mentions = matching_keywords.len();
+  let covered_areas: HashSet<&'static str> = matching_keywords
+    .iter()
+    .flat_map(|keyword| {
+      let mut areas = Vec::new();
+      if keyword.contains("auth") || keyword.contains("login") || keyword.contains("password") {
+        areas.push("authentication");
       }
-    }
-  }
+      if keyword.contains("encrypt") || keyword.contains("tls") || keyword.contains("ssl") {
+        areas.push("encryption");
+      }
+      if keyword.contains("validat") || keyword.contains("sanitiz") || keyword.contains("escape") {
+        areas.push("validation");
+      }
+      areas
+    })
+    .collect();
 
   // Score based on coverage of security areas
   let coverage_score = covered_areas.len() * 30; // max 90
   let mention_bonus = mentions.min(5) * 2; // max 10
   let total = coverage_score + mention_bonus;
 
-  let score = u8::try_from(total.min(100)).unwrap_or(100);
+  let score = u8::try_from(total.min(100)).map_or(100, |v| v);
 
   if covered_areas.is_empty() {
     issues.push(QualityIssue::new(
@@ -552,10 +560,10 @@ fn calculate_security(answers: &[Answer], issues: &mut Vec<QualityIssue>) -> Dim
     ));
   }
 
-  DimensionScore::new(QualityDimension::Security, score).unwrap_or_else(|_| DimensionScore {
+  DimensionScore::new(QualityDimension::Security, score).map_or_else(|_| DimensionScore {
     dimension: QualityDimension::Security,
     score: 0,
-  })
+  }, |v| v)
 }
 
 #[cfg(test)]

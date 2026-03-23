@@ -3,9 +3,9 @@
 //! Validated identifier types that make illegal states unrepresentable.
 
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 use std::fmt;
 use std::str::FromStr;
+use thiserror::Error;
 
 /// Error type for newtype parsing failures
 #[derive(Debug, Clone, PartialEq, Eq, Error, Serialize, Deserialize)]

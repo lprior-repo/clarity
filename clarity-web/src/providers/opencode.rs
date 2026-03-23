@@ -235,7 +235,7 @@ impl OpenCodeProvider {
       let error_body = response
         .text()
         .await
-        .unwrap_or_else(|e| format!("Failed to read error body: {e}"));
+        .map_or_else(|e| format!("Failed to read error body: {e}"), |v| v);
 
       return Err(Self::map_status_error(status, error_body));
     }
@@ -250,7 +250,7 @@ impl OpenCodeProvider {
     })?;
 
     let extraction = Self::parse_extraction_from_assistant_text(&assistant_text)?;
-    let duration_ms = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
+    let duration_ms = u64::try_from(start.elapsed().as_millis()).map_or(u64::MAX, |v| v);
 
     Ok(self.parse_response(extraction, duration_ms))
   }
@@ -270,7 +270,7 @@ impl OpenCodeProvider {
       let error_body = response
         .text()
         .await
-        .unwrap_or_else(|e| format!("Failed to read error body: {e}"));
+        .map_or_else(|e| format!("Failed to read error body: {e}"), |v| v);
       return Err(Self::map_status_error(status, error_body));
     }
 
@@ -327,13 +327,13 @@ impl OpenCodeProvider {
     context: &ExtractionContext,
     schema: Option<&[SchemaField]>,
   ) -> String {
-    let context_json = serde_json::to_string(context).unwrap_or_else(|_| "{}".to_string());
+    let context_json = serde_json::to_string(context).map_or_else(|_| "{}".to_string(), |v| v);
     let schema_json = schema
       .map(serde_json::to_string)
       .transpose()
       .ok()
       .flatten()
-      .unwrap_or_else(|| "null".to_string());
+      .map_or_else(|| "null".to_string(), |v| v);
 
     format!(
       "Extract structured fields from the input. Return ONLY valid JSON with this exact shape:\n\
@@ -517,7 +517,7 @@ impl OpenCodeProvider {
     let error_body: String = response
       .text()
       .await
-      .unwrap_or_else(|e| format!("Failed to read error body: {e}"));
+      .map_or_else(|e| format!("Failed to read error body: {e}"), |v| v);
 
     Err(Self::map_status_error(status, error_body))
   }

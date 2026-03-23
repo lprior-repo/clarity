@@ -194,7 +194,9 @@ mod tests {
   fn test_feature_validate_too_many_behaviors() {
     let mut feature = Feature::new("test".to_string()).unwrap();
     for i in 0..51 {
-      feature.behaviors.push(Behavior::new(format!("behavior_{}", i)).unwrap());
+      feature
+        .behaviors
+        .push(Behavior::new(format!("behavior_{}", i)).unwrap());
     }
 
     let result = feature.validate();
@@ -209,6 +211,9 @@ mod tests {
     }
 
     let result = feature.validate();
-    assert!(matches!(result, Err(TypeError::TooManyDependencies(_, _, _))));
+    assert!(matches!(
+      result,
+      Err(TypeError::TooManyDependencies(_, _, _))
+    ));
   }
 }

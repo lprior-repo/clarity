@@ -185,9 +185,9 @@ impl VorpScore {
 
         dimensions
             .iter()
-            .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+            .min_by(|a, b| a.1.partial_cmp(&b.1).map_or(std::cmp::Ordering::Equal, |v| v))
             .map(|&(name, score)| (name, score))
-            .unwrap_or(("Value", 0.0))
+            .map_or(("Value", 0.0), |v| v)
     }
 
     /// Get recommendations based on weak dimensions.
@@ -474,7 +474,7 @@ impl PrioritizedItem {
             .iter()
             .map(|(_, s)| s)
             .sum::<f64>()
-            / f64::from(u8::try_from(self.brutal_truth_scores.len()).unwrap_or(4));
+            / f64::from(u8::try_from(self.brutal_truth_scores.len()).map_or(4, |v| v));
         let truth_adj = (truth_avg - 0.5) * 20.0;
 
         // Risk penalty
@@ -491,7 +491,7 @@ impl PrioritizedItem {
             .iter()
             .find(|(t, _)| *t == truth)
             .map(|(_, s)| *s)
-            .unwrap_or(0.0)
+            .map_or(0.0, |v| v)
     }
 
     /// Identify the biggest concern based on brutal truths.
@@ -499,7 +499,7 @@ impl PrioritizedItem {
     pub fn biggest_concern(&self) -> Option<(BrutalTruth, f64)> {
         self.brutal_truth_scores
             .iter()
-            .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+            .min_by(|a, b| a.1.partial_cmp(&b.1).map_or(std::cmp::Ordering::Equal, |v| v))
             .map(|(t, s)| (*t, *s))
     }
 }
@@ -683,9 +683,9 @@ impl BrutalTruthsPrioritizer {
     /// Calculate statistics from prioritized items.
     fn calculate_stats(items: &[PrioritizedItem]) -> BrutalTruthsStats {
         let total = items.len();
-        let avg_priority = items.iter().map(|i| f64::from(i.priority)).sum::<f64>() / f64::from(u8::try_from(total).unwrap_or(1));
-        let avg_vorp = items.iter().map(|i| i.vorp_score.score).sum::<f64>() / f64::from(u8::try_from(total).unwrap_or(1));
-        let avg_risk = items.iter().map(|i| f64::from(i.risk)).sum::<f64>() / f64::from(u8::try_from(total).unwrap_or(1));
+        let avg_priority = items.iter().map(|i| f64::from(i.priority)).sum::<f64>() / f64::from(u8::try_from(total).map_or(1, |v| v));
+        let avg_vorp = items.iter().map(|i| i.vorp_score.score).sum::<f64>() / f64::from(u8::try_from(total).map_or(1, |v| v));
+        let avg_risk = items.iter().map(|i| f64::from(i.risk)).sum::<f64>() / f64::from(u8::try_from(total).map_or(1, |v| v));
 
         BrutalTruthsStats {
             total_items: total,
@@ -706,7 +706,7 @@ impl BrutalTruthsPrioritizer {
                     .iter()
                     .map(|item| item.get_truth_score(truth))
                     .sum::<f64>()
-                    / f64::from(u8::try_from(items.len()).unwrap_or(1));
+                    / f64::from(u8::try_from(items.len()).map_or(1, |v| v));
                 (truth, avg)
             })
             .collect()

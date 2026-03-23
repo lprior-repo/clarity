@@ -355,9 +355,7 @@ pub fn compute_critical_path(beads: &[PlanBead]) -> Vec<String> {
   }
 
   // Process in topological order
-  topological_sort(beads).map_or_else(
-    |_| Vec::new(),
-    |order| {
+  topological_sort(beads).map_or(Vec::new(), |order| {
       // Compute earliest completion time for each bead using dynamic programming
       let mut earliest_completion: HashMap<&str, u32> = HashMap::new();
       let mut predecessor: HashMap<&str, &str> = HashMap::new();
@@ -370,7 +368,7 @@ pub fn compute_critical_path(beads: &[PlanBead]) -> Vec<String> {
             .iter()
             .filter_map(|dep| earliest_completion.get(dep.as_str()).copied())
             .max()
-            .unwrap_or(0);
+            .map_or(0, |v| v);
 
           let completion = max_dep_completion + bead.effort;
           earliest_completion.insert(bead_id.as_str(), completion);
@@ -460,7 +458,7 @@ pub fn compute_parallelism(beads: &[PlanBead]) -> usize {
   }
 
   // Return max count at any level
-  level_counts.values().copied().max().unwrap_or(0)
+  level_counts.values().copied().max().map_or(0, |v| v)
 }
 
 /// Apply topological order to an execution plan

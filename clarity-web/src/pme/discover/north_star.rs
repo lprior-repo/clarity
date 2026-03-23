@@ -828,7 +828,7 @@ impl NorthStarBuilder {
             .min(0.4);
 
         // Penalty for timeline issues
-        let timeline_penalty = f64::from(u8::try_from(timeline_issues.len()).unwrap_or(0)) * 0.05;
+        let timeline_penalty = f64::from(u8::try_from(timeline_issues.len()).map_or(0, |v| v)) * 0.05;
 
         // Bonus for completeness
         let completeness_bonus = {

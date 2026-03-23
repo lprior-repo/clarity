@@ -610,8 +610,8 @@ impl SpecValidator {
           let path = format!("{}.{}", f.name, b.name);
           let priority = BehaviorPriority {
             path: path.clone(),
-            dependent_count: *dependent_count.get(&path).unwrap_or(&0),
-            precondition_count: *precondition_count.get(&path).unwrap_or(&0),
+            dependent_count: dependent_count.get(&path).map_or(0, |v| *v),
+            precondition_count: precondition_count.get(&path).map_or(0, |v| *v),
           };
           acc.push((path, priority));
         }

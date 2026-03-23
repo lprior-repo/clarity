@@ -60,8 +60,6 @@ use crate::providers::{
   ExtractedFields, ExtractionContext, ExtractionError, FieldExtraction, FieldType,
   OpenCodeProviderOptions, SchemaField,
 };
-#[cfg(not(target_arch = "wasm32"))]
-use crate::intent::security::validate_session_id;
 
 /// A planning bead (atomic work unit)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -247,7 +245,7 @@ impl RateLimiter {
   #[allow(dead_code)]
   async fn check_rate_limit(&self, session_id: &str) -> Result<(), u64> {
     let now = Instant::now();
-    let one_minute_ago = now.checked_sub(Duration::from_secs(60)).unwrap_or(now);
+    let one_minute_ago = now.checked_sub(Duration::from_secs(60)).map_or(now, |t| t);
     let mut requests = self.requests.write().await;
     let session_requests = requests
       .entry(session_id.to_string())
@@ -263,7 +261,7 @@ impl RateLimiter {
     }
 
     // Calculate oldest request time to determine retry-after
-    let oldest = session_requests.first().copied().unwrap_or(now);
+    let oldest = session_requests.first().copied().map_or(now, |t| t);
     let elapsed = now.duration_since(oldest).as_secs();
     let retry_after = 60_u64.saturating_sub(elapsed);
     drop(requests);
@@ -408,7 +406,7 @@ fn create_ai_provider_state(
 
 #[cfg(not(target_arch = "wasm32"))]
 fn initialize_ai_provider_state() -> Result<AiProviderState, AiProviderBootstrapError> {
-  let config = load_ai_config_if_present()?.unwrap_or_else(default_config);
+  let config = load_ai_config_if_present()?.map_or_else(default_config, |c| c);
   let input = build_provider_bootstrap_input(config, || uuid::Uuid::new_v4().to_string());
 
   create_ai_provider_state(input)
@@ -671,17 +669,17 @@ fn build_hole_punching_prompt(scenario: &ScenarioField) -> String {
       .hole_punching
       .discovery_hole
       .as_deref()
-      .unwrap_or("Not addressed"),
+      .map_or("Not addressed", |s| s),
     scenario
       .hole_punching
       .edge_case_hole
       .as_deref()
-      .unwrap_or("Not addressed"),
+      .map_or("Not addressed", |s| s),
     scenario
       .hole_punching
       .motivation_dropoff
       .as_deref()
-      .unwrap_or("Not addressed")
+      .map_or("Not addressed", |s| s)
   )
 }
 
@@ -741,7 +739,7 @@ pub async fn extract_fields_server(
   input: String,
   session_id: Option<String>,
 ) -> Result<ExtractedFields, ServerFnError> {
-  let session = session_id.as_deref().unwrap_or("default");
+  let session = session_id.as_deref().map_or("default", |s| s);
 
   // Check rate limit
   check_rate_limit_for_session(session, "extract_fields_server").await?;
@@ -796,7 +794,7 @@ pub async fn suggest_field_server(
   context: ExtractionContext,
   session_id: Option<String>,
 ) -> Result<String, ServerFnError> {
-  let session = session_id.as_deref().unwrap_or("default");
+  let session = session_id.as_deref().map_or("default", |s| s);
 
   // Check rate limit
   check_rate_limit_for_session(session, "suggest_field_server").await?;
@@ -819,7 +817,7 @@ pub async fn suggest_field_server(
       .as_object()
       .and_then(|o| o.get("prior_answers"))
       .and_then(|v| v.as_str())
-      .unwrap_or("")
+      .map_or("", |s| s)
   );
 
   // Call provider
@@ -838,9 +836,10 @@ pub async fn suggest_field_server(
         .map(|s| s.trim_matches('"').to_string())
         .ok()
     })
-    .unwrap_or_else(|| {
-      format!("Suggestion for {field:?} field based on your context. Please review and edit.")
-    });
+    .map_or_else(
+      || format!("Suggestion for {field:?} field based on your context. Please review and edit."),
+      |s| s,
+    );
 
   info!(
     session,
@@ -869,7 +868,7 @@ pub async fn calculate_quality_server(
   ears: Option<Vec<EarsRequirementRef>>,
   session_id: Option<String>,
 ) -> Result<QualityScore, ServerFnError> {
-  let session = session_id.as_deref().unwrap_or("default");
+  let session = session_id.as_deref().map_or("default", |s| s);
 
   // Rate limit quality calculations (they're lightweight but we track them)
   match RATE_LIMITER.check_rate_limit(session).await {
@@ -967,7 +966,7 @@ pub async fn validate_straw_man_traps_server(
   persona_text: String,
   session_id: Option<String>,
 ) -> Result<StrawManValidation, ServerFnError> {
-  let session = session_id.as_deref().unwrap_or("default");
+  let session = session_id.as_deref().map_or("default", |s| s);
 
   // Check rate limit
   check_rate_limit_for_session(session, "validate_straw_man_traps_server").await?;
@@ -1078,33 +1077,21 @@ pub async fn validate_straw_man_traps_server(
     .map_err(map_extraction_error)?;
 
   // Parse detected traps from response
-  let mut traps_detected = Vec::new();
-
-  for field in &result.fields {
-    match field.name.as_str() {
-      "irrational_actor_detected" => {
-        if field.value.as_bool() == Some(true) {
-          traps_detected.push(StrawManTrap::IrrationalActor);
-        }
+  let traps_detected: Vec<StrawManTrap> = result
+    .fields
+    .iter()
+    .filter_map(|field| match field.name.as_str() {
+      "irrational_actor_detected" if field.value.as_bool() == Some(true) => {
+        Some(StrawManTrap::IrrationalActor)
       }
-      "manic_pixie_dream_user_detected" => {
-        if field.value.as_bool() == Some(true) {
-          traps_detected.push(StrawManTrap::ManicPixieDreamUser);
-        }
+      "manic_pixie_dream_user_detected" if field.value.as_bool() == Some(true) => {
+        Some(StrawManTrap::ManicPixieDreamUser)
       }
-      "stoic_monk_detected" => {
-        if field.value.as_bool() == Some(true) {
-          traps_detected.push(StrawManTrap::StoicMonk);
-        }
-      }
-      "your_clone_detected" => {
-        if field.value.as_bool() == Some(true) {
-          traps_detected.push(StrawManTrap::YourClone);
-        }
-      }
-      _ => {}
-    }
-  }
+      "stoic_monk_detected" if field.value.as_bool() == Some(true) => Some(StrawManTrap::StoicMonk),
+      "your_clone_detected" if field.value.as_bool() == Some(true) => Some(StrawManTrap::YourClone),
+      _ => None,
+    })
+    .collect();
 
   // Create validation result
   let validation = StrawManValidation::new(traps_detected.clone());
@@ -1166,7 +1153,7 @@ pub async fn validate_hole_punching_server(
   scenario: ScenarioField,
   session_id: Option<String>,
 ) -> Result<HolePunchingResults, ServerFnError> {
-  let session = session_id.as_deref().unwrap_or("default");
+  let session = session_id.as_deref().map_or("default", |s| s);
 
   // Check rate limit
   check_rate_limit_for_session(session, "validate_hole_punching_server").await?;
@@ -1190,33 +1177,28 @@ pub async fn validate_hole_punching_server(
     .map_err(map_extraction_error)?;
 
   // Parse hole addressing status from response
-  let mut discovery_hole = scenario.hole_punching.discovery_hole.clone();
-  let mut edge_case_hole = scenario.hole_punching.edge_case_hole.clone();
-  let mut motivation_dropoff = scenario.hole_punching.motivation_dropoff.clone();
-
-  for field in &result.fields {
-    match field.name.as_str() {
-      "discovery_hole_addressed" => {
-        if field.value.as_bool() == Some(true) {
-          // Mark as addressed if not already set
-          if discovery_hole.is_none() {
-            discovery_hole = Some("Addressed in scenario".to_string());
-          }
+  let (discovery_hole, edge_case_hole, motivation_dropoff) = result.fields.iter().fold(
+    (
+      scenario.hole_punching.discovery_hole.clone(),
+      scenario.hole_punching.edge_case_hole.clone(),
+      scenario.hole_punching.motivation_dropoff.clone(),
+    ),
+    |(dh, eh, md), field| {
+      let is_true = field.value.as_bool() == Some(true);
+      match field.name.as_str() {
+        "discovery_hole_addressed" if is_true && dh.is_none() => {
+          (Some("Addressed in scenario".to_string()), eh, md)
         }
-      }
-      "edge_case_hole_addressed" => {
-        if field.value.as_bool() == Some(true) && edge_case_hole.is_none() {
-          edge_case_hole = Some("Addressed in scenario".to_string());
+        "edge_case_hole_addressed" if is_true && eh.is_none() => {
+          (dh, Some("Addressed in scenario".to_string()), md)
         }
-      }
-      "motivation_dropoff_addressed" => {
-        if field.value.as_bool() == Some(true) && motivation_dropoff.is_none() {
-          motivation_dropoff = Some("Addressed in scenario".to_string());
+        "motivation_dropoff_addressed" if is_true && md.is_none() => {
+          (dh, eh, Some("Addressed in scenario".to_string()))
         }
+        _ => (dh, eh, md),
       }
-      _ => {}
-    }
-  }
+    },
+  );
 
   // Create hole punching results
   let hole_results = HolePunchingResults {
@@ -1273,7 +1255,7 @@ pub async fn validate_antithesis(
   points: [String; 3],
   session_id: Option<String>,
 ) -> Result<AntithesisValidation, ServerFnError> {
-  let session = session_id.as_deref().unwrap_or("default");
+  let session = session_id.as_deref().map_or("default", |s| s);
 
   // Check rate limit
   match RATE_LIMITER.check_rate_limit(session).await {
@@ -1369,7 +1351,7 @@ fn calculate_specificity(text: &str) -> f64 {
 
   // Base score from word count (capped at 1.0)
   let bounded_word_count = word_count.min(20);
-  let bounded_word_count = u8::try_from(bounded_word_count).unwrap_or(20);
+  let bounded_word_count = u8::try_from(bounded_word_count).map_or(20, |v| v);
   let base = f64::from(bounded_word_count) / 20.0;
 
   // Boosts for specificity indicators
@@ -1403,7 +1385,7 @@ pub async fn validate_vorp(
   possible: String,
   session_id: Option<String>,
 ) -> Result<VorpValidation, ServerFnError> {
-  let session = session_id.as_deref().unwrap_or("default");
+  let session = session_id.as_deref().map_or("default", |s| s);
 
   // Check rate limit
   match RATE_LIMITER.check_rate_limit(session).await {
@@ -1448,7 +1430,7 @@ fn validate_v_dimension(text: &str) -> f64 {
     || text.to_lowercase().contains("increase");
 
   let bounded_word_count = word_count.min(15);
-  let bounded_word_count = u8::try_from(bounded_word_count).unwrap_or(15);
+  let bounded_word_count = u8::try_from(bounded_word_count).map_or(15, |v| v);
   let base = f64::from(bounded_word_count) / 15.0;
   let boost = if has_quantified_benefit { 0.2 } else { 0.0 };
 
@@ -1466,7 +1448,7 @@ fn validate_o_dimension(text: &str) -> f64 {
     || text.to_lowercase().contains("clear");
 
   let bounded_word_count = word_count.min(15);
-  let bounded_word_count = u8::try_from(bounded_word_count).unwrap_or(15);
+  let bounded_word_count = u8::try_from(bounded_word_count).map_or(15, |v| v);
   let base = f64::from(bounded_word_count) / 15.0;
   let boost = if mentions_immediate { 0.2 } else { 0.0 };
 
@@ -1485,7 +1467,7 @@ fn validate_r_dimension(text: &str) -> f64 {
     || text.chars().any(char::is_numeric);
 
   let bounded_word_count = word_count.min(15);
-  let bounded_word_count = u8::try_from(bounded_word_count).unwrap_or(15);
+  let bounded_word_count = u8::try_from(bounded_word_count).map_or(15, |v| v);
   let base = f64::from(bounded_word_count) / 15.0;
   let boost = if has_evidence { 0.2 } else { 0.0 };
 
@@ -1503,7 +1485,7 @@ fn validate_p_dimension(text: &str) -> f64 {
     || text.to_lowercase().contains("skill");
 
   let bounded_word_count = word_count.min(15);
-  let bounded_word_count = u8::try_from(bounded_word_count).unwrap_or(15);
+  let bounded_word_count = u8::try_from(bounded_word_count).map_or(15, |v| v);
   let base = f64::from(bounded_word_count) / 15.0;
   let boost = if mentions_resources { 0.2 } else { 0.0 };
 
@@ -1531,7 +1513,7 @@ pub async fn validate_hole_punching_v2(
   motivation_dropoff: Option<String>,
   session_id: Option<String>,
 ) -> Result<HolePunchingValidation, ServerFnError> {
-  let session = session_id.as_deref().unwrap_or("default");
+  let session = session_id.as_deref().map_or("default", |s| s);
 
   // Check rate limit
   match RATE_LIMITER.check_rate_limit(session).await {
@@ -1591,7 +1573,7 @@ pub async fn extract_ears(
   transcript: InterrogationTranscript,
   session_id: Option<String>,
 ) -> Result<EarsExtraction, ServerFnError> {
-  let session = session_id.as_deref().unwrap_or("default");
+  let session = session_id.as_deref().map_or("default", |s| s);
 
   // Check rate limit
   match RATE_LIMITER.check_rate_limit(session).await {
@@ -1606,37 +1588,16 @@ pub async fn extract_ears(
     }
   }
 
-  let mut requirements = Vec::new();
-
-  // Extract from problem statement
-  if !transcript.problem.content.is_empty() {
-    requirements.extend(extract_ears_from_text(
-      &transcript.problem.content,
-      "problem",
-    ));
-  }
-
-  // Extract from solution
-  if !transcript.solution.content.is_empty() {
-    requirements.extend(extract_ears_from_text(
-      &transcript.solution.content,
-      "solution",
-    ));
-  }
-
-  // Extract from scenario
-  if !transcript.scenario.trigger.is_empty() {
-    requirements.extend(extract_ears_from_text(
-      &transcript.scenario.trigger,
-      "scenario.trigger",
-    ));
-  }
-  if !transcript.scenario.value_moment.is_empty() {
-    requirements.extend(extract_ears_from_text(
-      &transcript.scenario.value_moment,
-      "scenario.value_moment",
-    ));
-  }
+  let requirements = [
+    (&transcript.problem.content, "problem"),
+    (&transcript.solution.content, "solution"),
+    (&transcript.scenario.trigger, "scenario.trigger"),
+    (&transcript.scenario.value_moment, "scenario.value_moment"),
+  ]
+  .into_iter()
+  .filter(|(content, _)| !content.is_empty())
+  .flat_map(|(content, section)| extract_ears_from_text(content, section))
+  .collect();
 
   let extraction = EarsExtraction::new(requirements);
 
@@ -1654,56 +1615,62 @@ pub async fn extract_ears(
 #[cfg(not(target_arch = "wasm32"))]
 #[allow(dead_code)]
 fn extract_ears_from_text(text: &str, source_section: &str) -> Vec<ExtractedEarsRequirement> {
-  let mut requirements = Vec::new();
   let sentences: Vec<&str> = text.split(&['.', '!', '?'][..]).collect();
 
-  // Look for EARS patterns
-  for (i, sentence) in sentences.iter().enumerate() {
-    let sentence_lower = sentence.to_lowercase();
+  let detected: Vec<ExtractedEarsRequirement> = sentences
+    .iter()
+    .enumerate()
+    .filter_map(|(i, sentence)| {
+      let sentence_lower = sentence.to_lowercase();
 
-    let pattern = if sentence_lower.contains("shall not") || sentence_lower.contains("must not") {
-      Some(EarsPattern::Unwanted)
-    } else if sentence_lower.contains("when ") || sentence_lower.contains("if ") {
-      Some(EarsPattern::EventDriven)
-    } else if sentence_lower.contains("while ") || sentence_lower.contains("during ") {
-      Some(EarsPattern::StateDriven)
-    } else if sentence_lower.contains("shall ")
-      || sentence_lower.contains("must ")
-      || sentence_lower.contains("will ")
-    {
-      Some(EarsPattern::Ubiquitous)
-    } else {
-      None
-    };
+      let pattern = if sentence_lower.contains("shall not") || sentence_lower.contains("must not") {
+        Some(EarsPattern::Unwanted)
+      } else if sentence_lower.contains("when ") || sentence_lower.contains("if ") {
+        Some(EarsPattern::EventDriven)
+      } else if sentence_lower.contains("while ") || sentence_lower.contains("during ") {
+        Some(EarsPattern::StateDriven)
+      } else if sentence_lower.contains("shall ")
+        || sentence_lower.contains("must ")
+        || sentence_lower.contains("will ")
+      {
+        Some(EarsPattern::Ubiquitous)
+      } else {
+        None
+      };
 
-    if let Some(p) = pattern {
-      let trimmed = sentence.trim();
-      if !trimmed.is_empty() {
-        requirements.push(ExtractedEarsRequirement::new(
-          format!("{source_section}-{i}"),
-          trimmed.to_string(),
-          p,
-          source_section.to_string(),
-        ));
-      }
-    }
-  }
+      pattern.and_then(|p| {
+        let trimmed = sentence.trim();
+        if trimmed.is_empty() {
+          None
+        } else {
+          Some(ExtractedEarsRequirement::new(
+            format!("{source_section}-{i}"),
+            trimmed.to_string(),
+            p,
+            source_section.to_string(),
+          ))
+        }
+      })
+    })
+    .collect();
 
   // Also check for keywords indicating requirements
   let lower = text.to_lowercase();
-  if lower.contains("require") || lower.contains("need") || lower.contains("should") {
-    // Add as ubiquitous if no specific pattern found and sentence is substantive
-    if requirements.is_empty() && text.len() > 20 {
-      requirements.push(ExtractedEarsRequirement::new(
+  let has_keyword = lower.contains("require") || lower.contains("need") || lower.contains("should");
+
+  if has_keyword && detected.is_empty() && text.len() > 20 {
+    detected
+      .into_iter()
+      .chain(std::iter::once(ExtractedEarsRequirement::new(
         format!("{source_section}-implicit"),
         text.trim().to_string(),
         EarsPattern::Ubiquitous,
         source_section.to_string(),
-      ));
-    }
+      )))
+      .collect()
+  } else {
+    detected
   }
-
-  requirements
 }
 
 /// Compile transcript to 16-section KIRK contract (bd-l1qq)
@@ -1725,7 +1692,7 @@ pub async fn compile_to_kirk(
   transcript: InterrogationTranscript,
   session_id: Option<String>,
 ) -> Result<KirkContract16, ServerFnError> {
-  let session = session_id.as_deref().unwrap_or("default");
+  let session = session_id.as_deref().map_or("default", |s| s);
 
   // Check rate limit
   match RATE_LIMITER.check_rate_limit(session).await {
@@ -1740,30 +1707,7 @@ pub async fn compile_to_kirk(
     }
   }
 
-  let mut contract = KirkContract16::new();
-
-  // Section 0: Original Prompt
-  contract = contract
-    .with_section_content(0, transcript.original_prompt.clone())
-    .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 0")))?;
-
-  // Section 1: Problem Statement
-  contract = contract
-    .with_section_content(1, transcript.problem.content.clone())
-    .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 1")))?;
-
-  // Section 2: Antithesis Points
-  let antithesis_content = transcript.antithesis.points.join("\n\n");
-  contract = contract
-    .with_section_content(2, antithesis_content)
-    .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 2")))?;
-
-  // Section 3: Target Persona
-  contract = contract
-    .with_section_content(3, transcript.persona.content.clone())
-    .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 3")))?;
-
-  // Section 4: Straw Man Validation
+  // Build section content pairs
   let straw_man_content = if transcript.straw_man_validation.passed {
     "Passed - No straw man traps detected".to_string()
   } else {
@@ -1772,62 +1716,7 @@ pub async fn compile_to_kirk(
       transcript.straw_man_validation.traps_detected
     )
   };
-  contract = contract
-    .with_section_content(4, straw_man_content)
-    .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 4")))?;
 
-  // Section 5: Solution Description
-  contract = contract
-    .with_section_content(5, transcript.solution.content.clone())
-    .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 5")))?;
-
-  // Section 6: VORP Justification
-  contract = contract
-    .with_section_content(6, transcript.vorp_justification.clone())
-    .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 6")))?;
-
-  // Section 7: Non-Persona
-  contract = contract
-    .with_section_content(7, transcript.nonpersona.content.clone())
-    .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 7")))?;
-
-  // Section 8: Scenario Trigger
-  contract = contract
-    .with_section_content(8, transcript.scenario.trigger.clone())
-    .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 8")))?;
-
-  // Section 9: Scenario Value Moment
-  contract = contract
-    .with_section_content(9, transcript.scenario.value_moment.clone())
-    .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 9")))?;
-
-  // Section 10: Scenario Feeling
-  contract = contract
-    .with_section_content(10, transcript.scenario.feeling.clone())
-    .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 10")))?;
-
-  // Section 11: Discovery Hole
-  if let Some(ref discovery) = transcript.scenario.hole_punching.discovery_hole {
-    contract = contract
-      .with_section_content(11, discovery.clone())
-      .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 11")))?;
-  }
-
-  // Section 12: Edge Case Hole
-  if let Some(ref edge_case) = transcript.scenario.hole_punching.edge_case_hole {
-    contract = contract
-      .with_section_content(12, edge_case.clone())
-      .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 12")))?;
-  }
-
-  // Section 13: Motivation Drop-off
-  if let Some(ref motivation) = transcript.scenario.hole_punching.motivation_dropoff {
-    contract = contract
-      .with_section_content(13, motivation.clone())
-      .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 13")))?;
-  }
-
-  // Section 14: EARS Requirements (extracted)
   let ears_extraction = extract_ears_from_text(&transcript.problem.content, "problem")
     .into_iter()
     .chain(extract_ears_from_text(
@@ -1838,11 +1727,6 @@ pub async fn compile_to_kirk(
     .collect::<Vec<_>>()
     .join("\n\n");
 
-  contract = contract
-    .with_section_content(14, ears_extraction)
-    .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 14")))?;
-
-  // Section 15: Compilation Metadata
   let metadata = serde_json::json!({
       "compiled_at": chrono::Utc::now().to_rfc3339(),
       "schema_version": "1.0.0",
@@ -1851,9 +1735,51 @@ pub async fn compile_to_kirk(
   })
   .to_string();
 
-  contract = contract
-    .with_section_content(15, metadata)
-    .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section 15")))?;
+  let required_sections: [(usize, String); 11] = [
+    (0, transcript.original_prompt.clone()),
+    (1, transcript.problem.content.clone()),
+    (2, transcript.antithesis.points.join("\n\n")),
+    (3, transcript.persona.content.clone()),
+    (4, straw_man_content),
+    (5, transcript.solution.content.clone()),
+    (6, transcript.vorp_justification.clone()),
+    (7, transcript.nonpersona.content.clone()),
+    (8, transcript.scenario.trigger.clone()),
+    (9, transcript.scenario.value_moment.clone()),
+    (10, transcript.scenario.feeling.clone()),
+  ];
+
+  let optional_sections: [Option<(usize, String)>; 5] = [
+    transcript
+      .scenario
+      .hole_punching
+      .discovery_hole
+      .clone()
+      .map(|c| (11, c)),
+    transcript
+      .scenario
+      .hole_punching
+      .edge_case_hole
+      .clone()
+      .map(|c| (12, c)),
+    transcript
+      .scenario
+      .hole_punching
+      .motivation_dropoff
+      .clone()
+      .map(|c| (13, c)),
+    Some((14, ears_extraction)),
+    Some((15, metadata)),
+  ];
+
+  let contract = required_sections
+    .into_iter()
+    .chain(optional_sections.into_iter().flatten())
+    .try_fold(KirkContract16::new(), |contract, (section, content)| {
+      contract
+        .with_section_content(section, content)
+        .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section {}", section)))
+    })?;
 
   info!(
     session,
@@ -1979,8 +1905,10 @@ mod integration_tests {
       extra: json!({"test": "value"}),
     };
 
-    let serialized = serde_json::to_string(&context).unwrap_or_else(|e| panic!("serialization error: {}", e));
-    let deserialized: ExtractionContext = serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
+    let serialized =
+      serde_json::to_string(&context).unwrap_or_else(|e| panic!("serialization error: {}", e));
+    let deserialized: ExtractionContext =
+      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
 
     assert_eq!(deserialized.document_type, context.document_type);
     assert_eq!(deserialized.locale, context.locale);
@@ -1990,8 +1918,10 @@ mod integration_tests {
   #[test]
   fn test_field_type_serialization() {
     let field_type = FieldType::TextArea;
-    let serialized = serde_json::to_string(&field_type).unwrap_or_else(|e| panic!("serialization error: {}", e));
-    let deserialized: FieldType = serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
+    let serialized =
+      serde_json::to_string(&field_type).unwrap_or_else(|e| panic!("serialization error: {}", e));
+    let deserialized: FieldType =
+      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
 
     assert_eq!(deserialized, field_type);
   }
@@ -2017,8 +1947,10 @@ mod integration_tests {
       },
     };
 
-    let serialized = serde_json::to_string(&fields).unwrap_or_else(|e| panic!("serialization error: {}", e));
-    let deserialized: ExtractedFields = serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
+    let serialized =
+      serde_json::to_string(&fields).unwrap_or_else(|e| panic!("serialization error: {}", e));
+    let deserialized: ExtractedFields =
+      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
 
     assert_eq!(deserialized.fields.len(), fields.fields.len());
     assert_eq!(deserialized.fields[0].name, "problem");
@@ -2039,8 +1971,10 @@ mod integration_tests {
       issues: vec![],
     };
 
-    let serialized = serde_json::to_string(&score).unwrap_or_else(|e| panic!("serialization error: {}", e));
-    let deserialized: QualityScore = serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
+    let serialized =
+      serde_json::to_string(&score).unwrap_or_else(|e| panic!("serialization error: {}", e));
+    let deserialized: QualityScore =
+      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
 
     assert_eq!(deserialized.overall, 85);
     assert_eq!(deserialized.dimensions.len(), 1);
@@ -2056,8 +1990,10 @@ mod integration_tests {
       has_acceptance_criteria: true,
     };
 
-    let serialized = serde_json::to_string(&ears).unwrap_or_else(|e| panic!("serialization error: {}", e));
-    let deserialized: EarsRequirementRef = serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
+    let serialized =
+      serde_json::to_string(&ears).unwrap_or_else(|e| panic!("serialization error: {}", e));
+    let deserialized: EarsRequirementRef =
+      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
 
     assert_eq!(deserialized.id, "req-1");
     assert_eq!(deserialized.text, "User shall authenticate");
@@ -2073,8 +2009,10 @@ mod integration_tests {
       timestamp: "2024-01-01T00:00:00Z".to_string(),
     };
 
-    let serialized = serde_json::to_string(&answer).unwrap_or_else(|e| panic!("serialization error: {}", e));
-    let deserialized: QualityAnswer = serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
+    let serialized =
+      serde_json::to_string(&answer).unwrap_or_else(|e| panic!("serialization error: {}", e));
+    let deserialized: QualityAnswer =
+      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
 
     assert_eq!(deserialized.step_id, "user_goal");
     assert_eq!(deserialized.value, "Users want to complete tasks quickly");
@@ -2090,8 +2028,10 @@ mod integration_tests {
       routing_provider: Some("zai-coding-plan".to_string()),
     };
 
-    let serialized = serde_json::to_string(&diagnostics).unwrap_or_else(|e| panic!("serialization error: {}", e));
-    let deserialized: AiProviderDiagnostics = serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
+    let serialized =
+      serde_json::to_string(&diagnostics).unwrap_or_else(|e| panic!("serialization error: {}", e));
+    let deserialized: AiProviderDiagnostics =
+      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
 
     assert_eq!(deserialized.provider, "opencode");
     assert_eq!(deserialized.endpoint, "https://api.opencode.ai/v1");
@@ -2377,8 +2317,7 @@ mod integration_tests {
       session_id: "session-123".to_string(),
     };
 
-    let state = create_ai_provider_state(input)
-      .expect("provider should initialize");
+    let state = create_ai_provider_state(input).expect("provider should initialize");
 
     assert_eq!(state.diagnostics.provider, "opencode");
     assert_eq!(state.diagnostics.endpoint, "https://api.opencode.ai/v1");
@@ -2400,8 +2339,10 @@ mod integration_tests {
       inverted_count: 5,
     };
 
-    let serialized = serde_json::to_string(&inversion).unwrap_or_else(|e| panic!("serialization error: {}", e));
-    let deserialized: InversionControl = serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
+    let serialized =
+      serde_json::to_string(&inversion).unwrap_or_else(|e| panic!("serialization error: {}", e));
+    let deserialized: InversionControl =
+      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
 
     assert!(deserialized.has_inversion_tests);
     assert_eq!(deserialized.inverted_count, 5);
@@ -2415,8 +2356,10 @@ mod integration_tests {
     let validation =
       StrawManValidation::new(vec![StrawManTrap::IrrationalActor, StrawManTrap::YourClone]);
 
-    let serialized = serde_json::to_string(&validation).unwrap_or_else(|e| panic!("serialization error: {}", e));
-    let deserialized: StrawManValidation = serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
+    let serialized =
+      serde_json::to_string(&validation).unwrap_or_else(|e| panic!("serialization error: {}", e));
+    let deserialized: StrawManValidation =
+      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
 
     assert_eq!(deserialized.traps_detected.len(), 2);
     assert!(!deserialized.passed);
@@ -2435,8 +2378,10 @@ mod integration_tests {
       StrawManTrap::StoicMonk,
       StrawManTrap::YourClone,
     ] {
-      let serialized = serde_json::to_string(&trap).unwrap_or_else(|e| panic!("serialization error: {}", e));
-      let deserialized: StrawManTrap = serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
+      let serialized =
+        serde_json::to_string(&trap).unwrap_or_else(|e| panic!("serialization error: {}", e));
+      let deserialized: StrawManTrap = serde_json::from_str(&serialized)
+        .unwrap_or_else(|e| panic!("deserialization error: {}", e));
       assert_eq!(trap, deserialized);
     }
   }
@@ -2481,8 +2426,10 @@ mod integration_tests {
       motivation_dropoff: None,
     };
 
-    let serialized = serde_json::to_string(&results).unwrap_or_else(|e| panic!("serialization error: {}", e));
-    let deserialized: HolePunchingResults = serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
+    let serialized =
+      serde_json::to_string(&results).unwrap_or_else(|e| panic!("serialization error: {}", e));
+    let deserialized: HolePunchingResults =
+      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
 
     assert_eq!(deserialized.discovery_hole, results.discovery_hole);
     assert_eq!(deserialized.edge_case_hole, results.edge_case_hole);
@@ -2503,8 +2450,10 @@ mod integration_tests {
       },
     };
 
-    let serialized = serde_json::to_string(&scenario).unwrap_or_else(|e| panic!("serialization error: {}", e));
-    let deserialized: ScenarioField = serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
+    let serialized =
+      serde_json::to_string(&scenario).unwrap_or_else(|e| panic!("serialization error: {}", e));
+    let deserialized: ScenarioField =
+      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
 
     assert_eq!(deserialized.trigger, "User sees error");
     assert_eq!(deserialized.value_moment, "Quick fix");
@@ -2821,6 +2770,9 @@ mod integration_tests {
     // Test that validation rejects empty session_id
     // Server functions should call this validation
     let empty_result = validate_session_id("");
-    assert!(empty_result.is_err(), "Empty session must be rejected by validation");
+    assert!(
+      empty_result.is_err(),
+      "Empty session must be rejected by validation"
+    );
   }
 }

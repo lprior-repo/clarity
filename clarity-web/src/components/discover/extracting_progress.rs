@@ -73,12 +73,12 @@ pub fn ExtractingProgress(props: ExtractingProgressProps) -> Element {
   );
 
   // Get status text
-  let status_text = message.unwrap_or_else(|| match status {
+  let status_text = message.map_or_else(|| match status {
     ExtractionStatus::Idle => "Ready to extract".to_string(),
     ExtractionStatus::Extracting => "Extracting fields...".to_string(),
     ExtractionStatus::Complete => "Extraction complete!".to_string(),
     ExtractionStatus::Failed => "Extraction failed".to_string(),
-  });
+  }, |v| v);
 
   // Calculate progress bar width
   let progress_width = format!("{clamped_progress}%");

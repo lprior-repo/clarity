@@ -894,13 +894,13 @@ fn extract_url_pattern(s: &str) -> Option<String> {
   // Find the end of the URL - stop at common delimiters
   let end = rest
     .find(|c: char| c.is_whitespace() || c == ',' || c == ')' || c == ']' || c == '}')
-    .unwrap_or(rest.len());
+    .map_or(rest.len(), |v| v);
 
   let url = &rest[..end];
 
   // Strip trailing period - it's likely sentence punctuation, not part of URL
   // (URLs can technically end with a period, but this is rare in practice)
-  let url = url.strip_suffix('.').unwrap_or(url);
+  let url = url.strip_suffix('.').map_or(url, |s| s);
 
   Some(url.to_string())
 }
@@ -936,12 +936,12 @@ fn extract_email_pattern(s: &str) -> Option<&str> {
   let rest = &s[at_pos..];
   let end_offset = rest
     .find(|c: char| c.is_whitespace() || c == '>' || c == ')' || c == ']' || c == ',')
-    .unwrap_or(rest.len());
+    .map_or(rest.len(), |v| v);
 
   let email = &s[start..at_pos + end_offset];
 
   // Strip trailing period if present (likely end of sentence, not part of email)
-  let email = email.strip_suffix('.').unwrap_or(email);
+  let email = email.strip_suffix('.').map_or(email, |s| s);
 
   Some(email)
 }

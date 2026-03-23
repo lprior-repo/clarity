@@ -314,7 +314,7 @@ fn resolve_from_body(
     body.ok_or_else(|| InterpolationError::VariableNotFound(format!("{body_name}.body")))?;
 
   // Handle "body" prefix in path
-  let actual_path = path.strip_prefix("body.").unwrap_or(path);
+  let actual_path = path.strip_prefix("body.").map_or(path, |v| v);
 
   if actual_path.is_empty() || actual_path == "body" {
     // Return the entire body as JSON string

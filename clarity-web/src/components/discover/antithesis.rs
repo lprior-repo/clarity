@@ -77,7 +77,7 @@ impl AntithesisResponse {
       .sum();
 
     // Average the 3 point scores (each max 100) to get overall score
-    u8::try_from(total_score / 3).unwrap_or(0)
+    u8::try_from(total_score / 3).map_or(0, |v| v)
   }
 
   /// Score a single antithesis point from 0-100.

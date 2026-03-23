@@ -111,13 +111,22 @@ impl Spec {
   /// Returns appropriate `TypeError` variant if validation fails
   pub fn validate(&self) -> Result<(), TypeError> {
     if self.features.len() > MAX_FEATURES {
-      return Err(TypeError::TooManyFeatures(self.features.len(), MAX_FEATURES));
+      return Err(TypeError::TooManyFeatures(
+        self.features.len(),
+        MAX_FEATURES,
+      ));
     }
     if self.invariants.len() > MAX_INVARIANTS {
-      return Err(TypeError::TooManyInvariants(self.invariants.len(), MAX_INVARIANTS));
+      return Err(TypeError::TooManyInvariants(
+        self.invariants.len(),
+        MAX_INVARIANTS,
+      ));
     }
     if self.anti_patterns.len() > MAX_ANTI_PATTERNS {
-      return Err(TypeError::TooManyAntiPatterns(self.anti_patterns.len(), MAX_ANTI_PATTERNS));
+      return Err(TypeError::TooManyAntiPatterns(
+        self.anti_patterns.len(),
+        MAX_ANTI_PATTERNS,
+      ));
     }
     let mut seen_features: HashSet<&str> = HashSet::new();
     for feature in &self.features {

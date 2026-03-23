@@ -381,16 +381,15 @@ fn generate_gap_summary(gaps: &[DetectedGap], overall_coverage: u8) -> String {
 /// Complete gap analysis with detected gaps and coverage scores
 #[must_use]
 pub fn detect_gaps(requirements: &[&str]) -> GapAnalysis {
-  let mut gaps = Vec::new();
-  let mut category_coverage = Vec::new();
-  let mut gap_id = 0;
-
-  // Analyze each category
-  for category in GapCategory::all() {
-    let (coverage, category_gaps) = analyze_category(category, requirements, &mut gap_id);
-    category_coverage.push((category, coverage));
-    gaps.extend(category_gaps);
-  }
+  let (category_coverage, gaps, _) = GapCategory::all().iter().fold(
+    (Vec::new(), Vec::new(), 0usize),
+    |(mut coverage, mut gaps, mut gap_id), category| {
+      let (cov, cat_gaps) = analyze_category(*category, requirements, &mut gap_id);
+      coverage.push((*category, cov));
+      gaps.extend(cat_gaps);
+      (coverage, gaps, gap_id)
+    },
+  );
 
   GapAnalysis::new(gaps, category_coverage)
 }
@@ -405,15 +404,13 @@ fn analyze_category(
 
   // Count unique requirements that have at least one indicator
   // Bug fix: Previously counted ALL indicator matches, not unique requirements
-  let mut requirements_with_indicators = 0;
-
-  for req in requirements {
-    let lower = req.to_lowercase();
-    let has_indicator = indicators.iter().any(|indicator| lower.contains(indicator));
-    if has_indicator {
-      requirements_with_indicators += 1;
-    }
-  }
+  let requirements_with_indicators = requirements
+    .iter()
+    .filter(|req| {
+      let lower = req.to_lowercase();
+      indicators.iter().any(|indicator| lower.contains(indicator))
+    })
+    .count();
 
   // Calculate coverage score based on unique requirements, not indicator count
   let coverage = if indicators.is_empty() || requirements.is_empty() {
@@ -501,25 +498,47 @@ pub fn generate_requirements_template(analysis: &GapAnalysis) -> String {
   template.push_str("# Requirements Template\n\n");
   template.push_str("Based on gap analysis, consider adding:\n\n");
 
-  for gap in analysis.prioritized_gaps() {
-    template.push_str(&format!(
-      "## {} ({:?})\n\n",
-      gap.category.label(),
-      gap.severity
-    ));
-    template.push_str(&format!("{}\n\n", gap.description));
-
-    for suggestion in &gap.suggestions {
-      template.push_str(&format!("- [ ] {}\n", suggestion));
-    }
-    template.push('\n');
-  }
+  template.push_str(
+    &analysis
+      .prioritized_gaps()
+      .iter()
+      .map(|gap| {
+        let suggestions = gap
+          .suggestions
+          .iter()
+          .map(|s| format!("- [ ] {}\n", s))
+          .collect::<String>();
+        format!(
+          "## {} ({:?})\n\n{}\n{}",
+          gap.category.label(),
+          gap.severity,
+          gap.description,
+          suggestions
+        )
+      })
+      .collect::<Vec<_>>()
+      .join("\n"),
+  );
 
   template
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::float_cmp, clippy::needless_collect, clippy::unnecessary_debug_formatting, clippy::match_same_arms, clippy::option_if_let_else, clippy::suspicious_else_formatting, clippy::manual_let_else, clippy::match_wild_err_arm, clippy::match_like_matches_macro, clippy::needless_pass_by_value)]
+#[allow(
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::unnecessary_debug_formatting,
+  clippy::match_same_arms,
+  clippy::option_if_let_else,
+  clippy::suspicious_else_formatting,
+  clippy::manual_let_else,
+  clippy::match_wild_err_arm,
+  clippy::match_like_matches_macro,
+  clippy::needless_pass_by_value
+)]
 mod tests {
   use super::*;
 
@@ -616,7 +635,10 @@ mod tests {
     let analysis = detect_gaps(requirements);
 
     // Should have reasonable coverage
-    assert!(analysis.overall_coverage >= 10, "Coverage should be at least 10% with new logic");
+    assert!(
+      analysis.overall_coverage >= 10,
+      "Coverage should be at least 10% with new logic"
+    );
   }
 
   #[test]
@@ -881,6 +903,10 @@ mod tests {
 
     // With 3 requirements and only 1 having security indicators, correct coverage should be ~33%
     // But buggy code returns 100% (5/5 indicators found)
-    assert!(coverage <= 50, "Coverage should reflect unique requirements (33%), not indicator count (100%). Got {}%", coverage);
+    assert!(
+      coverage <= 50,
+      "Coverage should reflect unique requirements (33%), not indicator count (100%). Got {}%",
+      coverage
+    );
   }
 }

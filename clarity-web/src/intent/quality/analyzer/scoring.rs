@@ -36,7 +36,7 @@ pub fn calculate_coverage_score(spec: &Spec) -> u8 {
     .saturating_sub(u16::from(!check_invariants_tested(spec)) * 20)
     .saturating_add(u16::from(calculate_verification_ratio(spec) > 0.8) * 10)
     .saturating_add(u16::from(!spec.invariants.is_empty()) * 5);
-  u8::try_from(score.min(100)).unwrap_or(100)
+  u8::try_from(score.min(100)).map_or(100, |v| v)
 }
 
 #[must_use]
@@ -55,7 +55,7 @@ pub fn calculate_clarity_score(spec: &Spec) -> u8 {
     .saturating_sub(u16::from(spec.description.is_empty()) * 10)
     .saturating_sub(u16::from(count_vague_language(spec)).saturating_mul(5))
     .saturating_add(u16::from(desc_ratio >= 0.9) * 5);
-  u8::try_from(score.min(100)).unwrap_or(100)
+  u8::try_from(score.min(100)).map_or(100, |v| v)
 }
 
 #[must_use]
@@ -72,7 +72,7 @@ pub fn calculate_testability_score(spec: &Spec) -> u8 {
     .saturating_sub(u16::from(deps_ratio < 0.5) * 10)
     .saturating_add(u16::from(precond_ratio >= 0.8 && postcond_ratio >= 0.8) * 10)
     .saturating_add(u16::from(example_ratio >= 0.8) * 5);
-  u8::try_from(score.min(100)).unwrap_or(100)
+  u8::try_from(score.min(100)).map_or(100, |v| v)
 }
 
 #[must_use]
@@ -100,7 +100,7 @@ pub fn calculate_ai_readiness_score(spec: &Spec) -> u8 {
     .saturating_sub(u16::from(!has_style_hints) * 5)
     .saturating_sub(u16::from(example_ratio < 0.5) * 15)
     .saturating_add(u16::from(has_impl_hints && has_security_hints && has_entity_hints) * 10);
-  u8::try_from(score.min(100)).unwrap_or(100)
+  u8::try_from(score.min(100)).map_or(100, |v| v)
 }
 
 #[must_use]
@@ -124,7 +124,7 @@ pub(super) fn calculate_overall_score_from_values(
     .saturating_add(u16::from(clarity).saturating_mul(25))
     .saturating_add(u16::from(testability).saturating_mul(25))
     .saturating_add(u16::from(ai_readiness).saturating_mul(20));
-  u8::try_from(weighted_sum / 100).unwrap_or(100)
+  u8::try_from(weighted_sum / 100).map_or(100, |v| v)
 }
 
 pub(super) fn check_has_error_tests(spec: &Spec) -> bool {
@@ -254,7 +254,7 @@ pub(super) fn count_vague_language(spec: &Spec) -> u8 {
           .filter(|word| text.contains(*word))
           .count(),
       )
-      .unwrap_or(u8::MAX)
+      .map_or(u8::MAX, |v| v)
     })
     .fold(0_u8, u8::saturating_add)
     .min(20)
@@ -283,8 +283,8 @@ pub(super) fn calculate_dependency_documentation_ratio(spec: &Spec) -> f64 {
       .iter()
       .filter(|f| !f.depends_on.is_empty() || f.behaviors.is_empty())
       .count();
-    let documented_u32 = u32::try_from(documented).unwrap_or(u32::MAX);
-    let total_u32 = u32::try_from(spec.features.len()).unwrap_or(u32::MAX);
+    let documented_u32 = u32::try_from(documented).map_or(u32::MAX, |v| v);
+    let total_u32 = u32::try_from(spec.features.len()).map_or(u32::MAX, |v| v);
     f64::from(documented_u32) / f64::from(total_u32)
   }
 }
@@ -304,8 +304,8 @@ fn ratio_by_behaviors(spec: &Spec, predicate: impl Fn(&Behavior) -> bool) -> f64
       .flat_map(|f| f.behaviors.iter())
       .filter(|b| predicate(b))
       .count();
-    let matched_u32 = u32::try_from(matched).unwrap_or(u32::MAX);
-    let total_u32 = u32::try_from(total).unwrap_or(u32::MAX);
+    let matched_u32 = u32::try_from(matched).map_or(u32::MAX, |v| v);
+    let total_u32 = u32::try_from(total).map_or(u32::MAX, |v| v);
     f64::from(matched_u32) / f64::from(total_u32)
   }
 }

@@ -37,7 +37,7 @@ fn navigate_array(value: &Value, spec: ArraySpec, field: &str) -> Result<Value, 
   if length == 0 {
     return match spec {
       ArraySpec::Index(i) => Err(ArrayIndexError::IndexOutOfBounds {
-        index: isize::try_from(i).unwrap_or(isize::MAX),
+        index: isize::try_from(i).map_or(isize::MAX, |v| v),
         length: 0,
       }),
       ArraySpec::NegativeIndex(_) | ArraySpec::All => Ok(Value::Array(Vec::new())),

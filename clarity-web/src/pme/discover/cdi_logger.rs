@@ -322,7 +322,7 @@ impl CdiEntry {
         }
 
         self.signals.iter().map(|s| s.score()).sum::<f64>()
-            / f64::from(u8::try_from(self.signals.len()).unwrap_or(1))
+            / f64::from(u8::try_from(self.signals.len()).map_or(1, |v| v))
     }
 
     /// Get signals by type.
@@ -431,10 +431,10 @@ impl CdiFunnel {
         if entry.outcome == InterviewOutcome::Completed {
             self.completed_interviews += 1;
 
-            let signal_count = u32::try_from(entry.signals.len()).unwrap_or(0);
+            let signal_count = u32::try_from(entry.signals.len()).map_or(0, |v| v);
             self.total_signals += signal_count;
 
-            let high_count = u32::try_from(entry.high_signal_items().len()).unwrap_or(0);
+            let high_count = u32::try_from(entry.high_signal_items().len()).map_or(0, |v| v);
             self.high_signal_count += high_count;
 
             if !entry.high_signal_items().is_empty() {
@@ -618,7 +618,7 @@ impl CdiLogger {
             0.0
         } else {
             all_signals.iter().map(|s| s.score()).sum::<f64>()
-                / f64::from(u8::try_from(all_signals.len()).unwrap_or(1))
+                / f64::from(u8::try_from(all_signals.len()).map_or(1, |v| v))
         };
 
         // Extract top problems
@@ -626,7 +626,7 @@ impl CdiLogger {
             .iter()
             .flat_map(|e| &e.signals)
             .filter(|s| s.signal_type == SignalType::Problem)
-            .sorted_by(|a, b| b.score().partial_cmp(&a.score()).unwrap_or(std::cmp::Ordering::Equal))
+            .sorted_by(|a, b| b.score().partial_cmp(&a.score()).map_or(std::cmp::Ordering::Equal, |v| v))
             .take(5)
             .map(|s| s.content.clone())
             .collect();
@@ -636,7 +636,7 @@ impl CdiLogger {
             .iter()
             .flat_map(|e| &e.signals)
             .filter(|s| s.signal_type == SignalType::DesiredOutcome)
-            .sorted_by(|a, b| b.score().partial_cmp(&a.score()).unwrap_or(std::cmp::Ordering::Equal))
+            .sorted_by(|a, b| b.score().partial_cmp(&a.score()).map_or(std::cmp::Ordering::Equal, |v| v))
             .take(5)
             .map(|s| s.content.clone())
             .collect();
@@ -689,14 +689,14 @@ impl CdiLogger {
             .iter()
             .find(|(t, _)| *t == SignalType::Problem)
             .map(|(_, c)| *c)
-            .unwrap_or(0);
+            .map_or(0, |v| v);
 
         let outcome_count = analysis
             .by_type
             .iter()
             .find(|(t, _)| *t == SignalType::DesiredOutcome)
             .map(|(_, c)| *c)
-            .unwrap_or(0);
+            .map_or(0, |v| v);
 
         if problem_count > 0 && outcome_count == 0 {
             recommendations.push(
@@ -760,10 +760,10 @@ impl CdiLogger {
             .into_iter()
             .map(|(segment, group)| {
                 let scores: Vec<f64> = group.map(|(_, score)| score).collect();
-                let avg = scores.iter().sum::<f64>() / f64::from(u8::try_from(scores.len()).unwrap_or(1));
+                let avg = scores.iter().sum::<f64>() / f64::from(u8::try_from(scores.len()).map_or(1, |v| v));
                 (segment, avg)
             })
-            .sorted_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal))
+            .sorted_by(|a, b| b.1.partial_cmp(&a.1).map_or(std::cmp::Ordering::Equal, |v| v))
             .collect()
     }
 }

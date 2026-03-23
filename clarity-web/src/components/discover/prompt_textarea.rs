@@ -232,7 +232,7 @@ pub fn CharacterCount(props: CharacterCountProps) -> Element {
       .current
       .saturating_mul(100)
       .checked_div(props.minimum)
-      .unwrap_or(0)
+      .map_or(0, |v| v)
       .min(100)
   };
 

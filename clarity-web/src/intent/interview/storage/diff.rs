@@ -151,8 +151,8 @@ pub fn format_diff(diff: &SessionDiff) -> String {
     let _ = writeln!(
       output,
       "Stage: {} -> {}\n",
-      diff.old_stage.as_deref().unwrap_or("(none)"),
-      diff.new_stage.as_deref().unwrap_or("(none)")
+      diff.old_stage.as_deref().map_or("(none)", |s| s),
+      diff.new_stage.as_deref().map_or("(none)", |s| s)
     );
   }
 

@@ -332,11 +332,11 @@ impl EffectsSummary {
     let max_severity = effects.iter().map(|e| e.severity).max();
 
     Self {
-      state_changes: *counts.get(&EffectType::StateChange).unwrap_or(&0),
-      notifications: *counts.get(&EffectType::Notification).unwrap_or(&0),
-      cascades: *counts.get(&EffectType::Cascade).unwrap_or(&0),
-      race_conditions: *counts.get(&EffectType::RaceCondition).unwrap_or(&0),
-      rollbacks: *counts.get(&EffectType::RollbackRequired).unwrap_or(&0),
+      state_changes: counts.get(&EffectType::StateChange).map_or(0, |v| *v),
+      notifications: counts.get(&EffectType::Notification).map_or(0, |v| *v),
+      cascades: counts.get(&EffectType::Cascade).map_or(0, |v| *v),
+      race_conditions: counts.get(&EffectType::RaceCondition).map_or(0, |v| *v),
+      rollbacks: counts.get(&EffectType::RollbackRequired).map_or(0, |v| *v),
       total: effects.len(),
       max_severity,
     }
@@ -482,11 +482,11 @@ impl SpecEffectsReport {
     let max_severity = effects.iter().map(|e| e.severity).max();
 
     EffectsSummary {
-      state_changes: *counts.get(&EffectType::StateChange).unwrap_or(&0),
-      notifications: *counts.get(&EffectType::Notification).unwrap_or(&0),
-      cascades: *counts.get(&EffectType::Cascade).unwrap_or(&0),
-      race_conditions: *counts.get(&EffectType::RaceCondition).unwrap_or(&0),
-      rollbacks: *counts.get(&EffectType::RollbackRequired).unwrap_or(&0),
+      state_changes: counts.get(&EffectType::StateChange).map_or(0, |v| *v),
+      notifications: counts.get(&EffectType::Notification).map_or(0, |v| *v),
+      cascades: counts.get(&EffectType::Cascade).map_or(0, |v| *v),
+      race_conditions: counts.get(&EffectType::RaceCondition).map_or(0, |v| *v),
+      rollbacks: counts.get(&EffectType::RollbackRequired).map_or(0, |v| *v),
       total: effects.len(),
       max_severity,
     }

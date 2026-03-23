@@ -27,7 +27,7 @@ impl ArraySpec {
           Ok(vec![i])
         } else {
           Err(ArrayIndexError::IndexOutOfBounds {
-            index: isize::try_from(i).unwrap_or(isize::MAX),
+            index: isize::try_from(i).map_or(isize::MAX, |v| v),
             length,
           })
         }
@@ -35,7 +35,7 @@ impl ArraySpec {
       Self::NegativeIndex(n) => {
         if n == 0 || n > length {
           Err(ArrayIndexError::IndexOutOfBounds {
-            index: -isize::try_from(n).unwrap_or(isize::MAX),
+            index: -isize::try_from(n).map_or(isize::MAX, |v| v),
             length,
           })
         } else {

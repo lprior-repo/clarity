@@ -45,13 +45,16 @@ fn create_regex_safe(primary: &str, secondary: &str) -> Regex {
   try_create_regex(primary)
     .or_else(|| try_create_regex(secondary))
     .or_else(|| try_create_regex(ULTIMATE_FALLBACK_PATTERN_STR))
-    .unwrap_or_else(|| {
-      // SAFETY: The pattern "(.+)" is syntactically valid and will always compile.
-      // This branch is unreachable in practice, but required by the type system.
-      #[allow(clippy::expect_used)]
-      Regex::new(ULTIMATE_FALLBACK_PATTERN_STR)
-        .expect("ULTIMATE_FALLBACK_PATTERN_STR must be valid regex syntax")
-    })
+    .map_or_else(
+      || {
+        // SAFETY: The pattern "(.+)" is syntactically valid and will always compile.
+        // This branch is unreachable in practice, but required by the type system.
+        #[allow(clippy::expect_used)]
+        Regex::new(ULTIMATE_FALLBACK_PATTERN_STR)
+          .expect("ULTIMATE_FALLBACK_PATTERN_STR must be valid regex syntax")
+      },
+      |v| v,
+    )
 }
 
 /// Lazy-initialized regex for capitalized word detection
@@ -167,7 +170,7 @@ impl CoveredComponent {
         .len()
         .saturating_mul(100)
         .checked_div(total_use_cases)
-        .unwrap_or(0);
+        .map_or(0, |v| v);
       u8::try_from(percent).map_err(|_| CoverageError::InvalidPercentage("overflow".to_string()))?
     } else {
       0
@@ -292,7 +295,7 @@ pub fn analyze_coverage(
     let percent = covered_count
       .saturating_mul(100)
       .checked_div(total_count)
-      .unwrap_or(0);
+      .map_or(0, |v| v);
     u8::try_from(percent).map_err(|_| CoverageError::InvalidPercentage("overflow".to_string()))?
   } else {
     0
@@ -326,27 +329,24 @@ fn extract_components_from_tasks(tasks: &[Task]) -> Result<Vec<Component>, Cover
   let capitalized_pattern = Regex::new(r"\b[A-Z][a-z]{2,}\b")
     .map_err(|e| CoverageError::ComponentExtractionFailed(e.to_string()))?;
 
-  for task in tasks {
-    let text = task.combined_text();
-
-    // Extract full component names with suffixes
-    for cap in component_pattern.captures_iter(&text) {
-      if let Some(name) = cap.get(1) {
-        component_names.insert(name.as_str().to_string());
-      }
-    }
-
-    // Extract capitalized words (potential components)
-    for cap in capitalized_pattern.captures_iter(&text) {
-      if let Some(name) = cap.get(1) {
-        let name_str = name.as_str().to_string();
-        // Filter out common non-component words
-        if !is_common_word(&name_str) {
-          component_names.insert(name_str);
-        }
-      }
-    }
-  }
+  tasks
+    .iter()
+    .flat_map(|task| {
+      let text = task.combined_text();
+      let suffix_names: Vec<String> = component_pattern
+        .captures_iter(&text)
+        .filter_map(|cap| cap.get(1).map(|m| m.as_str().to_string()))
+        .collect();
+      let capitalized_names: Vec<String> = capitalized_pattern
+        .captures_iter(&text)
+        .filter_map(|cap| cap.get(1).map(|m| m.as_str().to_string()))
+        .filter(|name| !is_common_word(name))
+        .collect();
+      suffix_names.into_iter().chain(capitalized_names)
+    })
+    .for_each(|name| {
+      component_names.insert(name);
+    });
 
   // Convert to sorted vector
   let mut components: Vec<_> = component_names.into_iter().map(Component::new).collect();
@@ -430,21 +430,22 @@ fn match_use_cases_to_components(
   components: &[Component],
   tasks: &[Task],
 ) -> Result<Vec<(Component, Vec<String>)>, CoverageError> {
-  let mut matches = Vec::new();
+  let matches = components
+    .iter()
+    .filter_map(|component| {
+      let matched_use_case_ids: Vec<String> = use_cases
+        .iter()
+        .filter(|use_case| component_covers_use_case(component, use_case, tasks))
+        .map(|use_case| use_case.id.clone())
+        .collect();
 
-  for component in components {
-    let mut matched_use_case_ids = Vec::new();
-
-    for use_case in use_cases {
-      if component_covers_use_case(component, use_case, tasks) {
-        matched_use_case_ids.push(use_case.id.clone());
+      if matched_use_case_ids.is_empty() {
+        None
+      } else {
+        Some((component.clone(), matched_use_case_ids))
       }
-    }
-
-    if !matched_use_case_ids.is_empty() {
-      matches.push((component.clone(), matched_use_case_ids));
-    }
-  }
+    })
+    .collect();
 
   Ok(matches)
 }
@@ -454,19 +455,12 @@ fn component_covers_use_case(component: &Component, use_case: &UseCase, tasks: &
   let component_lower = component.name.to_lowercase();
 
   // Check if component name appears in any task related to this use case
-  for task in tasks {
+  tasks.iter().any(|task| {
     let task_text = task.combined_text().to_lowercase();
 
     // If component appears in task and use case keywords appear in task
-    if task_text.contains(&component_lower) {
-      // Check if use case is related to this task
-      if use_case_related_to_task(use_case, task) {
-        return true;
-      }
-    }
-  }
-
-  false
+    task_text.contains(&component_lower) && use_case_related_to_task(use_case, task)
+  })
 }
 
 /// Check if a use case is related to a task

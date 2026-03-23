@@ -133,8 +133,8 @@ impl ExecutionPlan {
       return 0.0;
     }
     let completed = self.beads.iter().filter(|bead| bead.is_completed()).count();
-    let completed_u32 = u32::try_from(completed).unwrap_or(u32::MAX);
-    let total_u32 = u32::try_from(self.beads.len()).unwrap_or(u32::MAX);
+    let completed_u32 = u32::try_from(completed).map_or(u32::MAX, |v| v);
+    let total_u32 = u32::try_from(self.beads.len()).map_or(u32::MAX, |v| v);
     (f64::from(completed_u32) / f64::from(total_u32)) * 100.0
   }
 }

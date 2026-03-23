@@ -265,7 +265,7 @@ impl Persona {
             .iter()
             .find(|(l, _)| *l == limitation)
             .map(|(_, s)| *s)
-            .unwrap_or(0.5)
+            .map_or(0.5, |v| v)
     }
 
     /// Check if persona has high severity for any limitation.
@@ -278,7 +278,7 @@ impl Persona {
     #[must_use]
     pub fn friction_score(&self) -> f64 {
         let limitation_avg = self.limitations.iter().map(|(_, s)| s).sum::<f64>()
-            / f64::from(u8::try_from(self.limitations.len()).unwrap_or(1));
+            / f64::from(u8::try_from(self.limitations.len()).map_or(1, |v| v));
 
         let resource_friction = 1.0 - (self.resources.time * 0.3
             + self.resources.budget * 0.3
@@ -437,7 +437,7 @@ impl PersonaForge {
 
         // Check for insufficient limitations
         let avg_limitation = persona.limitations.iter().map(|(_, s)| s).sum::<f64>()
-            / f64::from(u8::try_from(persona.limitations.len()).unwrap_or(1));
+            / f64::from(u8::try_from(persona.limitations.len()).map_or(1, |v| v));
 
         if avg_limitation < 0.3 {
             issues.push(ValidationIssue {
@@ -572,7 +572,7 @@ impl PersonaForge {
 
         // Penalty for unrealistic limitation profile
         let avg_limitation = persona.limitations.iter().map(|(_, s)| s).sum::<f64>()
-            / f64::from(u8::try_from(persona.limitations.len()).unwrap_or(1));
+            / f64::from(u8::try_from(persona.limitations.len()).map_or(1, |v| v));
         let limitation_penalty = if avg_limitation < 0.3 { 0.15 } else { 0.0 };
 
         (base_score - issue_penalty - limitation_penalty + completeness_bonus).clamp(0.0, 1.0)
@@ -587,7 +587,7 @@ impl PersonaForge {
         let sorted_limitations: Vec<_> = persona
             .limitations
             .iter()
-            .sorted_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal))
+            .sorted_by(|a, b| b.1.partial_cmp(&a.1).map_or(std::cmp::Ordering::Equal, |v| v))
             .take(3)
             .collect();
 
@@ -633,9 +633,9 @@ impl PersonaForge {
         let stats = PersonaStats {
             total_personas: personas.len(),
             avg_friction: personas.iter().map(|p| p.friction_score()).sum::<f64>()
-                / f64::from(u8::try_from(personas.len()).unwrap_or(1)),
+                / f64::from(u8::try_from(personas.len()).map_or(1, |v| v)),
             avg_realism: validations.iter().map(|v| v.realism_score).sum::<f64>()
-                / f64::from(u8::try_from(validations.len()).unwrap_or(1)),
+                / f64::from(u8::try_from(validations.len()).map_or(1, |v| v)),
             severe_limitation_count: personas.iter().filter(|p| p.has_severe_limitation(0.7)).count(),
             high_authority_count: personas.iter().filter(|p| p.decision_authority > 0.7).count(),
         };

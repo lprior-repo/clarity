@@ -365,15 +365,18 @@ impl DimensionAnalysis {
 
 /// Calculate category scores
 fn calculate_category_scores(scores: &[DimensionScore]) -> HashMap<DimensionCategory, u8> {
-  let mut result = HashMap::new();
+  DimensionCategory::all()
+    .into_iter()
+    .filter_map(|category| {
+      let category_scores: Vec<&DimensionScore> = scores
+        .iter()
+        .filter(|s| s.dimension.category() == category)
+        .collect();
 
-  for category in DimensionCategory::all() {
-    let category_scores: Vec<&DimensionScore> = scores
-      .iter()
-      .filter(|s| s.dimension.category() == category)
-      .collect();
+      if category_scores.is_empty() {
+        return None;
+      }
 
-    if !category_scores.is_empty() {
       let total_weight: f32 = category_scores.iter().map(|s| s.weight).sum();
       let weighted_sum: f32 = category_scores.iter().map(|s| s.weighted_score()).sum();
 
@@ -383,11 +386,9 @@ fn calculate_category_scores(scores: &[DimensionScore]) -> HashMap<DimensionCate
         0.0
       };
 
-      result.insert(category, avg.min(100.0) as u8);
-    }
-  }
-
-  result
+      Some((category, avg.min(100.0) as u8))
+    })
+    .collect()
 }
 
 /// Calculate overall weighted score
@@ -435,21 +436,16 @@ fn generate_analysis_summary(scores: &[DimensionScore], issues: &[DimensionIssue
 /// Complete dimension analysis with scores and issues
 #[must_use]
 pub fn analyze_dimensions(requirements: &[&str]) -> DimensionAnalysis {
-  let mut scores = Vec::new();
-  let mut issues = Vec::new();
+  let (scores, issues): (Vec<_>, Vec<_>) = CoreDimension::all()
+    .into_iter()
+    .filter_map(|dimension| {
+      let (score, dimension_issues) = analyze_single_dimension(dimension, requirements);
+      let dim_score = DimensionScore::with_default_weight(dimension, score).ok()?;
+      Some((dim_score, dimension_issues))
+    })
+    .unzip();
 
-  // Analyze each dimension
-  for dimension in CoreDimension::all() {
-    let (score, dimension_issues) = analyze_single_dimension(dimension, requirements);
-
-    if let Ok(dim_score) = DimensionScore::with_default_weight(dimension, score) {
-      scores.push(dim_score);
-    }
-
-    issues.extend(dimension_issues);
-  }
-
-  DimensionAnalysis::new(scores, issues)
+  DimensionAnalysis::new(scores, issues.into_iter().flatten().collect())
 }
 
 /// Analyze a single dimension
@@ -493,25 +489,30 @@ fn analyze_completeness(requirements: &[&str], issues: &mut Vec<DimensionIssue>)
     ("result", ["then", "output", "response"]),
   ];
 
-  let mut filled_count = 0;
+  let filled_count = required_elements
+    .iter()
+    .filter(|(_name, keywords)| {
+      requirements
+        .iter()
+        .any(|r| keywords.iter().any(|k| r.to_lowercase().contains(k)))
+    })
+    .count();
   let total = required_elements.len();
 
-  for (name, keywords) in &required_elements {
-    let has_element = requirements.iter().any(|r| {
-      let lower = r.to_lowercase();
-      keywords.iter().any(|k| lower.contains(k))
-    });
-
-    if has_element {
-      filled_count += 1;
-    } else {
+  required_elements
+    .iter()
+    .filter(|(name, keywords)| {
+      !requirements
+        .iter()
+        .any(|r| keywords.iter().any(|k| r.to_lowercase().contains(k)))
+    })
+    .for_each(|(name, _keywords)| {
       issues.push(DimensionIssue::new(
         CoreDimension::Completeness,
         IssueSeverity::Warning,
         format!("Missing {name} element in requirements"),
       ));
-    }
-  }
+    });
 
   ((filled_count * 100) / total) as u8
 }
@@ -523,36 +524,64 @@ fn analyze_correctness(requirements: &[&str], issues: &mut Vec<DimensionIssue>) 
   // Check for vague language
   let vague_terms = ["etc", "and so on", "tbd", "todo", "sometime", "eventually"];
 
-  for req in requirements {
-    let lower = req.to_lowercase();
-    for term in &vague_terms {
-      if lower.contains(term) {
-        score = score.saturating_sub(15);
-        issues.push(
-          DimensionIssue::new(
-            CoreDimension::Correctness,
-            IssueSeverity::Warning,
-            format!("Vague term found: '{term}'"),
-          )
-          .with_location(req.to_string()),
-        );
-      }
-    }
-  }
+  let (score_delta, vague_matches): (u8, Vec<_>) = requirements
+    .iter()
+    .flat_map(|req| {
+      let lower = req.to_lowercase();
+      vague_terms
+        .iter()
+        .filter(move |term| lower.contains(term))
+        .map(move |term| (req, term))
+    })
+    .fold(
+      (0u8, Vec::new()),
+      |(count, mut acc), (req, term)| {
+        acc.push((*req, *term));
+        (count.saturating_add(15), acc)
+      },
+    );
+
+  score = score.saturating_sub(score_delta);
+
+  vague_matches.into_iter().for_each(|(req, term)| {
+    issues.push(
+      DimensionIssue::new(
+        CoreDimension::Correctness,
+        IssueSeverity::Warning,
+        format!("Vague term found: '{term}'"),
+      )
+      .with_location(req.to_string()),
+    );
+  });
 
   // Check for contradictory statements
-  for (i, req1) in requirements.iter().enumerate() {
-    for req2 in requirements.iter().skip(i + 1) {
-      if has_contradiction(req1, req2) {
-        score = score.saturating_sub(25);
-        issues.push(DimensionIssue::new(
-          CoreDimension::Correctness,
-          IssueSeverity::Error,
-          "Potential contradiction detected".to_string(),
-        ));
-      }
-    }
-  }
+  let (score_delta, contradiction_issues): (u8, Vec<_>) = requirements
+    .iter()
+    .enumerate()
+    .flat_map(|(i, req1)| {
+      requirements
+        .iter()
+        .skip(i + 1)
+        .filter(move |req2| has_contradiction(req1, req2))
+        .map(|_| ())
+    })
+    .fold(
+      (0u8, Vec::new()),
+      |(count, mut acc), _| {
+        acc.push(());
+        (count.saturating_add(25), acc)
+      },
+    );
+
+  score = score.saturating_sub(score_delta);
+
+  contradiction_issues.into_iter().for_each(|_| {
+    issues.push(DimensionIssue::new(
+      CoreDimension::Correctness,
+      IssueSeverity::Error,
+      "Potential contradiction detected".to_string(),
+    ));
+  });
 
   score
 }
@@ -587,22 +616,37 @@ fn analyze_appropriateness(requirements: &[&str], issues: &mut Vec<DimensionIssu
     "serverless",
   ];
 
-  for req in requirements {
-    let lower = req.to_lowercase();
-    for term in &jargon {
-      if lower.contains(term) && !lower.contains("for example") && !lower.contains("such as") {
-        score = score.saturating_sub(10);
-        issues.push(
-          DimensionIssue::new(
-            CoreDimension::Appropriateness,
-            IssueSeverity::Info,
-            format!("Technical term '{term}' may need context"),
-          )
-          .with_location(req.to_string()),
-        );
-      }
-    }
-  }
+  let (score_delta, jargon_matches): (u8, Vec<_>) = requirements
+    .iter()
+    .flat_map(|req| {
+      let lower = req.to_lowercase();
+      let has_context =
+        lower.contains("for example") || lower.contains("such as");
+      jargon
+        .iter()
+        .filter(move |term| lower.contains(term) && !has_context)
+        .map(move |term| (req, *term))
+    })
+    .fold(
+      (0u8, Vec::new()),
+      |(count, mut acc), (req, term)| {
+        acc.push((*req, term));
+        (count.saturating_add(10), acc)
+      },
+    );
+
+  score = score.saturating_sub(score_delta);
+
+  jargon_matches.into_iter().for_each(|(req, term)| {
+    issues.push(
+      DimensionIssue::new(
+        CoreDimension::Appropriateness,
+        IssueSeverity::Info,
+        format!("Technical term '{term}' may need context"),
+      )
+      .with_location(req.to_string()),
+    );
+  });
 
   score
 }
@@ -771,23 +815,30 @@ fn analyze_security(requirements: &[&str], issues: &mut Vec<DimensionIssue>) -> 
 
 /// Analyze maintainability dimension
 fn analyze_maintainability(requirements: &[&str], issues: &mut Vec<DimensionIssue>) -> u8 {
-  let mut score: u8 = 100;
+  let (score_delta, complex_reqs): (u8, Vec<_>) = requirements
+    .iter()
+    .filter(|req| req.split_whitespace().count() > 50)
+    .fold(
+      (0u8, Vec::new()),
+      |(count, mut acc), req| {
+        acc.push(*req);
+        (count.saturating_add(20), acc)
+      },
+    );
 
-  // Check for complexity
-  for req in requirements {
+  let score = 100u8.saturating_sub(score_delta);
+
+  complex_reqs.into_iter().for_each(|req| {
     let words = req.split_whitespace().count();
-    if words > 50 {
-      score = score.saturating_sub(20);
-      issues.push(
-        DimensionIssue::new(
-          CoreDimension::Maintainability,
-          IssueSeverity::Warning,
-          format!("Requirement too complex ({words} words)"),
-        )
-        .with_location(req.to_string()),
-      );
-    }
-  }
+    issues.push(
+      DimensionIssue::new(
+        CoreDimension::Maintainability,
+        IssueSeverity::Warning,
+        format!("Requirement too complex ({words} words)"),
+      )
+      .with_location(req.to_string()),
+    );
+  });
 
   score
 }

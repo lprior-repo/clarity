@@ -571,7 +571,7 @@ impl Span {
                 duration
                     .num_milliseconds()
                     .try_into()
-                    .unwrap_or(0),
+                    .map_or(0, |v| v),
             );
         }
 
@@ -892,7 +892,7 @@ impl TraceSummary {
             .iter()
             .filter_map(|s| s.duration_ms)
             .max()
-            .unwrap_or(0);
+            .map_or(0, |v| v);
 
         let services = spans
             .iter()

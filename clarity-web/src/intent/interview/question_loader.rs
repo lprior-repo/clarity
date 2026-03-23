@@ -260,7 +260,7 @@ fn parse_question(value: &serde_json::Value) -> Result<Question, QuestionLoadErr
     context,
     example,
     expected_type: get_optional_string_field(obj, "expected_type")
-      .unwrap_or_else(|| "text".to_string()),
+      .map_or_else(|| "text".to_string(), |v| v),
     extract_into: get_optional_string_list(obj, "extract_into").unwrap_or_default(),
     depends_on: get_optional_string_list(obj, "depends_on").unwrap_or_default(),
     blocks: get_optional_string_list(obj, "blocks").unwrap_or_default(),
@@ -321,7 +321,7 @@ fn get_u32_field(
   obj
     .get(key)
     .and_then(serde_json::Value::as_u64)
-    .map(|n| u32::try_from(n).unwrap_or(1))
+    .map(|n| u32::try_from(n).map_or(1, |v| v))
     .ok_or_else(|| QuestionLoadError::QuestionParseError {
       message: format!("Missing or invalid field: {key}"),
     })

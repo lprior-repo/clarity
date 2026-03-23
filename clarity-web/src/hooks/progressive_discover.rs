@@ -439,7 +439,8 @@ pub struct ProgressiveDiscoverState {
   pub hole_punching: HolePunchingResults,
   /// Four Brutal Truths acknowledgment state
   pub brutal_truths: BrutalTruthsState,
-}impl Default for ProgressiveDiscoverState {
+}
+impl Default for ProgressiveDiscoverState {
   fn default() -> Self {
     Self {
       phase: ProgressiveDiscoverPhase::default(),

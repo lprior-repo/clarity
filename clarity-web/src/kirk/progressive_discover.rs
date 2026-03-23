@@ -243,7 +243,7 @@ impl KirkContract16 {
   pub fn completion_percentage(&self) -> u8 {
     let filled = self.filled_section_count();
     let total = self.sections.len();
-    u8::try_from((filled * 100) / total).unwrap_or(0)
+    u8::try_from((filled * 100) / total).map_or(0, |v| v)
   }
 
   /// Check if all required sections are filled.
@@ -359,7 +359,7 @@ impl VorpValidation {
     self
       .dimensions
       .iter()
-      .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+      .min_by(|a, b| a.1.partial_cmp(&b.1).map_or(std::cmp::Ordering::Equal, |v| v))
   }
 }
 
@@ -543,23 +543,23 @@ impl EarsExtraction {
     vec![
       (
         EarsPattern::Ubiquitous,
-        *counts.get(&EarsPattern::Ubiquitous).unwrap_or(&0),
+        *counts.get(&EarsPattern::Ubiquitous).map_or(&0, |v| v),
       ),
       (
         EarsPattern::EventDriven,
-        *counts.get(&EarsPattern::EventDriven).unwrap_or(&0),
+        *counts.get(&EarsPattern::EventDriven).map_or(&0, |v| v),
       ),
       (
         EarsPattern::Unwanted,
-        *counts.get(&EarsPattern::Unwanted).unwrap_or(&0),
+        *counts.get(&EarsPattern::Unwanted).map_or(&0, |v| v),
       ),
       (
         EarsPattern::StateDriven,
-        *counts.get(&EarsPattern::StateDriven).unwrap_or(&0),
+        *counts.get(&EarsPattern::StateDriven).map_or(&0, |v| v),
       ),
       (
         EarsPattern::OptionalFeature,
-        *counts.get(&EarsPattern::OptionalFeature).unwrap_or(&0),
+        *counts.get(&EarsPattern::OptionalFeature).map_or(&0, |v| v),
       ),
     ]
   }
@@ -807,8 +807,11 @@ mod tests {
     assert_eq!(vorp.dimensions[0].1, 1.0);
 
     // Overall score should also reflect clamped values: (1.0 + 0.5 + 0.5 + 0.5) / 4 = 0.625
-    assert!((vorp.overall_score - 0.625).abs() < f64::EPSILON,
-        "overall_score should be consistent with clamped dimensions, got {}", vorp.overall_score);
+    assert!(
+      (vorp.overall_score - 0.625).abs() < f64::EPSILON,
+      "overall_score should be consistent with clamped dimensions, got {}",
+      vorp.overall_score
+    );
   }
 
   #[test]

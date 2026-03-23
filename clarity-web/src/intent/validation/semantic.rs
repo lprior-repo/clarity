@@ -796,8 +796,8 @@ impl SemanticValidator {
   /// `true` if the terms appear similar enough to warrant review, `false` otherwise
   fn are_similar_terms(term_a: &str, term_b: &str) -> bool {
     // Get just the behavior names (after the last dot)
-    let name_a = term_a.rsplit('.').next().unwrap_or(term_a);
-    let name_b = term_b.rsplit('.').next().unwrap_or(term_b);
+    let name_a = term_a.rsplit('.').next().map_or(term_a, |s| s);
+    let name_b = term_b.rsplit('.').next().map_or(term_b, |s| s);
 
     // Skip if identical
     if name_a == name_b {
@@ -975,7 +975,7 @@ impl SemanticValidator {
       .iter()
       .map(|dep| Self::calculate_depth(dep.as_str(), dep_map, visiting))
       .max()
-      .unwrap_or(0);
+      .map_or(0, |v| v);
 
     visiting.remove(feature_name);
     max_child_depth + 1

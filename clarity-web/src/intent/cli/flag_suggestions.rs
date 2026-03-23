@@ -188,7 +188,7 @@ fn is_flag(arg: &str) -> bool {
 
 /// Extract flag name from argument (removes -- prefix)
 fn extract_flag_name(arg: &str) -> &str {
-  arg.strip_prefix("--").unwrap_or("")
+  arg.strip_prefix("--").map_or("", |s| s)
 }
 
 /// Validate all flags in the argument list

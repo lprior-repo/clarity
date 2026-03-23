@@ -410,7 +410,7 @@ fn navigate_array(value: &Value, spec: ArraySpec, field: &str) -> Result<Value, 
 
   match indices.len() {
     0 => Ok(Value::Array(vec![])),
-    1 => Ok(array.get(indices[0]).cloned().unwrap_or(Value::Null)),
+    1 => Ok(array.get(indices[0]).cloned().map_or(Value::Null, |v| v)),
     _ => {
       let values: Vec<Value> = indices
         .into_iter()

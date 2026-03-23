@@ -1267,7 +1267,7 @@ pub fn LockedPhase(props: LockedPhaseProps) -> Element {
 }
 
 fn usize_to_u8(value: usize) -> u8 {
-  u8::try_from(value).unwrap_or(0)
+  u8::try_from(value).map_or(0, |v| v)
 }
 
 #[cfg(test)]
@@ -1352,7 +1352,10 @@ mod tests {
     // which would corrupt data (e.g., step 300 becoming step 255)
     let result = usize_to_u8(300);
     // Should indicate error, not silently return 255
-    assert_ne!(result, 255, "usize_to_u8(300) should not silently return 255");
+    assert_ne!(
+      result, 255,
+      "usize_to_u8(300) should not silently return 255"
+    );
   }
 
   // NOTE: compile_to_kirk EXISTS at server.rs:1723 - TODO is outdated

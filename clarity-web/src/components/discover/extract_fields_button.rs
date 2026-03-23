@@ -310,7 +310,7 @@ pub fn ExtractFieldsButtonWithServer(props: ExtractFieldsButtonWithServerProps) 
                                       let model_label = data
                                           .model
                                           .as_deref()
-                                          .unwrap_or("default-model");
+                                          .map_or("default-model", |s| s);
                                       *last_ai_status.write() = Some(format!(
                                           "AI: {} / {} in {}ms",
                                           data.provider, model_label, data.processing_duration_ms

@@ -440,17 +440,31 @@ fn generate_conflict_summary(conflicts: &[Conflict], consistency_score: u8) -> S
 #[must_use]
 pub fn detect_conflicts(requirements: &[&str]) -> ConflictAnalysis {
   let all_requirements: Vec<String> = requirements.iter().map(|s| s.to_string()).collect();
-  let mut conflicts = Vec::new();
-  let mut conflict_id = 0;
 
-  // Check all pairs of requirements
-  for (i, req_a) in requirements.iter().enumerate() {
-    for req_b in requirements.iter().skip(i + 1) {
-      if let Some(conflict) = check_requirement_pair(req_a, req_b, &mut conflict_id) {
-        conflicts.push(conflict);
-      }
-    }
-  }
+  // Check all pairs of requirements using fold
+  let (conflicts, _) = requirements
+    .iter()
+    .enumerate()
+    .fold(
+      (Vec::<Conflict>::new(), 0usize),
+      |(mut conflicts, conflict_id), (i, req_a)| {
+        let (mut conflicts, conflict_id) = requirements
+          .iter()
+          .skip(i + 1)
+          .fold(
+            (conflicts, conflict_id),
+            |(mut conflicts, mut conflict_id), req_b| {
+              if let Some(conflict) =
+                check_requirement_pair(req_a, req_b, &mut conflict_id)
+              {
+                conflicts.push(conflict);
+              }
+              (conflicts, conflict_id)
+            },
+          );
+        (conflicts, conflict_id)
+      },
+    );
 
   ConflictAnalysis::new(conflicts, all_requirements)
 }
@@ -502,14 +516,15 @@ fn check_contradiction(
     ("accept", "reject"),
   ];
 
-  for (pos, neg) in &contradictions {
-    if (lower_a.contains(pos) && lower_b.contains(neg))
-      || (lower_a.contains(neg) && lower_b.contains(pos))
-    {
-      // Check if they refer to the same concept
-      if shares_concept(lower_a, lower_b) {
+  contradictions
+    .iter()
+    .find_map(|(pos, neg)| {
+      if ((lower_a.contains(pos) && lower_b.contains(neg))
+        || (lower_a.contains(neg) && lower_b.contains(pos)))
+        && shares_concept(lower_a, lower_b)
+      {
         *conflict_id += 1;
-        return Some(
+        Some(
           Conflict::new(
             format!("CONFLICT-{:03}", conflict_id),
             ConflictType::Contradiction,
@@ -532,12 +547,11 @@ fn check_contradiction(
             ResolutionStrategy::Conditional,
             3,
           )),
-        );
+        )
+      } else {
+        None
       }
-    }
-  }
-
-  None
+    })
 }
 
 /// Check for mutual exclusion
@@ -561,34 +575,36 @@ fn check_mutual_exclusion(
     ),
   ];
 
-  for (group_a, group_b) in &exclusive_pairs {
-    let a_in_first = group_a.iter().any(|k| !k.is_empty() && lower_a.contains(k));
-    let b_in_first = group_a.iter().any(|k| !k.is_empty() && lower_b.contains(k));
-    let a_in_second = group_b.iter().any(|k| !k.is_empty() && lower_a.contains(k));
-    let b_in_second = group_b.iter().any(|k| !k.is_empty() && lower_b.contains(k));
+  exclusive_pairs
+    .iter()
+    .find_map(|(group_a, group_b)| {
+      let a_in_first = group_a.iter().any(|k| !k.is_empty() && lower_a.contains(k));
+      let b_in_first = group_a.iter().any(|k| !k.is_empty() && lower_b.contains(k));
+      let a_in_second = group_b.iter().any(|k| !k.is_empty() && lower_a.contains(k));
+      let b_in_second = group_b.iter().any(|k| !k.is_empty() && lower_b.contains(k));
 
-    if (a_in_first && b_in_second) || (a_in_second && b_in_first) {
-      *conflict_id += 1;
-      return Some(
-        Conflict::new(
-          format!("CONFLICT-{:03}", conflict_id),
-          ConflictType::MutualExclusion,
-          ConflictSeverity::High,
-          req_a.to_string(),
-          req_b.to_string(),
-          "Mutually exclusive requirements".to_string(),
+      if (a_in_first && b_in_second) || (a_in_second && b_in_first) {
+        *conflict_id += 1;
+        Some(
+          Conflict::new(
+            format!("CONFLICT-{:03}", conflict_id),
+            ConflictType::MutualExclusion,
+            ConflictSeverity::High,
+            req_a.to_string(),
+            req_b.to_string(),
+            "Mutually exclusive requirements".to_string(),
+          )
+          .with_evidence("Requirements cannot both be satisfied".to_string())
+          .with_resolution(ConflictResolution::new(
+            "Implement as configurable options".to_string(),
+            ResolutionStrategy::Conditional,
+            4,
+          )),
         )
-        .with_evidence("Requirements cannot both be satisfied".to_string())
-        .with_resolution(ConflictResolution::new(
-          "Implement as configurable options".to_string(),
-          ResolutionStrategy::Conditional,
-          4,
-        )),
-      );
-    }
-  }
-
-  None
+      } else {
+        None
+      }
+    })
 }
 
 /// Check for resource conflicts
@@ -607,40 +623,41 @@ fn check_resource_conflict(
     ("bandwidth", ["unlimited", "dedicated", ""]),
   ];
 
-  for (resource, demands) in &resource_patterns {
-    let a_wants_resource = lower_a.contains(resource);
-    let b_wants_resource = lower_b.contains(resource);
+  resource_patterns
+    .iter()
+    .find_map(|(resource, demands)| {
+      let a_wants_resource = lower_a.contains(resource);
+      let b_wants_resource = lower_b.contains(resource);
 
-    if a_wants_resource && b_wants_resource {
-      let a_exclusive = demands.iter().any(|d| !d.is_empty() && lower_a.contains(d));
-      let b_exclusive = demands.iter().any(|d| !d.is_empty() && lower_b.contains(d));
+      if a_wants_resource && b_wants_resource {
+        let a_exclusive = demands.iter().any(|d| !d.is_empty() && lower_a.contains(d));
+        let b_exclusive = demands.iter().any(|d| !d.is_empty() && lower_b.contains(d));
 
-      if a_exclusive || b_exclusive {
-        *conflict_id += 1;
-        return Some(
-          Conflict::new(
-            format!("CONFLICT-{:03}", conflict_id),
-            ConflictType::ResourceConflict,
-            ConflictSeverity::High,
-            req_a.to_string(),
-            req_b.to_string(),
-            format!("Resource conflict over {}", resource),
-          )
-          .with_evidence(format!(
-            "Both requirements demand exclusive {} access",
-            resource
-          ))
-          .with_resolution(ConflictResolution::new(
-            "Define resource allocation policy".to_string(),
-            ResolutionStrategy::Compromise,
-            4,
-          )),
-        );
+        if a_exclusive || b_exclusive {
+          *conflict_id += 1;
+          return Some(
+            Conflict::new(
+              format!("CONFLICT-{:03}", conflict_id),
+              ConflictType::ResourceConflict,
+              ConflictSeverity::High,
+              req_a.to_string(),
+              req_b.to_string(),
+              format!("Resource conflict over {}", resource),
+            )
+            .with_evidence(format!(
+              "Both requirements demand exclusive {} access",
+              resource
+            ))
+            .with_resolution(ConflictResolution::new(
+              "Define resource allocation policy".to_string(),
+              ResolutionStrategy::Compromise,
+              4,
+            )),
+          );
+        }
       }
-    }
-  }
-
-  None
+      None
+    })
 }
 
 /// Check for priority conflicts

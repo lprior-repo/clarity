@@ -533,7 +533,7 @@ impl Histogram {
             return None;
         }
 
-        let mean = sum / f64::from(u32::try_from(count).unwrap_or(u32::MAX));
+        let mean = sum / f64::from(u32::try_from(count).map_or(u32::MAX, |v| v));
 
         Some(HistogramStats {
             sum,
@@ -599,10 +599,10 @@ impl HistogramStats {
             return None;
         }
 
-        let target = f64::from(u32::try_from(self.count).unwrap_or(u32::MAX)) * (p / 100.0);
+        let target = f64::from(u32::try_from(self.count).map_or(u32::MAX, |v| v)) * (p / 100.0);
 
         for (i, &bucket_count) in self.bucket_counts.iter().enumerate() {
-            if f64::from(u32::try_from(bucket_count).unwrap_or(u32::MAX)) >= target {
+            if f64::from(u32::try_from(bucket_count).map_or(u32::MAX, |v| v)) >= target {
                 if i < self.buckets.len() {
                     return Some(self.buckets[i]);
                 }

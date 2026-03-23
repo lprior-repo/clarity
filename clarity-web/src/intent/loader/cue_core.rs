@@ -178,7 +178,7 @@ pub fn validate_command_output(output: &CommandOutput) -> Result<(), (i32, Strin
   if output.success {
     Ok(())
   } else {
-    Err((output.exit_code.unwrap_or(-1), output.stderr.clone()))
+    Err((output.exit_code.map_or(-1, |v| v), output.stderr.clone()))
   }
 }
 

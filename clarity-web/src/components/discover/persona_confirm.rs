@@ -201,9 +201,9 @@ pub fn PersonaQuality(props: PersonaQualityProps) -> Element {
       // Base score on content and trap count
       let base_score = calculate_persona_score(&persona_text);
       let trap_penalty = trap_count.saturating_mul(15);
-      let trap_penalty_u8 = u8::try_from(trap_penalty).unwrap_or(u8::MAX);
+      let trap_penalty_u8 = u8::try_from(trap_penalty).map_or(u8::MAX, |v| v);
       let overall = base_score.saturating_sub(trap_penalty_u8);
-      let straw_man_score = u8::try_from(100usize.saturating_sub(trap_penalty)).unwrap_or_default();
+      let straw_man_score = u8::try_from(100usize.saturating_sub(trap_penalty)).map_or(0, |v| v);
 
       let specificity = calculate_specificity_score(&persona_text);
       let realism = calculate_realism_score(&persona_text, trap_count);
@@ -283,7 +283,7 @@ fn calculate_realism_score(text: &str, trap_count: usize) -> u8 {
   }
 
   let base = 70u8;
-  let trap_penalty = u8::try_from(trap_count.saturating_mul(15)).unwrap_or(u8::MAX);
+  let trap_penalty = u8::try_from(trap_count.saturating_mul(15)).map_or(u8::MAX, |v| v);
 
   // Check for realistic language
   let lower = trimmed.to_lowercase();

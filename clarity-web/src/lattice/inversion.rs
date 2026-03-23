@@ -186,7 +186,7 @@ impl InversionOutput {
     } else {
       200u32.saturating_sub(total_impact)
     };
-    let quality_score = u8::try_from(quality_score_u32).unwrap_or(u8::MAX);
+    let quality_score = u8::try_from(quality_score_u32).map_or(u8::MAX, |v| v);
 
     Self {
       challenges,
@@ -248,35 +248,41 @@ pub fn extract_assumptions(problem: &str, solution: &str) -> Vec<String> {
     "expects",
   ];
 
-  let mut assumptions = Vec::new();
-
-  // Extract sentences with assumption indicators
-  for pattern in &assumption_patterns {
-    if lower.contains(pattern) {
-      // Find the sentence containing this pattern
-      for sentence in combined.split('.') {
+  let assumptions: Vec<String> = assumption_patterns
+    .iter()
+    .filter(|pattern| lower.contains(*pattern))
+    .flat_map(|pattern| {
+      combined.split('.').filter_map(move |sentence| {
         let sentence_lower = sentence.to_lowercase();
         if sentence_lower.contains(pattern) {
-          let cleaned = sentence.trim().to_string();
-          if !cleaned.is_empty() && !assumptions.contains(&cleaned) {
-            assumptions.push(cleaned);
-          }
+          Some(sentence.trim().to_string())
+        } else {
+          None
         }
-      }
-    }
-  }
+      })
+    })
+    .filter(|s| !s.is_empty())
+    .collect();
 
   // If no explicit assumptions found, extract statements
-  if assumptions.is_empty() {
-    for sentence in combined.split(['.', ',', '\n']).take(5) {
-      let cleaned = sentence.trim().to_string();
-      if cleaned.len() > 10 && !assumptions.contains(&cleaned) {
-        assumptions.push(cleaned);
-      }
-    }
-  }
+  let result = if assumptions.is_empty() {
+    combined
+      .split(['.', ',', '\n'])
+      .take(5)
+      .filter_map(|sentence| {
+        let cleaned = sentence.trim().to_string();
+        if cleaned.len() > 10 {
+          Some(cleaned)
+        } else {
+          None
+        }
+      })
+      .collect()
+  } else {
+    assumptions
+  };
 
-  assumptions.into_iter().unique().collect()
+  result.into_iter().unique().collect()
 }
 
 /// Apply negation pattern to generate challenge
@@ -297,21 +303,20 @@ pub fn apply_negation(assumption: &str) -> Option<InversionChallenge> {
     ("guarantee", "cannot guarantee"),
   ];
 
-  for (original, negated) in &negations {
-    if trimmed.to_lowercase().contains(original) {
+  negations
+    .iter()
+    .find(|(original, _)| trimmed.to_lowercase().contains(*original))
+    .map(|(original, negated)| {
       let challenge = trimmed.replacen(original, negated, 1);
       let severity = determine_severity(trimmed, original, 1);
 
-      return Some(InversionChallenge::new(
+      InversionChallenge::new(
         trimmed.to_string(),
         format!("What if {challenge}?"),
         ChallengePattern::Negation,
         severity,
-      ));
-    }
-  }
-
-  None
+      )
+    })
 }
 
 /// Apply counterexample pattern to generate challenge
@@ -428,8 +433,11 @@ pub fn apply_reversal(assumption: &str) -> InversionChallenge {
     ("active", "inactive"),
   ];
 
-  for (original, reversed) in &reversals {
-    if lower.contains(original) {
+  match reversals
+    .iter()
+    .find(|(original, _)| lower.contains(*original))
+  {
+    Some((original, reversed)) => {
       let challenge = trimmed.replacen(original, reversed, 1);
       let severity = if lower.contains("always") || lower.contains("guarantee") {
         Severity::Critical
@@ -437,22 +445,20 @@ pub fn apply_reversal(assumption: &str) -> InversionChallenge {
         Severity::Moderate
       };
 
-      return InversionChallenge::new(
+      InversionChallenge::new(
         trimmed.to_string(),
         format!("What if it actually {challenge}?"),
         ChallengePattern::Reversal,
         severity,
-      );
+      )
     }
+    None => InversionChallenge::new(
+      trimmed.to_string(),
+      format!("What if the opposite is true: {trimmed}?"),
+      ChallengePattern::Reversal,
+      Severity::Low,
+    ),
   }
-
-  // Generic reversal if no specific pattern matched
-  InversionChallenge::new(
-    trimmed.to_string(),
-    format!("What if the opposite is true: {trimmed}?"),
-    ChallengePattern::Reversal,
-    Severity::Low,
-  )
 }
 
 /// Determine severity based on context and pattern

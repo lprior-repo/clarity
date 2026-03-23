@@ -23,7 +23,7 @@ fn is_expired(timestamp: &str) -> bool {
       let duration = now.signed_duration_since(entry_time);
       duration.num_hours() > FEEDBACK_TTL_HOURS
     })
-    .unwrap_or(true)
+    .map_or(true, |v| v)
 }
 
 fn evict_expired_entries(history: &mut FeedbackHistory) {
@@ -41,10 +41,11 @@ fn evict_expired_entries(history: &mut FeedbackHistory) {
 }
 
 fn remove_oldest_entry(store: &mut FeedbackStore) {
-  if let Some((key, _)) = store
-    .iter()
-    .min_by(|(_, a), (_, b)| a.front().map_or("", |e| e.timestamp.as_str()).cmp(&b.front().map_or("", |e| e.timestamp.as_str())))
-  {
+  if let Some((key, _)) = store.iter().min_by(|(_, a), (_, b)| {
+    a.front()
+      .map_or("", |e| e.timestamp.as_str())
+      .cmp(&b.front().map_or("", |e| e.timestamp.as_str()))
+  }) {
     let key = key.clone();
     store.remove(&key);
   }
@@ -90,4 +91,3 @@ pub fn clear_feedback_store() {
     .map(|mut store| store.clear())
     .map_err(|_| ());
 }
-

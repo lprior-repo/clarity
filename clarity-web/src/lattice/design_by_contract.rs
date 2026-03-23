@@ -233,7 +233,7 @@ impl ContractAnalysis {
       .iter()
       .map(|v| u32::from(v.quality_impact()))
       .sum();
-    let health_score = u8::try_from(100_u32.saturating_sub(total_impact / 10)).unwrap_or(0);
+    let health_score = u8::try_from(100_u32.saturating_sub(total_impact / 10)).map_or(0, |v| v);
 
     let summary = generate_summary(&contracts, &violations);
 
@@ -315,8 +315,7 @@ fn generate_summary(contracts: &[Contract], violations: &[ContractViolation]) ->
 /// Vector of detected contracts
 #[must_use]
 pub fn extract_contracts(text: &str) -> Vec<Contract> {
-  let mut contracts = Vec::new();
-  let mut id_counter = 0;
+  use std::cell::Cell;
 
   // Precondition patterns
   let pre_patterns = [
@@ -349,65 +348,50 @@ pub fn extract_contracts(text: &str) -> Vec<Contract> {
     ("maintains", ""),
   ];
 
+  let id_counter = Cell::new(0usize);
+
+  let try_match = |patterns: &[(&str, &str)],
+                   sentence: &str,
+                   lower: &str,
+                   prefix: &str,
+                   contract_type: ContractType|
+   -> Option<Contract> {
+    patterns
+      .iter()
+      .find(|(pattern, _)| lower.contains(*pattern))
+      .map(|_| {
+        let id = id_counter.get() + 1;
+        id_counter.set(id);
+        Contract::new(
+          format!("{prefix}-{id:03}"),
+          contract_type,
+          format!("{contract_type:?} {id}"),
+          sentence.to_string(),
+        )
+        .ok()
+      })
+      .flatten()
+  };
+
   let sentences: Vec<&str> = text
     .split(['.', '!', '?'])
     .map(|s| s.trim())
     .filter(|s| !s.is_empty())
     .collect();
 
-  for sentence in &sentences {
-    let lower = sentence.to_lowercase();
-
-    // Check precondition patterns
-    for (pattern, _secondary) in &pre_patterns {
-      if lower.contains(pattern) {
-        id_counter += 1;
-        if let Ok(contract) = Contract::new(
-          format!("PRE-{id_counter:03}"),
-          ContractType::Precondition,
-          format!("Precondition {id_counter}"),
-          sentence.to_string(),
-        ) {
-          contracts.push(contract);
-        }
-        break;
-      }
-    }
-
-    // Check postcondition patterns
-    for (pattern, _) in &post_patterns {
-      if lower.contains(pattern) {
-        id_counter += 1;
-        if let Ok(contract) = Contract::new(
-          format!("POST-{id_counter:03}"),
-          ContractType::Postcondition,
-          format!("Postcondition {id_counter}"),
-          sentence.to_string(),
-        ) {
-          contracts.push(contract);
-        }
-        break;
-      }
-    }
-
-    // Check invariant patterns
-    for (pattern, _) in &inv_patterns {
-      if lower.contains(pattern) {
-        id_counter += 1;
-        if let Ok(contract) = Contract::new(
-          format!("INV-{id_counter:03}"),
-          ContractType::Invariant,
-          format!("Invariant {id_counter}"),
-          sentence.to_string(),
-        ) {
-          contracts.push(contract);
-        }
-        break;
-      }
-    }
-  }
-
-  contracts.into_iter().unique_by(|c| c.id.clone()).collect()
+  sentences
+    .iter()
+    .flat_map(|sentence| {
+      let lower = sentence.to_lowercase();
+      [
+        try_match(&pre_patterns, sentence, &lower, "PRE", ContractType::Precondition),
+        try_match(&post_patterns, sentence, &lower, "POST", ContractType::Postcondition),
+        try_match(&inv_patterns, sentence, &lower, "INV", ContractType::Invariant),
+      ]
+    })
+    .flatten()
+    .unique_by(|c| c.id.clone())
+    .collect()
 }
 
 /// Analyze requirements for contract violations
@@ -433,21 +417,22 @@ pub fn analyze_contracts(requirements: &[&str]) -> ContractAnalysis {
 
 /// Detect contract violations by analyzing contract consistency
 fn detect_violations(contracts: &[Contract]) -> Vec<ContractViolation> {
-  let mut violations = Vec::new();
-
   // Check for conflicting preconditions
   let preconditions: Vec<&Contract> = contracts
     .iter()
     .filter(|c| c.contract_type == ContractType::Precondition)
     .collect();
 
-  for (i, pre1) in preconditions.iter().enumerate() {
-    for pre2 in preconditions.iter().skip(i + 1) {
-      if let Some(violation) = check_precondition_conflict(pre1, pre2) {
-        violations.push(violation);
-      }
-    }
-  }
+  let pre_conflicts: Vec<ContractViolation> = preconditions
+    .iter()
+    .enumerate()
+    .flat_map(|(i, pre1)| {
+      preconditions
+        .iter()
+        .skip(i + 1)
+        .filter_map(|pre2| check_precondition_conflict(pre1, pre2))
+    })
+    .collect();
 
   // Check for invariant contradictions
   let invariants: Vec<&Contract> = contracts
@@ -455,33 +440,42 @@ fn detect_violations(contracts: &[Contract]) -> Vec<ContractViolation> {
     .filter(|c| c.contract_type == ContractType::Invariant)
     .collect();
 
-  for (i, inv1) in invariants.iter().enumerate() {
-    for inv2 in invariants.iter().skip(i + 1) {
-      if let Some(violation) = check_invariant_contradiction(inv1, inv2) {
-        violations.push(violation);
-      }
-    }
-  }
+  let inv_contradictions: Vec<ContractViolation> = invariants
+    .iter()
+    .enumerate()
+    .flat_map(|(i, inv1)| {
+      invariants
+        .iter()
+        .skip(i + 1)
+        .filter_map(|inv2| check_invariant_contradiction(inv1, inv2))
+    })
+    .collect();
 
   // Check for missing postconditions when preconditions exist
   let has_postconditions = contracts
     .iter()
     .any(|c| c.contract_type == ContractType::Postcondition);
 
-  if !preconditions.is_empty() && !has_postconditions {
-    if let Some(first_pre) = preconditions.first() {
-      violations.push(
+  let missing_post: Vec<ContractViolation> = preconditions
+    .first()
+    .filter(|_| !preconditions.is_empty() && !has_postconditions)
+    .map(|first_pre| {
+      vec![
         ContractViolation::new(
           (*first_pre).clone(),
           ViolationSeverity::Medium,
           "Preconditions exist but no postconditions defined".to_string(),
         )
         .with_remediation("Add postconditions to specify expected outcomes".to_string()),
-      );
-    }
-  }
+      ]
+    })
+    .unwrap_or_default();
 
-  violations
+  pre_conflicts
+    .into_iter()
+    .chain(inv_contradictions)
+    .chain(missing_post)
+    .collect()
 }
 
 /// Check if two preconditions conflict
@@ -498,25 +492,21 @@ fn check_precondition_conflict(pre1: &Contract, pre2: &Contract) -> Option<Contr
     ("present", "absent"),
   ];
 
-  for (pos, neg) in &contradictions {
-    if (lower1.contains(pos) && lower2.contains(neg))
-      || (lower1.contains(neg) && lower2.contains(pos))
-    {
-      return Some(
-        ContractViolation::new(
-          pre1.clone(),
-          ViolationSeverity::High,
-          format!(
-            "Conflicting preconditions: '{}' vs '{}'",
-            pre1.name, pre2.name
-          ),
-        )
-        .with_remediation("Resolve conflicting preconditions".to_string()),
-      );
-    }
-  }
-
-  None
+  contradictions.iter().find_map(|(pos, neg)| {
+    let cross = (lower1.contains(pos) && lower2.contains(neg))
+      || (lower1.contains(neg) && lower2.contains(pos));
+    cross.then(|| {
+      ContractViolation::new(
+        pre1.clone(),
+        ViolationSeverity::High,
+        format!(
+          "Conflicting preconditions: '{}' vs '{}'",
+          pre1.name, pre2.name
+        ),
+      )
+      .with_remediation("Resolve conflicting preconditions".to_string())
+    })
+  })
 }
 
 /// Check if two invariants contradict

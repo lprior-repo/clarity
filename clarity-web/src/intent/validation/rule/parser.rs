@@ -122,7 +122,7 @@ fn parse_equals_value(value: &str) -> RuleExpr {
   parse_equals_variable(value)
     .or_else(|| parse_equals_bool(value))
     .or_else(|| parse_equals_number(value))
-    .unwrap_or_else(|| RuleExpr::Equals(value.to_string()))
+    .map_or_else(|| RuleExpr::Equals(value.to_string()), |v| v)
 }
 
 fn parse_equals_variable(value: &str) -> Option<RuleExpr> {
@@ -334,7 +334,7 @@ where
 fn parse_array_where_each(rule: &str) -> Option<RuleExpr> {
   rule.strip_prefix("array where each ").map(|inner| {
     let inner_rule = normalize_inner_rule(inner);
-    let inner_expr = parse(&inner_rule).unwrap_or_else(|_| RuleExpr::Raw(inner.to_string()));
+    let inner_expr = parse(&inner_rule).map_or_else(|_| RuleExpr::Raw(inner.to_string()), |v| v);
     RuleExpr::ArrayWhereEach(Box::new(inner_expr))
   })
 }
@@ -382,7 +382,7 @@ fn parse_string_list(s: &str) -> Result<Vec<String>, RuleParseError> {
       item
         .strip_prefix('"')
         .and_then(|s| s.strip_suffix('"'))
-        .unwrap_or(item)
+        .map_or(item, |s| s)
         .to_string()
     })
     .filter(|s| !s.is_empty())
