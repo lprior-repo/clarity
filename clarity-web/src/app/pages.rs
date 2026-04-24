@@ -33,7 +33,7 @@ fn is_phase_done(phase_key: &str, answers: &[Answer]) -> bool {
 /// Phase button data for rendering
 #[derive(Clone, Debug)]
 struct PhaseButtonData {
-  key: String,
+  key: &'static str,
   label: String,
   index: usize,
   is_done: bool,
@@ -44,27 +44,17 @@ struct PhaseButtonData {
 
 /// Create phase button element from data
 fn render_phase_button(data: &PhaseButtonData, mut active_phase: Signal<String>) -> Element {
-  let PhaseButtonData {
-    key,
-    label,
-    index,
-    is_done,
-    is_active,
-    is_disabled,
-    disabled_reason,
-  } = data.clone();
-
-  let number_class = if is_active {
+  let number_class = if data.is_active {
     "bg-primary/20 text-primary"
-  } else if is_disabled {
+  } else if data.is_disabled {
     "bg-muted text-muted-foreground/50"
   } else {
     "bg-secondary text-muted-foreground"
   };
 
-  let text_class = if is_active {
+  let text_class = if data.is_active {
     "font-medium"
-  } else if is_disabled {
+  } else if data.is_disabled {
     "text-muted-foreground/50"
   } else {
     ""
@@ -72,30 +62,37 @@ fn render_phase_button(data: &PhaseButtonData, mut active_phase: Signal<String>)
 
   let button_class = format!(
     "relative flex items-center gap-1.5 px-3 py-2 text-sm transition-colors {}",
-    if is_active {
+    if data.is_active {
       "text-foreground"
-    } else if is_disabled {
+    } else if data.is_disabled {
       "text-muted-foreground/50 cursor-not-allowed"
     } else {
       "text-muted-foreground hover:text-foreground/70"
     }
   );
 
+  let key_owned = data.key;
+  let is_disabled = data.is_disabled;
+  let aria_label: String = data
+    .disabled_reason
+    .as_ref()
+    .map_or_else(|| data.label.clone(), |reason| format!("{} - {reason}", data.label));
+
   rsx! {
       div {
           class: "relative",
           button {
-              key: "{key}",
+              key: "{data.key}",
               "type": "button",
               onclick: move |_| {
                   if !is_disabled {
-                      active_phase.set(key.clone());
+                      active_phase.set(key_owned.to_string());
                   }
               },
-              disabled: is_disabled,
+              disabled: data.is_disabled,
               class: "{button_class}",
-              aria_label: disabled_reason.as_ref().map_or_else(|| label.clone(), |reason| format!("{label} - {reason}")),
-              if is_done {
+              aria_label: aria_label,
+              if data.is_done {
                   svg {
                       width: "14",
                       height: "14",
@@ -110,26 +107,26 @@ fn render_phase_button(data: &PhaseButtonData, mut active_phase: Signal<String>)
                           "stroke-linejoin": "round"
                       }
                   }
-              } else {
-                  span {
-                      class: "flex h-4 w-4 items-center justify-center rounded-full text-xs {number_class}",
-                      "{index + 1}"
-                  }
-              }
-              span { class: "{text_class}", "{label}" }
-              if is_active {
-                  span { class: "absolute inset-x-0 -bottom-[9px] h-0.5 bg-primary" }
-              }
-          }
-          // Tooltip for disabled button
-          if is_disabled {
-              if let Some(reason) = &disabled_reason {
-                  div {
-                      class: "absolute left-0 top-full mt-2 z-50 w-64 rounded-md bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md border border-border",
-                      "{reason}"
-                  }
-              }
-          }
+               } else {
+                   span {
+                       class: "flex h-4 w-4 items-center justify-center rounded-full text-xs {number_class}",
+                       "{data.index + 1}"
+                   }
+               }
+               span { class: "{text_class}", "{data.label}" }
+               if data.is_active {
+                   span { class: "absolute inset-x-0 -bottom-[9px] h-0.5 bg-primary" }
+               }
+           }
+           // Tooltip for disabled button
+           if data.is_disabled {
+               if let Some(reason) = &data.disabled_reason {
+                   div {
+                       class: "absolute left-0 top-full mt-2 z-50 w-64 rounded-md bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md border border-border",
+                       "{reason}"
+                   }
+               }
+           }
       }
   }
 }
@@ -328,7 +325,7 @@ pub fn HomePage() -> Element {
       };
 
       PhaseButtonData {
-        key: phase.key.to_string(),
+        key: phase.key,
         label: phase.label.to_string(),
         index: i,
         is_done,
@@ -340,26 +337,8 @@ pub fn HomePage() -> Element {
     .collect();
   drop(active_phase_val);
 
-  // Pre-render phase buttons
-  let active_phase_for_buttons = active_phase;
-  let phase_buttons: Vec<Element> = phase_buttons_data
-    .iter()
-    .map(|data| render_phase_button(data, active_phase_for_buttons))
-    .collect();
-
   // Pre-calculate tab states
-  // Pre-render tab buttons directly from TABS iterator
   let right_tab_val = right_tab();
-  let tab_buttons: Vec<Element> = TABS
-    .iter()
-    .map(|tab| TabButtonData {
-      key: tab.key,
-      label: tab.label.to_string(),
-      is_active: right_tab_val == tab.key,
-      right_tab_signal: right_tab,
-    })
-    .map(render_tab_button)
-    .collect();
 
   // Get current tab for content rendering
   let current_tab = right_tab();
@@ -415,8 +394,8 @@ pub fn HomePage() -> Element {
 
                   // Phase navigation
                   nav { class: "flex items-center", "aria-label": "Planning phases",
-                      for button in phase_buttons.iter() {
-                          {button.clone()}
+                      for data in phase_buttons_data.iter() {
+                          {render_phase_button(data, active_phase)}
                       }
                   }
               }
@@ -481,8 +460,13 @@ pub fn HomePage() -> Element {
               div { class: "flex w-[440px] shrink-0 flex-col lg:w-[500px]",
                   // Tab headers
                   div { class: "flex shrink-0 items-center border-b border-border",
-                      for button in tab_buttons.iter() {
-                          {button.clone()}
+                      for tab in TABS.iter() {
+                          {render_tab_button(TabButtonData {
+                              key: tab.key,
+                              label: tab.label.to_string(),
+                              is_active: right_tab_val == tab.key,
+                              right_tab_signal: right_tab,
+                          })}
                       }
                   }
 
