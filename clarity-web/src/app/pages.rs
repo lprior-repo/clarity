@@ -255,9 +255,6 @@ pub fn HomePage() -> Element {
 
   // Recalculate quality score when answers change
   use_effect({
-    let _answers_clone = answers.read().clone();
-    let _ears_clone = ears_requirements.read().clone();
-
     let mut quality_score = quality_score;
     move || {
       let answers_clone = answers.read().clone();
