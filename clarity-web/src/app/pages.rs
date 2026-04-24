@@ -8,6 +8,7 @@
 #![allow(clippy::missing_panics_doc)]
 
 use dioxus::prelude::*;
+use tracing;
 
 use crate::components::quality::{QualityScoreBar, MINIMUM_GATE};
 use crate::components::{ArtifactPanel, GraphVisualizer, PlanningCoach, StateMachine};
@@ -275,7 +276,10 @@ pub fn HomePage() -> Element {
       let result = calculate_quality(&answers_clone, &ears_clone, &inversion);
       match result {
         Ok(score) => quality_score.set(Some(score)),
-        Err(_) => quality_score.set(None),
+        Err(ref e) => {
+          tracing::debug!("quality calculation failed: {:?}", e);
+          quality_score.set(None)
+        }
       }
     }
   });
