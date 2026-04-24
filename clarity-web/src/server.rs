@@ -1,6 +1,3 @@
-#![warn(clippy::unwrap_used)]
-#![warn(clippy::expect_used)]
-#![warn(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![allow(clippy::suspicious_else_formatting)]
 #![allow(clippy::significant_drop_tightening)]
@@ -222,7 +219,6 @@ pub async fn get_coach_guidance(
 ///
 /// Tracks request timestamps per session ID and enforces max requests per minute.
 #[cfg(not(target_arch = "wasm32"))]
-#[allow(dead_code)]
 #[derive(Debug, Clone)]
 struct RateLimiter {
   max_requests_per_minute: u32,
@@ -242,7 +238,6 @@ impl RateLimiter {
   /// Check if a session is allowed to make a request
   ///
   /// Returns `Ok(())` if allowed, `Err` with remaining seconds if rate limited.
-  #[allow(dead_code)]
   async fn check_rate_limit(&self, session_id: &str) -> Result<(), u64> {
     let now = Instant::now();
     let one_minute_ago = now.checked_sub(Duration::from_secs(60)).map_or(now, |t| t);
@@ -271,7 +266,6 @@ impl RateLimiter {
 
 /// Global rate limiter instance
 #[cfg(not(target_arch = "wasm32"))]
-#[allow(dead_code)]
 static RATE_LIMITER: LazyLock<RateLimiter> = LazyLock::new(|| RateLimiter::new(10));
 
 /// Check rate limit for a session, returning a formatted error if limited.
@@ -416,7 +410,6 @@ fn initialize_ai_provider_state() -> Result<AiProviderState, AiProviderBootstrap
 ///
 /// Initialized lazily from configuration without aborting the process on failure.
 #[cfg(not(target_arch = "wasm32"))]
-#[allow(dead_code)]
 static AI_PROVIDER_STATE: LazyLock<Result<AiProviderState, AiProviderBootstrapError>> =
   LazyLock::new(|| {
     let state = initialize_ai_provider_state();
@@ -1328,7 +1321,6 @@ pub async fn validate_antithesis(
 
 /// Calculate specificity score for a single antithesis point.
 #[cfg(not(target_arch = "wasm32"))]
-#[allow(dead_code)]
 fn calculate_specificity(text: &str) -> f64 {
   let trimmed = text.trim();
 
@@ -1421,7 +1413,6 @@ pub async fn validate_vorp(
 
 /// Validate the Value dimension.
 #[cfg(not(target_arch = "wasm32"))]
-#[allow(dead_code)]
 fn validate_v_dimension(text: &str) -> f64 {
   let word_count = text.split_whitespace().count();
   let has_quantified_benefit = text.chars().any(char::is_numeric)
@@ -1439,7 +1430,6 @@ fn validate_v_dimension(text: &str) -> f64 {
 
 /// Validate the Obvious dimension.
 #[cfg(not(target_arch = "wasm32"))]
-#[allow(dead_code)]
 fn validate_o_dimension(text: &str) -> f64 {
   let word_count = text.split_whitespace().count();
   let mentions_immediate = text.to_lowercase().contains("immediately")
@@ -1457,7 +1447,6 @@ fn validate_o_dimension(text: &str) -> f64 {
 
 /// Validate the Real dimension.
 #[cfg(not(target_arch = "wasm32"))]
-#[allow(dead_code)]
 fn validate_r_dimension(text: &str) -> f64 {
   let word_count = text.split_whitespace().count();
   let has_evidence = text.to_lowercase().contains("research")
@@ -1476,7 +1465,6 @@ fn validate_r_dimension(text: &str) -> f64 {
 
 /// Validate the Possible dimension.
 #[cfg(not(target_arch = "wasm32"))]
-#[allow(dead_code)]
 fn validate_p_dimension(text: &str) -> f64 {
   let word_count = text.split_whitespace().count();
   let mentions_resources = text.to_lowercase().contains("can build")
