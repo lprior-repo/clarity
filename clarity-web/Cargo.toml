@@ -4,6 +4,9 @@ version.workspace = true
 edition.workspace = true
 autoexamples = false
 
+[[example]]
+name = "test_straw_man_validation"
+
 [dependencies]
 # Dioxus 0.7 - fullstack with web and server
 dioxus = { version = "0.7.3", features = ["router"] }
