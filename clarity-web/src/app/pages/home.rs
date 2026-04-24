@@ -20,6 +20,9 @@ use super::header::{render_header, HeaderRenderData};
 use super::phase_nav::{is_phase_done, render_phase_button, PhaseButtonData};
 use super::tab_panel::{render_tab_button, render_tab_content, TabButtonData};
 
+/// Phase keys that require quality gate completion to proceed
+const QUALITY_GATE_PHASES: &[&str] = &["develop", "deliver"];
+
 #[component]
 pub fn HomePage() -> Element {
   let active_phase = use_signal(|| String::from("discover"));
@@ -71,7 +74,7 @@ pub fn HomePage() -> Element {
     .map(|(i, phase)| {
       let is_done = is_phase_done(phase.key, &answers.read());
       let is_active = *active_phase_val == phase.key;
-      let (is_disabled, disabled_reason) = if phase.key == "develop"
+      let (is_disabled, disabled_reason) = if QUALITY_GATE_PHASES.contains(&phase.key)
         && is_phase_done("discover", &answers.read())
         && !passes_gate
       {
