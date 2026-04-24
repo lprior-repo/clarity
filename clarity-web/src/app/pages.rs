@@ -312,7 +312,7 @@ pub fn HomePage() -> Element {
       let is_active = *active_phase_val == phase.key;
 
       // Check if phase should be disabled due to quality gate
-      let (is_disabled, disabled_reason) = if phase.key == "develop" {
+      let (is_disabled, disabled_reason) = if phase.key == "develop" || phase.key == "deliver" {
         if is_phase_done("discover", &answers.read()) && !passes_gate {
           (
             true,
