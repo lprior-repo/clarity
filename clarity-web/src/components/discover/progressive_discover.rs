@@ -78,15 +78,6 @@ const SCAFFOLDING_PROMPTS: &[(&str, &str)] = &[
   ),
 ];
 
-impl PartialEq for ProgressiveDiscoverProps {
-  fn eq(&self, other: &Self) -> bool {
-    self.initial_prompt == other.initial_prompt
-      && self.extraction_provider.is_some() == other.extraction_provider.is_some()
-      && self.on_complete.is_some() == other.on_complete.is_some()
-      && self.on_refine.is_some() == other.on_refine.is_some()
-  }
-}
-
 /// Props for `ProgressiveDiscover` component
 #[derive(Clone, Props)]
 pub struct ProgressiveDiscoverProps {
@@ -101,7 +92,14 @@ pub struct ProgressiveDiscoverProps {
   pub on_refine: Option<EventHandler<()>>,
 }
 
-
+impl PartialEq for ProgressiveDiscoverProps {
+  fn eq(&self, _other: &Self) -> bool {
+    // Props with Arc<dyn Trait> cannot be compared
+    // NOTE: This always returns false - equality checking is broken for this type
+    // TODO: Implement proper comparison if needed, or remove PartialEq impl
+    false
+  }
+}
 
 /// `ProgressiveDiscover` component
 ///
@@ -1360,6 +1358,7 @@ mod tests {
     );
   }
 
+  // NOTE: compile_to_kirk EXISTS at server.rs:1723 - TODO is outdated
   #[test]
   fn test_kirk_compilation_phase_uses_compile_to_kirk_server_function() {
     use crate::server::compile_to_kirk;

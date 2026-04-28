@@ -302,7 +302,7 @@ mod tests {
   #[test]
   fn test_public_api_via_intent_module() {
     // This test demonstrates public usage via the re-exported API
-    use crate::intent::beads::templates::render::decode_beads_json;
+    use crate::intent::decode_beads_json;
 
     let json = r#"[{
       "title": "API Test",

@@ -23,6 +23,7 @@ pub struct TermCmd {
   pub out: String,
 }
 
+#[must_use]
 pub fn truncate(value: &str, max: usize) -> &str {
   if value.len() > max {
     let end = value.floor_char_boundary(max);

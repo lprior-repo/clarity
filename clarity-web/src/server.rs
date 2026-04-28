@@ -101,7 +101,7 @@ pub async fn save_bead(bead: Bead) -> Result<Bead, ServerFnError> {
   Ok(updated_bead)
 }
 
-/// Get all beads for a project (MOCK - ignores project_id, returns hardcoded data)
+/// Get all beads for a project (MOCK - ignores `project_id`, returns hardcoded data)
 #[allow(clippy::unused_async)]
 #[server]
 pub async fn get_beads(project_id: String) -> Result<Vec<Bead>, ServerFnError> {
@@ -240,7 +240,7 @@ impl RateLimiter {
   /// Returns `Ok(())` if allowed, `Err` with remaining seconds if rate limited.
   async fn check_rate_limit(&self, session_id: &str) -> Result<(), u64> {
     let now = Instant::now();
-    let one_minute_ago = now.checked_sub(Duration::from_secs(60)).map_or(now, |t| t);
+    let one_minute_ago = now.checked_sub(Duration::from_mins(1)).map_or(now, |t| t);
     let mut requests = self.requests.write().await;
     let session_requests = requests
       .entry(session_id.to_string())
@@ -400,7 +400,7 @@ fn create_ai_provider_state(
 
 #[cfg(not(target_arch = "wasm32"))]
 fn initialize_ai_provider_state() -> Result<AiProviderState, AiProviderBootstrapError> {
-  let config = load_ai_config_if_present()?.map_or_else(default_config, |c| c);
+  let config = load_ai_config_if_present()?.unwrap_or_else(default_config);
   let input = build_provider_bootstrap_input(config, || uuid::Uuid::new_v4().to_string());
 
   create_ai_provider_state(input)

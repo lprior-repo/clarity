@@ -881,7 +881,7 @@ impl SpecLinter {
                 LintRule::DeprecatedPattern,
                 severity,
                 format!("features[{idx}].behaviors[{bidx}].description"),
-                format!("Behavior description contains vague term '{term}'",),
+                format!("Behavior description contains vague term '{term}'"),
               )
               .with_suggestion("Replace with specific, concrete description".to_string()),
             );
@@ -1016,7 +1016,7 @@ impl SpecLinter {
           LintRule::Completeness,
           severity,
           "features".to_string(),
-          format!("{features_without_desc} feature(s) missing descriptions",),
+          format!("{features_without_desc} feature(s) missing descriptions"),
         )
         .with_suggestion("Add descriptions to all features".to_string()),
       );
@@ -1040,7 +1040,7 @@ impl SpecLinter {
           LintRule::Completeness,
           severity,
           "features[].behaviors".to_string(),
-          format!("{behaviors_without_desc} behavior(s) missing descriptions",),
+          format!("{behaviors_without_desc} behavior(s) missing descriptions")
         )
         .with_suggestion("Add descriptions to all behaviors".to_string()),
       );

@@ -22,7 +22,6 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::StorageError;
-pub use crate::components::discover::straw_man::{StrawManTrap, StrawManValidation};
 pub use crate::components::discover::types::{HolePunchingResults, ScenarioField};
 
 /// Result type for transcript store operations.
@@ -173,6 +172,56 @@ impl Default for AntithesisResponse {
   }
 }
 
+/// Types of straw man argument traps.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StrawManTrap {
+  /// Assumes irrational actor behavior
+  IrrationalActor,
+  /// Assumes idealized user who doesn't exist
+  ManicPixieDreamUser,
+  /// Assumes user with unrealistic self-discipline
+  StoicMonk,
+  /// Assumes user is exactly like the designer
+  YourClone,
+}
+
+/// Validation result for straw man argument detection.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct StrawManValidation {
+  /// Detected straw man traps
+  pub traps_detected: Vec<StrawManTrap>,
+  /// Whether the argument passed validation (no traps)
+  pub passed: bool,
+}
+
+impl StrawManValidation {
+  /// Create a new straw man validation result.
+  #[must_use]
+  pub const fn new(traps_detected: Vec<StrawManTrap>) -> Self {
+    let passed = traps_detected.is_empty();
+    Self {
+      traps_detected,
+      passed,
+    }
+  }
+
+  /// Create a passing validation (no traps detected).
+  #[must_use]
+  pub const fn passed() -> Self {
+    Self {
+      traps_detected: Vec::new(),
+      passed: true,
+    }
+  }
+}
+
+impl Default for StrawManValidation {
+  fn default() -> Self {
+    Self::passed()
+  }
+}
+
 /// Main transcript structure for the interrogation flow.
 ///
 /// Contains all extracted fields, adversarial responses, and metadata
@@ -222,7 +271,7 @@ impl InterrogationTranscript {
       problem: ExtractedField::empty(),
       antithesis: AntithesisResponse::empty(),
       persona: ExtractedField::empty(),
-      straw_man_validation: StrawManValidation::passing(),
+      straw_man_validation: StrawManValidation::passed(),
       solution: ExtractedField::empty(),
       vorp_justification: String::new(),
       nonpersona: ExtractedField::empty(),
@@ -332,8 +381,8 @@ mod tests {
   }
 
   #[test]
-  fn test_straw_man_validation_passing() {
-    let validation = StrawManValidation::passing();
+  fn test_straw_man_validation_passed() {
+    let validation = StrawManValidation::passed();
     assert!(validation.passed);
     assert!(validation.traps_detected.is_empty());
   }
@@ -405,7 +454,7 @@ mod tests {
   fn test_straw_man_trap_serialization() -> Result<(), serde_json::Error> {
     let trap = StrawManTrap::ManicPixieDreamUser;
     let json = serde_json::to_string(&trap)?;
-    assert_eq!(json, "\"ManicPixieDreamUser\"");
+    assert_eq!(json, "\"manic_pixie_dream_user\"");
     Ok(())
   }
 

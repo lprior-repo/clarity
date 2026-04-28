@@ -45,16 +45,13 @@ fn create_regex_safe(primary: &str, secondary: &str) -> Regex {
   try_create_regex(primary)
     .or_else(|| try_create_regex(secondary))
     .or_else(|| try_create_regex(ULTIMATE_FALLBACK_PATTERN_STR))
-    .map_or_else(
-      || {
-        // SAFETY: The pattern "(.+)" is syntactically valid and will always compile.
-        // This branch is unreachable in practice, but required by the type system.
-        #[allow(clippy::expect_used)]
-        Regex::new(ULTIMATE_FALLBACK_PATTERN_STR)
-          .expect("ULTIMATE_FALLBACK_PATTERN_STR must be valid regex syntax")
-      },
-      |v| v,
-    )
+    .unwrap_or_else(|| {
+      // SAFETY: The pattern "(.+)" is syntactically valid and will always compile.
+      // This branch is unreachable in practice, but required by the type system.
+      #[allow(clippy::expect_used)]
+      Regex::new(ULTIMATE_FALLBACK_PATTERN_STR)
+        .expect("ULTIMATE_FALLBACK_PATTERN_STR must be valid regex syntax")
+    })
 }
 
 /// Lazy-initialized regex for capitalized word detection

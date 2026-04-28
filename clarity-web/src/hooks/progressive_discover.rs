@@ -105,13 +105,13 @@ impl PersistableStateBuilder {
   }
 
   #[must_use]
-  pub fn phase(mut self, phase: ProgressiveDiscoverPhase) -> Self {
+  pub const fn phase(mut self, phase: ProgressiveDiscoverPhase) -> Self {
     self.phase = Some(phase);
     self
   }
 
   #[must_use]
-  pub fn sub_phase(mut self, sub_phase: ConfirmSubPhase) -> Self {
+  pub const fn sub_phase(mut self, sub_phase: ConfirmSubPhase) -> Self {
     self.sub_phase = Some(sub_phase);
     self
   }
@@ -153,7 +153,7 @@ impl PersistableStateBuilder {
   }
 
   #[must_use]
-  pub fn brutal_truths(mut self, brutal_truths: BrutalTruthsState) -> Self {
+  pub const fn brutal_truths(mut self, brutal_truths: BrutalTruthsState) -> Self {
     self.brutal_truths = Some(brutal_truths);
     self
   }
@@ -805,7 +805,7 @@ impl ProgressiveDiscoverState {
 
   /// Check if all brutal truths are acknowledged.
   #[must_use]
-  pub fn are_all_brutal_truths_acknowledged(&self) -> bool {
+  pub const fn are_all_brutal_truths_acknowledged(&self) -> bool {
     self.brutal_truths.is_complete()
   }
 
@@ -1211,6 +1211,7 @@ pub fn use_progressive_discover_with_recovery() -> (
 /// // Auto-save is automatically set up
 /// // Recovery status can be used to show a dialog
 /// ```
+#[must_use]
 pub fn use_progressive_discover_full() -> (Signal<ProgressiveDiscoverState>, CrashRecoveryStatus) {
   let recovery_status = use_crash_recovery_check();
 

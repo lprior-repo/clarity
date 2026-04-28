@@ -298,10 +298,10 @@ fn calculate_completeness(answers: &[Answer], issues: &mut Vec<QualityIssue>) ->
     100
   };
 
-  DimensionScore::new(QualityDimension::Completeness, score).map_or_else(|_| DimensionScore {
+  DimensionScore::new(QualityDimension::Completeness, score).unwrap_or_else(|_| DimensionScore {
     dimension: QualityDimension::Completeness,
     score: 0,
-  }, |v| v)
+  })
 }
 
 /// Calculate consistency: detect contradictions
@@ -337,10 +337,10 @@ fn calculate_consistency(answers: &[Answer], issues: &mut Vec<QualityIssue>) -> 
     ));
   }
 
-  DimensionScore::new(QualityDimension::Consistency, score).map_or_else(|_| DimensionScore {
+  DimensionScore::new(QualityDimension::Consistency, score).unwrap_or_else(|_| DimensionScore {
     dimension: QualityDimension::Consistency,
     score: 0,
-  }, |v| v)
+  })
 }
 
 /// Check if two statements contradict each other
@@ -370,12 +370,12 @@ fn calculate_testability(
       IssueSeverity::Error,
       "No EARS requirements defined".to_string(),
     ));
-    return DimensionScore::new(QualityDimension::Testability, 0).map_or_else(|_| {
+    return DimensionScore::new(QualityDimension::Testability, 0).unwrap_or_else(|_| {
       DimensionScore {
         dimension: QualityDimension::Testability,
         score: 0,
       }
-    }, |v| v);
+    });
   }
 
   let with_criteria = ears.iter().filter(|e| e.has_acceptance_criteria).count();
@@ -391,10 +391,10 @@ fn calculate_testability(
     ));
   }
 
-  DimensionScore::new(QualityDimension::Testability, score).map_or_else(|_| DimensionScore {
+  DimensionScore::new(QualityDimension::Testability, score).unwrap_or_else(|_| DimensionScore {
     dimension: QualityDimension::Testability,
     score: 0,
-  }, |v| v)
+  })
 }
 
 /// Calculate clarity: sentence complexity and jargon density
@@ -432,11 +432,7 @@ fn calculate_clarity(answers: &[Answer], issues: &mut Vec<QualityIssue>) -> Dime
       (
         total_sentences + sentence_count,
         complex_sentences
-          + if comma_count > 3 || word_count > 30 {
-            1
-          } else {
-            0
-          },
+          + usize::from(comma_count > 3 || word_count > 30),
         jargon_count + jargon_hits,
       )
     },
@@ -477,10 +473,10 @@ fn calculate_clarity(answers: &[Answer], issues: &mut Vec<QualityIssue>) -> Dime
     ));
   }
 
-  DimensionScore::new(QualityDimension::Clarity, score).map_or_else(|_| DimensionScore {
+  DimensionScore::new(QualityDimension::Clarity, score).unwrap_or_else(|_| DimensionScore {
     dimension: QualityDimension::Clarity,
     score: 0,
-  }, |v| v)
+  })
 }
 
 /// Calculate security: auth/encryption/validation mentions
@@ -560,10 +556,10 @@ fn calculate_security(answers: &[Answer], issues: &mut Vec<QualityIssue>) -> Dim
     ));
   }
 
-  DimensionScore::new(QualityDimension::Security, score).map_or_else(|_| DimensionScore {
+  DimensionScore::new(QualityDimension::Security, score).unwrap_or_else(|_| DimensionScore {
     dimension: QualityDimension::Security,
     score: 0,
-  }, |v| v)
+  })
 }
 
 #[cfg(test)]

@@ -269,7 +269,7 @@ fn parse_sentence(sentence: &str, patterns: &[CausalPattern]) -> Option<Effect> 
 
   patterns
     .iter()
-    .filter_map(|pattern| {
+    .find_map(|pattern| {
       let pos = lower.find(&pattern.keyword)?;
       // Extract trigger (before the keyword)
       let trigger = sentence[..pos].trim().to_string();
@@ -289,7 +289,6 @@ fn parse_sentence(sentence: &str, patterns: &[CausalPattern]) -> Option<Effect> 
         indirect_effects: Vec::new(),
       })
     })
-    .next()
 }
 
 /// Clean and normalize text

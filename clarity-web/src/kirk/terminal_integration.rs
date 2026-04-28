@@ -507,11 +507,13 @@ impl OpenCodeTerminalClient {
           let latency = start.elapsed().as_millis().try_into().map_or(u64::MAX, |v| v);
 
           // Update status on success
-          let mut status = self.status.write().await;
-          *status = status
-            .clone()
-            .with_state(ConnectionState::Connected)
-            .with_success(latency);
+          {
+            let mut status = self.status.write().await;
+            *status = status
+              .clone()
+              .with_state(ConnectionState::Connected)
+              .with_success(latency);
+          }
 
           debug!(
             attempts = attempts,
@@ -533,10 +535,13 @@ impl OpenCodeTerminalClient {
           );
 
           // Update status on failure
-          let mut status = self.status.write().await;
-          let new_state = status.state.on_failure(retryable);
-          let error_msg = terminal_error.to_string();
-          *status = ConnectionStatus::new(new_state).with_failure(error_msg);
+          {
+            let mut status = self.status.write().await;
+            let new_state = status.state.on_failure(retryable);
+            let error_msg = terminal_error.to_string();
+            *status = ConnectionStatus::new(new_state).with_failure(error_msg);
+            drop(status);
+          }
 
           last_error = Some(terminal_error);
 
@@ -606,11 +611,13 @@ impl OpenCodeTerminalClient {
           let latency = start.elapsed().as_millis().try_into().map_or(u64::MAX, |v| v);
 
           // Update status on success
-          let mut status = self.status.write().await;
-          *status = status
-            .clone()
-            .with_state(ConnectionState::Connected)
-            .with_success(latency);
+          {
+            let mut status = self.status.write().await;
+            *status = status
+              .clone()
+              .with_state(ConnectionState::Connected)
+              .with_success(latency);
+          }
 
           debug!(
             attempts = attempts,
@@ -822,19 +829,25 @@ impl TerminalClient for OpenCodeTerminalClient {
 
     match result {
       Ok(()) => {
-        let mut status = self.status.write().await;
-        *status = status.clone().with_state(ConnectionState::Connected);
+        {
+          let mut status = self.status.write().await;
+          *status = status.clone().with_state(ConnectionState::Connected);
+          drop(status);
+        }
 
         debug!("Health check passed");
         Ok(())
       }
       Err(e) => {
         let terminal_error = TerminalError::from(e);
-        let mut status = self.status.write().await;
-        *status = status
-          .clone()
-          .with_state(ConnectionState::Failed)
-          .with_failure(terminal_error.to_string());
+        {
+          let mut status = self.status.write().await;
+          *status = status
+            .clone()
+            .with_state(ConnectionState::Failed)
+            .with_failure(terminal_error.to_string());
+          drop(status);
+        }
 
         warn!(error = %terminal_error, "Health check failed");
         Err(terminal_error)
@@ -889,7 +902,7 @@ impl TranscriptProcessor {
     // Extract problem
     let problem_result = self.client.extract_problem(&original_prompt).await?;
     let problem =
-      extract_field_value(&problem_result, "problem").map_or_else(|| original_prompt.clone(), |v| v);
+      extract_field_value(&problem_result, "problem").unwrap_or_else(|| original_prompt.clone());
 
     // Extract persona
     let persona_result = self.client.extract_persona(&original_prompt).await?;

@@ -514,7 +514,7 @@ pub fn sample_transcript() -> InterrogationTranscript {
       ),
   };
 
-  transcript.straw_man_validation = StrawManValidation::passing();
+  transcript.straw_man_validation = StrawManValidation::passed();
 
   transcript
 }

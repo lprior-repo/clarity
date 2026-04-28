@@ -234,7 +234,7 @@ mod tests {
       "Counter 3".to_string(),
       0.7,
     );
-    transcript.straw_man_validation = StrawManValidation::passing();
+    transcript.straw_man_validation = StrawManValidation::passed();
     transcript
   }
 

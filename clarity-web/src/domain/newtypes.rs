@@ -25,7 +25,10 @@ pub enum NewtypeError {
 pub struct AnswerId(String);
 
 impl AnswerId {
-  /// Create a new AnswerId.
+  /// Create a new `AnswerId`.
+  ///
+  /// # Errors
+  /// Returns `NewtypeError::Empty` if the string is empty or whitespace-only.
   pub fn new(s: String) -> Result<Self, NewtypeError> {
     Self::try_from(s)
   }
@@ -78,7 +81,10 @@ impl FromStr for AnswerId {
 pub struct StepId(String);
 
 impl StepId {
-  /// Create a new StepId.
+  /// Create a new `StepId`.
+  ///
+  /// # Errors
+  /// Returns `NewtypeError::Empty` if the string is empty or whitespace-only.
   pub fn new(s: String) -> Result<Self, NewtypeError> {
     Self::try_from(s)
   }
@@ -131,7 +137,10 @@ impl FromStr for StepId {
 pub struct BeadId(String);
 
 impl BeadId {
-  /// Create a new BeadId.
+  /// Create a new `BeadId`.
+  ///
+  /// # Errors
+  /// Returns `NewtypeError::Empty` if the string is empty or whitespace-only.
   pub fn new(s: String) -> Result<Self, NewtypeError> {
     Self::try_from(s)
   }
@@ -184,7 +193,7 @@ impl FromStr for BeadId {
 pub struct AnswerValue(String);
 
 impl AnswerValue {
-  /// Create a new AnswerValue.
+  /// Create a new `AnswerValue`.
   #[must_use]
   pub const fn new(s: String) -> Self {
     Self(s)
@@ -192,7 +201,7 @@ impl AnswerValue {
 
   /// Check if the value is empty.
   #[must_use]
-  pub fn is_empty(&self) -> bool {
+  pub const fn is_empty(&self) -> bool {
     self.0.is_empty()
   }
 
@@ -237,7 +246,10 @@ impl From<AnswerValue> for String {
 pub struct Timestamp(String);
 
 impl Timestamp {
-  /// Create a new Timestamp, validating ISO-8601 format.
+  /// Create a new `Timestamp`, validating ISO-8601 format.
+  ///
+  /// # Errors
+  /// Returns `NewtypeError::Empty` if the string is empty, whitespace-only, or not valid ISO-8601.
   pub fn new(s: String) -> Result<Self, NewtypeError> {
     Self::try_from(s)
   }

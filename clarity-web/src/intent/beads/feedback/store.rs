@@ -44,7 +44,7 @@ fn remove_oldest_entry(store: &mut FeedbackStore) {
   if let Some((key, _)) = store.iter().min_by(|(_, a), (_, b)| {
     a.front()
       .map_or("", |e| e.timestamp.as_str())
-      .cmp(&b.front().map_or("", |e| e.timestamp.as_str()))
+      .cmp(b.front().map_or("", |e| e.timestamp.as_str()))
   }) {
     let key = key.clone();
     store.remove(&key);

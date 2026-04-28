@@ -6,7 +6,6 @@
 //! - Conflict detection (CAP theorem, anonymous+audit, perspective conflicts)
 //! - JSONL storage and session diffing
 
-pub mod answer_extraction;
 pub mod answer_file;
 pub mod storage;
 pub mod types;

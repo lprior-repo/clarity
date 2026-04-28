@@ -79,10 +79,10 @@ pub fn use_quality_score(
 /// Hook for caching quality score to `lattice_cache`
 ///
 /// WARNING: This hook does NOT actually persist to database.
-/// It only serializes to JSON and creates LatticeCache objects but does NOT save them.
+/// It only serializes to JSON and creates `LatticeCache` objects but does NOT save them.
 ///
 /// Actual behavior:
-/// - Creates LatticeCache objects when score changes (but doesn't save)
+/// - Creates `LatticeCache` objects when score changes (but doesn't save)
 /// - Calls load on mount (but drops the result immediately)
 /// - Handles serialization/deserialization (but doesn't use it)
 pub fn use_cached_quality_score(

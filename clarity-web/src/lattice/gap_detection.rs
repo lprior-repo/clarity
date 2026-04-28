@@ -72,7 +72,7 @@ impl GapCategory {
 
   /// Get label
   #[must_use]
-  pub const fn label(&self) -> &'static str {
+  pub const fn label(self) -> &'static str {
     match self {
       Self::Functional => "Functional",
       Self::NonFunctional => "Non-Functional",
@@ -159,7 +159,7 @@ pub enum GapSeverity {
 impl GapSeverity {
   /// Convert to numeric score
   #[must_use]
-  pub const fn score(&self) -> u8 {
+  pub const fn score(self) -> u8 {
     match self {
       Self::Low => 10,
       Self::Medium => 30,
@@ -200,7 +200,7 @@ impl DetectedGap {
     let suggestions = category
       .suggested_questions()
       .iter()
-      .map(|s| s.to_string())
+      .map(std::string::ToString::to_string)
       .collect();
 
     Self {
@@ -230,7 +230,7 @@ impl DetectedGap {
 }
 
 /// Complete gap analysis result
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GapAnalysis {
   /// All detected gaps
   pub gaps: Vec<DetectedGap>,
@@ -339,6 +339,7 @@ impl GapAnalysis {
 }
 
 /// Calculate overall coverage from category scores
+#[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 fn calculate_overall_coverage(category_coverage: &[(GapCategory, u8)]) -> u8 {
   if category_coverage.is_empty() {
     return 0;
@@ -367,8 +368,7 @@ fn generate_gap_summary(gaps: &[DetectedGap], overall_coverage: u8) -> String {
     .count();
 
   format!(
-    "Coverage: {}% | Gaps: {} critical, {} high, {} medium priority",
-    overall_coverage, critical, high, medium
+    "Coverage: {overall_coverage}% | Gaps: {critical} critical, {high} high, {medium} medium priority"
   )
 }
 
@@ -395,6 +395,7 @@ pub fn detect_gaps(requirements: &[&str]) -> GapAnalysis {
 }
 
 /// Analyze a single category for gaps
+#[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss)]
 fn analyze_category(
   category: GapCategory,
   requirements: &[&str],
@@ -416,8 +417,8 @@ fn analyze_category(
   let coverage = if indicators.is_empty() || requirements.is_empty() {
     0
   } else {
-    let ratio = requirements_with_indicators as f32 / requirements.len() as f32;
-    (ratio * 100.0).min(100.0) as u8
+    let ratio = requirements_with_indicators as f64 / requirements.len() as f64;
+    (ratio * 100.0).min(100.0).round() as u8
   };
 
   // Determine severity based on coverage
@@ -434,7 +435,7 @@ fn analyze_category(
   if coverage < 80 {
     *gap_id += 1;
     let gap = DetectedGap::new(
-      format!("GAP-{:03}", gap_id),
+      format!("GAP-{gap_id:03}"),
       category,
       severity,
       format!("Missing {} requirements", category.label()),
@@ -506,8 +507,11 @@ pub fn generate_requirements_template(analysis: &GapAnalysis) -> String {
         let suggestions = gap
           .suggestions
           .iter()
-          .map(|s| format!("- [ ] {}\n", s))
-          .collect::<String>();
+          .fold(String::new(), |mut acc, s| {
+            use std::fmt::Write;
+            let _ = writeln!(acc, "- [ ] {s}");
+            acc
+          });
         format!(
           "## {} ({:?})\n\n{}\n{}",
           gap.category.label(),
