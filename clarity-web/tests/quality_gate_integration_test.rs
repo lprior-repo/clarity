@@ -26,7 +26,7 @@
 //! - Quality score passed to Develop phase on transition
 //! - Debounce with 500ms delay
 
-use clarity_web::components::quality::MINIMUM_GATE;
+use clarity_web::lattice::quality::MINIMUM_GATE;
 use clarity_web::lattice::quality::{
   calculate_quality, Answer, EarsRequirementRef, InversionControl, QualityScore,
 };

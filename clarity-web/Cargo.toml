@@ -5,10 +5,6 @@ edition.workspace = true
 autoexamples = false
 
 [dependencies]
-# Dioxus 0.7 - fullstack with web and server
-dioxus = { version = "0.7.3", features = ["router"] }
-dioxus-logger = "0.5"
-
 # Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -26,37 +22,24 @@ regex = "1"
 toml = "0.8"
 once_cell = { workspace = true }
 tap = { workspace = true }
-uuid = { workspace = true, features = ["js"] }
+uuid = { workspace = true }
 tracing = { workspace = true }
+tracing-subscriber = "0.1"
 
-# WASM-only dependencies
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-web-sys = { version = "0.3", features = ["Window", "Storage", "Blob", "Url", "HtmlAnchorElement", "BlobPropertyBag"] }
-
-# Server-only dependencies (not for WASM)
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# Native-only dependencies
 redb = { workspace = true }
 tokio = { workspace = true }
 tokio-util = { workspace = true }
 reqwest = { workspace = true }
-dioxus-fullstack = { version = "0.7.3" }
+
+# CLI
+clap = { version = "4", features = ["derive"] }
 
 [dev-dependencies]
 tempfile = "3"
 tokio = { workspace = true }
 serial_test = "3"
 proptest = "1.10.0"
-
-[[test]]
-name = "server_functions_test"
-path = "tests/server_functions_test.rs"
-
-[features]
-default = ["fullstack"]
-web = ["dioxus/web"]
-desktop = ["dioxus/desktop"]
-server = ["dioxus/server"]
-fullstack = ["dioxus/fullstack"]
 
 [[bin]]
 name = "clarity-web"

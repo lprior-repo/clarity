@@ -20,7 +20,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::components::discover::types::{HolePunchingResults, HoleType};
+use crate::domain::scenario::{HolePunchingResults, HoleType};
 
 // ============================================================================
 // 16-Section KIRK Contract Types (bd-2uci)

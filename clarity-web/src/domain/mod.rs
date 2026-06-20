@@ -14,8 +14,12 @@
 pub mod error;
 pub mod newtypes;
 pub mod quality;
+pub mod scenario;
+pub mod straw_man;
 pub mod types;
 
 pub use error::ClarityError;
 pub use newtypes::{AnswerId, AnswerValue, BeadId, StepId, Timestamp};
+pub use scenario::{Hole, HolePunchingResults, HoleType, ScenarioField};
+pub use straw_man::{StrawManTrap, StrawManValidation};
 pub use types::{Answer, Behavior, Feature, Spec};

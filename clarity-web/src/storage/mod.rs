@@ -30,8 +30,7 @@ pub use transcript_store::{
   AntithesisResponse, ExtractedField, InterrogationTranscript, StrawManTrap, StrawManValidation,
   TranscriptResult, TranscriptStore,
 };
-// Re-export types from discover module for backwards compatibility
-pub use crate::components::discover::types::{HolePunchingResults, ScenarioField};
+pub use crate::domain::scenario::{HolePunchingResults, ScenarioField};
 pub use types::{tables, AnswerRecord, Confidence, ExtractionCache, LatticeCache, ProjectMetadata};
 
 #[cfg(not(target_arch = "wasm32"))]

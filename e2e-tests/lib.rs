@@ -10,7 +10,6 @@
 #[cfg(test)]
 mod tests {
   use chrono::Utc;
-  use clarity_web::components::discover::{Confidence, FieldData};
   use clarity_web::providers::{
     ExtractedFields, ExtractionContext, ExtractionError, ExtractionMetadata, ExtractionProvider,
     FieldExtraction, FieldType, SchemaField,
@@ -220,84 +219,6 @@ mod tests {
   }
 
   #[test]
-  fn test_five_field_cards_appear() {
-    let fields = vec![
-      FieldData {
-        id: "problem".to_string(),
-        title: "Problem Statement".to_string(),
-        content: "Task management for remote teams".to_string(),
-        confidence: Confidence::High,
-        locked: false,
-      },
-      FieldData {
-        id: "user".to_string(),
-        title: "Target User".to_string(),
-        content: "Remote team members".to_string(),
-        confidence: Confidence::High,
-        locked: false,
-      },
-      FieldData {
-        id: "context".to_string(),
-        title: "Context & Background".to_string(),
-        content: "Teams across time zones".to_string(),
-        confidence: Confidence::Medium,
-        locked: false,
-      },
-      FieldData {
-        id: "constraints".to_string(),
-        title: "Constraints".to_string(),
-        content: "Time zone differences".to_string(),
-        confidence: Confidence::Medium,
-        locked: false,
-      },
-      FieldData {
-        id: "goals".to_string(),
-        title: "Goals & Success Metrics".to_string(),
-        content: "Clear assignments, deadlines visible".to_string(),
-        confidence: Confidence::High,
-        locked: false,
-      },
-    ];
-
-    assert_eq!(fields.len(), 5);
-
-    for field in &fields {
-      assert!(!field.id.is_empty());
-      assert!(!field.title.is_empty());
-      assert!(!field.content.is_empty());
-    }
-  }
-
-  #[test]
-  fn test_confidence_variants_exist() {
-    let high = Confidence::High;
-    let medium = Confidence::Medium;
-    let low = Confidence::Low;
-
-    // Test that all three confidence levels exist
-    assert!(matches!(high, Confidence::High));
-    assert!(matches!(medium, Confidence::Medium));
-    assert!(matches!(low, Confidence::Low));
-  }
-
-  #[test]
-  fn test_locking_cards_updates_state() {
-    let mut field = FieldData {
-      id: "problem".to_string(),
-      title: "Problem Statement".to_string(),
-      content: "Test problem".to_string(),
-      confidence: Confidence::High,
-      locked: false,
-    };
-
-    assert!(!field.locked);
-    field.locked = true;
-    assert!(field.locked);
-    field.locked = false;
-    assert!(!field.locked);
-  }
-
-  #[test]
   fn test_quality_score_updates() {
     use clarity_web::lattice::quality::{calculate_quality, Answer, InversionControl};
 
@@ -326,94 +247,6 @@ mod tests {
       assert!(score.overall <= 100);
       assert!(!score.dimensions.is_empty());
     }
-  }
-
-  #[test]
-  fn test_continue_cta_appears_when_all_locked() {
-    let fields = [
-      FieldData {
-        id: "problem".to_string(),
-        title: "Problem".to_string(),
-        content: "Test".to_string(),
-        confidence: Confidence::High,
-        locked: true,
-      },
-      FieldData {
-        id: "user".to_string(),
-        title: "User".to_string(),
-        content: "Test".to_string(),
-        confidence: Confidence::High,
-        locked: true,
-      },
-      FieldData {
-        id: "context".to_string(),
-        title: "Context".to_string(),
-        content: "Test".to_string(),
-        confidence: Confidence::Medium,
-        locked: true,
-      },
-      FieldData {
-        id: "constraints".to_string(),
-        title: "Constraints".to_string(),
-        content: "Test".to_string(),
-        confidence: Confidence::Medium,
-        locked: true,
-      },
-      FieldData {
-        id: "goals".to_string(),
-        title: "Goals".to_string(),
-        content: "Test".to_string(),
-        confidence: Confidence::High,
-        locked: true,
-      },
-    ];
-
-    let all_locked = fields.iter().all(|f| f.locked);
-    assert!(all_locked);
-  }
-
-  #[test]
-  fn test_continue_cta_hidden_when_not_all_locked() {
-    let fields = [
-      FieldData {
-        id: "problem".to_string(),
-        title: "Problem".to_string(),
-        content: "Test".to_string(),
-        confidence: Confidence::High,
-        locked: true,
-      },
-      FieldData {
-        id: "user".to_string(),
-        title: "User".to_string(),
-        content: "Test".to_string(),
-        confidence: Confidence::High,
-        locked: false,
-      },
-      FieldData {
-        id: "context".to_string(),
-        title: "Context".to_string(),
-        content: "Test".to_string(),
-        confidence: Confidence::Medium,
-        locked: true,
-      },
-      FieldData {
-        id: "constraints".to_string(),
-        title: "Constraints".to_string(),
-        content: "Test".to_string(),
-        confidence: Confidence::Medium,
-        locked: true,
-      },
-      FieldData {
-        id: "goals".to_string(),
-        title: "Goals".to_string(),
-        content: "Test".to_string(),
-        confidence: Confidence::High,
-        locked: true,
-      },
-    ];
-
-    let all_locked = fields.iter().all(|f| f.locked);
-    assert!(!all_locked);
   }
 
   #[test]

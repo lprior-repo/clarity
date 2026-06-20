@@ -22,7 +22,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::StorageError;
-pub use crate::components::discover::types::{HolePunchingResults, ScenarioField};
+pub use crate::domain::scenario::{HolePunchingResults, ScenarioField};
 
 /// Result type for transcript store operations.
 pub type TranscriptResult<T> = Result<T, StorageError>;

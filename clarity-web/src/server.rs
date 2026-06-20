@@ -1,3 +1,6 @@
+#![warn(clippy::unwrap_used)]
+#![warn(clippy::expect_used)]
+#![warn(clippy::panic)]
 #![warn(clippy::pedantic)]
 #![allow(clippy::suspicious_else_formatting)]
 #![allow(clippy::significant_drop_tightening)]
@@ -17,42 +20,24 @@
 //! - Comprehensive error handling and logging
 //! - Field extraction, field suggestion, and quality scoring
 
-use dioxus::prelude::*;
-use dioxus_fullstack::server;
-use dioxus_fullstack::ServerFnError;
 use serde::{Deserialize, Serialize};
-#[cfg(not(target_arch = "wasm32"))]
 use std::collections::HashMap;
-#[cfg(not(target_arch = "wasm32"))]
 use std::sync::{Arc, LazyLock};
-#[cfg(not(target_arch = "wasm32"))]
 use std::time::{Duration, Instant};
-#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::RwLock;
-#[cfg(feature = "server")]
 use tracing::info;
 use tracing::warn as tracing_warn;
 
 // Re-export types from lattice and providers
-#[cfg(not(target_arch = "wasm32"))]
-use crate::components::discover::straw_man::StrawManTrap;
-#[cfg(not(target_arch = "wasm32"))]
-use crate::components::discover::straw_man::StrawManValidation;
-#[cfg(not(target_arch = "wasm32"))]
-use crate::components::discover::types::{HolePunchingResults, ScenarioField};
-#[cfg(not(target_arch = "wasm32"))]
+use crate::domain::straw_man::StrawManTrap;
+use crate::domain::straw_man::StrawManValidation;
+use crate::domain::scenario::{HolePunchingResults, ScenarioField};
 use crate::config::ai::{default_config, load_ai_config_if_present, AiConfig};
-#[cfg(feature = "server")]
 use crate::lattice::quality::{calculate_quality, InversionControl, QualityError};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::lattice::quality::{Answer as QualityAnswer, EarsRequirementRef, QualityScore};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::providers::resolution::resolve_provider_config;
-#[cfg(feature = "server")]
 use crate::providers::ExtractionProvider;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::providers::OpenCodeProvider;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::providers::{
   ExtractedFields, ExtractionContext, ExtractionError, FieldExtraction, FieldType,
   OpenCodeProviderOptions, SchemaField,
@@ -89,9 +74,7 @@ pub enum BeadStatus {
 }
 
 /// Save a bead (MOCK - does NOT actually save to database)
-#[allow(clippy::unused_async)]
-#[server]
-pub async fn save_bead(bead: Bead) -> Result<Bead, ServerFnError> {
+pub async fn save_bead(bead: Bead) -> Result<Bead, anyhow::Error> {
   // WARNING: Does NOT persist to database - only updates timestamp
   // In a real app, this would save to a database
   let updated_bead = Bead {
@@ -102,9 +85,7 @@ pub async fn save_bead(bead: Bead) -> Result<Bead, ServerFnError> {
 }
 
 /// Get all beads for a project (MOCK - ignores `project_id`, returns hardcoded data)
-#[allow(clippy::unused_async)]
-#[server]
-pub async fn get_beads(project_id: String) -> Result<Vec<Bead>, ServerFnError> {
+pub async fn get_beads(project_id: String) -> Result<Vec<Bead>, anyhow::Error> {
   let _ = project_id;
   // WARNING: Does NOT fetch from database - returns HARDCODED sample data
   // In a real app, this would fetch from a database
@@ -141,9 +122,7 @@ pub async fn get_beads(project_id: String) -> Result<Vec<Bead>, ServerFnError> {
 }
 
 /// Delete a bead (MOCK - does NOT actually delete)
-#[allow(clippy::unused_async)]
-#[server]
-pub async fn delete_bead(bead_id: String) -> Result<(), ServerFnError> {
+pub async fn delete_bead(bead_id: String) -> Result<(), anyhow::Error> {
   // WARNING: Does NOT delete from database - just logs
   // In a real app, this would delete from a database
   println!("[MOCK] Would delete bead: {bead_id}");
@@ -159,12 +138,10 @@ pub struct CoachResponse {
 }
 
 /// Get AI coaching guidance for a phase (MOCK - not actually AI)
-#[allow(clippy::unused_async)]
-#[server]
 pub async fn get_coach_guidance(
   phase: Phase,
   context: String,
-) -> Result<CoachResponse, ServerFnError> {
+) -> Result<CoachResponse, anyhow::Error> {
   // In a real app, this would call an AI API
   let guidance = match phase {
     Phase::Discover => {
@@ -218,14 +195,12 @@ pub async fn get_coach_guidance(
 /// Rate limiter for API calls per session
 ///
 /// Tracks request timestamps per session ID and enforces max requests per minute.
-#[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug, Clone)]
 struct RateLimiter {
   max_requests_per_minute: u32,
   requests: Arc<RwLock<HashMap<String, Vec<Instant>>>>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 impl RateLimiter {
   /// Create a new rate limiter
   fn new(max_requests_per_minute: u32) -> Self {
@@ -265,7 +240,6 @@ impl RateLimiter {
 }
 
 /// Global rate limiter instance
-#[cfg(not(target_arch = "wasm32"))]
 static RATE_LIMITER: LazyLock<RateLimiter> = LazyLock::new(|| RateLimiter::new(10));
 
 /// Check rate limit for a session, returning a formatted error if limited.
@@ -275,9 +249,8 @@ static RATE_LIMITER: LazyLock<RateLimiter> = LazyLock::new(|| RateLimiter::new(1
 /// * `operation` - Name of the operation for logging
 ///
 /// # Returns
-/// `Ok(())` if allowed, `Err(ServerFnError)` if rate limited
-#[cfg(not(target_arch = "wasm32"))]
-async fn check_rate_limit_for_session(session: &str, operation: &str) -> Result<(), ServerFnError> {
+/// `Ok(())` if allowed, `Err(anyhow::Error)` if rate limited
+async fn check_rate_limit_for_session(session: &str, operation: &str) -> Result<(), anyhow::Error> {
   match RATE_LIMITER.check_rate_limit(session).await {
     Ok(()) => {
       info!(session, operation, "Rate limit check passed");
@@ -285,9 +258,9 @@ async fn check_rate_limit_for_session(session: &str, operation: &str) -> Result<
     }
     Err(retry_after) => {
       tracing_warn!(session, retry_after, operation, "Rate limit exceeded");
-      Err(ServerFnError::new(anyhow::anyhow!(
+      Err(anyhow::anyhow!(
         "Rate limit exceeded. Please retry after {retry_after}s"
-      )))
+      ))
     }
   }
 }
@@ -298,36 +271,31 @@ async fn check_rate_limit_for_session(session: &str, operation: &str) -> Result<
 /// * `error` - The extraction error to map
 ///
 /// # Returns
-/// `ServerFnError` with user-friendly message
-#[cfg(not(target_arch = "wasm32"))]
-fn map_extraction_error(error: ExtractionError) -> ServerFnError {
+/// `anyhow::Error` with user-friendly message
+fn map_extraction_error(error: ExtractionError) -> anyhow::Error {
   match error {
     ExtractionError::RateLimited {
       retry_after_seconds,
-    } => ServerFnError::new(anyhow::anyhow!(
-      "Provider rate limited. Retry after {retry_after_seconds}s"
-    )),
+    } => anyhow::anyhow!("Provider rate limited. Retry after {retry_after_seconds}s"),
     ExtractionError::AuthenticationError(msg) => {
-      ServerFnError::new(anyhow::anyhow!("Authentication failed: {msg}"))
+      anyhow::anyhow!("Authentication failed: {msg}")
     }
     ExtractionError::InvalidInput(msg) => {
-      ServerFnError::new(anyhow::anyhow!("Invalid input: {msg}"))
+      anyhow::anyhow!("Invalid input: {msg}")
     }
-    _ => ServerFnError::new(anyhow::anyhow!("Extraction failed: {error}")),
+    _ => anyhow::anyhow!("Extraction failed: {error}"),
   }
 }
 
 /// Global AI provider singleton
 ///
 /// Initialized once with config from `~/.config/clarity/ai.toml`.
-#[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug, Clone)]
 struct AiProviderState {
   provider: Arc<OpenCodeProvider>,
   diagnostics: AiProviderDiagnostics,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ProviderBootstrapInput {
   diagnostics: AiProviderDiagnostics,
@@ -336,7 +304,6 @@ struct ProviderBootstrapInput {
 
 use thiserror::Error;
 
-#[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug, Error)]
 enum AiProviderBootstrapError {
   #[error("failed to load AI configuration: {0}")]
@@ -349,7 +316,6 @@ enum AiProviderBootstrapError {
   Provider(#[from] crate::providers::ExtractionError),
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn build_provider_bootstrap_input(
   config: AiConfig,
   session_factory: impl FnOnce() -> String,
@@ -372,7 +338,6 @@ fn build_provider_bootstrap_input(
   }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn create_ai_provider_state(
   input: ProviderBootstrapInput,
 ) -> Result<AiProviderState, AiProviderBootstrapError> {
@@ -398,7 +363,6 @@ fn create_ai_provider_state(
   })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn initialize_ai_provider_state() -> Result<AiProviderState, AiProviderBootstrapError> {
   let config = load_ai_config_if_present()?.unwrap_or_else(default_config);
   let input = build_provider_bootstrap_input(config, || uuid::Uuid::new_v4().to_string());
@@ -409,7 +373,6 @@ fn initialize_ai_provider_state() -> Result<AiProviderState, AiProviderBootstrap
 /// Global AI provider state.
 ///
 /// Initialized lazily from configuration without aborting the process on failure.
-#[cfg(not(target_arch = "wasm32"))]
 static AI_PROVIDER_STATE: LazyLock<Result<AiProviderState, AiProviderBootstrapError>> =
   LazyLock::new(|| {
     let state = initialize_ai_provider_state();
@@ -430,21 +393,18 @@ pub struct AiProviderDiagnostics {
   pub routing_provider: Option<String>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-fn ai_provider_state() -> Result<&'static AiProviderState, ServerFnError> {
+fn ai_provider_state() -> Result<&'static AiProviderState, anyhow::Error> {
   AI_PROVIDER_STATE.as_ref().map_err(|error| {
-    ServerFnError::new(anyhow::anyhow!(
+    anyhow::anyhow!(
       "AI provider initialization failed: {error:?}"
-    ))
+    )
   })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-fn ai_provider() -> Result<Arc<OpenCodeProvider>, ServerFnError> {
+fn ai_provider() -> Result<Arc<OpenCodeProvider>, anyhow::Error> {
   ai_provider_state().map(|state| Arc::clone(&state.provider))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn build_straw_man_schema() -> Vec<SchemaField> {
   vec![
     SchemaField {
@@ -497,7 +457,6 @@ fn build_straw_man_schema() -> Vec<SchemaField> {
   ]
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn build_straw_man_context(schema: Vec<SchemaField>) -> ExtractionContext {
   ExtractionContext {
     document_type: Some("persona_validation".to_string()),
@@ -527,7 +486,6 @@ fn build_straw_man_context(schema: Vec<SchemaField>) -> ExtractionContext {
   }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn build_straw_man_prompt(persona_text: &str) -> String {
   format!(
     "Analyze this user persona description for straw man trap patterns:\n\n{persona_text}\n\n\
@@ -540,7 +498,6 @@ fn build_straw_man_prompt(persona_text: &str) -> String {
   )
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn parse_straw_man_validation(fields: &[FieldExtraction]) -> StrawManValidation {
   let traps_detected = fields
     .iter()
@@ -556,7 +513,6 @@ fn parse_straw_man_validation(fields: &[FieldExtraction]) -> StrawManValidation 
   StrawManValidation::new(traps_detected)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn build_hole_punching_schema() -> Vec<SchemaField> {
   vec![
     SchemaField {
@@ -609,7 +565,6 @@ fn build_hole_punching_schema() -> Vec<SchemaField> {
   ]
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn build_hole_punching_context(schema: Vec<SchemaField>) -> ExtractionContext {
   ExtractionContext {
     document_type: Some("scenario_validation".to_string()),
@@ -638,7 +593,6 @@ fn build_hole_punching_context(schema: Vec<SchemaField>) -> ExtractionContext {
   }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn build_hole_punching_prompt(scenario: &ScenarioField) -> String {
   format!(
     "Analyze this user scenario for hole punching gaps:\n\n\
@@ -676,7 +630,6 @@ fn build_hole_punching_prompt(scenario: &ScenarioField) -> String {
   )
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn merge_hole_punching_results(
   existing: &HolePunchingResults,
   fields: &[FieldExtraction],
@@ -685,17 +638,17 @@ fn merge_hole_punching_results(
     match (field.name.as_str(), field.value.as_bool()) {
       ("discovery_hole_addressed", Some(true)) if results.discovery_hole.is_none() => results
         .address(
-          crate::components::discover::types::HoleType::DiscoveryHole,
+          crate::domain::scenario::HoleType::DiscoveryHole,
           "Addressed in scenario".to_string(),
         ),
       ("edge_case_hole_addressed", Some(true)) if results.edge_case_hole.is_none() => results
         .address(
-          crate::components::discover::types::HoleType::EdgeCaseHole,
+          crate::domain::scenario::HoleType::EdgeCaseHole,
           "Addressed in scenario".to_string(),
         ),
       ("motivation_dropoff_addressed", Some(true)) if results.motivation_dropoff.is_none() => {
         results.address(
-          crate::components::discover::types::HoleType::MotivationDropOff,
+          crate::domain::scenario::HoleType::MotivationDropOff,
           "Addressed in scenario".to_string(),
         )
       }
@@ -704,10 +657,7 @@ fn merge_hole_punching_results(
   })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-#[allow(clippy::unused_async)]
-#[server]
-pub async fn get_ai_provider_status_server() -> Result<AiProviderDiagnostics, ServerFnError> {
+pub async fn get_ai_provider_status_server() -> Result<AiProviderDiagnostics, anyhow::Error> {
   let provider = ai_provider()?;
   Ok(AiProviderDiagnostics {
     provider: "opencode".to_string(),
@@ -725,13 +675,11 @@ pub async fn get_ai_provider_status_server() -> Result<AiProviderDiagnostics, Se
 ///
 /// # Returns
 /// * `Ok(ExtractedFields)` - Successfully extracted fields with confidence scores
-/// * `Err(ServerFnError)` - Extraction failed or rate limited
-#[cfg(not(target_arch = "wasm32"))]
-#[server]
+/// * `Err(anyhow::Error)` - Extraction failed or rate limited
 pub async fn extract_fields_server(
   input: String,
   session_id: Option<String>,
-) -> Result<ExtractedFields, ServerFnError> {
+) -> Result<ExtractedFields, anyhow::Error> {
   let session = session_id.as_deref().map_or("default", |s| s);
 
   // Check rate limit
@@ -739,9 +687,9 @@ pub async fn extract_fields_server(
 
   // Validate input
   if input.trim().is_empty() {
-    return Err(ServerFnError::new(anyhow::anyhow!(
+    return Err(anyhow::anyhow!(
       "Input text cannot be empty"
-    )));
+    ));
   }
 
   // Build extraction context
@@ -779,14 +727,12 @@ pub async fn extract_fields_server(
 ///
 /// # Returns
 /// * `Ok(String)` - Suggested content for the field
-/// * `Err(ServerFnError)` - Suggestion failed or rate limited
-#[cfg(not(target_arch = "wasm32"))]
-#[server]
+/// * `Err(anyhow::Error)` - Suggestion failed or rate limited
 pub async fn suggest_field_server(
   field: FieldType,
   context: ExtractionContext,
   session_id: Option<String>,
-) -> Result<String, ServerFnError> {
+) -> Result<String, anyhow::Error> {
   let session = session_id.as_deref().map_or("default", |s| s);
 
   // Check rate limit
@@ -853,14 +799,12 @@ pub async fn suggest_field_server(
 ///
 /// # Returns
 /// * `Ok(QualityScore)` - Quality assessment with dimensions and issues
-/// * `Err(ServerFnError)` - Calculation failed
-#[cfg(not(target_arch = "wasm32"))]
-#[server]
+/// * `Err(anyhow::Error)` - Calculation failed
 pub async fn calculate_quality_server(
   answers: Vec<QualityAnswer>,
   ears: Option<Vec<EarsRequirementRef>>,
   session_id: Option<String>,
-) -> Result<QualityScore, ServerFnError> {
+) -> Result<QualityScore, anyhow::Error> {
   let session = session_id.as_deref().map_or("default", |s| s);
 
   // Rate limit quality calculations (they're lightweight but we track them)
@@ -878,17 +822,17 @@ pub async fn calculate_quality_server(
         retry_after,
         "calculate_quality_server: Rate limit exceeded"
       );
-      return Err(ServerFnError::new(anyhow::anyhow!(
+      return Err(anyhow::anyhow!(
         "Rate limit exceeded. Please retry after {retry_after}s"
-      )));
+      ));
     }
   }
 
   // Validate input
   if answers.is_empty() {
-    return Err(ServerFnError::new(anyhow::anyhow!(
+    return Err(anyhow::anyhow!(
       "Cannot calculate quality with empty answers"
-    )));
+    ));
   }
 
   // Default to empty EARS if none provided
@@ -904,10 +848,10 @@ pub async fn calculate_quality_server(
 
   // Calculate quality
   let result = calculate_quality(&answers, &ears_ref, &inversion).map_err(|e| match e {
-    QualityError::EmptyAnswers => ServerFnError::new(anyhow::anyhow!("No answers provided")),
-    QualityError::InvalidScore(msg) => ServerFnError::new(anyhow::anyhow!("Invalid score: {msg}")),
+    QualityError::EmptyAnswers => anyhow::anyhow!("No answers provided"),
+    QualityError::InvalidScore(msg) => anyhow::anyhow!("Invalid score: {msg}"),
     QualityError::DimensionFailed(msg) => {
-      ServerFnError::new(anyhow::anyhow!("Dimension failed: {msg}"))
+      anyhow::anyhow!("Dimension failed: {msg}")
     }
   })?;
 
@@ -939,7 +883,7 @@ pub async fn calculate_quality_server(
 ///
 /// # Returns
 /// * `Ok(StrawManValidation)` - Validation result with detected traps and suggestions
-/// * `Err(ServerFnError)` - Validation failed or rate limited
+/// * `Err(anyhow::Error)` - Validation failed or rate limited
 ///
 /// # Example
 /// ```ignore
@@ -952,13 +896,11 @@ pub async fn calculate_quality_server(
 ///     println!("Detected traps: {:?}", validation.traps_detected);
 /// }
 /// ```
-#[cfg(not(target_arch = "wasm32"))]
 #[allow(clippy::too_many_lines)]
-#[server]
 pub async fn validate_straw_man_traps_server(
   persona_text: String,
   session_id: Option<String>,
-) -> Result<StrawManValidation, ServerFnError> {
+) -> Result<StrawManValidation, anyhow::Error> {
   let session = session_id.as_deref().map_or("default", |s| s);
 
   // Check rate limit
@@ -966,9 +908,9 @@ pub async fn validate_straw_man_traps_server(
 
   // Validate input
   if persona_text.trim().is_empty() {
-    return Err(ServerFnError::new(anyhow::anyhow!(
+    return Err(anyhow::anyhow!(
       "Persona text cannot be empty"
-    )));
+    ));
   }
 
   // Define schema for trap detection
@@ -1120,7 +1062,7 @@ pub async fn validate_straw_man_traps_server(
 ///
 /// # Returns
 /// * `Ok(HolePunchingResults)` - Results showing which holes have been addressed
-/// * `Err(ServerFnError)` - Validation failed or rate limited
+/// * `Err(anyhow::Error)` - Validation failed or rate limited
 ///
 /// # Example
 /// ```ignore
@@ -1140,12 +1082,10 @@ pub async fn validate_straw_man_traps_server(
 ///     println!("Missing: {:?}", results.unaddressed_holes());
 /// }
 /// ```
-#[cfg(not(target_arch = "wasm32"))]
-#[server]
 pub async fn validate_hole_punching_server(
   scenario: ScenarioField,
   session_id: Option<String>,
-) -> Result<HolePunchingResults, ServerFnError> {
+) -> Result<HolePunchingResults, anyhow::Error> {
   let session = session_id.as_deref().map_or("default", |s| s);
 
   // Check rate limit
@@ -1153,9 +1093,9 @@ pub async fn validate_hole_punching_server(
 
   // Validate input - scenario bullets should be complete
   if !scenario.is_bullets_complete() {
-    return Err(ServerFnError::new(anyhow::anyhow!(
+    return Err(anyhow::anyhow!(
       "Scenario must have all three bullet fields (trigger, value_moment, feeling) complete"
-    )));
+    ));
   }
 
   let schema = build_hole_punching_schema();
@@ -1215,12 +1155,10 @@ pub async fn validate_hole_punching_server(
 // Progressive Discover Server Functions (WP01)
 // ============================================================================
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::kirk::progressive_discover::{
   AntithesisValidation, EarsExtraction, EarsPattern, ExtractedEarsRequirement,
   HolePunchingValidation, KirkContract16, VorpValidation,
 };
-#[cfg(not(target_arch = "wasm32"))]
 use crate::storage::transcript_store::InterrogationTranscript;
 
 /// Validate antithesis (null hypothesis) points (bd-378l)
@@ -1234,7 +1172,7 @@ use crate::storage::transcript_store::InterrogationTranscript;
 ///
 /// # Returns
 /// * `Ok(AntithesisValidation)` - Validation result with score and suggestions
-/// * `Err(ServerFnError)` - Validation failed or rate limited
+/// * `Err(anyhow::Error)` - Validation failed or rate limited
 ///
 /// # Quality Scoring
 /// Points score higher for:
@@ -1242,12 +1180,10 @@ use crate::storage::transcript_store::InterrogationTranscript;
 /// - Containing specific details (word count heuristics)
 /// - Using concrete language vs vague abstractions
 /// - Including numbers or specific reasoning
-#[cfg(not(target_arch = "wasm32"))]
-#[server]
 pub async fn validate_antithesis(
   points: [String; 3],
   session_id: Option<String>,
-) -> Result<AntithesisValidation, ServerFnError> {
+) -> Result<AntithesisValidation, anyhow::Error> {
   let session = session_id.as_deref().map_or("default", |s| s);
 
   // Check rate limit
@@ -1265,9 +1201,9 @@ pub async fn validate_antithesis(
         retry_after,
         "validate_antithesis: Rate limit exceeded"
       );
-      return Err(ServerFnError::new(anyhow::anyhow!(
+      return Err(anyhow::anyhow!(
         "Rate limit exceeded. Please retry after {retry_after}s"
-      )));
+      ));
     }
   }
 
@@ -1320,7 +1256,6 @@ pub async fn validate_antithesis(
 }
 
 /// Calculate specificity score for a single antithesis point.
-#[cfg(not(target_arch = "wasm32"))]
 fn calculate_specificity(text: &str) -> f64 {
   let trimmed = text.trim();
 
@@ -1367,16 +1302,14 @@ fn calculate_specificity(text: &str) -> f64 {
 ///
 /// # Returns
 /// * `Ok(VorpValidation)` - Validation result with scores and suggestions
-/// * `Err(ServerFnError)` - Validation failed or rate limited
-#[cfg(not(target_arch = "wasm32"))]
-#[server]
+/// * `Err(anyhow::Error)` - Validation failed or rate limited
 pub async fn validate_vorp(
   value: String,
   obvious: String,
   real: String,
   possible: String,
   session_id: Option<String>,
-) -> Result<VorpValidation, ServerFnError> {
+) -> Result<VorpValidation, anyhow::Error> {
   let session = session_id.as_deref().map_or("default", |s| s);
 
   // Check rate limit
@@ -1386,9 +1319,9 @@ pub async fn validate_vorp(
     }
     Err(retry_after) => {
       tracing_warn!(session, retry_after, "validate_vorp: Rate limit exceeded");
-      return Err(ServerFnError::new(anyhow::anyhow!(
+      return Err(anyhow::anyhow!(
         "Rate limit exceeded. Please retry after {retry_after}s"
-      )));
+      ));
     }
   }
 
@@ -1412,7 +1345,6 @@ pub async fn validate_vorp(
 }
 
 /// Validate the Value dimension.
-#[cfg(not(target_arch = "wasm32"))]
 fn validate_v_dimension(text: &str) -> f64 {
   let word_count = text.split_whitespace().count();
   let has_quantified_benefit = text.chars().any(char::is_numeric)
@@ -1429,7 +1361,6 @@ fn validate_v_dimension(text: &str) -> f64 {
 }
 
 /// Validate the Obvious dimension.
-#[cfg(not(target_arch = "wasm32"))]
 fn validate_o_dimension(text: &str) -> f64 {
   let word_count = text.split_whitespace().count();
   let mentions_immediate = text.to_lowercase().contains("immediately")
@@ -1446,7 +1377,6 @@ fn validate_o_dimension(text: &str) -> f64 {
 }
 
 /// Validate the Real dimension.
-#[cfg(not(target_arch = "wasm32"))]
 fn validate_r_dimension(text: &str) -> f64 {
   let word_count = text.split_whitespace().count();
   let has_evidence = text.to_lowercase().contains("research")
@@ -1464,7 +1394,6 @@ fn validate_r_dimension(text: &str) -> f64 {
 }
 
 /// Validate the Possible dimension.
-#[cfg(not(target_arch = "wasm32"))]
 fn validate_p_dimension(text: &str) -> f64 {
   let word_count = text.split_whitespace().count();
   let mentions_resources = text.to_lowercase().contains("can build")
@@ -1492,15 +1421,13 @@ fn validate_p_dimension(text: &str) -> f64 {
 ///
 /// # Returns
 /// * `Ok(HolePunchingValidation)` - Validation result
-/// * `Err(ServerFnError)` - Validation failed or rate limited
-#[cfg(not(target_arch = "wasm32"))]
-#[server]
+/// * `Err(anyhow::Error)` - Validation failed or rate limited
 pub async fn validate_hole_punching_v2(
   discovery_hole: Option<String>,
   edge_case_hole: Option<String>,
   motivation_dropoff: Option<String>,
   session_id: Option<String>,
-) -> Result<HolePunchingValidation, ServerFnError> {
+) -> Result<HolePunchingValidation, anyhow::Error> {
   let session = session_id.as_deref().map_or("default", |s| s);
 
   // Check rate limit
@@ -1514,9 +1441,9 @@ pub async fn validate_hole_punching_v2(
         retry_after,
         "validate_hole_punching_v2: Rate limit exceeded"
       );
-      return Err(ServerFnError::new(anyhow::anyhow!(
+      return Err(anyhow::anyhow!(
         "Rate limit exceeded. Please retry after {retry_after}s"
-      )));
+      ));
     }
   }
 
@@ -1554,13 +1481,11 @@ pub async fn validate_hole_punching_v2(
 ///
 /// # Returns
 /// * `Ok(EarsExtraction)` - Extracted requirements
-/// * `Err(ServerFnError)` - Extraction failed or rate limited
-#[cfg(not(target_arch = "wasm32"))]
-#[server]
+/// * `Err(anyhow::Error)` - Extraction failed or rate limited
 pub async fn extract_ears(
   transcript: InterrogationTranscript,
   session_id: Option<String>,
-) -> Result<EarsExtraction, ServerFnError> {
+) -> Result<EarsExtraction, anyhow::Error> {
   let session = session_id.as_deref().map_or("default", |s| s);
 
   // Check rate limit
@@ -1570,9 +1495,9 @@ pub async fn extract_ears(
     }
     Err(retry_after) => {
       tracing_warn!(session, retry_after, "extract_ears: Rate limit exceeded");
-      return Err(ServerFnError::new(anyhow::anyhow!(
+      return Err(anyhow::anyhow!(
         "Rate limit exceeded. Please retry after {retry_after}s"
-      )));
+      ));
     }
   }
 
@@ -1600,7 +1525,6 @@ pub async fn extract_ears(
 }
 
 /// Extract EARS requirements from a text string.
-#[cfg(not(target_arch = "wasm32"))]
 #[allow(dead_code)]
 fn extract_ears_from_text(text: &str, source_section: &str) -> Vec<ExtractedEarsRequirement> {
   let sentences: Vec<&str> = text.split(&['.', '!', '?'][..]).collect();
@@ -1672,14 +1596,12 @@ fn extract_ears_from_text(text: &str, source_section: &str) -> Vec<ExtractedEars
 ///
 /// # Returns
 /// * `Ok(KirkContract16)` - Compiled 16-section contract
-/// * `Err(ServerFnError)` - Compilation failed or rate limited
-#[cfg(not(target_arch = "wasm32"))]
+/// * `Err(anyhow::Error)` - Compilation failed or rate limited
 #[allow(clippy::too_many_lines)]
-#[server]
 pub async fn compile_to_kirk(
   transcript: InterrogationTranscript,
   session_id: Option<String>,
-) -> Result<KirkContract16, ServerFnError> {
+) -> Result<KirkContract16, anyhow::Error> {
   let session = session_id.as_deref().map_or("default", |s| s);
 
   // Check rate limit
@@ -1689,9 +1611,9 @@ pub async fn compile_to_kirk(
     }
     Err(retry_after) => {
       tracing_warn!(session, retry_after, "compile_to_kirk: Rate limit exceeded");
-      return Err(ServerFnError::new(anyhow::anyhow!(
+      return Err(anyhow::anyhow!(
         "Rate limit exceeded. Please retry after {retry_after}s"
-      )));
+      ));
     }
   }
 
@@ -1766,7 +1688,7 @@ pub async fn compile_to_kirk(
     .try_fold(KirkContract16::new(), |contract, (section, content)| {
       contract
         .with_section_content(section, content)
-        .ok_or_else(|| ServerFnError::new(anyhow::anyhow!("Failed to set section {}", section)))
+        .ok_or_else(|| anyhow::anyhow!("Failed to set section {}", section))
     })?;
 
   info!(
@@ -1788,7 +1710,7 @@ pub async fn compile_to_kirk(
 #[allow(clippy::unwrap_used)]
 mod integration_tests {
   use super::*;
-  use crate::components::discover::straw_man::StrawManTrap;
+  use crate::domain::straw_man::StrawManTrap;
   use crate::config::ai::{AiConfig, ProviderConfig, ProviderType, QualityConfig};
   use crate::providers::FieldExtraction;
   use serde_json::json;
@@ -2339,7 +2261,7 @@ mod integration_tests {
   /// Test `StrawManValidation` serialization
   #[test]
   fn test_straw_man_validation_serialization() {
-    use crate::components::discover::straw_man::StrawManValidation;
+    use crate::domain::straw_man::StrawManValidation;
 
     let validation =
       StrawManValidation::new(vec![StrawManTrap::IrrationalActor, StrawManTrap::YourClone]);
@@ -2358,7 +2280,7 @@ mod integration_tests {
   /// Test `StrawManTrap` serialization
   #[test]
   fn test_straw_man_trap_serialization() {
-    use crate::components::discover::straw_man::StrawManTrap;
+    use crate::domain::straw_man::StrawManTrap;
 
     for trap in [
       StrawManTrap::IrrationalActor,
@@ -2377,7 +2299,7 @@ mod integration_tests {
   /// Test passing `StrawManValidation`
   #[test]
   fn test_passing_straw_man_validation() {
-    use crate::components::discover::straw_man::StrawManValidation;
+    use crate::domain::straw_man::StrawManValidation;
 
     let validation = StrawManValidation::passing();
     assert!(validation.passed);
@@ -2388,7 +2310,7 @@ mod integration_tests {
   /// Test failing `StrawManValidation` with multiple traps
   #[test]
   fn test_failing_straw_man_validation_multiple_traps() {
-    use crate::components::discover::straw_man::StrawManValidation;
+    use crate::domain::straw_man::StrawManValidation;
 
     let traps = vec![
       StrawManTrap::ManicPixieDreamUser,
@@ -2486,7 +2408,7 @@ mod integration_tests {
   /// Test `HolePunchingResults::unaddressed_holes`
   #[test]
   fn test_hole_punching_results_unaddressed_holes() {
-    use crate::components::discover::types::HoleType;
+    use crate::domain::scenario::HoleType;
 
     let results = HolePunchingResults {
       discovery_hole: Some("x".to_string()),

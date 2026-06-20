@@ -30,6 +30,9 @@ use thiserror::Error;
 // Re-export Answer from types to use as the canonical Answer type
 pub use crate::types::Answer;
 
+/// Minimum quality score threshold for passing the gate to the Develop phase.
+pub const MINIMUM_GATE: u8 = 70;
+
 /// Domain errors for quality scoring
 #[derive(Debug, Error, PartialEq, Clone)]
 pub enum QualityError {
