@@ -4,23 +4,45 @@
 
 ## Required Skills for All Development
 
-1. **/functional-rust-generator** - Zero-panic functional Rust patterns
+1. **holzman-rust** - Canonical Rust implementation, repair, review, and performance doctrine
+   - Invoke before any Rust implementation, repair, review, async work, storage work, low-level systems work, or performance claim
+   - Enforces NASA/JPL Power-of-Ten style reliability, bounded resources, explicit error taxonomies, and evidence-backed performance
+   - **Precedence rule: if Holzman Rust conflicts with another Rust skill, Holzman wins**
+
+2. **functional-rust** / **functional-rust-generator** - Zero-panic functional Rust patterns
    - Railway-Oriented Programming
    - Zero unwraps, zero panics, zero expects
    - Result<T, E> with proper error propagation
+   - Data → Calculations → Actions layering
 
-2. Dioxus Skill as well
+3. **dioxus** - Use only for future Rust UI work
 
-- Follow common dioxus skills pleas
-- Use .7 latest and iodmatic code please
+- Clarity is currently CLI-first; do not add UI work unless explicitly requested
+- If UI work returns, follow Dioxus 0.7 idiomatic patterns
   **How to load skills:**
 
 ```
 When assigned a bead, automatically invoke these skills before starting implementation.
 The tdd15 skill will guide you through writing tests first.
 The zjj skill will create an isolated workspace.
-The functional-rust-generator skill will ensure zero-panic code.
+The holzman-rust skill is mandatory for Rust work and wins on conflicts.
+The functional-rust skill will ensure zero-panic functional code.
 ```
+
+## Rust Skill Precedence
+
+- Always invoke **holzman-rust** and **functional-rust** before Rust implementation, repair, review, or performance work.
+- Holzman Rust is the tie-breaker when skill guidance conflicts.
+- Functional Rust still applies for Data → Calculations → Actions, typed errors, and zero-panic railway-oriented code.
+- Do not introduce production `unsafe`, `unwrap`, `expect`, `panic`, `todo`, `unimplemented`, unchecked indexing, unchecked arithmetic, lossy `as` conversions, or ignored fallible results.
+
+## Dolt Beads Database
+
+- Clarity beads use DoltHub remote `priorlewis43/clarity-database`.
+- Local beads metadata belongs in `.beads/metadata.json` with `dolt_database` matching the active bd server database. With the clone at `.beads/dolt/`, `bd bootstrap` currently resolves this to `dolt`.
+- Local Dolt clone belongs in `.beads/dolt/` and must never be committed to Git.
+- Always use the `priorlewis43/` DoltHub prefix for Dolt remotes.
+- Use `bd dolt pull` / `bd dolt push` to sync issue state when the beads database is configured.
 
 ## Functional Programming Principles
 
