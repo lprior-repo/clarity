@@ -267,28 +267,26 @@ pub fn trace_effects_with_patterns(solution: &str, patterns: &[CausalPattern]) -
 fn parse_sentence(sentence: &str, patterns: &[CausalPattern]) -> Option<Effect> {
   let lower = sentence.to_lowercase();
 
-  patterns
-    .iter()
-    .find_map(|pattern| {
-      let pos = lower.find(&pattern.keyword)?;
-      // Extract trigger (before the keyword)
-      let trigger = sentence[..pos].trim().to_string();
+  patterns.iter().find_map(|pattern| {
+    let pos = lower.find(&pattern.keyword)?;
+    // Extract trigger (before the keyword)
+    let trigger = sentence[..pos].trim().to_string();
 
-      // Extract outcome (after the keyword)
-      let outcome_start = pos + pattern.keyword.len();
-      let outcome = sentence[outcome_start..].trim().to_string();
+    // Extract outcome (after the keyword)
+    let outcome_start = pos + pattern.keyword.len();
+    let outcome = sentence[outcome_start..].trim().to_string();
 
-      // Only create effect if both trigger and outcome are non-empty
-      if trigger.is_empty() || outcome.is_empty() {
-        return None;
-      }
-      Some(Effect {
-        trigger: clean_text(&trigger),
-        outcome: clean_text(&outcome),
-        confidence: pattern.default_confidence,
-        indirect_effects: Vec::new(),
-      })
+    // Only create effect if both trigger and outcome are non-empty
+    if trigger.is_empty() || outcome.is_empty() {
+      return None;
+    }
+    Some(Effect {
+      trigger: clean_text(&trigger),
+      outcome: clean_text(&outcome),
+      confidence: pattern.default_confidence,
+      indirect_effects: Vec::new(),
     })
+  })
 }
 
 /// Clean and normalize text

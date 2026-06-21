@@ -504,7 +504,11 @@ impl OpenCodeTerminalClient {
 
       match self.provider.extract_fields(text, context).await {
         Ok(fields) => {
-          let latency = start.elapsed().as_millis().try_into().map_or(u64::MAX, |v| v);
+          let latency = start
+            .elapsed()
+            .as_millis()
+            .try_into()
+            .map_or(u64::MAX, |v| v);
 
           // Update status on success
           {
@@ -608,7 +612,11 @@ impl OpenCodeTerminalClient {
         .await
       {
         Ok(fields) => {
-          let latency = start.elapsed().as_millis().try_into().map_or(u64::MAX, |v| v);
+          let latency = start
+            .elapsed()
+            .as_millis()
+            .try_into()
+            .map_or(u64::MAX, |v| v);
 
           // Update status on success
           {

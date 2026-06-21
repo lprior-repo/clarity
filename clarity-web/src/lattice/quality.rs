@@ -434,8 +434,7 @@ fn calculate_clarity(answers: &[Answer], issues: &mut Vec<QualityIssue>) -> Dime
 
       (
         total_sentences + sentence_count,
-        complex_sentences
-          + usize::from(comma_count > 3 || word_count > 30),
+        complex_sentences + usize::from(comma_count > 3 || word_count > 30),
         jargon_count + jargon_hits,
       )
     },

@@ -271,7 +271,9 @@ fn validate_email_local(local: &str) -> Result<(), EmailError> {
   local
     .chars()
     .find(|c| {
-      !(c.is_ascii_alphanumeric() || ALLOWED_LOCAL_SPECIAL.contains(c) || *c == '.' && !local.contains(".."))
+      !(c.is_ascii_alphanumeric()
+        || ALLOWED_LOCAL_SPECIAL.contains(c)
+        || *c == '.' && !local.contains(".."))
     })
     .map_or(Ok(()), |c| Err(EmailError::InvalidLocalChar(c)))?;
 

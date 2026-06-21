@@ -49,6 +49,7 @@ authors = ["Your Name <you@example.com>"]
 [workspace.dependencies]
 dioxus = { version = "0.7.3" }
 redb = "2.1"
+fjall = "3.1.4"
 dioxus-fullstack = { version = "0.7.3", features = ["server"] }
 tokio = { version = "1.0", features = ["full"] }
 tokio-util = { version = "0.7", features = ["codec", "compat", "io", "rt"] }
@@ -76,6 +77,7 @@ argon2 = "0.5"
 rand = "0.8"
 async-trait = "0.1"
 reqwest = { version = "0.12", features = ["json"] }
+sha2 = "0.10"
 
 [profile.dev]
 opt-level = 0

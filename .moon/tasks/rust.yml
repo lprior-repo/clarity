@@ -66,6 +66,13 @@ tasks:
       cache: true
       runInCI: false
 
+  schema-vet:
+    script: "cue vet ../schemas/questions.cue && cue vet ../schemas/kirk.cue && cue vet ../schemas/enhanced-bead.cue && cue vet ../schemas/reviewer-report.cue && cue vet ../schemas/events.cue && cue vet ../schemas/clarity-spec.cue"
+    description: "Validate canonical Clarity CUE schemas"
+    options:
+      cache: false
+      runInCI: true
+
   # ============================================================================
   # STAGE 3: TESTING
   # ============================================================================

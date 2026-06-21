@@ -84,6 +84,7 @@ REMAINING_*.md
 
 # All other markdown files except AGENTS.md, CLAUDE.md, docs/, and kitty-specs/
 *.md
+!MASTER_DOC.md
 !architecture-spec.md
 !AGENTS.md
 !CLAUDE.md

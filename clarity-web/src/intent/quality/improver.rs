@@ -522,10 +522,10 @@ fn suggest_security_improvements(report: &QualityReport) -> Vec<ImprovementSugge
         issue.field.clone(),
         format!(
           "Add security controls. {}",
-          issue
-            .context
-            .as_deref()
-            .map_or("Consider authentication, authorization, encryption, and input validation.", |v| v)
+          issue.context.as_deref().map_or(
+            "Consider authentication, authorization, encryption, and input validation.",
+            |v| v
+          )
         ),
       )
       .ok()

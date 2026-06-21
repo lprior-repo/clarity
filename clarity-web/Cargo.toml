@@ -27,10 +27,12 @@ tracing = { workspace = true }
 tracing-subscriber = "0.1"
 
 # Native-only dependencies
+fjall = { workspace = true }
 redb = { workspace = true }
 tokio = { workspace = true }
 tokio-util = { workspace = true }
 reqwest = { workspace = true }
+sha2 = { workspace = true }
 
 # CLI
 clap = { version = "4", features = ["derive"] }

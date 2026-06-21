@@ -395,7 +395,11 @@ pub fn detect_gaps(requirements: &[&str]) -> GapAnalysis {
 }
 
 /// Analyze a single category for gaps
-#[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss)]
+#[allow(
+  clippy::cast_possible_truncation,
+  clippy::cast_precision_loss,
+  clippy::cast_sign_loss
+)]
 fn analyze_category(
   category: GapCategory,
   requirements: &[&str],
@@ -504,14 +508,11 @@ pub fn generate_requirements_template(analysis: &GapAnalysis) -> String {
       .prioritized_gaps()
       .iter()
       .map(|gap| {
-        let suggestions = gap
-          .suggestions
-          .iter()
-          .fold(String::new(), |mut acc, s| {
-            use std::fmt::Write;
-            let _ = writeln!(acc, "- [ ] {s}");
-            acc
-          });
+        let suggestions = gap.suggestions.iter().fold(String::new(), |mut acc, s| {
+          use std::fmt::Write;
+          let _ = writeln!(acc, "- [ ] {s}");
+          acc
+        });
         format!(
           "## {} ({:?})\n\n{}\n{}",
           gap.category.label(),

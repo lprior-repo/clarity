@@ -356,10 +356,11 @@ impl VorpValidation {
   /// Get the lowest-scoring dimension.
   #[must_use]
   pub fn weakest_dimension(&self) -> Option<&(String, f64)> {
-    self
-      .dimensions
-      .iter()
-      .min_by(|a, b| a.1.partial_cmp(&b.1).map_or(std::cmp::Ordering::Equal, |v| v))
+    self.dimensions.iter().min_by(|a, b| {
+      a.1
+        .partial_cmp(&b.1)
+        .map_or(std::cmp::Ordering::Equal, |v| v)
+    })
   }
 }
 

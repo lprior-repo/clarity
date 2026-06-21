@@ -1,5 +1,7 @@
 # Clarity
 
+> **Source of truth:** The target product PRD, architecture spec, domain contract, and bead-decomposition contract live in [`MASTER_DOC.md`](./MASTER_DOC.md). This README may describe current repository/development context; do not use it as the end-state specification.
+
 A modern desktop application built with Rust and Dioxus following functional programming principles and test-driven development.
 
 ## Table of Contents

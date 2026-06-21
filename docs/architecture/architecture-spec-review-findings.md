@@ -2,47 +2,64 @@
 
 Date: 2026-06-20
 
-Scope: `architecture-spec.md`
+Scope: Historical review of `architecture-spec.md`. The current source of truth is now top-level `MASTER_DOC.md`; `architecture-spec.md` is only a compatibility pointer.
 
-Verdict: Not ready for `arch-spec-to-beads` until the blockers below are resolved.
+Current status: the master doc now contains normative contracts addressing the doc-level gaps identified below. The first blocker-repair pass added canonical CUE schemas, a schema manifest, the target CLI command hierarchy, and a Fjall event-store foundation. `MASTER_DOC.md` is now full-scope and ready for full-product DAG decomposition; implementation completion still requires the full reducer/gate/artifact/bd behavior to be built and proven.
 
-## Critical Blockers
+## 2026-06-21 Repair Evidence
 
-1. The current enhanced bead CUE schema does not evaluate. `schemas/enhanced-bead.cue` references `strings.MinRunes` without importing `strings`.
-2. `schemas/enhanced-bead.cue` still requires bead IDs matching `intent-cli-*`, which conflicts with Clarity/Rust-only identity.
-3. The spec defines Rust-specific profiles, but current CUE schemas define generic profiles: `api`, `cli`, `event`, `data`, `workflow`, `ui`, and `common`.
-4. `schemas/kirk.cue` does not define `#KirkContract16`, even though the spec requires KIRK16 schema validation.
-5. The current CLI binary exposes only the thin commands: `extract`, `quality`, `validate-straw-man`, `validate-vorp`, `validate-holes`, and `status`; the spec command surface is not implemented.
-6. The current storage code uses redb tables, while the spec now requires Fjall keyspaces and event-sourced state.
-7. The event schema lacks payload schemas for AI effect correlation, reviewer lifecycle, bd create requests, projection writes, and recovery.
-8. The state machine lacks exact reducer semantics for stuck cases: reviewers pass but gates fail, reviewer fails with no repair questions, EOF/SIGINT, and crashes during artifact generation.
-9. The reviewer trust model needs deterministic evidence validation. Schema-valid reviewer output with irrelevant evidence IDs must not pass.
-10. bd idempotency needs a stable content hash and external-effect request event before `bd create`.
+Resolved or materially advanced:
 
-## Security Blockers
+1. `schemas/enhanced-bead.cue` now evaluates and uses Clarity bead IDs.
+2. `schemas/questions.cue` now exposes Rust profiles: `rust-cli`, `rust-library`, `rust-web-service`, `rust-async-service`, `rust-storage`, `rust-ui`, `rust-refactor`.
+3. `schemas/kirk.cue` now defines `#KirkContract16`, `#KirkSection`, and `#KirkMetadata`.
+4. Added `schemas/reviewer-report.cue`, `schemas/events.cue`, `schemas/clarity-spec.cue`, and `schemas/manifest.json`.
+5. Added Moon schema validation task: `moon run :schema-vet`.
+6. Replaced the old top-level thin CLI command-only surface with the target `interview`, `gates`, `spec`, `beads`, and `sessions` hierarchy.
+7. Added canonical Fjall event-store foundation in `clarity-web/src/storage/fjall_event_store.rs`; redb remains legacy UI/transcript storage.
 
-1. Raw transcript data is plaintext for MVP. The spec must explicitly accept this risk or move encryption-at-rest into the foundation.
-2. AI provider prompts need a pre-provider secret scan and prompt-minimization policy.
-3. `bd` emission can leak full enhanced bead content and needs explicit privacy consent plus redaction.
-4. Local CUE schemas and project-local overrides are poisonable unless canonical schema hashes are pinned or trusted through a manifest.
-5. Project-local question overrides can add secret-harvesting questions unless override validation includes forbidden-question policies.
-6. All file paths, session IDs, artifact IDs, and export destinations need safe newtypes and no-follow/canonical-root validation.
+Validation evidence:
 
-## Decomposition Blockers
+1. `moon run :schema-vet` passes.
+2. `moon run :fmt` passes after formatting.
+3. `moon run :check` passes.
+4. `moon run :test-unit` passes.
+5. CLI smoke: `clarity-web --json interview start --profile rust-cli` writes a Fjall event and `interview status` reads it back.
 
-1. Add a decomposition contract before bead generation: max effort, max touched files, one behavior per bead, and required test evidence.
-2. Add an explicit dependency DAG for schema reconciliation, domain types, event model, Fjall store, locks, snapshots, CLI, AI provider, reviewers, gates, artifacts, and bd emission.
-3. Split PME integration into separate adapter contracts: VORP, failure categories, human limitations, CDI evidence, NFR tradeoffs.
-4. Split AI work into pure provider traits and shell-specific OpenCode implementation.
-5. Split reviewer work into schema validation, prompt construction, evidence validation, orchestration, and repair-question flow.
-6. Keep bd emission downstream and out of core `SpecComplete` foundation beads.
+Known remaining validation debt:
 
-## Required Spec Fixes
+1. `moon run :clippy` still fails on pre-existing legacy server/test lint debt; tracked as bead `cl-2q6`.
 
-1. Define actual CUE schemas for Rust profiles, KIRK16, reviewer reports, event payloads, and Clarity enhanced beads.
-2. Fix `schemas/enhanced-bead.cue` so it evaluates and uses Clarity IDs.
-3. Add a command/state/event reducer table.
-4. Add a crash-recovery matrix for AI calls, reviewer calls, projection writes, artifact writes, and bd emission.
-5. Add exact CLI stdout/stderr/JSON/exit-code contracts.
-6. Add exact sanitizer policy for JSONL, provider prompts, raw export, and bd emission.
-7. Add Fjall keyspace definitions, key encodings, batch boundaries, persistence mode, and one-process-per-database behavior.
+Verdict: `MASTER_DOC.md` is approved as the source-of-truth PRD/spec. The review loop is closed for doc-level readiness and approved for `decomposition_ready: full-product-dag`. Do not claim `implementation_complete: true` until the implementation-depth blockers below are completed.
+
+## Original Findings Disposition
+
+| Original finding | Current disposition |
+|---|---|
+| Enhanced bead CUE schema did not evaluate because `strings.MinRunes` lacked import | **Closed.** `schemas/enhanced-bead.cue` imports `strings`; `moon run :schema-vet` passes. |
+| Enhanced bead IDs required `intent-cli-*` | **Closed.** `schemas/enhanced-bead.cue` now requires Clarity IDs. |
+| Question profiles were generic (`api`, `cli`, `event`, `data`, `workflow`, `ui`, `common`) | **Closed for canonical schema.** `schemas/questions.cue` exposes the seven Rust profiles from `MASTER_DOC.md`. |
+| `schemas/kirk.cue` lacked `#KirkContract16` | **Closed.** `#KirkContract16`, `#KirkSection`, and `#KirkMetadata` exist. |
+| CLI exposed only thin legacy commands | **Foundation-only closed.** The target command hierarchy exists and `interview start/status` use Fjall. Full reducer/gate/spec/bead/export/bd behavior remains a full-readiness implementation blocker. |
+| Storage used redb instead of Fjall | **Foundation-only closed.** `FjallEventStore` exists and the CLI uses it for canonical interview events. Full event hash chain, sequence enforcement, lock protocol, snapshots, derived indexes, schema validation, and recovery semantics remain full-readiness blockers. |
+| Event schema lacked AI/reviewer/bd/projection/recovery payloads | **Foundation-only closed.** `schemas/events.cue` exists, vets, and discriminates payload families by event type. Full semantic parity and production replay enforcement remain implementation blockers. |
+| State machine lacked exact reducer semantics | **Closed at MASTER_DOC level.** See `MASTER_DOC.md` reducer/state sections. Implementation remains pending. |
+| Reviewer trust model needed deterministic evidence validation | **Closed at MASTER_DOC/schema level.** `schemas/reviewer-report.cue` exists and `MASTER_DOC.md` defines deterministic evidence validation. Implementation remains pending. |
+| bd idempotency needed stable content hash and request event | **Closed at MASTER_DOC/events-schema level.** Implementation remains pending. |
+| Plaintext raw transcript risk was ambiguous | **Closed at MASTER_DOC level.** Initial full-product plaintext risk is explicitly accepted with constraints. |
+| Provider prompts needed minimization and secret scan | **Closed at MASTER_DOC level.** Implementation remains pending. |
+| bd emission needed privacy consent and redaction | **Closed at MASTER_DOC level.** Implementation remains pending. |
+| Local schema/question overrides needed trust/forbidden-question policy | **Closed at MASTER_DOC level and schema manifest exists.** Implementation remains pending. |
+| Safe newtypes/path validation needed specification | **Closed at MASTER_DOC level.** Implementation remains pending. |
+| Decomposition contract and dependency DAG missing | **Closed.** `MASTER_DOC.md` defines bead decomposition contract and implementation DAG. |
+| PME/AI/reviewer work needed adapter/decomposition boundaries | **Closed at MASTER_DOC level.** Implementation remains pending. |
+
+## Remaining Full-Readiness Blockers
+
+These do not block full-product DAG decomposition, but they do block claiming `implementation_complete: true`:
+
+1. Implement real reducer-backed behavior for `gates run`, `spec compile`, `beads generate`, `beads emit`, `sessions list`, and export.
+2. Complete Fjall event-store contract: hash chain, schema validation on append/replay, contiguous sequence enforcement, session lock protocol, snapshots, derived indexes, projection status, and recovery matrix behavior.
+3. Tighten schemas to complete semantic parity with every `MASTER_DOC.md` required field, including full enhanced bead decomposition fields.
+4. Implement reviewer evidence validation, prompt minimization, secret scan, redaction, local override trust checks, and bd idempotency behavior.
+5. Resolve repo-wide clippy debt tracked as bead `cl-2q6`.

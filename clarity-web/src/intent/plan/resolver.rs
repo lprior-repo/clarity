@@ -356,54 +356,53 @@ pub fn compute_critical_path(beads: &[PlanBead]) -> Vec<String> {
 
   // Process in topological order
   topological_sort(beads).map_or(Vec::new(), |order| {
-      // Compute earliest completion time for each bead using dynamic programming
-      let mut earliest_completion: HashMap<&str, u32> = HashMap::new();
-      let mut predecessor: HashMap<&str, &str> = HashMap::new();
+    // Compute earliest completion time for each bead using dynamic programming
+    let mut earliest_completion: HashMap<&str, u32> = HashMap::new();
+    let mut predecessor: HashMap<&str, &str> = HashMap::new();
 
-      for bead_id in &order {
-        let bead = beads.iter().find(|b| &b.id == bead_id);
-        if let Some(bead) = bead {
-          let max_dep_completion = bead
-            .dependencies
-            .iter()
-            .filter_map(|dep| earliest_completion.get(dep.as_str()).copied())
-            .max()
-            .map_or(0, |v| v);
+    for bead_id in &order {
+      let bead = beads.iter().find(|b| &b.id == bead_id);
+      if let Some(bead) = bead {
+        let max_dep_completion = bead
+          .dependencies
+          .iter()
+          .filter_map(|dep| earliest_completion.get(dep.as_str()).copied())
+          .max()
+          .map_or(0, |v| v);
 
-          let completion = max_dep_completion + bead.effort;
-          earliest_completion.insert(bead_id.as_str(), completion);
+        let completion = max_dep_completion + bead.effort;
+        earliest_completion.insert(bead_id.as_str(), completion);
 
-          // Find which dependency led to this completion time
-          for dep in &bead.dependencies {
-            if let Some(&dep_completion) = earliest_completion.get(dep.as_str()) {
-              if dep_completion == max_dep_completion {
-                predecessor.insert(bead_id.as_str(), dep.as_str());
-              }
+        // Find which dependency led to this completion time
+        for dep in &bead.dependencies {
+          if let Some(&dep_completion) = earliest_completion.get(dep.as_str()) {
+            if dep_completion == max_dep_completion {
+              predecessor.insert(bead_id.as_str(), dep.as_str());
             }
           }
         }
       }
+    }
 
-      // Find bead with maximum completion time (end of critical path)
-      let critical_end = earliest_completion
-        .iter()
-        .max_by_key(|(_, &completion)| completion)
-        .map(|(&id, _)| id);
+    // Find bead with maximum completion time (end of critical path)
+    let critical_end = earliest_completion
+      .iter()
+      .max_by_key(|(_, &completion)| completion)
+      .map(|(&id, _)| id);
 
-      // Trace back to find critical path
-      let mut path = Vec::new();
-      if let Some(mut current) = critical_end {
-        path.push(current.to_string());
-        while let Some(&pred) = predecessor.get(current) {
-          path.push(pred.to_string());
-          current = pred;
-        }
-        path.reverse();
+    // Trace back to find critical path
+    let mut path = Vec::new();
+    if let Some(mut current) = critical_end {
+      path.push(current.to_string());
+      while let Some(&pred) = predecessor.get(current) {
+        path.push(pred.to_string());
+        current = pred;
       }
+      path.reverse();
+    }
 
-      path
-    },
-  )
+    path
+  })
 }
 
 /// Compute parallelism factor - maximum number of beads that can run concurrently

@@ -7,6 +7,28 @@ package intent
 // KIRK EXTENSIONS TO SPEC
 // =============================================================================
 
+// Minimal legacy anchors retained so old KIRK extensions evaluate while the
+// normative #KirkContract16 below becomes the Clarity source-of-truth artifact.
+#Spec: {
+	name?: string
+	version?: string
+	behaviors?: [...#Behavior]
+	ai_hints?: #AIHints
+	...
+}
+
+#Behavior: {
+	name?: string
+	intent?: string
+	...
+}
+
+#AIHints: {
+	do?: [...string]
+	do_not?: [...string]
+	...
+}
+
 // Extended Spec with KIRK mental model fields
 #KirkSpec: #Spec & {
 	// Mental Model: Inversion
@@ -28,6 +50,80 @@ package intent
 
 	// Detected Conflicts (computed)
 	conflicts?: [...#Conflict]
+}
+
+// =============================================================================
+// CLARITY KIRK16 CONTRACT - MASTER_DOC.md SECTION 16
+// =============================================================================
+
+#KirkContract16: {
+	schema_version: string
+	schema_hash: string & =~"^sha256:[a-f0-9]{64}$"
+	session_id: string
+	profile: "rust-cli" | "rust-library" | "rust-web-service" | "rust-async-service" | "rust-storage" | "rust-ui" | "rust-refactor"
+	sections: [
+		#KirkSection0,
+		#KirkSection1,
+		#KirkSection2,
+		#KirkSection3,
+		#KirkSection4,
+		#KirkSection5,
+		#KirkSection6,
+		#KirkSection7,
+		#KirkSection8,
+		#KirkSection9,
+		#KirkSection10,
+		#KirkSection11,
+		#KirkSection12,
+		#KirkSection13,
+		#KirkSection14,
+		#KirkSection15,
+	]
+}
+
+#KirkSection: {
+	index: int & >=0 & <=15
+	title: string
+	content: string
+	evidence_event_ids: [...string] & [_, ...]
+	...
+}
+
+#KirkSection0: #KirkSection & {index: 0, title: "Original Prompt"}
+#KirkSection1: #KirkSection & {index: 1, title: "Problem Statement"}
+#KirkSection2: #KirkSection & {index: 2, title: "Antithesis Points"}
+#KirkSection3: #KirkSection & {index: 3, title: "Target Persona"}
+#KirkSection4: #KirkSection & {index: 4, title: "Straw Man Validation"}
+#KirkSection5: #KirkSection & {index: 5, title: "Solution Description"}
+#KirkSection6: #KirkSection & {index: 6, title: "VORP Justification"}
+#KirkSection7: #KirkSection & {index: 7, title: "Non-Persona"}
+#KirkSection8: #KirkSection & {index: 8, title: "Scenario Trigger"}
+#KirkSection9: #KirkSection & {index: 9, title: "Scenario Value Moment"}
+#KirkSection10: #KirkSection & {index: 10, title: "Scenario Feeling"}
+#KirkSection11: #KirkSection & {index: 11, title: "Discovery Hole"}
+#KirkSection12: #KirkSection & {index: 12, title: "Edge Case Hole"}
+#KirkSection13: #KirkSection & {index: 13, title: "Motivation Drop-off"}
+#KirkSection14: #KirkSection & {index: 14, title: "EARS Requirements"}
+#KirkSection15: #KirkSection & {
+	index: 15
+	title: "Compilation Metadata"
+	metadata: #KirkMetadata
+}
+
+#KirkMetadata: {
+	generated_at: string
+	event_log_last_seq: int & >=0
+	event_log_hash: string & =~"^sha256:[a-f0-9]{64}$"
+	reviewer_panel_results: [...{
+		reviewer: "sre" | "architect" | "wardley" | "munger" | "security" | "test"
+		verdict: "Pass" | "Fail"
+		evidence_event_ids: [...string] & [_, ...]
+	}]
+	gate_results: [...{
+		gate_id: string
+		passed: bool
+		evidence_event_ids: [...string]
+	}]
 }
 
 // =============================================================================

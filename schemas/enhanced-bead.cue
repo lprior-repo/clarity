@@ -9,13 +9,15 @@
 
 package schema
 
+import "strings"
+
 // ============================================================================
 // Core Bead Structure
 // ============================================================================
 
 #EnhancedBead: {
 	// Identity
-	id:              string & =~"^intent-cli-[a-z0-9]+$"
+	id:              string & =~"^clarity-[a-z0-9][a-z0-9-]{2,80}-[a-f0-9]{12}$"
 	title:           string & =~"^[A-Za-z-]+: .+"  // Must be "Component: Description"
 	type:            #IssueType
 	priority:        #Priority
@@ -38,7 +40,31 @@ package schema
 	completion_checklist: #CompletionChecklist     // Section 8
 	context:              #Context                 // Section 9
 	ai_hints:             #AIHints                 // Section 10
+	...
 }
+
+// Clarity source-of-truth alias required by MASTER_DOC.md.
+#ClarityEnhancedBead: #EnhancedBead & {
+	canonical_task_id: string & =~"^[a-z0-9][a-z0-9-]{2,120}$"
+	master_doc_refs: [...string] & [_, ...]
+	bead_evidence: [...#BeadEvidence]
+	verification_lanes: [...#BeadVerificationLane] & [_, ...]
+	moon_commands: [...string] & [_, ...]
+	error_variants_touched?: [...string]
+	event_types_touched?: [...string]
+	allowed_source_files?: [...string]
+	security_privacy_notes?: [...string]
+}
+
+#BeadEvidence: {
+	kind: "test" | "proof" | "schema" | "source" | "command" | "review"
+	description: string & strings.MinRunes(10)
+	path?: string
+	command?: string
+	evidence_event_ids?: [...string]
+}
+
+#BeadVerificationLane: "unit" | "integration" | "bdd" | "proptest" | "kani" | "verus" | "flux" | "loom" | "miri" | "fuzz" | "manual-qa" | "schema-vet"
 
 #IssueType: "feature" | "bug" | "task" | "epic" | "chore"
 
@@ -569,46 +595,7 @@ package schema
 // ============================================================================
 
 // A bead is only valid if it passes ALL quality gates
-#ValidBead: #EnhancedBead & {
-	// Gate 0: Clarifications resolved
-	clarifications: _ready_for_implementation: true
-
-	// Gate 1: EARS coverage
-	ears_requirements: _valid: true
-
-	// Gate 2: Research requirements defined
-	research_requirements: files_to_read: [_, ...]
-
-	// Gate 3: Inversion analysis done
-	inversions: _valid: true
-
-	// Gate 4: Happy and error path tests defined
-	acceptance_tests: {
-		happy_paths: [_, ...]
-		error_paths: [_, ...]
-	}
-
-	// Gate 5: Pipeline test defined
-	e2e_tests: pipeline_test: name: =~"^test_full_.+"
-
-	// Gate 6: Verification checkpoints defined
-	verification_checkpoints: {
-		gate_0_research: checks: [_, ...]
-		gate_1_tests: checks: [_, ...]
-	}
-
-	// Gate 7: Test-first tasks defined
-	implementation_tasks: phase_0_research: tasks: [_, ...]
-
-	// Gate 8: Anti-hallucination rules
-	anti_hallucination: read_before_write: [_, ...]
-
-	// Gate 9: Context survival configured
-	context_survival: progress_file: path: =~".+"
-
-	// Gate 10: Constitution defined
-	ai_hints: constitution: [_, ...]
-}
+#ValidBead: #ClarityEnhancedBead
 
 // Lightweight validation for in-progress beads
 #DraftBead: #EnhancedBead & {

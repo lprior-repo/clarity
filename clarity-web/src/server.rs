@@ -29,10 +29,10 @@ use tracing::info;
 use tracing::warn as tracing_warn;
 
 // Re-export types from lattice and providers
+use crate::config::ai::{default_config, load_ai_config_if_present, AiConfig};
+use crate::domain::scenario::{HolePunchingResults, ScenarioField};
 use crate::domain::straw_man::StrawManTrap;
 use crate::domain::straw_man::StrawManValidation;
-use crate::domain::scenario::{HolePunchingResults, ScenarioField};
-use crate::config::ai::{default_config, load_ai_config_if_present, AiConfig};
 use crate::lattice::quality::{calculate_quality, InversionControl, QualityError};
 use crate::lattice::quality::{Answer as QualityAnswer, EarsRequirementRef, QualityScore};
 use crate::providers::resolution::resolve_provider_config;
@@ -394,11 +394,9 @@ pub struct AiProviderDiagnostics {
 }
 
 fn ai_provider_state() -> Result<&'static AiProviderState, anyhow::Error> {
-  AI_PROVIDER_STATE.as_ref().map_err(|error| {
-    anyhow::anyhow!(
-      "AI provider initialization failed: {error:?}"
-    )
-  })
+  AI_PROVIDER_STATE
+    .as_ref()
+    .map_err(|error| anyhow::anyhow!("AI provider initialization failed: {error:?}"))
 }
 
 fn ai_provider() -> Result<Arc<OpenCodeProvider>, anyhow::Error> {
@@ -687,9 +685,7 @@ pub async fn extract_fields_server(
 
   // Validate input
   if input.trim().is_empty() {
-    return Err(anyhow::anyhow!(
-      "Input text cannot be empty"
-    ));
+    return Err(anyhow::anyhow!("Input text cannot be empty"));
   }
 
   // Build extraction context
@@ -908,9 +904,7 @@ pub async fn validate_straw_man_traps_server(
 
   // Validate input
   if persona_text.trim().is_empty() {
-    return Err(anyhow::anyhow!(
-      "Persona text cannot be empty"
-    ));
+    return Err(anyhow::anyhow!("Persona text cannot be empty"));
   }
 
   // Define schema for trap detection
@@ -1710,8 +1704,8 @@ pub async fn compile_to_kirk(
 #[allow(clippy::unwrap_used)]
 mod integration_tests {
   use super::*;
-  use crate::domain::straw_man::StrawManTrap;
   use crate::config::ai::{AiConfig, ProviderConfig, ProviderType, QualityConfig};
+  use crate::domain::straw_man::StrawManTrap;
   use crate::providers::FieldExtraction;
   use serde_json::json;
 

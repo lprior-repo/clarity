@@ -1,0 +1,48 @@
+{
+  "schema_manifest_version": "1.0.0",
+  "source_of_truth": "MASTER_DOC.md",
+  "schemas": [
+    {
+      "path": "schemas/questions.cue",
+      "semantic_version": "1.0.0",
+      "sha256": "c484413dad6c509e67f2dbc3f78fe9d2f33fc7fe951420e16434e8c9ef009c03",
+      "required_definitions": ["#QuestionBank", "#Question", "#GateRef", "#RustProfile"],
+      "validation_command": "cue vet schemas/questions.cue"
+    },
+    {
+      "path": "schemas/kirk.cue",
+      "semantic_version": "1.0.0",
+      "sha256": "764f3fe5f32e4a37d489b9b0ac767b2e003b8b07d025396d442ff441a7da392b",
+      "required_definitions": ["#KirkContract16", "#KirkSection", "#KirkMetadata"],
+      "validation_command": "cue vet schemas/kirk.cue"
+    },
+    {
+      "path": "schemas/enhanced-bead.cue",
+      "semantic_version": "1.0.0",
+      "sha256": "6c974506f3bd255caadb39b754433e357a71b3e28524ab9fc181a1b4b621b83b",
+      "required_definitions": ["#ClarityEnhancedBead", "#BeadEvidence", "#BeadVerificationLane"],
+      "validation_command": "cue vet schemas/enhanced-bead.cue"
+    },
+    {
+      "path": "schemas/reviewer-report.cue",
+      "semantic_version": "1.0.0",
+      "sha256": "ef974cd7ded8f89fc1a749ae1ab4277b3faa5a1189c21e5d6938aba567ed3848",
+      "required_definitions": ["#ReviewerReport", "#ReviewerFinding", "#ReviewerPassClaim"],
+      "validation_command": "cue vet schemas/reviewer-report.cue"
+    },
+    {
+      "path": "schemas/events.cue",
+      "semantic_version": "1.0.0",
+      "sha256": "0f79ed1dc63429b10d4f9944824d78a97dd856c231700fbff6500f7e5086a353",
+      "required_definitions": ["#EventEnvelope", "#EventPayload"],
+      "validation_command": "cue vet schemas/events.cue"
+    },
+    {
+      "path": "schemas/clarity-spec.cue",
+      "semantic_version": "1.0.0",
+      "sha256": "b6baebcb262011c814bf634eea401601c8ebcc57eb5a9c79315cbd582fa89585",
+      "required_definitions": ["#ClaritySpec", "#RustRequirement", "#GateResult"],
+      "validation_command": "cue vet schemas/clarity-spec.cue"
+    }
+  ]
+}
