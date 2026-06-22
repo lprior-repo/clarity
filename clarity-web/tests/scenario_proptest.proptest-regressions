@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 8c4a282ad277b6cb662bf2db3a00299b85d70e85fd9cae1bb07f9ae1aeae2d33 # shrinks to r = HolePunchingResults { discovery_hole: Some("!"), edge_case_hole: None, motivation_dropoff: None }, ht = DiscoveryHole, expl = ""

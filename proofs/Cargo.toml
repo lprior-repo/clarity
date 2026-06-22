@@ -1,0 +1,10 @@
+[package]
+name = "proofs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clarity-web = { path = "../clarity-web" }
+
+[dev-dependencies]
+proptest = "1.10.0"
