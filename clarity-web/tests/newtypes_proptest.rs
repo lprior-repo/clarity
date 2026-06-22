@@ -9,15 +9,15 @@
 //!
 //! # Proptest obligations
 //!
-//! - PO-NT-P-01: AnswerId boundary (whitespace-only → Err, non-whitespace → Ok verbatim)
-//! - PO-NT-P-02: StepId boundary (same as P-01)
-//! - PO-NT-P-03: BeadId boundary (same as P-01)
-//! - PO-NT-P-04: FromStr(s) ≡ try_from(s.to_string()) for all three ID types
+//! - PO-NT-P-01: `AnswerId` boundary (whitespace-only → Err, non-whitespace → Ok verbatim)
+//! - PO-NT-P-02: `StepId` boundary (same as P-01)
+//! - PO-NT-P-03: `BeadId` boundary (same as P-01)
+//! - PO-NT-P-04: FromStr(s) ≡ `try_from(s.to_string())` for all three ID types
 //! - PO-NT-P-05: Timestamp boundary (valid RFC 3339 → Ok, else → Err)
-//! - PO-NT-P-06: Timestamp::default().as_str() parses via chrono
-//! - PO-NT-P-07: Display round-trip: format!("{}", t) == t.as_str() for all 5 types
-//! - PO-NT-P-08: AnswerValue round-trip: new/from/as_str/From impls
-//! - PO-NT-P-09: serde_json round-trip for all 5 types
+//! - PO-NT-P-06: `Timestamp::default().as_str()` parses via chrono
+//! - PO-NT-P-07: Display round-trip: format!("{}", t) == `t.as_str()` for all 5 types
+//! - PO-NT-P-08: `AnswerValue` round-trip: `new/from/as_str/From` impls
+//! - PO-NT-P-09: `serde_json` round-trip for all 5 types
 //!
 //! # Lint constraints
 //!
@@ -34,17 +34,15 @@
 //! `clarity-web/tests/newtypes_proptest.rs`.
 
 #![allow(
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::panic,
-    clippy::float_cmp,
-    clippy::needless_collect,
-    clippy::match_same_arms
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::match_same_arms
 )]
 
-use clarity_web::domain::{
-    AnswerId, AnswerValue, BeadId, StepId, Timestamp,
-};
+use clarity_web::domain::{AnswerId, AnswerValue, BeadId, StepId, Timestamp};
 use proptest::prelude::*;
 use std::str::FromStr;
 
@@ -53,7 +51,7 @@ use std::str::FromStr;
 // ============================================================
 
 fn is_whitespace_only(s: &str) -> bool {
-    s.trim().is_empty()
+  s.trim().is_empty()
 }
 
 // ============================================================
@@ -63,13 +61,12 @@ fn is_whitespace_only(s: &str) -> bool {
 proptest! {
     #[test]
     fn proptest_answer_id_boundary(s in ".*") {
+        let result = AnswerId::try_from(s.clone());
         if is_whitespace_only(&s) {
             // Whitespace-only → Err
-            let result = AnswerId::try_from(s.clone());
             prop_assert!(result.is_err(), "AnswerId should reject whitespace-only string: {:?}", s);
         } else {
             // Non-whitespace → Ok with inner verbatim
-            let result = AnswerId::try_from(s.clone());
             prop_assert!(result.is_ok(), "AnswerId should accept non-whitespace string: {:?}", s);
             if let Ok(id) = result {
                 prop_assert_eq!(id.as_str(), s.as_str(), "AnswerId inner should be verbatim for {:?}", s);
@@ -85,11 +82,10 @@ proptest! {
 proptest! {
     #[test]
     fn proptest_step_id_boundary(s in ".*") {
+        let result = StepId::try_from(s.clone());
         if is_whitespace_only(&s) {
-            let result = StepId::try_from(s.clone());
             prop_assert!(result.is_err(), "StepId should reject whitespace-only string: {:?}", s);
         } else {
-            let result = StepId::try_from(s.clone());
             prop_assert!(result.is_ok(), "StepId should accept non-whitespace string: {:?}", s);
             if let Ok(id) = result {
                 prop_assert_eq!(id.as_str(), s.as_str(), "StepId inner should be verbatim for {:?}", s);
@@ -105,11 +101,10 @@ proptest! {
 proptest! {
     #[test]
     fn proptest_bead_id_boundary(s in ".*") {
+        let result = BeadId::try_from(s.clone());
         if is_whitespace_only(&s) {
-            let result = BeadId::try_from(s.clone());
             prop_assert!(result.is_err(), "BeadId should reject whitespace-only string: {:?}", s);
         } else {
-            let result = BeadId::try_from(s.clone());
             prop_assert!(result.is_ok(), "BeadId should accept non-whitespace string: {:?}", s);
             if let Ok(id) = result {
                 prop_assert_eq!(id.as_str(), s.as_str(), "BeadId inner should be verbatim for {:?}", s);
@@ -222,8 +217,8 @@ proptest! {
         if is_whitespace_only(&s) {
             return Ok(());
         }
-        let id = AnswerId::try_from(s.clone())?;
-        let formatted = format!("{}", id);
+        let id = AnswerId::try_from(s)?;
+        let formatted = format!("{id}");
         prop_assert_eq!(formatted.as_str(), id.as_str(), "format!() must equal as_str() for AnswerId");
     }
 }
@@ -234,8 +229,8 @@ proptest! {
         if is_whitespace_only(&s) {
             return Ok(());
         }
-        let id = StepId::try_from(s.clone())?;
-        let formatted = format!("{}", id);
+        let id = StepId::try_from(s)?;
+        let formatted = format!("{id}");
         prop_assert_eq!(formatted.as_str(), id.as_str(), "format!() must equal as_str() for StepId");
     }
 }
@@ -246,8 +241,8 @@ proptest! {
         if is_whitespace_only(&s) {
             return Ok(());
         }
-        let id = BeadId::try_from(s.clone())?;
-        let formatted = format!("{}", id);
+        let id = BeadId::try_from(s)?;
+        let formatted = format!("{id}");
         prop_assert_eq!(formatted.as_str(), id.as_str(), "format!() must equal as_str() for BeadId");
     }
 }
@@ -256,7 +251,7 @@ proptest! {
     #[test]
     fn proptest_display_roundtrip_timestamp(_i in 0..64) {
         let ts = Timestamp::default();
-        let formatted = format!("{}", ts);
+        let formatted = format!("{ts}");
         prop_assert_eq!(formatted.as_str(), ts.as_str(), "format!() must equal as_str() for Timestamp");
     }
 }
@@ -264,8 +259,8 @@ proptest! {
 proptest! {
     #[test]
     fn proptest_display_roundtrip_answer_value(s in ".*") {
-        let v = AnswerValue::new(s.clone());
-        let formatted = format!("{}", v);
+        let v = AnswerValue::new(s);
+        let formatted = format!("{v}");
         prop_assert_eq!(formatted.as_str(), v.as_str(), "format!() must equal as_str() for AnswerValue");
     }
 }
@@ -282,7 +277,7 @@ proptest! {
         prop_assert_eq!(v.as_str(), s.as_str(), "AnswerValue::new must preserve string");
 
         // (b) String::from(AnswerValue::new(s)) == s
-        let s2 = std::string::String::from(v.clone());
+        let s2 = std::string::String::from(v);
         prop_assert_eq!(s2.as_str(), s.as_str(), "String::from must extract inner");
 
         // (c) AnswerValue::from(s.as_str()).as_str() == s.as_str()
@@ -305,7 +300,7 @@ proptest! {
         if is_whitespace_only(&s) {
             return Ok(());
         }
-        let id = AnswerId::try_from(s.clone())?;
+        let id = AnswerId::try_from(s)?;
         let json = serde_json::to_string(&id)?;
         let roundtrip = serde_json::from_str::<AnswerId>(&json)?;
         prop_assert_eq!(roundtrip.as_str(), id.as_str(), "serde_json round-trip must preserve AnswerId");
@@ -318,7 +313,7 @@ proptest! {
         if is_whitespace_only(&s) {
             return Ok(());
         }
-        let id = StepId::try_from(s.clone())?;
+        let id = StepId::try_from(s)?;
         let json = serde_json::to_string(&id)?;
         let roundtrip = serde_json::from_str::<StepId>(&json)?;
         prop_assert_eq!(roundtrip.as_str(), id.as_str(), "serde_json round-trip must preserve StepId");
@@ -331,7 +326,7 @@ proptest! {
         if is_whitespace_only(&s) {
             return Ok(());
         }
-        let id = BeadId::try_from(s.clone())?;
+        let id = BeadId::try_from(s)?;
         let json = serde_json::to_string(&id)?;
         let roundtrip = serde_json::from_str::<BeadId>(&json)?;
         prop_assert_eq!(roundtrip.as_str(), id.as_str(), "serde_json round-trip must preserve BeadId");
@@ -341,7 +336,7 @@ proptest! {
 proptest! {
     #[test]
     fn proptest_serde_roundtrip_answer_value(s in ".*") {
-        let v = AnswerValue::new(s.clone());
+        let v = AnswerValue::new(s);
         let json = serde_json::to_string(&v)?;
         let roundtrip = serde_json::from_str::<AnswerValue>(&json)?;
         prop_assert_eq!(roundtrip.as_str(), v.as_str(), "serde_json round-trip must preserve AnswerValue");

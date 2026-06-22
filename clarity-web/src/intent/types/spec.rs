@@ -343,7 +343,7 @@ mod tests {
       name: "test".to_string(),
       description: String::new(),
       features: (0..101)
-        .map(|i| Feature::new(format!("feature_{}", i)).unwrap())
+        .map(|i| Feature::new(format!("feature_{i}")).unwrap())
         .collect(),
       invariants: Vec::new(),
       anti_patterns: Vec::new(),

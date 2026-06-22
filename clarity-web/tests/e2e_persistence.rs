@@ -108,6 +108,12 @@ fn count_table_records(db_path: &Path, table_name: &str) -> Result<usize, String
 }
 
 /// Test complete Discover phase persistence and restoration
+// The test asserts a full express-mode Discover phase end-to-end, including
+// multi-step domain transition, persistence write/read, and result
+// reconstruction. Splitting it would force sharing of the tempdir setup and
+// risk introducing ordering-dependent flakes between sub-tests, so the body
+// intentionally remains a single linear flow.
+#[allow(clippy::too_many_lines)]
 #[test]
 fn test_e2e_persistence_discover_phase_express_mode() {
   // Create a temporary database file

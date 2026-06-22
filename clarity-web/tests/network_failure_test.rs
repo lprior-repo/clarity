@@ -14,7 +14,7 @@
 )]
 #![forbid(unsafe_code)]
 
-//! Comprehensive network failure handling tests for OpenCode provider
+//! Comprehensive network failure handling tests for `OpenCode` provider
 //!
 //! This test suite validates that the application handles various network
 //! failure scenarios gracefully with appropriate error messages and behavior.
@@ -49,7 +49,7 @@ fn test_connection_refused_to_nonexistent_server() {
   // Should get a network error, not panic or hang
   match result {
     Err(ExtractionError::NetworkError(msg)) => {
-      println!("Connection refused error: {}", msg);
+      println!("Connection refused error: {msg}");
       assert!(
         msg.contains("Failed to connect")
           || msg.contains("connection refused")
@@ -58,10 +58,7 @@ fn test_connection_refused_to_nonexistent_server() {
       );
     }
     Err(other) => {
-      panic!(
-        "Expected NetworkError for connection refused, got: {:?}",
-        other
-      );
+      panic!("Expected NetworkError for connection refused, got: {other:?}");
     }
     Ok(_) => {
       panic!("Should not succeed with non-existent server");
@@ -85,19 +82,18 @@ fn test_connection_timeout_to_unroutable_ip() {
   let result = rt.block_on(provider.extract_fields("test input", &create_test_context()));
   let elapsed = start.elapsed();
 
-  println!("Timeout test completed in: {:?}", elapsed);
+  println!("Timeout test completed in: {elapsed:?}");
 
   // Should timeout and return an error, not hang indefinitely
   // The timeout is 30 seconds, but connection might fail faster
   assert!(
     elapsed < Duration::from_secs(35),
-    "Should timeout within 35 seconds, took {:?}",
-    elapsed
+    "Should timeout within 35 seconds, took {elapsed:?}"
   );
 
   match result {
     Err(ExtractionError::Timeout { timeout_ms }) => {
-      println!("Got timeout error with timeout_ms: {}", timeout_ms);
+      println!("Got timeout error with timeout_ms: {timeout_ms}");
       assert_eq!(
         timeout_ms, 30000,
         "Timeout should match DEFAULT_TIMEOUT_SECS (30s)"
@@ -105,10 +101,10 @@ fn test_connection_timeout_to_unroutable_ip() {
     }
     Err(ExtractionError::NetworkError(msg)) => {
       // Network errors are also acceptable (might fail before timeout)
-      println!("Got network error instead of timeout (acceptable): {}", msg);
+      println!("Got network error instead of timeout (acceptable): {msg}");
     }
     Err(other) => {
-      panic!("Expected Timeout or NetworkError, got: {:?}", other);
+      panic!("Expected Timeout or NetworkError, got: {other:?}");
     }
     Ok(_) => {
       panic!("Should not succeed with unroutable IP");
@@ -131,18 +127,17 @@ fn test_invalid_hostname() {
   let result = rt.block_on(provider.extract_fields("test input", &create_test_context()));
   let elapsed = start.elapsed();
 
-  println!("Invalid hostname test completed in: {:?}", elapsed);
+  println!("Invalid hostname test completed in: {elapsed:?}");
 
   // Should fail quickly with DNS error
   assert!(
     elapsed < Duration::from_secs(10),
-    "DNS failure should be fast, took {:?}",
-    elapsed
+    "DNS failure should be fast, took {elapsed:?}"
   );
 
   match result {
     Err(ExtractionError::NetworkError(msg)) => {
-      println!("DNS resolution error: {}", msg);
+      println!("DNS resolution error: {msg}");
       // DNS errors often mention "dns", "resolve", or "name"
       let msg_lower = msg.to_lowercase();
       assert!(
@@ -151,12 +146,11 @@ fn test_invalid_hostname() {
           || msg_lower.contains("name")
           || msg_lower.contains("connection")
           || msg_lower.contains("connect"),
-        "Error should indicate DNS/resolution issue, got: {}",
-        msg
+        "Error should indicate DNS/resolution issue, got: {msg}"
       );
     }
     Err(other) => {
-      panic!("Expected NetworkError for DNS failure, got: {:?}", other);
+      panic!("Expected NetworkError for DNS failure, got: {other:?}");
     }
     Ok(_) => {
       panic!("Should not succeed with invalid hostname");
@@ -185,7 +179,7 @@ fn test_http_error_handling_404() {
       println!("Got expected network error for non-existent endpoint");
     }
     Err(other) => {
-      println!("Got error (acceptable): {:?}", other);
+      println!("Got error (acceptable): {other:?}");
       // Any error is acceptable - we're just verifying it doesn't panic
     }
     Ok(_) => {
@@ -214,7 +208,7 @@ fn test_timeout_value_is_reasonable() {
       // Timeout should be 30 seconds (30000ms) as per DEFAULT_TIMEOUT_SECS
       assert_eq!(timeout_ms, 30000, "Timeout should be 30 seconds");
       assert!(timeout_ms >= 5000, "Timeout should be at least 5 seconds");
-      assert!(timeout_ms <= 120000, "Timeout should not exceed 2 minutes");
+      assert!(timeout_ms <= 120_000, "Timeout should not exceed 2 minutes");
 
       // Actual time waited should be close to configured timeout
       // Allow some margin for overhead
@@ -235,7 +229,7 @@ fn test_timeout_value_is_reasonable() {
       );
     }
     Err(other) => {
-      panic!("Unexpected error: {:?}", other);
+      panic!("Unexpected error: {other:?}");
     }
     Ok(_) => {
       panic!("Should not succeed");
@@ -260,11 +254,11 @@ fn test_malformed_url() {
     let result = rt.block_on(provider.extract_fields("test input", &create_test_context()));
 
     match result {
-      Err(ExtractionError::NetworkError(_)) | Err(ExtractionError::ConfigurationError(_)) => {
+      Err(ExtractionError::NetworkError(_) | ExtractionError::ConfigurationError(_)) => {
         println!("Got expected error for malformed URL");
       }
       Err(other) => {
-        println!("Got error (acceptable): {:?}", other);
+        println!("Got error (acceptable): {other:?}");
       }
       Ok(_) => {
         panic!("Should not succeed with malformed URL");
@@ -298,7 +292,7 @@ fn test_empty_response_body() {
       println!("Parse error indicates we got a response but couldn't parse it");
     }
     Err(other) => {
-      println!("Got error (acceptable): {:?}", other);
+      println!("Got error (acceptable): {other:?}");
     }
     Ok(_) => {
       panic!("Should not succeed");
@@ -332,8 +326,8 @@ fn test_concurrent_failure_handling() {
   assert!(result2.is_err(), "Second request should fail");
 
   println!("Concurrent failure test passed");
-  println!("Result 1: {:?}", result1);
-  println!("Result 2: {:?}", result2);
+  println!("Result 1: {result1:?}");
+  println!("Result 2: {result2:?}");
 }
 
 #[test]
@@ -356,12 +350,11 @@ fn test_retry_does_not_hang() {
   // Should complete quickly (connection refused or timeout)
   assert!(
     elapsed < Duration::from_secs(35),
-    "Request should not hang indefinitely, took {:?}",
-    elapsed
+    "Request should not hang indefinitely, took {elapsed:?}"
   );
 
   assert!(result.is_err(), "Should fail with non-existent server");
-  println!("No-hang test passed in {:?}", elapsed);
+  println!("No-hang test passed in {elapsed:?}");
 }
 
 // Helper function to verify error messages are user-friendly
@@ -376,7 +369,7 @@ fn test_error_messages_are_actionable() {
   for (url, scenario) in test_cases {
     let provider = OpenCodeProvider::new(
       url.to_string(),
-      format!("test-session-{}", scenario.replace(" ", "-")),
+      format!("test-session-{}", scenario.replace(' ', "-")),
     );
 
     if let Ok(provider) = provider {
@@ -384,8 +377,8 @@ fn test_error_messages_are_actionable() {
       let result = rt.block_on(provider.extract_fields("test", &create_test_context()));
 
       if let Err(error) = result {
-        let error_msg = format!("{}", error);
-        println!("{} error message: {}", scenario, error_msg);
+        let error_msg = format!("{error}");
+        println!("{scenario} error message: {error_msg}");
 
         // Error messages should be descriptive
         assert!(!error_msg.is_empty(), "Error message should not be empty");

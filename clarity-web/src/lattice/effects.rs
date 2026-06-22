@@ -634,8 +634,7 @@ mod tests {
     let result = detect_cycles(&graph);
     assert!(
       result.is_ok(),
-      "Valid deep chain should not fail: {:?}",
-      result
+      "Valid deep chain should not fail: {result:?}"
     );
   }
 }

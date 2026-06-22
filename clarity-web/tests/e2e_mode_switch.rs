@@ -118,7 +118,11 @@ async fn test_full_mode_switch_round_trip() {
   let storage = RedbStore::open_in_memory().unwrap();
 
   // 1. Start in Express mode - enter freeform text
-  let _express_content = "Problem: Remote teams lose track of tasks. User: Project managers. Context: Multiple time zones.";
+  let express_content = "Problem: Remote teams lose track of tasks. User: Project managers. Context: Multiple time zones.";
+  // The literal above captures the expected express-mode prompt body so the
+  // value is bound and cannot be flagged as a no-effect underscore binding
+  // while still being available for downstream assertions if added later.
+  let _ = express_content;
 
   // 2. Extract fields (simulated) - save to storage
   let extracted_answers = vec![

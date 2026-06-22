@@ -48,8 +48,8 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)] // proptest contract: shrinking requires panic-able assertions
 
 use clarity_web::lattice::quality::{
-    calculate_quality, DimensionScore, EarsRequirementRef, InversionControl, IssueSeverity,
-    QualityDimension, QualityError, QualityIssue, QualityScore, Answer, MINIMUM_GATE,
+  calculate_quality, Answer, DimensionScore, EarsRequirementRef, InversionControl, IssueSeverity,
+  QualityDimension, QualityError, QualityIssue, QualityScore, MINIMUM_GATE,
 };
 use proptest::prelude::*;
 use std::collections::HashSet;
@@ -60,87 +60,91 @@ use std::collections::HashSet;
 
 /// All `QualityDimension` variants. Used by `arb_quality_dimension`.
 const ALL_DIMENSIONS: &[QualityDimension] = &[
-    QualityDimension::Completeness,
-    QualityDimension::Consistency,
-    QualityDimension::Testability,
-    QualityDimension::Clarity,
-    QualityDimension::Security,
+  QualityDimension::Completeness,
+  QualityDimension::Consistency,
+  QualityDimension::Testability,
+  QualityDimension::Clarity,
+  QualityDimension::Security,
 ];
 
 fn arb_quality_dimension() -> impl Strategy<Value = QualityDimension> {
-    proptest::sample::select(ALL_DIMENSIONS)
+  proptest::sample::select(ALL_DIMENSIONS)
 }
 
 fn arb_issue_severity() -> impl Strategy<Value = IssueSeverity> {
-    proptest::sample::select(&[
-        IssueSeverity::Warning,
-        IssueSeverity::Error,
-        IssueSeverity::Critical,
-    ])
+  proptest::sample::select(&[
+    IssueSeverity::Warning,
+    IssueSeverity::Error,
+    IssueSeverity::Critical,
+  ])
 }
 
 fn arb_short_string(min: usize, max: usize) -> impl Strategy<Value = String> {
-    proptest::collection::vec(proptest::arbitrary::any::<char>(), min..=max)
-        .prop_map(|v| v.into_iter().collect())
+  proptest::collection::vec(proptest::arbitrary::any::<char>(), min..=max)
+    .prop_map(|v| v.into_iter().collect())
 }
 
 fn arb_answer() -> impl Strategy<Value = Answer> {
-    (
-        arb_short_string(1, 24),  // step_id — narrow alphabet would be better but char is fine
-        arb_short_string(0, 64),  // value
-        arb_short_string(0, 32),  // timestamp
-    )
-        .prop_map(|(step_id, value, timestamp)| Answer {
-            step_id,
-            value,
-            timestamp,
-        })
+  (
+    arb_short_string(1, 24), // step_id — narrow alphabet would be better but char is fine
+    arb_short_string(0, 64), // value
+    arb_short_string(0, 32), // timestamp
+  )
+    .prop_map(|(step_id, value, timestamp)| Answer {
+      step_id,
+      value,
+      timestamp,
+    })
 }
 
 fn arb_ears_requirement_ref() -> impl Strategy<Value = EarsRequirementRef> {
-    (
-        arb_short_string(1, 16),
-        arb_short_string(0, 64),
-        any::<bool>(),
-    )
-        .prop_map(|(id, text, has_acceptance_criteria)| EarsRequirementRef {
-            id,
-            text,
-            has_acceptance_criteria,
-        })
+  (
+    arb_short_string(1, 16),
+    arb_short_string(0, 64),
+    any::<bool>(),
+  )
+    .prop_map(|(id, text, has_acceptance_criteria)| EarsRequirementRef {
+      id,
+      text,
+      has_acceptance_criteria,
+    })
 }
 
 fn arb_inversion_control() -> impl Strategy<Value = InversionControl> {
-    (any::<bool>(), 0usize..=1000).prop_map(|(has_inversion_tests, inverted_count)| {
-        InversionControl {
-            has_inversion_tests,
-            inverted_count,
-        }
-    })
+  (any::<bool>(), 0usize..=1000).prop_map(|(has_inversion_tests, inverted_count)| {
+    InversionControl {
+      has_inversion_tests,
+      inverted_count,
+    }
+  })
 }
 
 fn arb_dimension_score() -> impl Strategy<Value = DimensionScore> {
-    (arb_quality_dimension(), 0u8..=100).prop_map(|(d, s)| {
-        // In-range input — `new` is total over [0, 100] by OB-LQ-V-05/06.
-        DimensionScore::new(d, s).expect("in-range score must be Ok")
-    })
+  (arb_quality_dimension(), 0u8..=100).prop_map(|(d, s)| {
+    // In-range input — `new` is total over [0, 100] by OB-LQ-V-05/06.
+    DimensionScore::new(d, s).expect("in-range score must be Ok")
+  })
 }
 
 fn arb_quality_issue() -> impl Strategy<Value = QualityIssue> {
-    (arb_quality_dimension(), arb_issue_severity(), arb_short_string(1, 64))
-        .prop_map(|(dimension, severity, message)| QualityIssue::new(dimension, severity, message))
+  (
+    arb_quality_dimension(),
+    arb_issue_severity(),
+    arb_short_string(1, 64),
+  )
+    .prop_map(|(dimension, severity, message)| QualityIssue::new(dimension, severity, message))
 }
 
 fn arb_quality_score() -> impl Strategy<Value = QualityScore> {
-    (
-        0u8..=100,
-        proptest::collection::vec(arb_dimension_score(), 0..=5),
-        proptest::collection::vec(arb_quality_issue(), 0..=3),
-    )
-        .prop_map(|(overall, dimensions, issues)| {
-            // Valid range by construction — `new` accepts overall ∈ [0, 100].
-            QualityScore::new(overall, dimensions, issues).expect("valid overall must be Ok")
-        })
+  (
+    0u8..=100,
+    proptest::collection::vec(arb_dimension_score(), 0..=5),
+    proptest::collection::vec(arb_quality_issue(), 0..=3),
+  )
+    .prop_map(|(overall, dimensions, issues)| {
+      // Valid range by construction — `new` accepts overall ∈ [0, 100].
+      QualityScore::new(overall, dimensions, issues).expect("valid overall must be Ok")
+    })
 }
 
 // =============================================================================

@@ -196,7 +196,7 @@ mod tests {
     for i in 0..51 {
       feature
         .behaviors
-        .push(Behavior::new(format!("behavior_{}", i)).unwrap());
+        .push(Behavior::new(format!("behavior_{i}")).unwrap());
     }
 
     let result = feature.validate();
@@ -207,7 +207,7 @@ mod tests {
   fn test_feature_validate_too_many_dependencies() {
     let mut feature = Feature::new("test".to_string()).unwrap();
     for i in 0..21 {
-      feature.depends_on.push(format!("dep_{}", i));
+      feature.depends_on.push(format!("dep_{i}"));
     }
 
     let result = feature.validate();

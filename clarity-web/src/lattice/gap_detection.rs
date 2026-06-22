@@ -910,8 +910,7 @@ mod tests {
     // But buggy code returns 100% (5/5 indicators found)
     assert!(
       coverage <= 50,
-      "Coverage should reflect unique requirements (33%), not indicator count (100%). Got {}%",
-      coverage
+      "Coverage should reflect unique requirements (33%), not indicator count (100%). Got {coverage}%"
     );
   }
 }

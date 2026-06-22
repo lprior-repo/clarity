@@ -74,7 +74,11 @@ pub enum BeadStatus {
 }
 
 /// Save a bead (MOCK - does NOT actually save to database)
-pub async fn save_bead(bead: Bead) -> Result<Bead, anyhow::Error> {
+///
+/// # Errors
+/// This is a mock implementation that always succeeds. A real implementation
+/// would return `Err` on database write failures or validation errors.
+pub fn save_bead(bead: Bead) -> Result<Bead, anyhow::Error> {
   // WARNING: Does NOT persist to database - only updates timestamp
   // In a real app, this would save to a database
   let updated_bead = Bead {
@@ -85,8 +89,11 @@ pub async fn save_bead(bead: Bead) -> Result<Bead, anyhow::Error> {
 }
 
 /// Get all beads for a project (MOCK - ignores `project_id`, returns hardcoded data)
-pub async fn get_beads(project_id: String) -> Result<Vec<Bead>, anyhow::Error> {
-  let _ = project_id;
+///
+/// # Errors
+/// This is a mock implementation that always succeeds. A real implementation
+/// would return `Err` on database read failures.
+pub fn get_beads(_project_id: &str) -> Result<Vec<Bead>, anyhow::Error> {
   // WARNING: Does NOT fetch from database - returns HARDCODED sample data
   // In a real app, this would fetch from a database
   let beads = vec![
@@ -122,7 +129,11 @@ pub async fn get_beads(project_id: String) -> Result<Vec<Bead>, anyhow::Error> {
 }
 
 /// Delete a bead (MOCK - does NOT actually delete)
-pub async fn delete_bead(bead_id: String) -> Result<(), anyhow::Error> {
+///
+/// # Errors
+/// This is a mock implementation that always succeeds. A real implementation
+/// would return `Err` on database delete failures or missing bead.
+pub fn delete_bead(bead_id: &str) -> Result<(), anyhow::Error> {
   // WARNING: Does NOT delete from database - just logs
   // In a real app, this would delete from a database
   println!("[MOCK] Would delete bead: {bead_id}");
@@ -138,10 +149,11 @@ pub struct CoachResponse {
 }
 
 /// Get AI coaching guidance for a phase (MOCK - not actually AI)
-pub async fn get_coach_guidance(
-  phase: Phase,
-  context: String,
-) -> Result<CoachResponse, anyhow::Error> {
+///
+/// # Errors
+/// This is a mock implementation that always succeeds. A real implementation
+/// would return `Err` if the AI provider fails or the rate limit is exceeded.
+pub fn get_coach_guidance(phase: Phase, context: &str) -> Result<CoachResponse, anyhow::Error> {
   // In a real app, this would call an AI API
   let guidance = match phase {
     Phase::Discover => {
@@ -655,7 +667,12 @@ fn merge_hole_punching_results(
   })
 }
 
-pub async fn get_ai_provider_status_server() -> Result<AiProviderDiagnostics, anyhow::Error> {
+/// Get diagnostics for the active AI provider.
+///
+/// # Errors
+/// Returns `Err` if the AI provider singleton cannot be initialized
+/// (e.g., configuration is missing or the provider is unreachable).
+pub fn get_ai_provider_status_server() -> Result<AiProviderDiagnostics, anyhow::Error> {
   let provider = ai_provider()?;
   Ok(AiProviderDiagnostics {
     provider: "opencode".to_string(),
@@ -674,6 +691,10 @@ pub async fn get_ai_provider_status_server() -> Result<AiProviderDiagnostics, an
 /// # Returns
 /// * `Ok(ExtractedFields)` - Successfully extracted fields with confidence scores
 /// * `Err(anyhow::Error)` - Extraction failed or rate limited
+///
+/// # Errors
+/// Returns `Err` if the input is empty, the rate limit is exceeded, or the
+/// underlying AI provider fails to extract fields.
 pub async fn extract_fields_server(
   input: String,
   session_id: Option<String>,
@@ -724,6 +745,10 @@ pub async fn extract_fields_server(
 /// # Returns
 /// * `Ok(String)` - Suggested content for the field
 /// * `Err(anyhow::Error)` - Suggestion failed or rate limited
+///
+/// # Errors
+/// Returns `Err` if the rate limit is exceeded, or the underlying AI provider
+/// fails to generate a suggestion.
 pub async fn suggest_field_server(
   field: FieldType,
   context: ExtractionContext,
@@ -771,10 +796,9 @@ pub async fn suggest_field_server(
         .map(|s| s.trim_matches('"').to_string())
         .ok()
     })
-    .map_or_else(
-      || format!("Suggestion for {field:?} field based on your context. Please review and edit."),
-      |s| s,
-    );
+    .unwrap_or_else(|| {
+      format!("Suggestion for {field:?} field based on your context. Please review and edit.")
+    });
 
   info!(
     session,
@@ -796,6 +820,10 @@ pub async fn suggest_field_server(
 /// # Returns
 /// * `Ok(QualityScore)` - Quality assessment with dimensions and issues
 /// * `Err(anyhow::Error)` - Calculation failed
+///
+/// # Errors
+/// Returns `Err` if the rate limit is exceeded, or the quality calculation
+/// fails (e.g., invalid `ears` requirements, internal consistency errors).
 pub async fn calculate_quality_server(
   answers: Vec<QualityAnswer>,
   ears: Option<Vec<EarsRequirementRef>>,
@@ -892,6 +920,10 @@ pub async fn calculate_quality_server(
 ///     println!("Detected traps: {:?}", validation.traps_detected);
 /// }
 /// ```
+///
+/// # Errors
+/// Returns `Err` if `persona_text` is empty, the rate limit is exceeded, or
+/// the underlying AI provider fails trap detection.
 #[allow(clippy::too_many_lines)]
 pub async fn validate_straw_man_traps_server(
   persona_text: String,
@@ -1076,6 +1108,10 @@ pub async fn validate_straw_man_traps_server(
 ///     println!("Missing: {:?}", results.unaddressed_holes());
 /// }
 /// ```
+///
+/// # Errors
+/// Returns `Err` if the scenario bullets are incomplete, the rate limit is
+/// exceeded, or the underlying AI provider fails to evaluate hole punching.
 pub async fn validate_hole_punching_server(
   scenario: ScenarioField,
   session_id: Option<String>,
@@ -1174,6 +1210,10 @@ use crate::storage::transcript_store::InterrogationTranscript;
 /// - Containing specific details (word count heuristics)
 /// - Using concrete language vs vague abstractions
 /// - Including numbers or specific reasoning
+///
+/// # Errors
+/// Returns `Err` if the rate limit is exceeded or internal antithesis scoring
+/// fails (e.g., points fail the empty-string guard).
 pub async fn validate_antithesis(
   points: [String; 3],
   session_id: Option<String>,
@@ -1297,6 +1337,10 @@ fn calculate_specificity(text: &str) -> f64 {
 /// # Returns
 /// * `Ok(VorpValidation)` - Validation result with scores and suggestions
 /// * `Err(anyhow::Error)` - Validation failed or rate limited
+///
+/// # Errors
+/// Returns `Err` if the rate limit is exceeded, any VORP field is empty, or
+/// the underlying validation routine rejects the input.
 pub async fn validate_vorp(
   value: String,
   obvious: String,
@@ -1416,6 +1460,10 @@ fn validate_p_dimension(text: &str) -> f64 {
 /// # Returns
 /// * `Ok(HolePunchingValidation)` - Validation result
 /// * `Err(anyhow::Error)` - Validation failed or rate limited
+///
+/// # Errors
+/// Returns `Err` if the rate limit is exceeded or hole content fails the
+/// empty-string normalization check.
 pub async fn validate_hole_punching_v2(
   discovery_hole: Option<String>,
   edge_case_hole: Option<String>,
@@ -1476,6 +1524,10 @@ pub async fn validate_hole_punching_v2(
 /// # Returns
 /// * `Ok(EarsExtraction)` - Extracted requirements
 /// * `Err(anyhow::Error)` - Extraction failed or rate limited
+///
+/// # Errors
+/// Returns `Err` if the rate limit is exceeded, the transcript is empty, or
+/// the underlying AI provider fails to extract EARS requirements.
 pub async fn extract_ears(
   transcript: InterrogationTranscript,
   session_id: Option<String>,
@@ -1591,6 +1643,10 @@ fn extract_ears_from_text(text: &str, source_section: &str) -> Vec<ExtractedEars
 /// # Returns
 /// * `Ok(KirkContract16)` - Compiled 16-section contract
 /// * `Err(anyhow::Error)` - Compilation failed or rate limited
+///
+/// # Errors
+/// Returns `Err` if the rate limit is exceeded, the transcript is missing
+/// required fields, or any section cannot be set on the `KirkContract16`.
 #[allow(clippy::too_many_lines)]
 pub async fn compile_to_kirk(
   transcript: InterrogationTranscript,
@@ -1682,7 +1738,7 @@ pub async fn compile_to_kirk(
     .try_fold(KirkContract16::new(), |contract, (section, content)| {
       contract
         .with_section_content(section, content)
-        .ok_or_else(|| anyhow::anyhow!("Failed to set section {}", section))
+        .ok_or_else(|| anyhow::anyhow!("Failed to set section {section}"))
     })?;
 
   info!(
@@ -1701,7 +1757,11 @@ pub async fn compile_to_kirk(
 // ============================================================================
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+// Test scaffolding: `expect()` and `unwrap()` are the documented test-failure
+// mechanism. Production code in `mod server {}` above remains zero-unwrap;
+// these tests are the one place where panics are intentional and signal
+// test failures (not production invariants).
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod integration_tests {
   use super::*;
   use crate::config::ai::{AiConfig, ProviderConfig, ProviderType, QualityConfig};
@@ -1810,9 +1870,9 @@ mod integration_tests {
     };
 
     let serialized =
-      serde_json::to_string(&context).unwrap_or_else(|e| panic!("serialization error: {}", e));
+      serde_json::to_string(&context).unwrap_or_else(|e| panic!("serialization error: {e}"));
     let deserialized: ExtractionContext =
-      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
+      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {e}"));
 
     assert_eq!(deserialized.document_type, context.document_type);
     assert_eq!(deserialized.locale, context.locale);
@@ -1823,9 +1883,9 @@ mod integration_tests {
   fn test_field_type_serialization() {
     let field_type = FieldType::TextArea;
     let serialized =
-      serde_json::to_string(&field_type).unwrap_or_else(|e| panic!("serialization error: {}", e));
+      serde_json::to_string(&field_type).unwrap_or_else(|e| panic!("serialization error: {e}"));
     let deserialized: FieldType =
-      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
+      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {e}"));
 
     assert_eq!(deserialized, field_type);
   }
@@ -1852,9 +1912,9 @@ mod integration_tests {
     };
 
     let serialized =
-      serde_json::to_string(&fields).unwrap_or_else(|e| panic!("serialization error: {}", e));
+      serde_json::to_string(&fields).unwrap_or_else(|e| panic!("serialization error: {e}"));
     let deserialized: ExtractedFields =
-      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
+      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {e}"));
 
     assert_eq!(deserialized.fields.len(), fields.fields.len());
     assert_eq!(deserialized.fields[0].name, "problem");
@@ -1876,9 +1936,9 @@ mod integration_tests {
     };
 
     let serialized =
-      serde_json::to_string(&score).unwrap_or_else(|e| panic!("serialization error: {}", e));
+      serde_json::to_string(&score).unwrap_or_else(|e| panic!("serialization error: {e}"));
     let deserialized: QualityScore =
-      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
+      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {e}"));
 
     assert_eq!(deserialized.overall, 85);
     assert_eq!(deserialized.dimensions.len(), 1);
@@ -1895,9 +1955,9 @@ mod integration_tests {
     };
 
     let serialized =
-      serde_json::to_string(&ears).unwrap_or_else(|e| panic!("serialization error: {}", e));
+      serde_json::to_string(&ears).unwrap_or_else(|e| panic!("serialization error: {e}"));
     let deserialized: EarsRequirementRef =
-      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
+      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {e}"));
 
     assert_eq!(deserialized.id, "req-1");
     assert_eq!(deserialized.text, "User shall authenticate");
@@ -1914,9 +1974,9 @@ mod integration_tests {
     };
 
     let serialized =
-      serde_json::to_string(&answer).unwrap_or_else(|e| panic!("serialization error: {}", e));
+      serde_json::to_string(&answer).unwrap_or_else(|e| panic!("serialization error: {e}"));
     let deserialized: QualityAnswer =
-      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
+      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {e}"));
 
     assert_eq!(deserialized.step_id, "user_goal");
     assert_eq!(deserialized.value, "Users want to complete tasks quickly");
@@ -1933,9 +1993,9 @@ mod integration_tests {
     };
 
     let serialized =
-      serde_json::to_string(&diagnostics).unwrap_or_else(|e| panic!("serialization error: {}", e));
+      serde_json::to_string(&diagnostics).unwrap_or_else(|e| panic!("serialization error: {e}"));
     let deserialized: AiProviderDiagnostics =
-      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
+      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {e}"));
 
     assert_eq!(deserialized.provider, "opencode");
     assert_eq!(deserialized.endpoint, "https://api.opencode.ai/v1");
@@ -2244,9 +2304,9 @@ mod integration_tests {
     };
 
     let serialized =
-      serde_json::to_string(&inversion).unwrap_or_else(|e| panic!("serialization error: {}", e));
+      serde_json::to_string(&inversion).unwrap_or_else(|e| panic!("serialization error: {e}"));
     let deserialized: InversionControl =
-      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
+      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {e}"));
 
     assert!(deserialized.has_inversion_tests);
     assert_eq!(deserialized.inverted_count, 5);
@@ -2261,9 +2321,9 @@ mod integration_tests {
       StrawManValidation::new(vec![StrawManTrap::IrrationalActor, StrawManTrap::YourClone]);
 
     let serialized =
-      serde_json::to_string(&validation).unwrap_or_else(|e| panic!("serialization error: {}", e));
+      serde_json::to_string(&validation).unwrap_or_else(|e| panic!("serialization error: {e}"));
     let deserialized: StrawManValidation =
-      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
+      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {e}"));
 
     assert_eq!(deserialized.traps_detected.len(), 2);
     assert!(!deserialized.passed);
@@ -2283,9 +2343,9 @@ mod integration_tests {
       StrawManTrap::YourClone,
     ] {
       let serialized =
-        serde_json::to_string(&trap).unwrap_or_else(|e| panic!("serialization error: {}", e));
-      let deserialized: StrawManTrap = serde_json::from_str(&serialized)
-        .unwrap_or_else(|e| panic!("deserialization error: {}", e));
+        serde_json::to_string(&trap).unwrap_or_else(|e| panic!("serialization error: {e}"));
+      let deserialized: StrawManTrap =
+        serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {e}"));
       assert_eq!(trap, deserialized);
     }
   }
@@ -2331,9 +2391,9 @@ mod integration_tests {
     };
 
     let serialized =
-      serde_json::to_string(&results).unwrap_or_else(|e| panic!("serialization error: {}", e));
+      serde_json::to_string(&results).unwrap_or_else(|e| panic!("serialization error: {e}"));
     let deserialized: HolePunchingResults =
-      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
+      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {e}"));
 
     assert_eq!(deserialized.discovery_hole, results.discovery_hole);
     assert_eq!(deserialized.edge_case_hole, results.edge_case_hole);
@@ -2355,9 +2415,9 @@ mod integration_tests {
     };
 
     let serialized =
-      serde_json::to_string(&scenario).unwrap_or_else(|e| panic!("serialization error: {}", e));
+      serde_json::to_string(&scenario).unwrap_or_else(|e| panic!("serialization error: {e}"));
     let deserialized: ScenarioField =
-      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {}", e));
+      serde_json::from_str(&serialized).unwrap_or_else(|e| panic!("deserialization error: {e}"));
 
     assert_eq!(deserialized.trigger, "User sees error");
     assert_eq!(deserialized.value_moment, "Quick fix");
@@ -2653,7 +2713,7 @@ mod integration_tests {
     assert_eq!(valid.addressed_count(), 3);
   }
 
-  /// Test that session_id validation works for server functions
+  /// Test that `session_id` validation works for server functions
   #[test]
   fn test_session_id_validation_available() {
     use crate::intent::security::validate_session_id;
@@ -2664,9 +2724,9 @@ mod integration_tests {
     assert!(validate_session_id("").is_err());
   }
 
-  /// Test: extract_fields_server should validate session_id
-  /// This test verifies session_id validation is available.
-  /// The validate_session_id function should be called by extract_fields_server.
+  /// Test: `extract_fields_server` should validate `session_id`
+  /// This test verifies `session_id` validation is available.
+  /// The `validate_session_id` function should be called by `extract_fields_server`.
   #[test]
   fn test_extract_fields_server_uses_session_validation() {
     use crate::intent::security::validate_session_id;

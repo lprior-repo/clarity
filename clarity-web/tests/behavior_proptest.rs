@@ -43,12 +43,12 @@
 //! | proptest's `proptest!` macro | Library contract; not our code | Standard proptest machinery; no custom shrinkers. |
 
 #![allow(
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::panic,
-    clippy::float_cmp,
-    clippy::needless_collect,
-    clippy::match_same_arms
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::match_same_arms
 )]
 
 use proptest::prelude::*;
@@ -62,80 +62,75 @@ const MAX_POSTCONDITIONS: usize = 20;
 // Generators
 // ============================================================
 
-/// Generate a snake_case behavior name (lowercase letters, digits, underscores).
+/// Generate a `snake_case` behavior name (lowercase letters, digits, underscores).
 /// Source: `behavior.rs:17-25`.
 fn arb_snake_case_name() -> impl Strategy<Value = String> {
-    "[a-z][a-z0-9_]*".prop_filter_map("valid snake_case", |s| {
-        if s.is_empty() || !s.chars().next().map_or(false, |c| c.is_ascii_lowercase()) {
-            None
-        } else {
-            Some(s)
-        }
-    })
+  "[a-z][a-z0-9_]*".prop_filter_map("valid snake_case", |s| {
+    if s.is_empty() || !s.chars().next().is_some_and(|c| c.is_ascii_lowercase()) {
+      None
+    } else {
+      Some(s)
+    }
+  })
 }
 
 /// Generate an arbitrary description string (any UTF-8).
 fn arb_description() -> impl Strategy<Value = String> {
-    ".*".prop_filter_map("non-empty description", |s| {
-        if s.is_empty() {
-            Some("a".to_string())
-        } else {
-            Some(s.to_string())
-        }
-    })
+  ".*".prop_filter_map("non-empty description", |s| {
+    if s.is_empty() {
+      Some("a".to_string())
+    } else {
+      Some(s)
+    }
+  })
 }
 
 /// Generate an arbitrary Verification.
 fn arb_verification() -> impl Strategy<Value = Verification> {
-    (arb_snake_case_name(), arb_description()).prop_map(|(t, d)| {
-        Verification::new(t, d)
-    })
+  (arb_snake_case_name(), arb_description()).prop_map(|(t, d)| Verification::new(t, d))
 }
 
 /// Generate a Vec<String> of preconditions within [0, MAX+1] range.
-/// MAX+1 = 21 exercises the boundary rejection in validate().
+/// MAX+1 = 21 exercises the boundary rejection in `validate()`.
 fn arb_preconditions_vec() -> impl Strategy<Value = Vec<String>> {
-    proptest::collection::vec(
-        arb_description(),
-        0..=MAX_PRECONDITIONS + 1,
-    )
+  proptest::collection::vec(arb_description(), 0..=MAX_PRECONDITIONS + 1)
 }
 
 /// Generate a Vec<String> of postconditions within [0, MAX+1] range.
 fn arb_postconditions_vec() -> impl Strategy<Value = Vec<String>> {
-    proptest::collection::vec(
-        arb_description(),
-        0..=MAX_POSTCONDITIONS + 1,
-    )
+  proptest::collection::vec(arb_description(), 0..=MAX_POSTCONDITIONS + 1)
 }
 
 /// PO-P1: Generate a complete Behavior via the public API.
-/// Uses snake_case names, arbitrary descriptions, optional verification,
+/// Uses `snake_case` names, arbitrary descriptions, optional verification,
 /// and pre/postcondition vectors in [0, MAX+1] to exercise both
 /// valid and boundary-rejected constructions.
 fn arb_behavior() -> impl Strategy<Value = Behavior> {
-    (
-        arb_snake_case_name(),
-        arb_description(),
-        prop::option::of(arb_verification()),
-        arb_preconditions_vec(),
-        arb_postconditions_vec(),
-    ).prop_map(|(name, desc, verification, preconditions, postconditions)| {
+  (
+    arb_snake_case_name(),
+    arb_description(),
+    prop::option::of(arb_verification()),
+    arb_preconditions_vec(),
+    arb_postconditions_vec(),
+  )
+    .prop_map(
+      |(name, desc, verification, preconditions, postconditions)| {
         let behavior = Behavior::new(name).expect("valid snake_case name");
         let behavior = behavior.with_description(desc);
         let behavior = match verification {
-            Some(v) => behavior.with_verification(v),
-            None => behavior,
+          Some(v) => behavior.with_verification(v),
+          None => behavior,
         };
         let mut b = behavior;
         for pre in preconditions {
-            b.add_precondition(pre);
+          b.add_precondition(pre);
         }
         for post in postconditions {
-            b.add_postcondition(post);
+          b.add_postcondition(post);
         }
         b
-    })
+      },
+    )
 }
 
 proptest! {
@@ -182,7 +177,7 @@ proptest! {
         desc2 in arb_description(),
     ) {
         let b1 = Behavior::new(name.clone()).expect("valid");
-        let b1 = b1.with_description(desc1.clone());
+        let b1 = b1.with_description(desc1);
         let preconditions_before = b1.preconditions.clone();
         let postconditions_before = b1.postconditions.clone();
         let verification_before = b1.verification.clone();
@@ -325,10 +320,10 @@ proptest! {
     ) {
         let mut b = Behavior::new(name).expect("valid");
         for i in 0..20 {
-            b.add_precondition(format!("pre_{}", i));
+            b.add_precondition(format!("pre_{i}"));
         }
         for i in 0..20 {
-            b.add_postcondition(format!("post_{}", i));
+            b.add_postcondition(format!("post_{i}"));
         }
         prop_assert!(b.validate().is_ok());
     }
@@ -342,7 +337,7 @@ proptest! {
     ) {
         let mut b = Behavior::new(name.clone()).expect("valid");
         for i in 0..21 {
-            b.add_precondition(format!("pre_{}", i));
+            b.add_precondition(format!("pre_{i}"));
         }
         let result = b.validate();
         prop_assert!(result.is_err());
@@ -362,7 +357,7 @@ proptest! {
     ) {
         let mut b = Behavior::new(name.clone()).expect("valid");
         for i in 0..21 {
-            b.add_postcondition(format!("post_{}", i));
+            b.add_postcondition(format!("post_{i}"));
         }
         let result = b.validate();
         prop_assert!(result.is_err());
@@ -381,7 +376,7 @@ proptest! {
     ) {
         let mut b = Behavior::new(name).expect("valid");
         for i in 0..19 {
-            b.add_precondition(format!("pre_{}", i));
+            b.add_precondition(format!("pre_{i}"));
         }
         prop_assert!(b.validate().is_ok());
         b.add_precondition("pre_19".to_string());
@@ -397,7 +392,7 @@ proptest! {
     ) {
         let mut b = Behavior::new(name.clone()).expect("valid");
         for i in 0..20 {
-            b.add_precondition(format!("pre_{}", i));
+            b.add_precondition(format!("pre_{i}"));
         }
         prop_assert!(b.validate().is_ok());
         b.add_precondition("pre_20".to_string());

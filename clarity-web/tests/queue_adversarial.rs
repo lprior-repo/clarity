@@ -184,7 +184,7 @@ async fn queue_respects_concurrency_limits() {
   for input in &inputs {
     let provider = provider.clone();
     let context = context.clone();
-    let input = (*input).to_string();
+    let input = input.clone();
     let handle = tokio::spawn(async move {
       let result = provider.extract_fields(&input, &context).await;
       match result {

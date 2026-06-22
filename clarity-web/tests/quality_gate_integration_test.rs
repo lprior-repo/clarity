@@ -781,6 +781,8 @@ fn test_e2e_tooltip_explains_quality_gate() {
 /// Test that issues explain quality gaps to user
 #[test]
 fn test_e2e_issues_explain_quality_gaps() {
+  use clarity_web::lattice::quality::QualityDimension;
+
   let answers = vec![
     Answer {
       step_id: "user_goal".to_string(),
@@ -807,8 +809,6 @@ fn test_e2e_issues_explain_quality_gaps() {
   );
 
   // Check for specific dimension issues
-  use clarity_web::lattice::quality::QualityDimension;
-
   let completeness_issues: Vec<_> = score
     .issues
     .iter()

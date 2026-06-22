@@ -524,6 +524,7 @@ fn test_concurrent_error_propagation() {
     errors.is_empty(),
     "All concurrent operations should succeed, errors: {errors:?}"
   );
+  drop(errors);
 }
 
 #[test]

@@ -54,18 +54,18 @@
 //! | `chrono::DateTime::parse_from_rfc3339` | Library contract; not our code | Companion behaviour tests parse timestamps and assert `is_ok()`. |
 
 #![allow(
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::panic,
-    clippy::float_cmp,
-    clippy::needless_collect,
-    clippy::match_same_arms
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::match_same_arms
 )]
 
 use proptest::prelude::*;
 
 use clarity_web::storage::types::{
-    Confidence, AnswerRecord, ExtractionCache, ProjectMetadata, LatticeCache,
+  AnswerRecord, Confidence, ExtractionCache, LatticeCache, ProjectMetadata,
 };
 
 // ============================================================
@@ -74,91 +74,90 @@ use clarity_web::storage::types::{
 
 /// Generate any `Confidence` variant uniformly.
 fn arb_confidence() -> impl Strategy<Value = Confidence> {
-    prop_oneof![
-        Just(Confidence::High),     // types.rs:14
-        Just(Confidence::Inferred),  // types.rs:17
-        Just(Confidence::Uncertain), // types.rs:19
-    ]
+  prop_oneof![
+    Just(Confidence::High),      // types.rs:14
+    Just(Confidence::Inferred),  // types.rs:17
+    Just(Confidence::Uncertain), // types.rs:19
+  ]
 }
 
 /// Generate an arbitrary `String` — includes empty, non-ASCII, and very long strings.
 fn arb_string() -> impl Strategy<Value = String> {
-    "[\\x00-\\x10FFFF]{0,256}".prop_map(|s| {
-        let mut r = String::new();
-        let mut chars: Vec<char> = s.chars().collect();
-        for c in chars.drain(..) {
-            r.push(c);
-        }
-        r
-    })
+  "[\\x00-\\x10FFFF]{0,256}".prop_map(|s| {
+    let mut r = String::new();
+    for c in s.chars() {
+      r.push(c);
+    }
+    r
+  })
 }
 
 /// Generate an arbitrary non-empty `String`.
 fn arb_non_empty_string() -> impl Strategy<Value = String> {
-    "[\\x00-\\x10FFFF]{1,256}".prop_map(|s| {
-        let mut r = String::new();
-        for c in s.chars() {
-            r.push(c);
-        }
-        r
-    })
+  "[\\x00-\\x10FFFF]{1,256}".prop_map(|s| {
+    let mut r = String::new();
+    for c in s.chars() {
+      r.push(c);
+    }
+    r
+  })
 }
 
 /// Generate an `AnswerRecord` via the production `new` constructor.
 fn arb_answer_record_via_new() -> impl Strategy<Value = AnswerRecord> {
-    (
-        arb_non_empty_string(), // step_id — non-empty per C-ST-4
-        arb_string(),            // value
-        arb_string(),            // timestamp (arbitrary string per C-ST-2)
-        arb_confidence(),
-        any::<bool>(),
-    )
-        .prop_map(|(step_id, value, timestamp, confidence, ai_generated)| {
-            AnswerRecord::new(step_id, value, timestamp, confidence, ai_generated)
-        })
+  (
+    arb_non_empty_string(), // step_id — non-empty per C-ST-4
+    arb_string(),           // value
+    arb_string(),           // timestamp (arbitrary string per C-ST-2)
+    arb_confidence(),
+    any::<bool>(),
+  )
+    .prop_map(|(step_id, value, timestamp, confidence, ai_generated)| {
+      AnswerRecord::new(step_id, value, timestamp, confidence, ai_generated)
+    })
 }
 
 /// Generate an `AnswerRecord` via `from_answer` constructor.
 fn arb_answer_record_via_from_answer() -> impl Strategy<Value = AnswerRecord> {
-    (
-        arb_non_empty_string(), // step_id — non-empty per C-ST-4
-        arb_string(),            // value
-        arb_string(),            // timestamp
-    )
-        .prop_map(|(step_id, value, timestamp)| AnswerRecord::from_answer(step_id, value, timestamp))
+  (
+    arb_non_empty_string(), // step_id — non-empty per C-ST-4
+    arb_string(),           // value
+    arb_string(),           // timestamp
+  )
+    .prop_map(|(step_id, value, timestamp)| AnswerRecord::from_answer(step_id, value, timestamp))
 }
 
 /// Generate an `ExtractionCache` via `new`.
 fn arb_extraction_cache_via_new() -> impl Strategy<Value = ExtractionCache> {
-    (
-        arb_non_empty_string(), // input_hash — non-empty per C-ST-6
-        arb_string(),            // fields — arbitrary string per C-ST-7
-        arb_string(),            // timestamp — arbitrary string per C-ST-5
-    )
-        .prop_map(|(input_hash, fields, timestamp)| ExtractionCache::new(input_hash, fields, timestamp))
+  (
+    arb_non_empty_string(), // input_hash — non-empty per C-ST-6
+    arb_string(),           // fields — arbitrary string per C-ST-7
+    arb_string(),           // timestamp — arbitrary string per C-ST-5
+  )
+    .prop_map(|(input_hash, fields, timestamp)| ExtractionCache::new(input_hash, fields, timestamp))
 }
 
 /// Generate a `ProjectMetadata` via `new`.
 fn arb_project_metadata_via_new() -> impl Strategy<Value = ProjectMetadata> {
-    (
-        arb_non_empty_string(), // mode_preference — non-empty per C-ST-10
-        arb_non_empty_string(), // current_phase — non-empty per C-ST-10
-        arb_string(),            // created_at — arbitrary string per C-ST-8
-        arb_string(),            // updated_at — arbitrary string per C-ST-8
-    )
-        .prop_map(|(mode_preference, current_phase, created_at, updated_at)| {
-            ProjectMetadata::new(mode_preference, current_phase, created_at, updated_at)
-        })
+  (
+    arb_non_empty_string(), // mode_preference — non-empty per C-ST-10
+    arb_non_empty_string(), // current_phase — non-empty per C-ST-10
+    arb_string(),           // created_at — arbitrary string per C-ST-8
+    arb_string(),           // updated_at — arbitrary string per C-ST-8
+  )
+    .prop_map(|(mode_preference, current_phase, created_at, updated_at)| {
+      ProjectMetadata::new(mode_preference, current_phase, created_at, updated_at)
+    })
 }
 
 /// Generate a `LatticeCache` via `new`.
 fn arb_lattice_cache_via_new() -> impl Strategy<Value = LatticeCache> {
-    (
-        arb_non_empty_string(), // phase — non-empty per C-ST-13
-        arb_string(),            // output_data — arbitrary string per C-ST-11
-        arb_string(),            // timestamp — arbitrary string per C-ST-11
-    )
-        .prop_map(|(phase, output_data, timestamp)| LatticeCache::new(phase, output_data, timestamp))
+  (
+    arb_non_empty_string(), // phase — non-empty per C-ST-13
+    arb_string(),           // output_data — arbitrary string per C-ST-11
+    arb_string(),           // timestamp — arbitrary string per C-ST-11
+  )
+    .prop_map(|(phase, output_data, timestamp)| LatticeCache::new(phase, output_data, timestamp))
 }
 
 // ============================================================

@@ -47,7 +47,7 @@ impl JsonHandlingProvider {
   }
 
   /// Attempt to parse JSON and extract fields from it
-  fn extract_from_json(&self, json_str: &str) -> Result<ExtractedFields, ExtractionError> {
+  fn extract_from_json(json_str: &str) -> Result<ExtractedFields, ExtractionError> {
     // Trim whitespace first
     let trimmed = json_str.trim();
 
@@ -74,13 +74,13 @@ impl JsonHandlingProvider {
           "JSON object is empty".to_string(),
         ));
       }
-      serde_json::Value::Object(map) => self.extract_from_object(map),
+      serde_json::Value::Object(map) => Self::extract_from_object(map),
       serde_json::Value::Array(arr) if arr.is_empty() => {
         return Err(ExtractionError::InvalidInput(
           "JSON array is empty".to_string(),
         ));
       }
-      serde_json::Value::Array(arr) => self.extract_from_array(arr),
+      serde_json::Value::Array(arr) => Self::extract_from_array(arr),
       serde_json::Value::String(s) if s.trim().is_empty() => {
         return Err(ExtractionError::InvalidInput(
           "JSON string is empty".to_string(),
@@ -122,10 +122,7 @@ impl JsonHandlingProvider {
     })
   }
 
-  fn extract_from_object(
-    &self,
-    map: serde_json::Map<String, serde_json::Value>,
-  ) -> Vec<FieldExtraction> {
+  fn extract_from_object(map: serde_json::Map<String, serde_json::Value>) -> Vec<FieldExtraction> {
     map
       .into_iter()
       .map(|(key, value)| FieldExtraction {
@@ -138,7 +135,7 @@ impl JsonHandlingProvider {
       .collect()
   }
 
-  fn extract_from_array(&self, arr: Vec<serde_json::Value>) -> Vec<FieldExtraction> {
+  fn extract_from_array(arr: Vec<serde_json::Value>) -> Vec<FieldExtraction> {
     arr
       .into_iter()
       .enumerate()
@@ -173,7 +170,7 @@ impl ExtractionProvider for JsonHandlingProvider {
   ) -> Result<ExtractedFields, ExtractionError> {
     // Try to parse as JSON first, fall back to text extraction
     if text.trim().starts_with('{') || text.trim().starts_with('[') {
-      self.extract_from_json(text)
+      Self::extract_from_json(text)
     } else if text.trim().is_empty() {
       Err(ExtractionError::InvalidInput("Empty input".to_string()))
     } else {
@@ -186,7 +183,7 @@ impl ExtractionProvider for JsonHandlingProvider {
           serde_json::Value::String(s) if s.trim().is_empty() => Err(
             ExtractionError::InvalidInput("JSON string is empty".to_string()),
           ),
-          _ => self.extract_from_json(text),
+          _ => Self::extract_from_json(text),
         }
       } else {
         // Regular text extraction for non-JSON input

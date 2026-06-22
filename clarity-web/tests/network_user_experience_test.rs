@@ -51,9 +51,9 @@ fn test_error_messages_are_user_friendly() {
 
   match result {
     Err(error) => {
-      let error_msg = format!("{}", error);
+      let error_msg = format!("{error}");
 
-      println!("User-facing error message: {}", error_msg);
+      println!("User-facing error message: {error_msg}");
 
       // Error messages should be user-friendly
       assert!(!error_msg.is_empty(), "Error message must not be empty");
@@ -102,15 +102,14 @@ fn test_timeout_error_message_includes_duration() {
 
   match result {
     Err(ExtractionError::Timeout { timeout_ms }) => {
-      let error_msg = format!("Timeout after {}ms", timeout_ms);
+      let error_msg = format!("Timeout after {timeout_ms}ms");
 
-      println!("Timeout error message: {}", error_msg);
+      println!("Timeout error message: {error_msg}");
 
       // The error message should mention the timeout duration
       assert!(
         error_msg.contains("30000") || error_msg.contains("30"),
-        "Timeout error should mention the duration: {}",
-        error_msg
+        "Timeout error should mention the duration: {error_msg}"
       );
     }
     Err(ExtractionError::NetworkError(_)) => {
@@ -118,7 +117,7 @@ fn test_timeout_error_message_includes_duration() {
       println!("Connection failed before timeout (acceptable)");
     }
     Err(other) => {
-      panic!("Unexpected error: {:?}", other);
+      panic!("Unexpected error: {other:?}");
     }
     Ok(_) => {
       panic!("Should not succeed");
@@ -134,15 +133,14 @@ fn test_rate_limit_error_includes_retry_after() {
     retry_after_seconds: 60,
   };
 
-  let error_msg = format!("{}", error);
+  let error_msg = format!("{error}");
 
-  println!("Rate limit error message: {}", error_msg);
+  println!("Rate limit error message: {error_msg}");
 
   // Error should mention retry time
   assert!(
     error_msg.contains("60") || error_msg.contains("retry"),
-    "Rate limit error should mention retry time: {}",
-    error_msg
+    "Rate limit error should mention retry time: {error_msg}"
   );
 }
 
@@ -216,12 +214,11 @@ fn test_no_ui_hang_on_connection_refused() {
   // Connection refused should fail fast (< 5 seconds)
   assert!(
     elapsed < Duration::from_secs(5),
-    "Connection refused should fail fast, took {:?}",
-    elapsed
+    "Connection refused should fail fast, took {elapsed:?}"
   );
 
   assert!(result.is_err());
-  println!("No hang on connection refused: {:?}", elapsed);
+  println!("No hang on connection refused: {elapsed:?}");
 }
 
 #[test]
@@ -242,12 +239,11 @@ fn test_no_ui_hang_on_dns_failure() {
   // DNS failure should fail fast (< 10 seconds)
   assert!(
     elapsed < Duration::from_secs(10),
-    "DNS failure should fail fast, took {:?}",
-    elapsed
+    "DNS failure should fail fast, took {elapsed:?}"
   );
 
   assert!(result.is_err());
-  println!("No hang on DNS failure: {:?}", elapsed);
+  println!("No hang on DNS failure: {elapsed:?}");
 }
 
 #[test]
@@ -269,21 +265,19 @@ fn test_no_ui_hang_on_timeout() {
   // Allow 5 second margin for overhead
   assert!(
     elapsed < Duration::from_secs(35),
-    "Timeout should not exceed 35 seconds, took {:?}",
-    elapsed
+    "Timeout should not exceed 35 seconds, took {elapsed:?}"
   );
 
   // And should wait at least 25 seconds (close to configured timeout)
   if matches!(result, Err(ExtractionError::Timeout { .. })) {
     assert!(
       elapsed >= Duration::from_secs(25),
-      "Should wait close to timeout duration, took {:?}",
-      elapsed
+      "Should wait close to timeout duration, took {elapsed:?}"
     );
   }
 
   assert!(result.is_err());
-  println!("No hang on timeout: {:?}", elapsed);
+  println!("No hang on timeout: {elapsed:?}");
 }
 
 #[test]
@@ -347,7 +341,7 @@ fn test_timeout_value_is_configurable_and_reasonable() {
     // - Not too short (< 5s would be too aggressive)
     // - Not too long (> 2 min would frustrate users)
     assert!(timeout_ms >= 5000, "Timeout should be at least 5 seconds");
-    assert!(timeout_ms <= 120000, "Timeout should not exceed 2 minutes");
+    assert!(timeout_ms <= 120_000, "Timeout should not exceed 2 minutes");
 
     println!(
       "Timeout value is reasonable: {}ms ({} seconds)",

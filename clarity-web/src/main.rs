@@ -1,6 +1,13 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![allow(clippy::missing_errors_doc)]
+// `CliFailure` (below) is intentionally detailed for human-readable CLI error
+// reporting. Its size exceeds the `clippy::result_large_err` threshold, but
+// every field is either a reference or a heap-allocated `String`, so the
+// stack footprint is just pointer wrappers and boxing would not reduce the
+// cost. The value is also constructed and immediately formatted rather than
+// stored, so the size does not matter in practice.
+#![allow(clippy::result_large_err)]
 #![forbid(unsafe_code)]
 
 use std::path::PathBuf;
@@ -88,13 +95,18 @@ enum BeadsCommand {
   Emit { session_id: String },
 }
 
-#[derive(Subcommand)]
+#[derive(Copy, Clone, Subcommand)]
 enum SessionsCommand {
   List,
 }
 
 #[derive(Copy, Clone, Debug, ValueEnum)]
 #[clap(rename_all = "kebab-case")]
+// The `Rust` prefix is intentional: it groups Rust-domain profiles with
+// future non-Rust profiles that may share CLI argument parsing. Removing the
+// prefix would change the public `clap` value names (e.g. `rust-cli` ->
+// `cli`) and break callers.
+#[allow(clippy::enum_variant_names)]
 enum RustProfile {
   RustCli,
   RustLibrary,
@@ -163,10 +175,10 @@ fn run_cli(cli: Cli) -> Result<CliOutput, CliFailure> {
 fn run_interview(command: InterviewCommand) -> Result<CliOutput, CliFailure> {
   match command {
     InterviewCommand::Start { profile } => start_interview(profile),
-    InterviewCommand::Resume { session_id } => summarize_session("interview resume", session_id),
-    InterviewCommand::Status { session_id } => summarize_session("interview status", session_id),
-    InterviewCommand::Export { session_id, raw } => export_not_ready(session_id, raw),
-    InterviewCommand::Abort { session_id } => abort_session(session_id),
+    InterviewCommand::Resume { session_id } => summarize_session("interview resume", &session_id),
+    InterviewCommand::Status { session_id } => summarize_session("interview status", &session_id),
+    InterviewCommand::Export { session_id, raw } => export_not_ready(&session_id, raw),
+    InterviewCommand::Abort { session_id } => abort_session(&session_id),
   }
 }
 
@@ -253,11 +265,11 @@ fn start_interview(profile: RustProfile) -> Result<CliOutput, CliFailure> {
   })
 }
 
-fn summarize_session(command: &'static str, session_id: String) -> Result<CliOutput, CliFailure> {
-  let store = open_store(command, Some(session_id.clone()))?;
+fn summarize_session(command: &'static str, session_id: &str) -> Result<CliOutput, CliFailure> {
+  let store = open_store(command, Some(session_id.to_string()))?;
   let events = store
-    .load_events(&session_id)
-    .map_err(|error| storage_failure(command, Some(session_id.clone()), error.to_string()))?;
+    .load_events(session_id)
+    .map_err(|error| storage_failure(command, Some(session_id.to_string()), error.to_string()))?;
   let last_seq = events
     .iter()
     .map(|event| event.seq)
@@ -268,7 +280,7 @@ fn summarize_session(command: &'static str, session_id: String) -> Result<CliOut
     .map_or("New", |event| state_after_event(&event.event_type));
   Ok(CliOutput {
     command,
-    session_id: Some(session_id.clone()),
+    session_id: Some(session_id.to_string()),
     state: Some(state),
     last_seq,
     data: json!({
@@ -283,12 +295,12 @@ fn summarize_session(command: &'static str, session_id: String) -> Result<CliOut
   })
 }
 
-fn abort_session(session_id: String) -> Result<CliOutput, CliFailure> {
-  let store = open_store("interview abort", Some(session_id.clone()))?;
-  let events = store.load_events(&session_id).map_err(|error| {
+fn abort_session(session_id: &str) -> Result<CliOutput, CliFailure> {
+  let store = open_store("interview abort", Some(session_id.to_string()))?;
+  let events = store.load_events(session_id).map_err(|error| {
     storage_failure(
       "interview abort",
-      Some(session_id.clone()),
+      Some(session_id.to_string()),
       error.to_string(),
     )
   })?;
@@ -298,7 +310,7 @@ fn abort_session(session_id: String) -> Result<CliOutput, CliFailure> {
     .max()
     .map_or(1, |seq| seq.saturating_add(1));
   let event = session_event(
-    &session_id,
+    session_id,
     next_seq,
     "InterviewAborted",
     "interview abort",
@@ -307,13 +319,13 @@ fn abort_session(session_id: String) -> Result<CliOutput, CliFailure> {
   store.append_event_sync_all(&event).map_err(|error| {
     storage_failure(
       "interview abort",
-      Some(session_id.clone()),
+      Some(session_id.to_string()),
       error.to_string(),
     )
   })?;
   Ok(CliOutput {
     command: "interview abort",
-    session_id: Some(session_id.clone()),
+    session_id: Some(session_id.to_string()),
     state: Some("Aborted"),
     last_seq: next_seq,
     data: json!({"session_id": session_id, "state": "Aborted", "last_seq": next_seq}),
@@ -322,7 +334,7 @@ fn abort_session(session_id: String) -> Result<CliOutput, CliFailure> {
   })
 }
 
-fn export_not_ready(session_id: String, raw: bool) -> Result<CliOutput, CliFailure> {
+fn export_not_ready(session_id: &str, raw: bool) -> Result<CliOutput, CliFailure> {
   let error_code = if raw {
     "RawExportRequiresExplicitConsent"
   } else {
@@ -330,7 +342,7 @@ fn export_not_ready(session_id: String, raw: bool) -> Result<CliOutput, CliFailu
   };
   Err(foundation_pending(
     "interview export",
-    Some(session_id),
+    Some(session_id.to_string()),
     error_code,
     "export writer and redaction pipeline are not complete",
     9,
@@ -383,13 +395,13 @@ fn session_event(
 
 fn state_after_event(event_type: &str) -> &'static str {
   match event_type {
-    "InterviewStarted" => "Interviewing",
     "NormalQuestioningFrozen" => "NormalQuestioningFrozen",
     "ReviewerPanelStarted" => "Reviewing",
     "InterviewExhausted" => "InterviewExhausted",
     "SpecCompleted" => "SpecComplete",
     "InterviewAborted" => "Aborted",
     "RecoveredDegraded" => "RecoveredDegraded",
+    // "InterviewStarted" and unknown event types default to "Interviewing".
     _ => "Interviewing",
   }
 }
@@ -423,15 +435,17 @@ fn open_store(
 }
 
 fn default_db_root() -> Result<PathBuf, String> {
-  match std::env::var_os("CLARITY_FJALL_ROOT") {
-    Some(path) => Ok(PathBuf::from(path)),
-    None => dirs::data_local_dir()
-      .map(|path| path.join("clarity").join("fjall"))
-      .ok_or_else(|| "could not resolve local data directory".to_string()),
-  }
+  std::env::var_os("CLARITY_FJALL_ROOT").map_or_else(
+    || {
+      dirs::data_local_dir()
+        .map(|path| path.join("clarity").join("fjall"))
+        .ok_or_else(|| "could not resolve local data directory".to_string())
+    },
+    |path| Ok(PathBuf::from(path)),
+  )
 }
 
-fn storage_failure(
+const fn storage_failure(
   command: &'static str,
   session_id: Option<String>,
   message: String,
@@ -523,7 +537,7 @@ fn failure_envelope(failure: &CliFailure) -> Value {
   })
 }
 
-fn serialization_failure(message: String) -> CliFailure {
+const fn serialization_failure(message: String) -> CliFailure {
   CliFailure {
     command: "json serialization",
     session_id: None,

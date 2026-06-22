@@ -44,12 +44,12 @@
 //! | `prop_oneof!` over `StrawManTrap` | Library contract; not our code | Enumerates 4 variants explicitly to mirror the production enum. |
 
 #![allow(
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::panic,
-    clippy::float_cmp,
-    clippy::needless_collect,
-    clippy::match_same_arms
+  clippy::unwrap_used,
+  clippy::expect_used,
+  clippy::panic,
+  clippy::float_cmp,
+  clippy::needless_collect,
+  clippy::match_same_arms
 )]
 
 use proptest::prelude::*;
@@ -63,26 +63,26 @@ use clarity_web::domain::straw_man::{StrawManTrap, StrawManValidation};
 /// Generate one of the four `StrawManTrap` variants uniformly.
 /// Mirrors the production enum at `straw_man.rs:15-31`.
 fn arb_trap() -> impl Strategy<Value = StrawManTrap> {
-    prop_oneof![
-        Just(StrawManTrap::IrrationalActor),     // straw_man.rs:18
-        Just(StrawManTrap::ManicPixieDreamUser), // straw_man.rs:22
-        Just(StrawManTrap::StoicMonk),           // straw_man.rs:26
-        Just(StrawManTrap::YourClone),           // straw_man.rs:30
-    ]
+  prop_oneof![
+    Just(StrawManTrap::IrrationalActor),     // straw_man.rs:18
+    Just(StrawManTrap::ManicPixieDreamUser), // straw_man.rs:22
+    Just(StrawManTrap::StoicMonk),           // straw_man.rs:26
+    Just(StrawManTrap::YourClone),           // straw_man.rs:30
+  ]
 }
 
 /// Generate any `Vec<StrawManTrap>`, including the empty vec.
 /// Mirrors the production field `traps_detected: Vec<StrawManTrap>`
 /// at `straw_man.rs:98`.
 fn arb_trap_vec() -> impl Strategy<Value = Vec<StrawManTrap>> {
-    proptest::collection::vec(arb_trap(), 0..16)
+  proptest::collection::vec(arb_trap(), 0..16)
 }
 
 /// Generate a `StrawManValidation` built via the production `new` constructor
 /// from a generator over arbitrary trap lists. The constructor at
 /// `straw_man.rs:108-114` is the single canonical entry point.
 fn arb_validation_via_new() -> impl Strategy<Value = StrawManValidation> {
-    arb_trap_vec().prop_map(StrawManValidation::new)
+  arb_trap_vec().prop_map(StrawManValidation::new)
 }
 
 proptest! {
@@ -182,7 +182,7 @@ proptest! {
     /// Source: straw_man.rs:145-149 (Default impl) delegates to `passing()`.
     #[test]
     fn prop_default_equals_passing(_unused: ()) {
-        let d: StrawManValidation = Default::default();
+        let d: StrawManValidation = StrawManValidation::default();
         let p = StrawManValidation::passing();
         prop_assert!(d.is_valid());
         prop_assert_eq!(d.passed, p.passed);
@@ -239,8 +239,7 @@ proptest! {
     fn prop_has_trap_implies_count_positive(
         trap in arb_trap(),
     ) {
-        let mut traps = Vec::new();
-        traps.push(trap);
+        let traps = vec![trap];
         let v = StrawManValidation::new(traps);
         prop_assert!(v.has_trap(trap));
         prop_assert!(v.trap_count() >= 1);
@@ -260,7 +259,7 @@ proptest! {
         candidate in arb_trap(),
     ) {
         let v1 = StrawManValidation::new(traps.clone());
-        let mut reversed = traps.clone();
+        let mut reversed = traps;
         reversed.reverse();
         let v2 = StrawManValidation::new(reversed);
         prop_assert_eq!(v1.has_trap(candidate), v2.has_trap(candidate));
@@ -271,7 +270,7 @@ proptest! {
     #[test]
     fn prop_trap_count_is_order_invariant(traps in arb_trap_vec()) {
         let v1 = StrawManValidation::new(traps.clone());
-        let mut reversed = traps.clone();
+        let mut reversed = traps;
         reversed.reverse();
         let v2 = StrawManValidation::new(reversed);
         prop_assert_eq!(v1.trap_count(), v2.trap_count());
@@ -282,7 +281,7 @@ proptest! {
     #[test]
     fn prop_passed_is_order_invariant(traps in arb_trap_vec()) {
         let v1 = StrawManValidation::new(traps.clone());
-        let mut reversed = traps.clone();
+        let mut reversed = traps;
         reversed.reverse();
         let v2 = StrawManValidation::new(reversed);
         prop_assert_eq!(v1.passed, v2.passed);

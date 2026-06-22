@@ -1302,6 +1302,7 @@ mod mock_client {
         .clone()
         .with_state(ConnectionState::Connected)
         .with_success(100);
+      drop(status);
 
       Ok(ExtractedFields {
         fields: vec![crate::providers::FieldExtraction {

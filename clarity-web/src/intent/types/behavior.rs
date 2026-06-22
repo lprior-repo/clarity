@@ -210,7 +210,7 @@ mod tests {
   fn test_behavior_validate_too_many_preconditions() {
     let mut behavior = Behavior::new("test".to_string()).unwrap();
     for i in 0..21 {
-      behavior.preconditions.push(format!("precondition_{}", i));
+      behavior.preconditions.push(format!("precondition_{i}"));
     }
 
     let result = behavior.validate();
@@ -224,7 +224,7 @@ mod tests {
   fn test_behavior_validate_too_many_postconditions() {
     let mut behavior = Behavior::new("test".to_string()).unwrap();
     for i in 0..21 {
-      behavior.postconditions.push(format!("postcondition_{}", i));
+      behavior.postconditions.push(format!("postcondition_{i}"));
     }
 
     let result = behavior.validate();

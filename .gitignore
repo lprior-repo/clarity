@@ -90,6 +90,15 @@ REMAINING_*.md
 !CLAUDE.md
 !docs/**/*.md
 !kitty-specs/**/*.md
+# Domain/contracts authored by `rust-contract` and proof plan/review/writeup
+# artifacts authored by `proof-planner` / `proof-reviewer` / `proof-writer`.
+# These are substantive machine-readable specs that go-skill relies on; they
+# are not transient review reports.
+!clarity-web/src/**/*_contract.md
+!proofs/*-plan.md
+!proofs/*-review.md
+!proofs/*-writeup.md
+!proofs/*-repair-guide.md
 
 # Codanna index (binary build artifacts - never commit)
 .codanna/index/
@@ -115,3 +124,11 @@ REMAINING_*.md
 
 # Dolt database files (added by bd init)
 .dolt/
+
+# Verus proof compiler outputs (build artifacts from `verus proofs/*.rs`)
+# Verus emits standalone executables alongside the .rs source plus an rlib
+# intermediate. Never commit these.
+*_verus
+lib*_verus.rlib
+test_str
+verus_out*
