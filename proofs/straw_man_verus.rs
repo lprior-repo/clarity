@@ -29,8 +29,9 @@
 //!
 //! | Trust | Why trusted | Mitigation |
 //! |---|---|---|
-//! | `vstd::seq::Seq::contains` semantics | Verus std spec, not our code | Used directly via the `Vec` view; postcondition pinned to `seq.contains(t)`. |
-//! | `Vec::is_empty`, `Vec::len`, `Vec::contains(&T)` | Rust std lib contract | Verus std external_type_specification; no spec gap. |
+//! | `seq_contains<T>(Seq<T>, T) -> bool` (in-file spec helper) | Spec-level definition, identical to vstd's `Seq::contains` at `vstd/seq_lib.rs:376` | Used in `has_trap`'s postcondition; `Vec::contains` assume_specification pins its return value to `seq_contains`. |
+//! | `<[T]>::contains` semantics (Rust std lib) | Standard `PartialEq` linear scan | `assume_specification` declares the contract as `b == seq_contains(slice@, *value)`; trust boundary is explicit. |
+//! | `Vec::is_empty`, `Vec::len` | Rust std lib contract | Verus std external_type_specification; no spec gap. |
 //! | `&'static [Self; N]` slice coercion to `&'static [Self]` | Rust language rule | Production code uses the same coercion. |
 //! | `StrawManTrap` is closed (no future variants) | Type-system fact at spec time | Spec enumerates 4 indices via `all_variant_at`. Adding a variant breaks `all_variant_at` and is caught at spec compile time. |
 //!
@@ -191,12 +192,35 @@ impl StrawManTrap {
 // `StrawManValidation` impl — mirror production bodies verbatim.
 // ============================================================
 
-// F1 fix — `<[T]>::contains` is NOT in vstd.  The assume_specification is an
-// honest trust boundary: it asserts the method returns `bool` with the standard
-// PartialEq semantics.  Once this declaration is in scope, the body at
-// `has_trap()` (line 220) verifies.  Syntax from vstd/slice.rs examples.
+// F1 fix (non-vacuous) — `seq_contains` is the vstd-compatible spec form of
+// containment for `Seq<T>`. vstd's `vstd::seq_lib::Seq::contains` defines
+// exactly the same predicate (see `vstd/seq_lib.rs:376`), but we name the
+// helper explicitly so the V-07 postcondition has a precise, non-vacuous
+// semantic meaning instead of the `ensures true` placeholder. The helper is
+// defined here as a separate `pub open spec fn` so the contract is auditable
+// without requiring the reviewer to chase vstd's internal definitions.
+//
+// Using `seq_contains` in `has_trap`'s ensures clause makes the postcondition
+// NON-VACUOUS: it pins the result to "trap appears at some index in the
+// trap list", which is the actual semantic guarantee we want from the
+// production body `self.traps_detected.contains(&trap)` at straw_man.rs:128.
+pub open spec fn seq_contains<T>(s: Seq<T>, x: T) -> bool {
+    exists|i: int| #![trigger s[i]] 0 <= i < s.len() && s[i] == x
+}
+
+// Trust boundary for `<[T]>::contains` (the method `Vec::contains` resolves
+// to via deref coercion) — the proper, NON-VACUOUS replacement for the
+// original `<[T]>::contains` assume_specification at lines 198-199 of the
+// prior revision. Unlike the old hack (which only declared the signature
+// without an ensures clause and therefore left `has_trap`'s postcondition
+// vacuous), this declaration pins the return value to `seq_contains` so SMT
+// can verify that the body `self.traps_detected.contains(&trap)` satisfies the
+// postcondition `r == seq_contains(self.traps_detected@, trap)`. The Rust
+// stdlib implementation is trusted via this declaration; the ensures clause
+// is the contract that bridges the body to the spec helper.
 pub assume_specification<T: PartialEq>[ <[T]>::contains ]
-    (slice: &[T], value: &T) -> (b: bool);
+    (slice: &[T], value: &T) -> (b: bool)
+    ensures b == seq_contains(slice@, *value);
 
 impl StrawManValidation {
 
@@ -229,14 +253,20 @@ impl StrawManValidation {
     }
 
     /// Mirror of `StrawManValidation::has_trap()`. Source: `straw_man.rs:127-129`.
-    /// Spec: returns true iff `trap ∈ traps_detected`.
+    /// Spec: returns true iff `trap ∈ traps_detected`. The postcondition is
+    /// non-vacuous: `r == seq_contains(self.traps_detected@, trap)` is a
+    /// precise semantic statement (exists an index where the element equals
+    /// the trap), not a placeholder `ensures true`.
     ///
-    /// **Vacuity notice:** `assume_specification` declares the signature of
-    /// `slice::contains` but does NOT provide a body for Verus to verify. The
-    /// postcondition is vacuous; the `contains` semantics are trusted via the
-    /// `assume_specification` declaration (the Rust stdlib implementation is trusted).
+    /// The Rust stdlib implementation of `Vec::contains` (which resolves to
+    /// `<[T]>::contains` via deref coercion) is trusted via the
+    /// `assume_specification` for `<[T]>::contains` declared at module scope
+    /// above; that specification pins its return value to
+    /// `seq_contains(slice@, *value)` so the postcondition is provable. See
+    /// `vstd/seq_lib.rs:376` for vstd's reference definition of
+    /// `Seq::contains`, which matches our `seq_contains` helper exactly.
     pub fn has_trap(&self, trap: StrawManTrap) -> (r: bool)
-        ensures true,  // vacuous: assume_specification provides no proof body
+        ensures r == seq_contains(self.traps_detected@, trap),
     {
         // VERBATIM body from straw_man.rs:128.
         self.traps_detected.contains(&trap)
