@@ -43,6 +43,10 @@ tokio = { workspace = true }
 serial_test = "3"
 proptest = "1.10.0"
 
+# Opt in to workspace lints (deny unwrap_used, expect_used, panic, todo, unimplemented, etc.)
+[lints]
+workspace = true
+
 [[bin]]
 name = "clarity-web"
 path = "src/main.rs"
